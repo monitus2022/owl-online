@@ -1,6 +1,6 @@
 # AGENTS.md
 
-O.W.L. Online — a grounded, agentic RAG application. Read this before making changes.
+O.W.L. Online - a grounded, agentic RAG application. Read this before making changes.
 
 ## Commands
 
@@ -16,11 +16,11 @@ O.W.L. Online — a grounded, agentic RAG application. Read this before making c
 
 ## Architecture
 
-- `src/` — ingest, index, retrieve, rerank, generate
-- `providers/` — model adapters (Bedrock, OpenRouter)
-- `agent/` — LangGraph graph, nodes, state
-- `api/` — FastAPI + SSE
-- `eval/` — harness, gold set, thresholds
+- `src/` - ingest, index, retrieve, rerank, generate
+- `providers/` - model adapters (Bedrock, OpenRouter)
+- `agent/` - LangGraph graph, nodes, state
+- `api/` - FastAPI + SSE
+- `eval/` - harness, gold set, thresholds
 - Every model call goes through an adapter; the provider is a config value.
 
 ## Conventions
@@ -31,6 +31,11 @@ O.W.L. Online — a grounded, agentic RAG application. Read this before making c
 
 ## Do not
 
-- Commit the copyrighted corpus — keep it out of git.
+- Commit the copyrighted corpus - keep it out of git.
 - Render model output as HTML.
 - Put secrets in the image or config; use environment variables.
+
+## Review workflow
+
+- Each ticket is reviewed by the read-only `reviewer` subagent before it is done.
+- See `.opencode/agents/reviewer.md`.
