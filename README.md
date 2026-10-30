@@ -1,8 +1,8 @@
 # O.W.L. Online
 
-A grounded, agentic RAG application — a revision tool that answers questions, generates practice exams, and grades your answers.
+A grounded, agentic RAG application - a revision tool that answers questions, generates practice exams, and grades your answers.
 
-> Status: early. The engine (retrieval → grounded generation → evaluation) is under construction. See the milestones and issues.
+> Status: early. The engine (retrieval -> grounded generation -> evaluation) is under construction. See the milestones and issues.
 
 ---
 
@@ -12,11 +12,11 @@ O.W.L. Online is a grounded question-answering engine with three surfaces on one
 
 | Mode | What it does |
 |---|---|
-| Revision chat | Ask anything → a grounded answer with citations |
+| Revision chat | Ask anything, get a grounded answer with citations |
 | Exam mode | Generate practice O.W.L. / N.E.W.T. questions by subject |
 | Grading | Grade your answers on the O.W.L. scale: O / E / A / P / D / T |
 
-The corpus is a single well-known work of fiction. The source text is not included (see Disclaimer). The point of the project is not the corpus — it is the evaluation discipline and the full-stack agent around it.
+The corpus is a single well-known work of fiction. The source text is not included (see Disclaimer). The point of the project is not the corpus - it is the evaluation discipline and the full-stack agent around it.
 
 ---
 
@@ -24,8 +24,8 @@ The corpus is a single well-known work of fiction. The source text is not includ
 
 A portfolio project that does the two hard things, then wraps them in a served application:
 
-1. A retrieval core that works — hybrid (dense + BM25, fused with RRF) → rerank.
-2. An evaluation harness that separates failures — retrieval scored on chunk ids, generation scored by a judge, plus a closed-book control and perturbation probes.
+1. A retrieval core that works - hybrid (dense + BM25, fused with RRF) then rerank.
+2. An evaluation harness that separates failures - retrieval scored on chunk ids, generation scored by a judge, plus a closed-book control and perturbation probes.
 
 ---
 
@@ -71,9 +71,9 @@ The harness scores each stage separately, so a failure can be attributed to retr
 - M1 Package the pipeline
 - M2 Eval harness as CI gate
 - M3 Single-shot streaming API
-- M4 Grounding & guardrails
+- M4 Grounding and guardrails
 - M5 Agentic loop (LangGraph)
-- M6 Observability & deploy
+- M6 Observability and deploy
 - M7 Exam mode
 - Future: lesson mode (a virtual professor)
 
@@ -81,7 +81,17 @@ The harness scores each stage separately, so a failure can be attributed to retr
 
 ## Tech
 
-`Python` · `FastAPI` · `LangGraph` · hybrid retrieval (vector + BM25 + RRF) · LLM adapters · eval-as-CI
+`Python` - `FastAPI` - `LangGraph` - hybrid retrieval (vector + BM25 + RRF) - LLM adapters - eval-as-CI
+
+---
+
+## Agent workflow
+
+This repository is developed with AI coding agents under human review.
+
+- `AGENTS.md` gives coding agents project guidance: build, test, conventions, verification.
+- A read-only reviewer subagent (`.opencode/agents/reviewer.md`) reviews each ticket against its acceptance criteria before it is done.
+- The GitHub MCP server is used to read issues and post review findings back to the ticket.
 
 ---
 
