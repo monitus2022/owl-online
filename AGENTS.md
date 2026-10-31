@@ -60,3 +60,8 @@ Only open-weight and Amazon models are callable (Bedrock in-region; OpenRouter).
 
 - Each ticket is reviewed by the read-only `reviewer` subagent before it is done.
 - See `.opencode/agents/reviewer.md`.
+
+## AI usage records
+
+- When a ticket includes AI-drafted code, say so in the PR description (what was agent-written, what was human-written, and that the human reviewed it).
+- Keep `README.md` "AI usage" accurate as agent involvement grows.
