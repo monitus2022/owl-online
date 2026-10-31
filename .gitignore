@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.uv/
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+
+# Corpus and derived data: copyrighted source text must stay out of git.
+data/*
+!data/.gitkeep
+/data/**/*.jsonl
+
+# The gold set is original content and is published.
+!eval/gold/**/*.jsonl
+
+# Eval artifacts
+eval/results.csv
+eval/runs/
+
+# Notebooks
+notebooks/.ipynb_checkpoints/
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/
