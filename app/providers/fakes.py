@@ -1,4 +1,8 @@
-# Create fake entities for testing, repeated usage
+"""Contract-conforming stand-ins used by the factory until real adapters land (#36).
+
+Shared by the factory (temporary returns) and the tests. Deterministic by design:
+same input -> same output, forever. Not test-only: app code imports these."""
+
 from collections.abc import AsyncIterator
 
 from app.schemas import Chunk, ChunkMetadata
