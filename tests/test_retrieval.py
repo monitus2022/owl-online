@@ -1,0 +1,145 @@
+"""Hybrid retrieval tests: a real local index on a tiny fixture + fusion math."""
+
+import asyncio
+
+import httpx
+import pytest
+
+from app.pipeline.index import build_index, build_lexical_index
+from app.pipeline.retrieve import HybridRetriever, compose_retriever
+from app.providers.factory import make_embedder
+from app.providers.fakes import FakeEmbedder
+from app.schemas import Chunk, ChunkMetadata
+
+
+def _chunk(num: int, title: str, text: str) -> Chunk:
+    return Chunk(
+        id=f"b1-c{num:02d}-0000",
+        text=text,
+        metadata=ChunkMetadata(
+            book_num=1, chapter_num=num, book_name="Invented Volume One", chapter_name=title
+        ),
+    )
+
+
+# Invented sample content: distinct topics so dense and sparse behave visibly.
+_CHUNKS = [
+    _chunk(1, "BROOM SPORTS", "Quidditch is a fast flying sport played on broomsticks."),
+    _chunk(2, "POTIONS CLASS", "Potions lessons brew shrinking solution herbs."),
+    _chunk(3, "OWL POST", "Letters and parcels arrive by owl post at breakfast."),
+    _chunk(4, "DARK FOREST", "Students stay out of the shadowy forest at night."),
+    _chunk(5, "SORTING FEAST", "The sorting hat places new students into a house."),
+    _chunk(6, "QUIET EVENING", "The common room falls quiet as the fire burns low."),
+    _chunk(7, "SAMPLE END", "A short filler passage ends the sample corpus."),
+]
+
+
+def _ollama_running() -> bool:
+    try:
+        httpx.get("http://localhost:11434/api/version", timeout=1)
+    except Exception:
+        return False
+    return True
+
+
+@pytest.fixture(scope="session")
+def index_parts(tmp_path_factory):
+    """Real local index over the fixture, built once (Ollama must be running)."""
+    if not _ollama_running():
+        pytest.skip("Ollama daemon not running")
+    index_dir = tmp_path_factory.mktemp("index")
+    built = asyncio.run(build_index(_CHUNKS, index_dir, make_embedder("local")))
+    collection = built.collection
+    bm25, ids, by_id = build_lexical_index(_CHUNKS)
+    return collection, bm25, ids, by_id
+
+
+def _retriever_for(index_parts) -> HybridRetriever:
+    """Fresh embedder per test: its httpx pool must bind to the test's own loop."""
+    collection, bm25, ids, by_id = index_parts
+    return HybridRetriever(
+        embedder=make_embedder("local"),
+        collection=collection,
+        bm25=bm25,
+        chunk_ids=ids,
+        chunks_by_id=by_id,
+    )
+
+
+async def test_retrieve_returns_valid_hit_list(index_parts):
+    """Retriever contract shape: valid, unique, score-sorted chunks."""
+    retriever = _retriever_for(index_parts)
+    chunks = await retriever.retrieve("a fast flying sport on broomsticks", top_k=3)
+    assert len(chunks) == 3
+    assert all(isinstance(c, Chunk) for c in chunks)
+    assert len({c.id for c in chunks}) == 3
+    scores = [c.score for c in chunks]
+    assert scores == sorted(scores, reverse=True)
+
+
+async def test_topic_question_finds_the_right_chunk(index_parts):
+    """The known-play-fixture question surfaces the quidditch chunk."""
+    retriever = _retriever_for(index_parts)
+    chunks = await retriever.retrieve("playing a sport on a flying broomstick", top_k=3)
+    assert "b1-c01-0000" in [c.id for c in chunks]
+    assert chunks[0].score > 0
+
+async def test_compose_retriever_from_disk(tmp_path):
+    """The composition function wires a retriever straight from a chunks file."""
+    if not _ollama_running():
+        pytest.skip("Ollama daemon not running")
+    chunks_path = tmp_path / "chunks.jsonl"
+    chunks_path.write_text(
+        "\n".join(c.model_dump_json() for c in _CHUNKS[:3]) + "\n", encoding="utf-8"
+    )
+    index_dir = tmp_path / "index"
+
+    setup = await compose_retriever(chunks_path, index_dir, make_embedder("local"))
+    assert setup.chunks == 3
+    assert setup.embedder == "ollama/qwen3-embedding:0.6b"
+    assert setup.dims > 0
+    assert setup.rebuilt is True
+    hits = await setup.retriever.retrieve("quidditch", top_k=1)
+    assert hits[0].id == "b1-c01-0000"
+
+    # Slug guard via composition: same file, same embedder -> reuse, no rebuild.
+    again = await compose_retriever(chunks_path, index_dir, make_embedder("local"))
+    assert again.rebuilt is False
+
+class _StubCollection:
+    """Dense run stub: fixed id order, whatever candidate count is asked."""
+
+    def __init__(self, ids):
+        self._ids = ids
+
+    def count(self):
+        return len(self._ids)
+
+    def query(self, *, query_embeddings, n_results):
+        return {"ids": [self._ids[:n_results]]}
+
+
+class _StubBM25:
+    """Sparse run stub: one fixed score vector aligned to _CHUNKS order."""
+
+    def __init__(self, scores):
+        self._scores = scores
+
+    def get_scores(self, tokens):
+        return self._scores
+
+
+async def test_rrf_prefers_multi_leg_hits():
+    """A candidate found by both legs outranks single-leg hits; RRF math pinned."""
+    chunks_by_id = {c.id: c for c in _CHUNKS}
+    stub_retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000", "b1-c02-0000", "b1-c03-0000"]),
+        bm25=_StubBM25([0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id=chunks_by_id,
+    )
+    hits = await stub_retriever.retrieve("anything", top_k=3)
+    assert [c.id for c in hits] == ["b1-c02-0000", "b1-c01-0000", "b1-c03-0000"]
+    expected = 1.0 / 61 + 1.0 / 62  # dense rank 2 + sparse rank 1, rrf_k=60
+    assert abs(hits[0].score - expected) < 1e-9

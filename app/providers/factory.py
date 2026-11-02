@@ -1,21 +1,25 @@
 """Provider factory: the single place a provider name becomes an object.
 
 Called once at composition time (startup), never per request and never on
-user input. The pipeline and agent receive contract objects; they never see
+user input. The pipeline and agent receive contract objects, they never see
 a provider name.
 """
 
-# TODO: replace with real providers once they land (ticket #36)
-
 from app.providers.contracts import Embedder, Llm, Reranker, Retriever
 from app.providers.fakes import FakeEmbedder, FakeLlm, FakeReranker, FakeRetriever
+from app.providers.local import OllamaEmbedder
 
-PROVIDERS = ("bedrock", "openrouter")
+# All provider names the factory accepts ("local" builds a real embedder).
+PROVIDERS = ("bedrock", "openrouter", "local")
+# The subset that hosts an Llm / Reranker — "local" has no hosted models.
+MODEL_PROVIDERS = ("bedrock", "openrouter")
 
 
 def make_embedder(provider: str, *, model: str = "unspecified") -> Embedder:
-    """Build an Embedder for a provider name (fake until #36)."""
+    """Build an Embedder for a provider name"""
     match provider:
+        case "local":
+            return OllamaEmbedder() if model == "unspecified" else OllamaEmbedder(model=model)
         case "bedrock" | "openrouter":
             return FakeEmbedder()
         case _:
@@ -23,7 +27,7 @@ def make_embedder(provider: str, *, model: str = "unspecified") -> Embedder:
 
 
 def make_llm(provider: str, *, model: str = "unspecified") -> Llm:
-    """Build an Llm for a provider name (fake until #36)."""
+    """Build an Llm for a provider name"""
     match provider:
         case "bedrock" | "openrouter":
             return FakeLlm()
@@ -32,7 +36,7 @@ def make_llm(provider: str, *, model: str = "unspecified") -> Llm:
 
 
 def make_reranker(provider: str, *, model: str = "unspecified") -> Reranker:
-    """Build a Reranker for a provider name (fake until #36)."""
+    """Build a Reranker for a provider name"""
     match provider:
         case "bedrock" | "openrouter":
             return FakeReranker()
@@ -41,10 +45,10 @@ def make_reranker(provider: str, *, model: str = "unspecified") -> Reranker:
 
 
 def make_retriever(provider: str) -> Retriever:
-    """Build a Retriever for a provider name (concrete pipeline impl in M1).
+    """Build a Retriever for a provider name (concrete impl in the pipeline).
 
     No model kwarg: retrieval is provider-internal (local vector store + BM25),
-    not a model call. Concrete hybrid retriever lands in M1 pipeline tickets.
+    not a model call. The concrete hybrid retriever lands in the pipeline tickets.
     """
     match provider:
         case "bedrock" | "openrouter":
