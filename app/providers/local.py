@@ -1,5 +1,4 @@
-"""Local open-weight provider: embeddings served by the Ollama daemon.
-"""
+"""Local open-weight provider: embeddings served by the Ollama daemon."""
 
 import httpx
 
@@ -30,3 +29,7 @@ class OllamaEmbedder:
         )
         response.raise_for_status()
         return response.json()["embeddings"]
+
+    async def aclose(self) -> None:
+        """Release the HTTP pool; the composition owner (API startup, D4) calls this."""
+        await self._client.aclose()

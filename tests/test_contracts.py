@@ -69,9 +69,11 @@ async def test_llm_stream_yield_text_tokens():
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
-async def test_embedder_contract_swappable(provider):
+async def test_embedder_contract_swappable(provider, ollama_running):
     """Factory-built embedder satisfies the Embedder contract for each provider."""
     # No model kwarg: "local" is real, so it must resolve to the default Ollama model.
+    if provider == "local" and not ollama_running:
+        pytest.skip("Ollama daemon not running")
     embedder = make_embedder(provider)
     vectors = await embedder.embed(["hello"])
     assert len(vectors) == 1

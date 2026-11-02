@@ -15,18 +15,18 @@ PROVIDERS = ("bedrock", "openrouter", "local")
 MODEL_PROVIDERS = ("bedrock", "openrouter")
 
 
-def make_embedder(provider: str, *, model: str = "unspecified") -> Embedder:
+def make_embedder(provider: str, *, model: str | None = None) -> Embedder:
     """Build an Embedder for a provider name"""
     match provider:
         case "local":
-            return OllamaEmbedder() if model == "unspecified" else OllamaEmbedder(model=model)
+            return OllamaEmbedder() if model is None else OllamaEmbedder(model=model)
         case "bedrock" | "openrouter":
             return FakeEmbedder()
         case _:
             raise ValueError(f"unknown provider: {provider}")
 
 
-def make_llm(provider: str, *, model: str = "unspecified") -> Llm:
+def make_llm(provider: str, *, model: str | None = None) -> Llm:
     """Build an Llm for a provider name"""
     match provider:
         case "bedrock" | "openrouter":
@@ -35,7 +35,7 @@ def make_llm(provider: str, *, model: str = "unspecified") -> Llm:
             raise ValueError(f"unknown provider: {provider}")
 
 
-def make_reranker(provider: str, *, model: str = "unspecified") -> Reranker:
+def make_reranker(provider: str, *, model: str | None = None) -> Reranker:
     """Build a Reranker for a provider name"""
     match provider:
         case "bedrock" | "openrouter":

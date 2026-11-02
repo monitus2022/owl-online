@@ -25,6 +25,10 @@ class Llm(Protocol):
 
 
 class Embedder(Protocol):
+    """Embedding adapter; name is the manifest slug the index slug-guard records."""
+
+    name: str
+
     async def embed(self, texts: list[str]) -> list[list[float]]: ...
 
 

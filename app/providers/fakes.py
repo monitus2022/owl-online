@@ -11,6 +11,11 @@ from app.schemas import Chunk, ChunkMetadata
 
 
 class FakeEmbedder:
+    """Fixed 100-dim vectors; injectable slug so slug-guard paths test offline."""
+
+    def __init__(self, name: str = "fake/embedder") -> None:
+        self.name = name
+
     async def embed(self, texts):
         return [[0.0] * 100] * len(texts)
 

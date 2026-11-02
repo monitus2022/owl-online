@@ -50,6 +50,13 @@ class HybridRetriever:
         """Query the Chroma collection for the top candidates by embedding similarity."""
         n_results = min(self._candidates, self._collection.count())
         vectors = await self._embedder.embed([query])
+        # Query-time dims guard: a wrong-model query against an existing index
+        # must fail loudly rather than return neighbors in a foreign vector space.
+        recorded = (getattr(self._collection, "metadata", None) or {}).get("dims")
+        if recorded and len(vectors[0]) != recorded:
+            raise ValueError(
+                f"embedder returned {len(vectors[0])} dims; index was built with {recorded}"
+            )
         result = self._collection.query(query_embeddings=vectors, n_results=n_results)
         return result["ids"][0]
 

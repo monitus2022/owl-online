@@ -1,9 +1,9 @@
 """Index building: chunks JSONL -> persisted Chroma vectors + in-process BM25.
 
 chromadb here is storage, not a model call. Embedding is done by the Embedder
-provider (default: Qwen3-Embedding 0.6b served locally by Ollama). The
-collection records its embedder slug so an index built with one model is
-never reused for queries from another model's space.
+provider (slug pinned in the manifest, D7 #53). The collection records its
+embedder slug so an index built with one model is never reused for queries
+from another model's space.
 """
 
 import re
@@ -18,7 +18,7 @@ from app.providers.contracts import Embedder
 from app.schemas import Chunk
 
 COLLECTION_NAME = "owl-online"  # TODO: make this configurable, e.g. per corpus
-_EMBED_BATCH = 128  # Temporary batch size for embedding for now
+EMBED_BATCH = 128  # Temporary batch size for embedding for now; public: callers derive cadence
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ def _matching_collection(client, n_chunks: int, embedder_name: str) -> chromadb.
     return None
 
 
-async def embed_in_batches(chunks: list[Chunk], embedder: Embedder, *, batch_size=_EMBED_BATCH):
+async def embed_in_batches(chunks: list[Chunk], embedder: Embedder, *, batch_size=EMBED_BATCH):
     """Embed chunks in batches and yield (batch, embeddings) for callers to stream progress."""
     for i in range(0, len(chunks), batch_size):
         batch = chunks[i : i + batch_size]

@@ -21,14 +21,15 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+from app.pipeline.index import EMBED_BATCH  # noqa: E402
 from app.pipeline.retrieve import compose_retriever  # noqa: E402
 from app.providers.factory import make_embedder  # noqa: E402
 
-_BATCH_PRINT_STRIDE = 10
+_PRINT_EVERY_BATCHES = 10
 
 
 def _progress(done: int, total: int) -> None:
-    if done % (_BATCH_PRINT_STRIDE * 128) == 0 or done == total:
+    if done % (_PRINT_EVERY_BATCHES * EMBED_BATCH) == 0 or done == total:
         print(f"embedded {done}/{total}", flush=True)
 
 

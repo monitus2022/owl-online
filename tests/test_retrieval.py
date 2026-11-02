@@ -2,7 +2,6 @@
 
 import asyncio
 
-import httpx
 import pytest
 
 from app.pipeline.index import build_index, build_lexical_index
@@ -34,18 +33,10 @@ _CHUNKS = [
 ]
 
 
-def _ollama_running() -> bool:
-    try:
-        httpx.get("http://localhost:11434/api/version", timeout=1)
-    except Exception:
-        return False
-    return True
-
-
 @pytest.fixture(scope="session")
-def index_parts(tmp_path_factory):
+def index_parts(tmp_path_factory, ollama_running):
     """Real local index over the fixture, built once (Ollama must be running)."""
-    if not _ollama_running():
+    if not ollama_running:
         pytest.skip("Ollama daemon not running")
     index_dir = tmp_path_factory.mktemp("index")
     built = asyncio.run(build_index(_CHUNKS, index_dir, make_embedder("local")))
@@ -84,9 +75,10 @@ async def test_topic_question_finds_the_right_chunk(index_parts):
     assert "b1-c01-0000" in [c.id for c in chunks]
     assert chunks[0].score > 0
 
-async def test_compose_retriever_from_disk(tmp_path):
+
+async def test_compose_retriever_from_disk(tmp_path, ollama_running):
     """The composition function wires a retriever straight from a chunks file."""
-    if not _ollama_running():
+    if not ollama_running:
         pytest.skip("Ollama daemon not running")
     chunks_path = tmp_path / "chunks.jsonl"
     chunks_path.write_text(
@@ -105,6 +97,24 @@ async def test_compose_retriever_from_disk(tmp_path):
     # Slug guard via composition: same file, same embedder -> reuse, no rebuild.
     again = await compose_retriever(chunks_path, index_dir, make_embedder("local"))
     assert again.rebuilt is False
+
+
+async def test_build_index_slug_guard_offline(tmp_path):
+    """Slug change on the same dir forces a rebuild; matching slug reuses (offline)."""
+    first = await build_index(_CHUNKS[:3], tmp_path, FakeEmbedder(name="fake/one"))
+    assert first.rebuilt is True
+    assert first.collection.metadata["embedder"] == "fake/one"
+    assert first.dims == 100
+
+    # Same dir, different slug: the guard must rebuild, not reuse stale vectors.
+    second = await build_index(_CHUNKS[:3], tmp_path, FakeEmbedder(name="fake/two"))
+    assert second.rebuilt is True
+    assert second.collection.metadata["embedder"] == "fake/two"
+
+    # Same dir, same slug and count: reuse, no re-embedding.
+    third = await build_index(_CHUNKS[:3], tmp_path, FakeEmbedder(name="fake/two"))
+    assert third.rebuilt is False
+
 
 class _StubCollection:
     """Dense run stub: fixed id order, whatever candidate count is asked."""
