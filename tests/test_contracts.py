@@ -2,6 +2,7 @@
 import pytest
 
 from app.providers.factory import (
+    MODEL_PROVIDERS,
     PROVIDERS,
     make_embedder,
     make_llm,
@@ -68,14 +69,17 @@ async def test_llm_stream_yield_text_tokens():
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
-async def test_embedder_contract_swappable(provider):
+async def test_embedder_contract_swappable(provider, ollama_running):
     """Factory-built embedder satisfies the Embedder contract for each provider."""
-    embedder = make_embedder(provider, model="test")
+    # No model kwarg: "local" is real, so it must resolve to the default Ollama model.
+    if provider == "local" and not ollama_running:
+        pytest.skip("Ollama daemon not running")
+    embedder = make_embedder(provider)
     vectors = await embedder.embed(["hello"])
     assert len(vectors) == 1
 
 
-@pytest.mark.parametrize("provider", PROVIDERS)
+@pytest.mark.parametrize("provider", MODEL_PROVIDERS)
 async def test_llm_contract_swappable(provider):
     """Factory-built Llm satisfies the Llm contract for each provider."""
     llm = make_llm(provider, model="test")
@@ -85,7 +89,7 @@ async def test_llm_contract_swappable(provider):
     assert all(isinstance(t, str) for t in tokens)
 
 
-@pytest.mark.parametrize("provider", PROVIDERS)
+@pytest.mark.parametrize("provider", MODEL_PROVIDERS)
 async def test_reranker_contract_swappable(provider):
     """Factory-built Reranker satisfies the Reranker contract for each provider."""
     chunks = [
@@ -104,7 +108,7 @@ async def test_reranker_contract_swappable(provider):
     assert all(isinstance(c, Chunk) for c in ranked)
 
 
-@pytest.mark.parametrize("provider", PROVIDERS)
+@pytest.mark.parametrize("provider", MODEL_PROVIDERS)
 async def test_retriever_contract_swappable(provider):
     """Factory-built Retriever satisfies the Retriever contract for each provider."""
     retriever = make_retriever(provider)
