@@ -9,10 +9,11 @@ from dataclasses import dataclass
 
 from app.providers.contracts import Llm
 
+# Invented content only: the corpus is copyrighted and must stay out of git.
 PROBE_SYSTEM = "Answer using only the excerpt. Cite the excerpt id in square brackets."
 PROBE_PROMPT = (
-    "Excerpt [b1-c01-0000]: Mr and Mrs Dursley, of number four, Privet Drive. "
-    "Question: Where do the Dursleys live?"
+    "Excerpt [b1-c01-0000]: The lighthouse keeper, Rowan, trims the wick every "
+    "evening. Question: Who trims the wick each evening?"
 )
 
 

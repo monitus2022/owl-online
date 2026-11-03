@@ -8,15 +8,18 @@ top hit, or an uncited answer means abstain rather than guess.
 import re
 from dataclasses import dataclass, field
 
+from app.pipeline.retrieve.retriever import DEFAULT_RRF_K
 from app.providers.contracts import Llm, Retriever
 from app.schemas import Chunk
 
 ABSTAIN_MESSAGE = "I cannot answer that from the books."
 DEFAULT_TOP_K = 5
-# Set floor for RRF retrieval score
-# Current preset from esimate of lab
-# TODO: Update based on the retrieval score distribution of the corpus.
-DEFAULT_MIN_SCORE = 0.015
+# A one-leg top hit scores 1/(rrf_k+1), and the dense leg always returns its
+# nearest neighbours, so a floor at that value can never fire. Require a two-leg
+# top hit instead: the question must overlap a chunk both lexically and
+# semantically, so a question with no lexical overlap abstains. Tunable in #51
+# once the score distribution is measured.
+DEFAULT_MIN_SCORE = 2.0 / (DEFAULT_RRF_K + 1)
 
 _SYSTEM = (
     "You are O.W.L. Online, a revision assistant grounded only in the excerpts "
@@ -27,6 +30,7 @@ _SYSTEM = (
 )
 
 _CITATION = re.compile(r"\[([^\]]+)\]")
+_ID_SEPARATOR = re.compile(r"[,\s]+")
 
 
 @dataclass(frozen=True)
@@ -51,11 +55,12 @@ async def ask(
     if not chunks or chunks[0].score < min_score:
         return AskResult(ABSTAIN_MESSAGE, abstained=True)
     answer = await llm.generate(_SYSTEM, _prompt(question, chunks))
-    citations = _citations(answer, chunks)
+    allowed = {c.id for c in chunks}
+    citations = [cid for cid in _cited_ids(answer) if cid in allowed]
     if not citations:
         # No excerpt cited: the answer is ungrounded, so do not return it.
         return AskResult(ABSTAIN_MESSAGE, abstained=True)
-    return AskResult(answer.strip(), citations)
+    return AskResult(_drop_unknown_citations(answer, allowed), citations)
 
 
 def _prompt(question: str, chunks: list[Chunk]) -> str:
@@ -66,12 +71,21 @@ def _prompt(question: str, chunks: list[Chunk]) -> str:
     return f"Excerpts:\n\n{evidence}\n\nQuestion: {question}\n\nAnswer:"
 
 
-def _citations(answer: str, chunks: list[Chunk]) -> list[str]:
-    """Cited ids that actually appear in the retrieved set, in order, unique."""
-    allowed = {c.id for c in chunks}
+def _cited_ids(answer: str) -> list[str]:
+    """Every id the answer cites, in order, unique; handles [a, b] groups."""
     seen: list[str] = []
     for raw in _CITATION.findall(answer):
-        cid = raw.strip()
-        if cid in allowed and cid not in seen:
-            seen.append(cid)
+        for cid in _ID_SEPARATOR.split(raw.strip()):
+            if cid and cid not in seen:
+                seen.append(cid)
     return seen
+
+
+def _drop_unknown_citations(answer: str, allowed: set[str]) -> str:
+    """Remove citations the model invented; keep only retrieved ids in the text."""
+
+    def keep(raw: str) -> str:
+        known = [cid for cid in _ID_SEPARATOR.split(raw.strip()) if cid in allowed]
+        return f"[{', '.join(known)}]" if known else ""
+
+    return _CITATION.sub(lambda match: keep(match.group(1)), answer).strip()

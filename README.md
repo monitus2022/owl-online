@@ -103,7 +103,7 @@ This repository is developed with AI coding agents under human review.
 
 This project is developed with AI coding agents under human review, and that usage is recorded per ticket.
 
-- AI drafted parts of the code: for ticket #1, the factory (`app/providers/factory.py`) and parts of the test suite were agent-written; the contracts and schemas were human-written with agent review. The human reviewed, tested, and owns every line.
+- AI drafted parts of the code: for ticket #1, the factory (`app/providers/factory.py`) and parts of the test suite were agent-written; the contracts and schemas were human-written with agent review. For ticket #49, the OpenRouter adapter (`app/providers/openrouter.py`), the probe logic (`app/providers/probe.py`), the grounded `ask()` path (`app/pipeline/generate/generate.py`) and their tests were agent-drafted. The human reviewed, tested, and owns every line.
 - The system design and architecture decisions (contracts, provider abstraction, eval discipline) are human-directed; the AI assistant advised and explained, the human decided.
 - AI also drafted documentation (this README, issue descriptions).
 

@@ -105,8 +105,8 @@ async def test_live_generate_and_stream(openrouter_live):
     llm = OpenRouterLlm()
     answer = await llm.generate(
         "Answer using only the excerpt. Cite the id in brackets.",
-        "Excerpt [b1-c01-0000]: Mr and Mrs Dursley, of number four, Privet Drive. "
-        "Where do the Dursleys live?",
+        "Excerpt [b1-c01-0000]: The lighthouse keeper, Rowan, trims the wick every "
+        "evening. Who trims the wick each evening?",
     )
     assert answer.strip()
     tokens = [t async for t in llm.stream("Reply with the single word ok.", "say ok")]

@@ -1,7 +1,6 @@
 """OpenRouter provider: hosted open-weight LLMs over the OpenAI-compatible API.
 
-Only this module imports the vendor SDK. 
-Everything else holds the Llm contract.
+Only this module imports the vendor SDK. Everything else holds the Llm contract.
 """
 
 from collections.abc import AsyncIterator
