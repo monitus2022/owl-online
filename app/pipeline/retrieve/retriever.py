@@ -13,7 +13,7 @@ from app.providers.contracts import Embedder
 from app.schemas import Chunk
 
 DEFAULT_RRF_K = 60
-_QUERY_CANDIDATES = 20
+QUERY_CANDIDATES = 20
 
 
 class _VectorStore(Protocol):
@@ -35,7 +35,7 @@ class HybridRetriever:
         chunk_ids: list[str],
         chunks_by_id: dict[str, Chunk],
         rrf_k: int = DEFAULT_RRF_K,
-        candidates: int = _QUERY_CANDIDATES,
+        candidates: int = QUERY_CANDIDATES,
     ) -> None:
         self._embedder = embedder
         self._collection = collection

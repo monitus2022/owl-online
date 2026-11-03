@@ -8,18 +8,17 @@ top hit, or an uncited answer means abstain rather than guess.
 import re
 from dataclasses import dataclass, field
 
-from app.pipeline.retrieve.retriever import DEFAULT_RRF_K
+from app.pipeline.retrieve.retriever import DEFAULT_RRF_K, QUERY_CANDIDATES
 from app.providers.contracts import Llm, Retriever
 from app.schemas import Chunk
 
 ABSTAIN_MESSAGE = "I cannot answer that from the books."
 DEFAULT_TOP_K = 5
-# A one-leg top hit scores 1/(rrf_k+1), and the dense leg always returns its
-# nearest neighbours, so a floor at that value can never fire. Require a two-leg
-# top hit instead: the question must overlap a chunk both lexically and
-# semantically, so a question with no lexical overlap abstains. Tunable in #51
-# once the score distribution is measured.
-DEFAULT_MIN_SCORE = 2.0 / (DEFAULT_RRF_K + 1)
+# A chunk reached by one leg scores at most 1/(rrf_k+1); reached by both legs, at
+# least 2/(rrf_k+candidates). The floor sits in that gap, so abstention means "no
+# chunk was found by both the dense and the lexical leg" — a question the corpus
+# does not lexically cover. Tunable in #51 against the measured distribution.
+DEFAULT_MIN_SCORE = 2.0 / (DEFAULT_RRF_K + QUERY_CANDIDATES)
 
 _SYSTEM = (
     "You are O.W.L. Online, a revision assistant grounded only in the excerpts "
