@@ -19,8 +19,8 @@ def extract_pages(pdf: Path, cache: Path) -> list[str]:
     """PDF -> list of page texts, backed by a form-feed separated cache file."""
     if cache.exists():
         return cache.read_text(encoding="utf-8").split("\f")
-    doc = pymupdf.open(pdf)
-    pages = [page.get_text() for page in doc]
+    with pymupdf.open(pdf) as doc:
+        pages = [doc.load_page(i).get_text() for i in range(doc.page_count)]
     cache.write_text("\f".join(pages), encoding="utf-8")
     return pages
 
@@ -37,6 +37,7 @@ class IngestSummary:
     min_size: int
     median_size: int
     max_size: int
+
 
 # --- Ingest step used in scripts/ingest_corpus.py and uv CLI ---
 def ingest_corpus(pdf: Path, cache: Path, out: Path) -> IngestSummary:

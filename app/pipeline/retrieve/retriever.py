@@ -4,6 +4,8 @@ Implements the Retriever contract. top_k is a call parameter; rrf_k and the
 candidate pool size are manifest values in D7 (#53) with defaults here.
 """
 
+from typing import Any, Protocol
+
 from rank_bm25 import BM25Okapi
 
 from app.pipeline.index import tokenize
@@ -14,6 +16,13 @@ DEFAULT_RRF_K = 60
 _QUERY_CANDIDATES = 20
 
 
+class _VectorStore(Protocol):
+    """The slice of a vector store the dense leg uses; stubs stay duck-typed."""
+
+    def count(self) -> int: ...
+    def query(self, *, query_embeddings: Any, n_results: int) -> Any: ...
+
+
 class HybridRetriever:
     """Dense + sparse candidate lists joined by reciprocal rank fusion."""
 
@@ -21,7 +30,7 @@ class HybridRetriever:
         self,
         *,
         embedder: Embedder,
-        collection: object,  # chromadb Collection, duck-typed for tests
+        collection: _VectorStore,  # chromadb Collection, duck-typed for tests
         bm25: BM25Okapi,
         chunk_ids: list[str],
         chunks_by_id: dict[str, Chunk],

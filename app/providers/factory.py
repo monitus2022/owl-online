@@ -5,9 +5,11 @@ user input. The pipeline and agent receive contract objects, they never see
 a provider name.
 """
 
+from app.config import settings
 from app.providers.contracts import Embedder, Llm, Reranker, Retriever
 from app.providers.fakes import FakeEmbedder, FakeLlm, FakeReranker, FakeRetriever
 from app.providers.local import OllamaEmbedder
+from app.providers.openrouter import DEFAULT_MODEL, OpenRouterLlm
 
 # All provider names the factory accepts ("local" builds a real embedder).
 PROVIDERS = ("bedrock", "openrouter", "local")
@@ -29,8 +31,13 @@ def make_embedder(provider: str, *, model: str | None = None) -> Embedder:
 def make_llm(provider: str, *, model: str | None = None) -> Llm:
     """Build an Llm for a provider name"""
     match provider:
-        case "bedrock" | "openrouter":
-            return FakeLlm()
+        case "openrouter":
+            return OpenRouterLlm(
+                model=model or DEFAULT_MODEL,
+                api_key=settings.openrouter_api_key,
+            )
+        case "bedrock":
+            return FakeLlm()  # real Bedrock adapter is V2 (#36)
         case _:
             raise ValueError(f"unknown provider: {provider}")
 

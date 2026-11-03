@@ -32,9 +32,7 @@ def main() -> int:
     print(f"books: {summary.books}, chapters: {summary.chapters}")
     print(f"chunks: {summary.total_chunks} -> {args.out}")
     print(f"per book: {summary.per_book}")
-    print(
-        f"char sizes: min={summary.min_size} median={summary.median_size} max={summary.max_size}"
-    )
+    print(f"char sizes: min={summary.min_size} median={summary.median_size} max={summary.max_size}")
     return 0
 
 
