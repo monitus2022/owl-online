@@ -1,6 +1,7 @@
 """Hybrid retrieval tests: a real local index on a tiny fixture + fusion math."""
 
 import asyncio
+import time
 
 import pytest
 
@@ -237,3 +238,41 @@ async def test_pool_of_fifty_reaches_the_reranker():
     )
     await retriever.retrieve("q", top_k=5)
     assert len(reranker.calls[0][1]) == 50
+
+
+async def test_retrieve_does_not_block_the_event_loop():
+    """The sync Chroma query runs in a thread; the loop keeps ticking meanwhile."""
+    ticks = 0
+
+    class _SlowCollection:
+        def count(self) -> int:
+            return 1
+
+        def query(self, *, query_embeddings, n_results):
+            time.sleep(0.2)  # a blocking sqlite call that must not freeze the loop
+            return {"ids": [["b1-c01-0000"]]}
+
+    class _FlatBM25:
+        def get_scores(self, tokens):
+            return [1.0] * len(_CHUNKS)
+
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_SlowCollection(),
+        bm25=_FlatBM25(),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+    )
+
+    async def ticker() -> None:
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.01)
+            ticks += 1
+
+    task = asyncio.create_task(ticker())
+    try:
+        await retriever.retrieve("q", top_k=1)
+    finally:
+        task.cancel()
+    assert ticks >= 5  # the loop ran while the 0.2s blocking query was in a thread
