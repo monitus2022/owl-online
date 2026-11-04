@@ -227,7 +227,7 @@ def diff_results(
                 metric=key[2],
                 baseline=before,
                 latest=after,
-                delta=round(after - before, 4),
+                delta=after - before,
             )
         )
     return deltas

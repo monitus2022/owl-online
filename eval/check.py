@@ -40,9 +40,10 @@ GENERATION_GATED = frozenset(
 )
 
 # Denominator counts must not change; a gold-set or sample edit would otherwise
-# hide inside a rate.
+# hide inside a rate. `judged` and `faithfulness_n` are answerability outcomes:
+# they fail on a drop (over-abstention) but may rise when abstentions fall.
 DENOMINATOR_COUNTS = frozenset(
-    {"retrieval_n", "abstention_n", "generation_n", "faithfulness_n", "judged"}
+    {"retrieval_n", "abstention_n", "generation_n"}
 )
 
 # Quality metrics fail on a drop; over-abstention and parser failures fail on a
@@ -57,6 +58,8 @@ DROP_METRICS = frozenset(
         "judge_correct_rate",
         "grounded_rate",
         "abstention_rate",
+        "judged",
+        "faithfulness_n",
     }
 )
 RISE_METRICS = frozenset(
@@ -75,7 +78,7 @@ RATE_DENOMINATOR = {
     "f1": "generation_n",
     "faithfulness_rate": "faithfulness_n",
     "judge_correct_rate": "judged",
-    "grounded_rate": "judged",
+    "grounded_rate": "generation_n",
     "abstained_rate": "generation_n",
     "abstention_rate": "abstention_n",
 }
@@ -259,6 +262,11 @@ def check(
         raise CheckError(f"baseline is empty: {baseline}")
     if not latest_rows:
         raise CheckError(f"latest run is empty: {latest}")
+    if baseline_rows[0].get("run_id") == latest_rows[0].get("run_id"):
+        raise CheckError(
+            "latest run is the baseline copy "
+            f"({latest_rows[0].get('run_id')}); gate a fresh run"
+        )
     mismatch = manifest_mismatch(baseline_rows, latest_rows)
     if mismatch:
         details = ", ".join(

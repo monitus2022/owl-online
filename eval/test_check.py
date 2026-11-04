@@ -111,7 +111,7 @@ def test_every_gated_metric_has_exactly_one_rule():
     assert not (DENOMINATOR_COUNTS & RISE_METRICS)
     assert not (DROP_METRICS & RISE_METRICS)
     assert set(RATE_DENOMINATOR) <= DROP_METRICS | RISE_METRICS
-    assert set(RATE_DENOMINATOR.values()) <= DENOMINATOR_COUNTS
+    assert set(RATE_DENOMINATOR.values()) <= GATED_METRICS
 
 
 def test_thresholds_load_and_validate_the_real_file():
@@ -171,12 +171,40 @@ def test_count_change_fails_with_a_zero_band(tmp_path):
 
 def test_answerability_change_fails_even_when_rates_rise(tmp_path):
     latest = dict(
-        OVERALL, answered=13, abstained=2, abstained_rate=2 / 15
+        OVERALL,
+        answered=13,
+        abstained=2,
+        abstained_rate=2 / 15,
+        judged=13,
+        faithfulness_n=13,
     )
     results, baseline = _files(tmp_path, OVERALL, latest)
     report = check(results, baseline)
     assert not report.passed
-    assert "abstained_rate" in {f.delta.metric for f in report.failures}
+    failed = {f.delta.metric for f in report.failures}
+    assert {"abstained_rate", "judged", "faithfulness_n"} <= failed
+
+
+def test_fewer_abstentions_is_an_improvement(tmp_path):
+    baseline = dict(
+        OVERALL,
+        answered=13,
+        abstained=2,
+        abstained_rate=2 / 15,
+        judged=13,
+        faithfulness_n=13,
+    )
+    latest = dict(OVERALL)
+    results, baseline_path = _files(tmp_path, baseline, latest)
+    report = check(results, baseline_path)
+    assert report.passed
+
+
+def test_one_item_f1_drop_is_inside_the_band(tmp_path):
+    latest = dict(OVERALL, f1=0.30 - 1 / 15)
+    results, baseline = _files(tmp_path, OVERALL, latest)
+    report = check(results, baseline)
+    assert report.passed
 
 
 def test_improving_outcome_counts_do_not_fail(tmp_path):
@@ -264,6 +292,14 @@ def test_self_comparison_is_refused(tmp_path):
         check(results, latest, latest_path=latest)
 
 
+def test_baseline_copy_of_latest_is_refused(tmp_path):
+    results, baseline = _files(tmp_path, OVERALL, OVERALL)
+    latest = results / "20260101T000000Z.csv"
+    baseline.write_text(latest.read_text(encoding="utf-8"), encoding="utf-8")
+    with pytest.raises(CheckError, match="baseline copy"):
+        check(results, baseline)
+
+
 def test_toml_baseline_path_is_used_when_omitted(tmp_path):
     results, baseline = _files(tmp_path, OVERALL, OVERALL)
     text = THRESHOLDS_PATH.read_text(encoding="utf-8")
@@ -279,10 +315,14 @@ def test_toml_baseline_path_is_used_when_omitted(tmp_path):
     assert report.passed
 
 
-def test_non_finite_band_is_rejected(tmp_path):
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf", "true", "-0.01"])
+def test_invalid_bands_are_rejected(tmp_path, value):
     text = THRESHOLDS_PATH.read_text(encoding="utf-8")
     path = tmp_path / "thresholds.toml"
-    path.write_text(text.replace("hit_at_k = 0.05", "hit_at_k = nan"), encoding="utf-8")
+    path.write_text(
+        text.replace("hit_at_k = 0.05", f"hit_at_k = {value}"),
+        encoding="utf-8",
+    )
     with pytest.raises(CheckError, match="finite non-negative"):
         load_thresholds(path)
 

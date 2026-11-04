@@ -3,7 +3,8 @@
 import pytest
 
 from eval.check import THRESHOLDS_PATH
-from eval.test_check import OVERALL, _files
+from eval.results import write_results
+from eval.test_check import OVERALL, _files, _rows
 from scripts.run_eval import main
 
 
@@ -52,6 +53,19 @@ def test_cli_uses_the_toml_baseline_when_omitted(tmp_path, monkeypatch):
         ],
     )
     assert main() == 0
+
+
+def test_cli_latest_pins_a_specific_run(tmp_path, monkeypatch):
+    results, baseline = _files(tmp_path, OVERALL, OVERALL)
+    passing = results / "20260101T000000Z.csv"
+    failing = results / "20260102T000000Z.csv"
+    write_results(failing, _rows("failing", dict(OVERALL, hit_at_k=0.60)))
+
+    monkeypatch.setattr("sys.argv", _argv(results, baseline, "--latest", str(passing)))
+    assert main() == 0
+
+    monkeypatch.setattr("sys.argv", _argv(results, baseline, "--latest", str(failing)))
+    assert main() == 1
 
 
 def test_cli_rejects_check_and_write_baseline_together(monkeypatch):

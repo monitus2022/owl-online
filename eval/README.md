@@ -103,24 +103,29 @@ set hash or rerank floor), because those deltas would not be comparable. The CI
 workflow that runs this on pull requests is still open in #77.
 
 Bands are absolute. For rate metrics the effective band is `max(base, 1 / n)` for
-that slice, so one item is always allowed: 0.05 on overall retrieval with n=50,
+that slice, so one item is normally allowed: 0.05 on overall retrieval with n=50,
 0.125 on an 8-item slice, 0.067 on the 15-item F1 sample, and 0.20 on a 5-item
-slice. The gate treats metrics by direction:
+slice. The exception is over-abstention, which fails through `judged` and
+`faithfulness_n` as well as `abstained_rate`, because losing an answer is not a
+sampling artifact. The gate treats metrics by direction:
 
 | Group | Metrics | Failure rule |
 |---|---|---|
-| Denominators | `retrieval_n`, `abstention_n`, `generation_n`, `faithfulness_n`, `judged` | any change |
+| Sample invariants | `retrieval_n`, `abstention_n`, `generation_n` | any change |
 | Quality, drop | Hit@k, Recall@k, MRR, F1, faithfulness rate, judge-correct rate, grounded rate, abstention rate | drop beyond band |
+| Answerability, drop | `judged`, `faithfulness_n` | drop beyond band |
 | Quality, rise | `abstained_rate`, `judge_parse_failures`, `faithful_parse_failures` | rise beyond band |
 
 Outcome counts (`answered`, `abstained`, `faithful`, `grounded`, the judge buckets)
 stay in the CSV as diagnostics but are not gated directly; their rates carry the
 quality signal, so an improvement cannot fail the gate. A gold-set or sample
-change fails through the denominator counts instead of hiding inside an average.
+change fails through the sample invariants instead of hiding inside an average.
 EM is reported but not gated.
 
 `[slice_kinds]` in the TOML marks each slice as `answerable` or `unanswerable`;
-a new slice must be added there before the gate can score it.
+a new slice must be added there before the gate can score it. `--sample` must be
+at least the number of answerable slices, otherwise a slice has no generation
+rows and the gate fails closed.
 
 Generation and judge calls are pinned to temperature 0, and the result rows
 record `generator_temperature` and `judge_temperature`. The cache key carries the
@@ -145,9 +150,11 @@ baseline run plus a new record.
 | `eval/results/<timestamp>.csv` | no | one run, gitignored |
 | `eval/results/baseline.csv` | yes | the pinned comparison point |
 
-The V2 baseline is written by the first `--write-baseline` run against the pinned
-manifest. This file does not invent a baseline; rerun the command after a
-deliberate configuration change and review the diff.
+The pinned V2 baseline is run `20261104T144856Z`, recorded as
+`docs/runs/2026-11-04-v2-d1-baseline-r4.md`. Earlier D1 runs are kept as separate
+records because their metric definitions and sampling changed. Rerun
+`--write-baseline` only after a deliberate configuration change, and add a new
+record instead of editing the old one.
 
 ## Run record
 

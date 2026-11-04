@@ -105,6 +105,9 @@ uv run python scripts/run_eval.py
 uv run python scripts/run_eval.py --check
 ```
 
+Pin with `--write-baseline` only when replacing the baseline. A check immediately
+after pinning compares the baseline to its own copied run and is refused.
+
 ## Raw summary
 
 ```text
