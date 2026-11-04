@@ -29,9 +29,9 @@ data/*
 # The gold set is original content and is published.
 !eval/gold/**/*.jsonl
 
-# Eval artifacts
-eval/results.csv
-eval/runs/
+# Eval artifacts: timestamped runs stay local; the pinned baseline is committed.
+eval/results/*.csv
+!eval/results/baseline.csv
 eval/.cache/
 
 # Notebooks

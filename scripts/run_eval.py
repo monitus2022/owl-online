@@ -1,8 +1,11 @@
-"""Run the O.W.L. mini-eval and print the metrics.
+"""Run the O.W.L. eval.
 
-Run: uv run python scripts/run_eval.py
-Params and printing only; the logic lives in eval.harness. Generation and judge
-outputs are cached under eval/.cache by (model, input).
+Params and dispatch only; the run logic lives in `eval`.
+
+Run:
+  uv run python scripts/run_eval.py
+  uv run python scripts/run_eval.py --write-baseline
+  uv run python scripts/run_eval.py --check
 """
 
 from __future__ import annotations
@@ -16,77 +19,56 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from app.config import settings  # noqa: E402
-from app.pipeline.retrieve import compose_retriever  # noqa: E402
-from app.providers.factory import make_embedder, make_llm, make_reranker  # noqa: E402
-from app.providers.openrouter import DEFAULT_MODEL  # noqa: E402
-from eval.harness import (  # noqa: E402
-    JUDGE_MODEL,
-    CachedLlm,
-    abstention_metrics,
-    judge_sample,
-    load_gold,
-    retrieval_metrics,
-)
-
-
-async def _run(args: argparse.Namespace) -> int:
-    reranker = (
-        None if settings.rerank_provider == "none" else make_reranker(settings.rerank_provider)
-    )
-    setup = await compose_retriever(
-        args.chunks,
-        args.index,
-        make_embedder(settings.embedder_provider),
-        reranker=reranker,
-        pool=settings.rerank_pool if reranker is not None else None,
-        min_score=settings.rerank_min_score,
-    )
-    # The eval needs real hosted models; the judge is pinned to OpenRouter.
-    generator = CachedLlm(make_llm("openrouter"), DEFAULT_MODEL, args.cache)
-    judge = CachedLlm(make_llm("openrouter", model=JUDGE_MODEL), JUDGE_MODEL, args.cache)
-    gold = load_gold(args.gold)
-
-    retrieval = await retrieval_metrics(setup.retriever, gold, args.k)
-    abstention = await abstention_metrics(setup.retriever, generator, gold, args.k)
-    verdicts = await judge_sample(
-        setup.retriever, generator, judge, gold, args.sample, args.k
-    )
-
-    correct = sum(v.correctness == "correct" for v in verdicts)
-    partial = sum(v.correctness == "partial" for v in verdicts)
-    wrong = sum(v.correctness == "wrong" for v in verdicts)
-    abstained = sum(v.abstained for v in verdicts)
-    grounded = sum(v.grounded for v in verdicts)
-
-    print(f"gold: {len(gold)} items ({retrieval.n} answerable, {abstention.n} unanswerable)")
-    print(f"reranker: {settings.rerank_provider if reranker is not None else 'none'}")
-    print(f"generator: openrouter/{DEFAULT_MODEL}")
-    print(f"judge: openrouter/{JUDGE_MODEL}")
-    print()
-    print(f"Hit@{args.k}: {retrieval.hit_at_k:.2f}")
-    print(f"Recall@{args.k}: {retrieval.recall_at_k:.2f}")
-    print(f"MRR: {retrieval.mrr:.2f}")
-    print(f"Abstention (unanswerable): {abstention.refused}/{abstention.n} ({abstention.rate:.2f})")
-    print()
-    print(
-        f"judged sample: {len(verdicts)} "
-        f"(correct {correct}, partial {partial}, wrong {wrong}, abstained {abstained})"
-    )
-    print(f"grounded: {grounded}/{len(verdicts)}")
-    return 0
+from eval.check import CheckError, check, render_check  # noqa: E402
+from eval.report import render_run  # noqa: E402
+from eval.results import BASELINE_PATH, RESULTS_DIR  # noqa: E402
+from eval.runner import run  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the O.W.L. mini-eval")
+    parser = argparse.ArgumentParser(description="Run the O.W.L. eval")
     parser.add_argument("--gold", type=Path, default=REPO / "eval" / "gold" / "questions.jsonl")
     parser.add_argument("--chunks", type=Path, default=REPO / "data" / "chunks.jsonl")
     parser.add_argument("--index", type=Path, default=REPO / "data" / "index" / "chroma")
     parser.add_argument("--cache", type=Path, default=REPO / "eval" / ".cache")
+    parser.add_argument("--results", type=Path, default=RESULTS_DIR)
+    parser.add_argument("--baseline", type=Path, default=BASELINE_PATH)
     parser.add_argument("--k", type=int, default=5)
-    parser.add_argument("--sample", type=int, default=10)
+    parser.add_argument("--sample", type=int, default=15)
+    parser.add_argument("--write-baseline", action="store_true")
+    parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    return asyncio.run(_run(args))
+    if args.check and args.write_baseline:
+        parser.error("--check and --write-baseline are mutually exclusive")
+
+    if args.check:
+        try:
+            report = check(args.results, args.baseline)
+        except CheckError as error:
+            print(error, file=sys.stderr)
+            return 1
+        print(render_check(report))
+        return 0
+
+    run_report = asyncio.run(
+        run(
+            gold_path=args.gold,
+            chunks_path=args.chunks,
+            index_dir=args.index,
+            cache_dir=args.cache,
+            results_dir=args.results,
+            baseline=args.baseline,
+            k=args.k,
+            sample=args.sample,
+            pin_baseline=args.write_baseline,
+        )
+    )
+    print(render_run(run_report))
+    print(
+        "next: write a run record in docs/runs/ "
+        f"(run id {run_report.run_path.stem}; see docs/runs/README.md)"
+    )
+    return 0
 
 
 if __name__ == "__main__":

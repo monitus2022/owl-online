@@ -25,8 +25,17 @@ environment, dev included.
 ## Verification (required)
 
 - Run the eval gate before considering a change done.
+- After any run of `scripts/run_eval.py`, write a run record in `docs/runs/` before the change is done.
 - Do not regress retrieval or faithfulness beyond the noise band.
 - Do not merge a change that fails the eval gate.
+
+## Run records
+
+- Every finished eval run gets a committed Markdown record under `docs/runs/`.
+- Copy the template from `docs/runs/README.md`; name the file `YYYY-MM-DD-<ticket>-<slug>.md`.
+- Record the run id, configuration, retrieval, abstention and generation tables, the reading notes, and the printed summary verbatim.
+- Add a row to the Runs table in `docs/runs/README.md` in the same commit.
+- One record per run id. Timestamped CSVs stay local and gitignored; the record must stand alone without them.
 
 ## Architecture
 
@@ -40,6 +49,7 @@ Layout:
 - `app/config.py` - settings (env-based, `OWL_` prefix)
 - `app/logging.py` - logging setup: one formatter, level from settings, per-request id
 - `docs/architecture.md` - living diagrams (contracts, module deps, `/ask` flow); update when a contract, an adapter, or the top-level flow changes
+- `docs/runs/` - one committed Markdown record per eval run, plus the template and index
 - `eval/` - harness, gold set, thresholds
 
 Every model call goes through an adapter; the provider is a config value.

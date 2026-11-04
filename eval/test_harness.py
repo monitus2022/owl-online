@@ -1,4 +1,4 @@
-"""Mini-eval harness tests: metric math and judge parsing, no network.
+"""Eval harness tests: metric math, slices and judge parsing, no network.
 
 Lives in eval/ so the documented gate `pytest eval/` collects it.
 """
@@ -6,10 +6,20 @@ Lives in eval/ so the documented gate `pytest eval/` collects it.
 from app.schemas import Chunk, ChunkMetadata
 from eval.harness import (
     GoldItem,
+    JudgeVerdict,
     abstention_metrics,
+    abstention_metrics_by_slice,
+    exact_match,
     load_gold,
+    normalize_answer,
+    parse_faithful,
     parse_verdict,
     retrieval_metrics,
+    retrieval_metrics_all,
+    retrieval_metrics_by_slice,
+    sample_answerable,
+    summarize_generation,
+    token_f1,
 )
 
 
@@ -60,6 +70,32 @@ async def test_retrieval_metrics_miss_is_zero():
     assert metrics.mrr == 0.0
 
 
+async def test_retrieval_metrics_by_slice_groups_without_a_second_pass():
+    items = [
+        GoldItem("s1", "a", True, ["c1"], ("simple",)),
+        GoldItem("n1", "b", True, ["c2"], ("named_reference",)),
+    ]
+    retriever = _Retriever({"a": ["c1"], "b": ["x"]})
+    metrics = await retrieval_metrics_by_slice(retriever, items, k=5)
+    assert metrics["simple"].hit_at_k == 1.0
+    assert metrics["named_reference"].hit_at_k == 0.0
+    # One retrieval per answerable item, not one per slice.
+    assert retriever.top_k_seen == [5, 5]
+
+
+async def test_retrieval_metrics_all_returns_overall_and_slices_in_one_pass():
+    items = [
+        GoldItem("s1", "a", True, ["c1"], ("simple",)),
+        GoldItem("n1", "b", True, ["c2"], ("named_reference",)),
+    ]
+    retriever = _Retriever({"a": ["c1"], "b": ["c2"]})
+    overall, by_slice = await retrieval_metrics_all(retriever, items, k=5)
+    assert overall.n == 2
+    assert overall.hit_at_k == 1.0
+    assert set(by_slice) == {"simple", "named_reference"}
+    assert retriever.top_k_seen == [5, 5]
+
+
 async def test_abstention_metrics_counts_refusals_and_forwards_top_k():
     retriever = _Retriever({})
     metrics = await abstention_metrics(
@@ -69,6 +105,16 @@ async def test_abstention_metrics_counts_refusals_and_forwards_top_k():
     assert metrics.refused == 1
     assert metrics.rate == 1.0
     assert retriever.top_k_seen == [3]
+
+
+async def test_abstention_metrics_by_slice():
+    items = [
+        GoldItem("u1", "z", False, [], ("near_miss_unanswerable",)),
+        GoldItem("u2", "w", False, [], ("off_topic",)),
+    ]
+    metrics = await abstention_metrics_by_slice(_Retriever({}), _Llm(), items, top_k=3)
+    assert metrics["near_miss_unanswerable"].refused == 1
+    assert metrics["off_topic"].refused == 1
 
 
 def test_parse_verdict_tolerates_prose():
@@ -92,11 +138,69 @@ def test_parse_verdict_uses_the_first_object():
     assert parse_verdict(raw) == ("wrong", False)
 
 
+def test_parse_faithful():
+    assert parse_faithful('{"faithful": true}') is True
+    assert parse_faithful('Sure: {"faithful": "false"}') is False
+    assert parse_faithful("no json here") is False
+
+
+def test_normalize_answer_strips_articles_and_punctuation():
+    assert normalize_answer("The Elder Wand!") == "elder wand"
+    assert normalize_answer("  A   Hippogriff. ") == "hippogriff"
+
+
+def test_exact_match_and_token_f1():
+    assert exact_match("The Elder Wand", "Elder Wand") == 1.0
+    assert exact_match("Elder Wand", "Resurrection Stone") == 0.0
+    assert token_f1("The Elder Wand", "Elder Wand") == 1.0
+    assert token_f1("Elder Wand", "Resurrection Stone") == 0.0
+    partial = token_f1("Minerva McGonagall", "Professor Minerva McGonagall")
+    assert 0.0 < partial < 1.0
+
+
+def test_summarize_generation_counts_abstentions_and_faithfulness():
+    verdicts = [
+        JudgeVerdict("a", "correct", True, False, faithful=True, em=1.0, f1=1.0),
+        JudgeVerdict("b", "wrong", False, False, faithful=False, em=0.0, f1=0.5),
+        JudgeVerdict("c", "abstained", False, True, faithful=None, em=0.0, f1=0.0),
+    ]
+    metrics = summarize_generation(verdicts)
+    assert metrics.n == 3
+    assert metrics.answered == 2
+    assert metrics.abstained == 1
+    assert abs(metrics.em - (1.0 / 3.0)) < 1e-9
+    assert abs(metrics.f1 - (1.5 / 3.0)) < 1e-9
+    assert metrics.correct == 1
+    assert metrics.wrong == 1
+    assert metrics.faithfulness_n == 2
+    assert metrics.faithful == 1
+    assert metrics.faithfulness_rate == 0.5
+
+
+def test_sample_answerable_round_robins_slices():
+    items = [
+        GoldItem(f"s{i}", "q", True, ["c"], ("simple",)) for i in range(3)
+    ] + [
+        GoldItem(f"n{i}", "q", True, ["c"], ("named_reference",)) for i in range(3)
+    ]
+    picked = sample_answerable(items, 4)
+    assert [item.primary_slice for item in picked] == [
+        "simple",
+        "named_reference",
+        "simple",
+        "named_reference",
+    ]
+
+
 def test_load_gold_reads_records(tmp_path):
     path = tmp_path / "g.jsonl"
     path.write_text(
-        '{"id": "q1", "question": "x", "answerable": true, "expected_chunk_ids": ["c1"]}\n'
+        '{"id": "q1", "question": "x", "answerable": true, '
+        '"expected_chunk_ids": ["c1"], "slices": ["simple"], '
+        '"reference_answer": "y"}\n'
     )
     items = load_gold(path)
     assert items[0].id == "q1"
     assert items[0].expected_chunk_ids == ["c1"]
+    assert items[0].primary_slice == "simple"
+    assert items[0].reference_answer == "y"
