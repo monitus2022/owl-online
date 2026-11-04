@@ -110,8 +110,9 @@ dir). Trigger it by pushing to `main`, or run it manually with
 
 The instance pulls the image with its own role
 (`AmazonEC2ContainerRegistryReadOnly`) and calls Bedrock with its own role, so
-no keys live on the host. The container publishes host port 80 and reads its
-runtime secrets from the env file in the next section.
+no keys live on the host. The container binds `127.0.0.1:8000`; nginx terminates
+TLS on 80/443 and proxies to it, and reads its runtime secrets from the env file
+in the next section.
 
 ### V1 host
 
@@ -152,9 +153,11 @@ The pipeline ships only the image. Do these once on the instance:
    # copy data/chunks.jsonl and data/index/titan/ to /data on the host
    ```
 
-4. A TLS terminator in front of port 80 if the chat page is served over HTTPS
-   (a mixed-content block otherwise). Cloudflare in front of the instance, or a
-   small Caddy reverse proxy with a domain, both work.
+4. TLS. nginx terminates HTTPS on 443 with the Cloudflare Origin Certificate
+   (`*.monitus.org`, from `s3://monitus-cloudflare-certs`) and proxies to the
+   container on `127.0.0.1:8000`; port 80 redirects to 443. Cloudflare fronts
+   `api.monitus.org` (proxied) in Full (strict) mode. Config lives at
+   `/etc/nginx/conf.d/owl.conf`, certs at `/etc/nginx/owl/`.
 
 ## Cloudflare Pages for the chat page
 
