@@ -8,6 +8,7 @@ Timestamped runs stay local; the pinned baseline is committed.
 from __future__ import annotations
 
 import csv
+import re
 import tomllib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ REPO = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = REPO / "config" / "manifest.toml"
 RESULTS_DIR = REPO / "eval" / "results"
 BASELINE_PATH = RESULTS_DIR / "baseline.csv"
+RUN_ID_RE = re.compile(r"^\d{8}T\d{6}Z$")
 
 # Flattened manifest columns. Every result row carries all of them.
 MANIFEST_FIELDS = [
@@ -36,6 +38,7 @@ MANIFEST_FIELDS = [
     "top_k",
     "rrf_k",
     "candidates",
+    "judged_sample",
 ]
 
 RESULT_FIELDS = ["run_id", "config", "slice", "metric", "value", *MANIFEST_FIELDS]
@@ -54,12 +57,18 @@ def manifest_row(
     top_k: int | None = None,
     reranker_pool: int | None = None,
     candidates: int | None = None,
+    judged_sample: int | None = None,
+    reranker_model: str | None = None,
+    embedder_model: str | None = None,
+    embedder_dims: int | None = None,
 ) -> dict[str, str]:
     """Flatten the manifest plus the run-time choices into CSV columns.
 
-    `top_k`, `reranker_pool` and `candidates` can be passed when the run used a
-    value other than the manifest default (for example `--k`). With rerank off
-    the per-leg candidate count is the retriever's own default, not the pool.
+    `top_k`, `reranker_pool`, `candidates` and `judged_sample` can be passed
+    when the run used a value other than the manifest default (for example
+    `--k` or `--sample`). The model overrides record the effective settings
+    when an `OWL_*` variable changes the manifest slug. With rerank off the
+    per-leg candidate count is the retriever's own default, not the pool.
     """
     embedder_key = "cloud" if embedder_provider == "bedrock" else "local"
     embedder = manifest["embedder"][embedder_key]
@@ -73,17 +82,26 @@ def manifest_row(
     return {
         "generator_model": str(manifest["generator"]["model"]),
         "judge_model": str(manifest["judge"]["model"]),
-        "reranker_model": str(reranker["model"]) if rerank_enabled else "none",
+        "reranker_model": str(
+            reranker_model if reranker_model is not None else reranker["model"]
+        )
+        if rerank_enabled
+        else "none",
         "reranker_pool": str(actual_pool) if rerank_enabled else "0",
         "embedder_provider": embedder_provider,
-        "embedder_model": str(embedder["model"]),
-        "embedder_dims": str(embedder["dimensions"]),
+        "embedder_model": str(
+            embedder_model if embedder_model is not None else embedder["model"]
+        ),
+        "embedder_dims": str(
+            embedder_dims if embedder_dims is not None else embedder["dimensions"]
+        ),
         "chunk_size": str(chunking["size"]),
         "chunk_overlap": str(chunking["overlap"]),
         "chunk_min_size": str(chunking["min_size"]),
         "top_k": str(top_k if top_k is not None else retrieval["top_k"]),
         "rrf_k": str(retrieval["rrf_k"]),
         "candidates": str(actual_candidates),
+        "judged_sample": str(judged_sample) if judged_sample is not None else "",
     }
 
 
@@ -136,7 +154,9 @@ def read_results(path: Path) -> list[dict[str, str]]:
 def latest_run(results_dir: Path = RESULTS_DIR) -> Path | None:
     """The newest timestamped CSV, excluding the pinned baseline."""
     candidates = sorted(
-        path for path in results_dir.glob("*.csv") if path.name != BASELINE_PATH.name
+        path
+        for path in results_dir.glob("*.csv")
+        if RUN_ID_RE.fullmatch(path.stem) and path.name != BASELINE_PATH.name
     )
     return candidates[-1] if candidates else None
 
@@ -198,3 +218,24 @@ def diff_results(
 def metric_keys(rows: Iterable[Mapping[str, str]]) -> set[tuple[str, str, str]]:
     """The (config, slice, metric) keys present in a result file."""
     return {(row["config"], row["slice"], row["metric"]) for row in rows}
+
+
+def manifest_mismatch(
+    baseline_rows: Iterable[Mapping[str, str]],
+    latest_rows: Iterable[Mapping[str, str]],
+) -> dict[str, tuple[str, str]]:
+    """Manifest fields whose recorded values differ between two runs.
+
+    Result rows repeat the manifest, so the first row of each file is enough.
+    `--check` refuses to diff runs that were produced with different models,
+    chunking or retrieval settings: the deltas would not be comparable.
+    """
+    baseline = next(iter(baseline_rows), {})
+    latest = next(iter(latest_rows), {})
+    mismatch: dict[str, tuple[str, str]] = {}
+    for field in MANIFEST_FIELDS:
+        before = str(baseline.get(field, ""))
+        after = str(latest.get(field, ""))
+        if before != after:
+            mismatch[field] = (before, after)
+    return mismatch

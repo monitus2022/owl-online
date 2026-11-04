@@ -57,23 +57,27 @@ def _first_json_object(raw: str) -> dict[str, object] | None:
     return data if isinstance(data, dict) else None
 
 
-def parse_verdict(raw: str) -> tuple[str, bool]:
-    """Pull correctness and grounded from a judge reply; tolerate extra prose."""
+def parse_verdict(raw: str) -> tuple[str, bool] | None:
+    """Pull correctness and grounded from a judge reply; tolerate extra prose.
+
+    Returns None when the reply has no usable verdict, so a prompt drift cannot
+    masquerade as a real wrong answer.
+    """
     data = _first_json_object(raw)
     if data is None:
-        return "wrong", False
-    correctness = str(data.get("correctness", "wrong")).lower()
+        return None
+    correctness = str(data.get("correctness", "")).lower()
     if correctness not in {"correct", "partial", "wrong"}:
-        correctness = "wrong"
+        return None
     return correctness, _as_bool(data.get("grounded", False))
 
 
-def parse_faithful(raw: str) -> bool:
+def parse_faithful(raw: str) -> bool | None:
     """Pull the faithful flag from the separate claim-support judge reply."""
     data = _first_json_object(raw)
-    if data is None:
-        return False
-    return _as_bool(data.get("faithful", False))
+    if data is None or "faithful" not in data:
+        return None
+    return _as_bool(data["faithful"])
 
 
 def sample_answerable(items: list[GoldItem], sample: int) -> list[GoldItem]:
@@ -141,8 +145,14 @@ async def judge_sample(
             f"Question: {item.question}\n\n"
             f"Answer: {result.answer}"
         )
-        correctness, grounded = parse_verdict(await judge.generate(JUDGE_SYSTEM, prompt))
-        faithful = parse_faithful(await judge.generate(FAITHFUL_SYSTEM, prompt))
+        correctness, grounded = ("wrong", False)
+        verdict = parse_verdict(await judge.generate(JUDGE_SYSTEM, prompt))
+        judge_parse_failed = verdict is None
+        if verdict is not None:
+            correctness, grounded = verdict
+        faithful_reply = parse_faithful(await judge.generate(FAITHFUL_SYSTEM, prompt))
+        faithful_parse_failed = faithful_reply is None
+        faithful = bool(faithful_reply) if faithful_reply is not None else False
         verdicts.append(
             JudgeVerdict(
                 item.id,
@@ -154,6 +164,8 @@ async def judge_sample(
                 faithful=faithful,
                 em=exact_match(result.answer, reference),
                 f1=token_f1(result.answer, reference),
+                judge_parse_failed=judge_parse_failed,
+                faithful_parse_failed=faithful_parse_failed,
             )
         )
     return verdicts

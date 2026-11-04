@@ -9,6 +9,7 @@ from eval.results import (
     MetricDelta,
     diff_results,
     latest_run,
+    manifest_mismatch,
     metric_keys,
     read_results,
 )
@@ -43,6 +44,16 @@ def check(results_dir: Path, baseline: Path) -> CheckReport:
 
     baseline_rows = read_results(baseline)
     latest_rows = read_results(latest)
+    mismatch = manifest_mismatch(baseline_rows, latest_rows)
+    if mismatch:
+        details = ", ".join(
+            f"{field} {before!r} -> {after!r}"
+            for field, (before, after) in mismatch.items()
+        )
+        raise CheckError(
+            "baseline and latest run used different configurations "
+            f"({details}); rerun with --write-baseline after a deliberate change"
+        )
     baseline_keys = metric_keys(baseline_rows)
     latest_keys = metric_keys(latest_rows)
     return CheckReport(

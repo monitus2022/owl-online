@@ -6,6 +6,7 @@ from eval.results import (
     diff_results,
     latest_run,
     load_manifest,
+    manifest_mismatch,
     manifest_row,
     metric_keys,
     read_results,
@@ -57,10 +58,18 @@ def test_manifest_row_records_run_time_overrides():
         top_k=3,
         reranker_pool=30,
         candidates=30,
+        judged_sample=7,
+        reranker_model="effective-rerank",
+        embedder_model="effective-embed",
+        embedder_dims=512,
     )
     assert row["top_k"] == "3"
     assert row["reranker_pool"] == "30"
     assert row["candidates"] == "30"
+    assert row["judged_sample"] == "7"
+    assert row["reranker_model"] == "effective-rerank"
+    assert row["embedder_model"] == "effective-embed"
+    assert row["embedder_dims"] == "512"
 
 
 def test_load_manifest_pins_the_real_file():
@@ -95,6 +104,7 @@ def test_latest_run_ignores_the_baseline(tmp_path):
     (tmp_path / "20260101T000000Z.csv").write_text("", encoding="utf-8")
     (tmp_path / "20260102T000000Z.csv").write_text("", encoding="utf-8")
     (tmp_path / "baseline.csv").write_text("", encoding="utf-8")
+    (tmp_path / "stray.csv").write_text("", encoding="utf-8")
     assert latest_run(tmp_path) == tmp_path / "20260102T000000Z.csv"
 
 
@@ -138,6 +148,24 @@ def test_metric_keys_identifies_missing_metrics():
     assert missing == {("pinned", "overall", "mrr")}
 
 
+def test_manifest_mismatch_flags_incomparable_runs():
+    manifest = manifest_row(_manifest(), embedder_provider="local", rerank_enabled=True)
+    other = dict(manifest, judge_model="different", judged_sample="7")
+    mismatch = manifest_mismatch(
+        [{**manifest, "metric": "hit_at_k"}],
+        [{**other, "metric": "hit_at_k"}],
+    )
+    assert mismatch == {
+        "judge_model": ("judge", "different"),
+        "judged_sample": ("", "7"),
+    }
+
+
+def test_manifest_mismatch_is_empty_for_the_same_configuration():
+    manifest = manifest_row(_manifest(), embedder_provider="local", rerank_enabled=True)
+    assert manifest_mismatch([manifest], [dict(manifest)]) == {}
+
+
 def test_copy_baseline(tmp_path):
     latest = tmp_path / "run.csv"
     latest.write_text("run_id,config\nrun1,pinned\n", encoding="utf-8")
@@ -151,4 +179,4 @@ def test_result_fields_are_stable():
 
     assert RESULT_FIELDS[:5] == ["run_id", "config", "slice", "metric", "value"]
     assert RESULT_FIELDS[5:] == MANIFEST_FIELDS
-    assert len(MANIFEST_FIELDS) == 13
+    assert len(MANIFEST_FIELDS) == 14

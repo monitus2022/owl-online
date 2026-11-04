@@ -20,6 +20,7 @@ from eval.harness.generation import (
     exact_match,
     generation_metrics_by_slice,
     normalize_answer,
+    strip_citations,
     summarize_generation,
     token_f1,
 )
@@ -71,6 +72,7 @@ __all__ = [
     "retrieval_metrics_by_slice",
     "retrieval_scores",
     "sample_answerable",
+    "strip_citations",
     "summarize_abstention",
     "summarize_generation",
     "summarize_retrieval",

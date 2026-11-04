@@ -91,8 +91,10 @@ uv run python scripts/run_eval.py --check
 ```
 
 `--check` prints per-metric deltas and lists metrics that appear on only one
-side. It does not fail on a drop yet; thresholds and a required CI workflow are
-V2 D2 (#77).
+side. It refuses to diff two runs whose recorded manifest values differ (models,
+chunking, retrieval settings or judged sample), because those deltas would not be
+comparable. It does not fail on a drop yet; thresholds and a required CI workflow
+are V2 D2 (#77).
 
 Generation and judge outputs are cached under `eval/.cache/` by `(model, input)`,
 so reruns are cheap and deterministic. `--k` controls the retrieval cutoff and
@@ -122,8 +124,9 @@ After the pipeline finishes, before closing the ticket:
 2. Copy the template in `docs/runs/README.md` to
    `docs/runs/YYYY-MM-DD-<ticket>-<slug>.md`.
 3. Fill in the configuration, retrieval, abstention and generation tables, then
-   the reading notes. Paste the printed summary into the raw summary block
-   verbatim.
+   the reading notes. Paste the `render_run` output into the raw summary block,
+   including its `wrote` lines; the final `next: write a run record` line is a
+   reminder, not part of the summary.
 4. Add a row to the Runs table in `docs/runs/README.md`.
 
 One record per run id. Do not rewrite the metrics of a past run; a changed
@@ -176,9 +179,13 @@ excluded from the faithfulness denominator and reported separately.
 
 ## Notes and limitations
 
-- EM/F1 compare the generated answer with a short reference answer. A correct but
-  verbose answer scores low on EM and partially on F1, so read them beside the
-  judge buckets rather than alone.
+- EM/F1 compare the generated answer with a short reference answer. Inline
+  citation markers are stripped first, so `[b1-c06-0001]` does not count as
+  answer tokens. A correct but verbose answer still scores low on EM and
+  partially on F1, so read them beside the judge buckets rather than alone.
+- Judge replies that fail to parse are counted in `judge_parse_failures` and
+  `faithful_parse_failures`; they are not silently treated as a wrong answer or
+  an unfaithful one.
 - The judge grades correctness against the retrieved excerpts, not a gold answer,
   so it partly measures retrieval. Faithfulness is the claim-support check.
 - The `near_miss_unanswerable` slice is new in V2 D1. It tests whether a

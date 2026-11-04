@@ -23,14 +23,17 @@ def test_retrieval_rows_cover_overall_and_slices():
     by_slice = {"simple": RetrievalMetrics(2, 0.5, 0.25, 0.5)}
     rows = retrieval_rows("run1", "pinned", _manifest(), overall, by_slice)
     assert [(row.slice, row.metric) for row in rows] == [
+        ("overall", "retrieval_n"),
         ("overall", "hit_at_k"),
         ("overall", "recall_at_k"),
         ("overall", "mrr"),
+        ("simple", "retrieval_n"),
         ("simple", "hit_at_k"),
         ("simple", "recall_at_k"),
         ("simple", "mrr"),
     ]
-    assert rows[0].value == 0.5
+    assert rows[0].value == 2
+    assert rows[1].value == 0.5
 
 
 def test_abstention_rows_use_the_rate_property():
@@ -61,6 +64,9 @@ def test_generation_rows_include_faithfulness_counts():
     values = {row.metric: row.value for row in rows}
     assert values["faithfulness_n"] == 2
     assert values["faithful"] == 1
+    assert values["faithfulness_rate"] == 0.5
+    assert values["judge_correct_rate"] == 0.5
+    assert values["judge_parse_failures"] == 0
     assert values["abstained"] == 1
 
 
