@@ -118,6 +118,7 @@ in the next section.
 
 | Field | Value |
 |---|---|
+| Live URL | `https://api.monitus.org` (Cloudflare proxy, Full strict) |
 | Instance | `i-0bd80b876b2c1ab56` (t3.micro, Amazon Linux 2023) |
 | Region | `ap-northeast-3` |
 | Elastic IP | `13.208.134.172` |
