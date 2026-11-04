@@ -16,6 +16,7 @@ from eval.harness import (
     generation_metrics_by_slice,
     judge_sample,
     load_gold,
+    retrieval_diagnostics_all,
     retrieval_metrics_all,
     summarize_generation,
 )
@@ -23,6 +24,7 @@ from eval.report import (
     RunReport,
     abstention_rows,
     generation_rows,
+    retrieval_diagnostic_rows,
     retrieval_rows,
 )
 from eval.results import (
@@ -76,6 +78,9 @@ async def run(
     gold_hash = hashlib.sha256(gold_path.read_bytes()).hexdigest()[:12]
 
     retrieval, retrieval_by_slice = await retrieval_metrics_all(setup.retriever, gold, k)
+    diagnostics, diagnostics_by_slice = await retrieval_diagnostics_all(
+        setup.retriever, gold, k
+    )
     abstention, abstention_by_slice = await abstention_metrics_all(
         setup.retriever, generator, gold, k
     )
@@ -112,6 +117,9 @@ async def run(
     )
     rows = [
         *retrieval_rows(run_id, config, values, retrieval, retrieval_by_slice),
+        *retrieval_diagnostic_rows(
+            run_id, config, values, diagnostics, diagnostics_by_slice
+        ),
         *abstention_rows(run_id, config, values, abstention, abstention_by_slice),
         *generation_rows(run_id, config, values, generation, generation_by_slice),
     ]
@@ -144,4 +152,6 @@ async def run(
         abstention_by_slice=abstention_by_slice,
         generation=generation,
         generation_by_slice=generation_by_slice,
+        diagnostics=diagnostics,
+        diagnostics_by_slice=diagnostics_by_slice,
     )
