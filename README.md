@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, generates practice exams, and grades your answers.
 
-> Status: early. The engine (retrieval -> grounded generation -> evaluation) is under construction. See the milestones and issues.
+> Status: V1 shipped. Grounded RAG is live at https://api.monitus.org. See the milestones and issues.
 
 ---
 
@@ -95,7 +95,7 @@ First measured run (V1 mini-eval #51, reranker #6; details in `eval/README.md`):
 | Judge correct / partial / wrong | 9 / 0 / 0 of 10 | 7 / 1 / 2 of 10 |
 | Grounded | 9 / 10 | 8 / 10 |
 
-Generator `qwen/qwen3-30b-a3b-instruct-2507`; judge `deepseek/deepseek-v4.1-flash-1017` (different family); reranker `amazon.rerank-v1:0`.
+Generator `qwen/qwen3-30b-a3b-instruct-2507`; judge `deepseek/deepseek-v4.1-flash-1017` (different family); reranker `amazon.rerank-v1:0`. The pinned configuration (model slugs, chunking, `top_k`, `rrf_k`, pool) is in [`config/manifest.toml`](config/manifest.toml); `tests/test_manifest.py` asserts the code agrees, so the manifest and the code cannot drift.
 
 ---
 
@@ -109,7 +109,7 @@ Execution is phased:
 
 | Phase | Scope | Status |
 |---|---|---|
-| V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval + rerank, cited generation with abstention, API, mini-eval, deployed | in progress (one-week sprint, issues #6, #47-#53) |
+| V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval + rerank, cited generation with abstention, API, mini-eval, deployed | shipped (https://api.monitus.org) |
 | V2 - Deepening | guardrails, agentic loop (LangGraph), Bedrock Llm adapter, full eval harness as CI gate | planned |
 | V3 - Product | exam mode, lesson mode | Exam mode priority, lesson mode in the future |
 
@@ -135,7 +135,7 @@ This repository is developed with AI coding agents under human review.
 
 This project is developed with AI coding agents under human review, and that usage is recorded per ticket.
 
-- AI drafted parts of the code: for ticket #1, the factory (`app/providers/factory.py`) and parts of the test suite were agent-written; the contracts and schemas were human-written with agent review. For ticket #49, the OpenRouter adapter (`app/providers/openrouter.py`), the probe logic (`app/providers/probe.py`), the grounded `ask()` path (`app/pipeline/generate/generate.py`) and their tests were agent-drafted. For ticket #50, the API composition root (`app/api/runtime.py`), schemas, the `/ask` endpoint and static chat page (`app/main.py`, `app/api/static/index.html`) and the API tests were agent-drafted. For ticket #51, the mini-eval harness and gold set (`eval/`) and the eval runner were agent-drafted. For ticket #6, the Bedrock reranker (`app/providers/bedrock.py`) and the two-stage retrieval wiring were agent-drafted. The human reviewed, tested, and owns every line.
+- AI drafted parts of the code: for ticket #1, the factory (`app/providers/factory.py`) and parts of the test suite were agent-written; the contracts and schemas were human-written with agent review. For ticket #49, the OpenRouter adapter (`app/providers/openrouter.py`), the probe logic (`app/providers/probe.py`), the grounded `ask()` path (`app/pipeline/generate/generate.py`) and their tests were agent-drafted. For ticket #50, the API composition root (`app/api/runtime.py`), schemas, the `/ask` endpoint and static chat page (`app/main.py`, `app/api/static/index.html`) and the API tests were agent-drafted. For ticket #51, the mini-eval harness and gold set (`eval/`) and the eval runner were agent-drafted. For ticket #6, the Bedrock reranker (`app/providers/bedrock.py`) and the two-stage retrieval wiring were agent-drafted. For ticket #52, the Dockerfile, the deploy guide (`docs/deploy.md`), the deploy workflow (`.github/workflows/deploy.yml`), the Titan embedder, the concurrent retrieval change, and the logging (`app/logging.py`, request ids and per-stage timings) were agent-drafted. For ticket #53, the repro manifest (`config/manifest.toml`) and this README were agent-drafted. The human reviewed, tested, and owns every line.
 - The system design and architecture decisions (contracts, provider abstraction, eval discipline) are human-directed; the AI assistant advised and explained, the human decided.
 - AI also drafted documentation (this README, issue descriptions).
 
