@@ -29,6 +29,7 @@ class BuiltIndex:
     collection: chromadb.Collection
     rebuilt: bool
     dims: int
+    text_hash: str
 
 
 def load_chunks(path: Path) -> list[Chunk]:
@@ -121,7 +122,12 @@ async def build_index(
     current = _matching_collection(client, len(chunks), embedder.name, text_hash)
     if current is not None:
         meta = current.metadata or {}
-        return BuiltIndex(collection=current, rebuilt=False, dims=meta.get("dims", 0))
+        return BuiltIndex(
+            collection=current,
+            rebuilt=False,
+            dims=meta.get("dims", 0),
+            text_hash=meta.get("text_hash", text_hash),
+        )
 
     try:
         client.delete_collection(COLLECTION_NAME)
@@ -150,7 +156,12 @@ async def build_index(
             progress(done, total)
     assert collection is not None  # chunks is non-empty, so at least one batch ran
     meta = collection.metadata or {}
-    return BuiltIndex(collection=collection, rebuilt=True, dims=meta.get("dims", 0))
+    return BuiltIndex(
+        collection=collection,
+        rebuilt=True,
+        dims=meta.get("dims", 0),
+        text_hash=text_hash,
+    )
 
 
 def build_lexical_index(chunks: list[Chunk]) -> tuple[BM25Okapi, list[str], dict[str, Chunk]]:

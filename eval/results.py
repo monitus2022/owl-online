@@ -40,6 +40,7 @@ MANIFEST_FIELDS = [
     "candidates",
     "judged_sample",
     "gold_hash",
+    "index_text_hash",
     "rerank_min_score",
     "generator_temperature",
     "judge_temperature",
@@ -66,6 +67,7 @@ def manifest_row(
     embedder_model: str | None = None,
     embedder_dims: int | None = None,
     gold_hash: str | None = None,
+    index_text_hash: str | None = None,
     rerank_min_score: float | None = None,
     generator_temperature: float | None = None,
     judge_temperature: float | None = None,
@@ -111,6 +113,7 @@ def manifest_row(
         "candidates": str(actual_candidates),
         "judged_sample": str(judged_sample) if judged_sample is not None else "",
         "gold_hash": gold_hash or "",
+        "index_text_hash": index_text_hash or "",
         "rerank_min_score": (
             str(rerank_min_score) if rerank_min_score is not None else ""
         ),

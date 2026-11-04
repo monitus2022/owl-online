@@ -23,7 +23,7 @@ citations still used the original chunk.
 
 ## Comparison
 
-Baseline is run `20261104T154503Z`.
+Baseline is run `20261104T220147Z`.
 
 | Slice | Hit@5 base | Hit@5 context | Recall@5 base | Recall@5 context | MRR base | MRR context |
 |---|---|---|---|---|---|---|
@@ -43,8 +43,9 @@ Baseline is run `20261104T154503Z`.
 
 ## Reading
 
-- Contextual indexing is a net regression. Overall Hit@5 drops from 0.76 to
-  0.72 and simple from 0.74 to 0.68. Named is unchanged at 1.00.
+- Contextual indexing is negative in this sample. Overall Hit@5 drops from 0.76
+  to 0.72 (two items, at the edge of the overall noise band) and simple from
+  0.74 to 0.68. Named is unchanged at 1.00.
 - Only two simple items flipped from hit to miss (`q02`, `s01`). The missing
   9% of chunks do not explain the loss: `q18`, `q20` and `n08` are unchanged.
 - Sparse recall improves from 0.68 to 0.73, so the context does add lexical
@@ -52,8 +53,8 @@ Baseline is run `20261104T154503Z`.
   The 0.6B embedder is the likely limit: longer, denser text is harder for it.
 - Multi-part MRR improves from 0.40 to 0.45, but Hit@5 and recall do not. That is
   not enough to keep the change.
-- Generation improves slightly (F1 0.32 to 0.31 is flat; judge correct 12 to 13),
-  but it is not a retrieval win.
+- Generation is flat: F1 slips from 0.32 to 0.31 and judge correct rises from 12
+  to 13. It is not a retrieval win.
 
 ## Cost
 

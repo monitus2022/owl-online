@@ -42,8 +42,10 @@ def _shorten(text: str, max_chars: int) -> str:
     short = " ".join(_SENTENCE.split(text)[:2])
     if len(short) <= max_chars:
         return short
-    cut = short[:max_chars].rsplit(" ", 1)[0].rstrip(" ,;:")
-    return f"{cut}."
+    cut = short[:max_chars].rsplit(" ", 1)[0].rstrip(" ,;:.")
+    if not cut:
+        cut = short[: max_chars - 1]
+    return cut if cut.endswith((".", "!", "?")) else f"{cut}."
 
 
 def _prompt(book: str, chapter: int, title: str, prev: str, text: str, nxt: str) -> str:
@@ -58,6 +60,11 @@ def _prompt(book: str, chapter: int, title: str, prev: str, text: str, nxt: str)
 
 
 async def build(args: argparse.Namespace) -> int:
+    default_out = REPO / "data" / "chunks_context.jsonl"
+    if args.limit and args.out == default_out:
+        raise SystemExit(
+            "--limit needs a distinct --out; refusing to overwrite the full context file"
+        )
     chunks = load_chunks(args.chunks)
     if args.limit:
         chunks = chunks[: args.limit]
@@ -67,7 +74,7 @@ async def build(args: argparse.Namespace) -> int:
         by_chapter.setdefault(key, []).append(chunk)
 
     llm = CachedLlm(
-        make_llm("openrouter", temperature=0.0),
+        None if args.cache_only else make_llm("openrouter", temperature=0.0),
         DEFAULT_MODEL,
         args.cache,
         variant="context",
@@ -95,9 +102,8 @@ async def build(args: argparse.Namespace) -> int:
                 context = llm.get_cached(SYSTEM, prompt)
             else:
                 context = await llm.generate(SYSTEM, prompt)
-        if context is None:
+        if context is None or not context.strip():
             missing += 1
-            chunk.context = ""
         else:
             chunk.context = _shorten(context.strip(), args.max_chars)
         done += 1
@@ -106,13 +112,18 @@ async def build(args: argparse.Namespace) -> int:
 
     await asyncio.gather(*(contextualize(chunk) for chunk in chunks))
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(
+    tmp = args.out.with_suffix(f"{args.out.suffix}.tmp")
+    tmp.write_text(
         "\n".join(chunk.model_dump_json() for chunk in chunks) + "\n",
         encoding="utf-8",
     )
+    tmp.replace(args.out)
     print(f"wrote {args.out} ({len(chunks)} chunks)")
     if missing:
         print(f"text-only fallback: {missing} chunks")
+        if not args.allow_missing:
+            print("rerun with --allow-missing to accept partial coverage", file=sys.stderr)
+            return 1
     return 0
 
 
@@ -132,6 +143,11 @@ def main() -> int:
         "--cache-only",
         action="store_true",
         help="use cached contexts and leave missing chunks text-only",
+    )
+    parser.add_argument(
+        "--allow-missing",
+        action="store_true",
+        help="accept text-only fallback for uncached chunks",
     )
     return asyncio.run(build(parser.parse_args()))
 

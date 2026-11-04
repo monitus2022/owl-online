@@ -56,6 +56,17 @@ def main() -> int:
         parser.error("--check and --write-baseline are mutually exclusive")
     if args.latest is not None and not args.check:
         parser.error("--latest is only used with --check")
+    if args.embedder_model and args.index == REPO / "data" / "index" / "chroma":
+        parser.error("--embedder-model requires a separate --index")
+    pinned_setup = (
+        args.chunks == REPO / "data" / "chunks.jsonl"
+        and args.index == REPO / "data" / "index" / "chroma"
+        and args.embedder_model is None
+        and args.k == 5
+        and args.sample == 15
+    )
+    if args.write_baseline and not pinned_setup:
+        parser.error("--write-baseline requires the pinned chunks, index, embedder, k and sample")
 
     try:
         thresholds = load_thresholds(args.thresholds)

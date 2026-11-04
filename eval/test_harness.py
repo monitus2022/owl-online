@@ -118,6 +118,7 @@ async def test_cached_llm_variant_separates_cache_keys(tmp_path):
     assert len(list(tmp_path.glob("*.txt"))) == 2
     assert zero.get_cached("system", "prompt") == "an answer [c1]"
     assert zero.get_cached("system", "other") is None
+    assert zero.get_cached("system", "prompt", context="ctx") is None
 
 
 async def test_retrieval_metrics_hit_recall_and_mrr():

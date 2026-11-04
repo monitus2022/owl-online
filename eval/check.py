@@ -267,6 +267,13 @@ def check(
             "latest run is the baseline copy "
             f"({latest_rows[0].get('run_id')}); gate a fresh run"
         )
+    if baseline_rows[0].get("config") != latest_rows[0].get("config"):
+        raise CheckError(
+            "baseline and latest run used different configurations "
+            f"({baseline_rows[0].get('config')!r} -> "
+            f"{latest_rows[0].get('config')!r}); "
+            "gate the pinned configuration or re-pin deliberately"
+        )
     mismatch = manifest_mismatch(baseline_rows, latest_rows)
     if mismatch:
         details = ", ".join(

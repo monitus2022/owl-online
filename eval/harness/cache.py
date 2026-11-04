@@ -15,7 +15,7 @@ class CachedLlm:
 
     def __init__(
         self,
-        inner: Llm,
+        inner: Llm | None,
         name: str,
         cache_dir: Path,
         *,
@@ -32,6 +32,8 @@ class CachedLlm:
         cached = self.get_cached(system, prompt, context=context)
         if cached is not None:
             return cached
+        if self._inner is None:
+            raise RuntimeError("cache-only CachedLlm cannot generate")
         output = await self._inner.generate(system, prompt, context=context)
         path.write_text(output, encoding="utf-8")
         return output

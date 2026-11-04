@@ -90,7 +90,14 @@ async def run(
     generation_by_slice = generation_metrics_by_slice(verdicts, gold)
 
     run_id = timestamp_run_id()
-    config = "pinned" if reranker is not None else "no-rerank"
+    if reranker is None:
+        config = "no-rerank"
+    elif embedder_model is not None:
+        config = "custom-embedder"
+    elif chunks_path.name != "chunks.jsonl" or index_dir.name != "chroma":
+        config = "context"
+    else:
+        config = "pinned"
     manifest = load_manifest()
     values = manifest_row(
         manifest,
@@ -111,6 +118,7 @@ async def run(
         ),
         embedder_dims=setup.dims,
         gold_hash=gold_hash,
+        index_text_hash=setup.text_hash,
         rerank_min_score=settings.rerank_min_score,
         generator_temperature=temperature,
         judge_temperature=temperature,
