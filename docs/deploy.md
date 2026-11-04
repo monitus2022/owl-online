@@ -113,6 +113,17 @@ The instance pulls the image with its own role
 no keys live on the host. The container publishes host port 80 and reads its
 runtime secrets from the env file in the next section.
 
+### V1 host
+
+| Field | Value |
+|---|---|
+| Instance | `i-0bd80b876b2c1ab56` (t3.micro, Amazon Linux 2023) |
+| Region | `ap-northeast-3` |
+| Elastic IP | `13.208.134.172` |
+| Instance role | `monitus-ec2-ecr-role` (`AmazonSSMManagedInstanceCore`, `AmazonEC2ContainerRegistryReadOnly`, `owl-online-bedrock`) |
+| Bedrock policy | `owl-online-bedrock`: `bedrock:Rerank` on `*`, `bedrock:InvokeModel` on the Titan and rerank model ARNs in `ap-northeast-1` |
+| Data volume | `/data` on the instance root volume |
+
 ## One-time host setup
 
 The pipeline ships only the image. Do these once on the instance:
