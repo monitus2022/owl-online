@@ -88,10 +88,10 @@ jobs:
           aws ecr get-login-password --region __REGION__ \
             | docker login --username AWS --password-stdin __REGISTRY__
           # The root volume is small and /data shares it. Pull first: if it fits
-          # (the image is ~215 MB now), the old version kept serving the whole
-          # time. Only on failure evict the running container and unused images,
-          # then retry (that retry is the only window where a failure leaves the
-          # service down).
+          # (~215 MB to download, ~590 MB on disk), the old version kept serving
+          # the whole time. Only on failure evict the running container and unused
+          # images, then retry (that retry is the only window where a failure
+          # leaves the service down).
           if ! docker pull __IMAGE__; then
             docker rm -f __NAME__ >/dev/null 2>&1 || true
             docker image prune -af >/dev/null
@@ -106,7 +106,8 @@ jobs:
           for i in $(seq 1 30); do
             if docker exec __NAME__ python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=2).status==200 else 1)" 2>/dev/null; then
               echo "healthy after $i tries"
-              docker image prune -f >/dev/null
+              # Drop the previous image now that the new container is up.
+              docker image prune -af >/dev/null
               exit 0
             fi
             sleep 2

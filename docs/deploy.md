@@ -50,8 +50,8 @@ Windows; on Linux use the host gateway address).
 The image is runtime-only: `uv sync --no-default-groups` installs `[project]`
 dependencies, not the `ingest` (PDF parsing) or `agent` (V2) groups, and
 chromadb's unused `kubernetes` and `onnxruntime` are excluded in
-`pyproject.toml`. That keeps the image about 215 MB, which fits the host's 8 GB
-volume comfortably.
+`pyproject.toml`. That keeps the image about 215 MB in the registry (about
+590 MB on disk), which fits the host's 8 GB volume comfortably.
 
 To keep Ollama next to the API instead, run both with Compose:
 
@@ -123,12 +123,13 @@ TLS on 80/443 and proxies to it, and reads its runtime secrets from the env file
 in the next section.
 
 The root volume is 8 GB and `/data` (the corpus plus the index) shares it. The
-image is now about 215 MB, so a pull fits comfortably next to the running one.
-The rollout still pulls first, so the old version keeps serving while the pull
-fits; only on failure does it stop the container, prune unused images, and
-retry. That retry is the one window where a failed deploy leaves the API down
-until the next successful rollout. A larger or separate volume for `/data`
-remains the durable fix.
+image is now about 215 MB to download (about 590 MB on disk), so a pull fits
+comfortably next to the running one, and the rollout prunes the previous image
+after a successful start. It still pulls first, so the old version keeps serving
+while the pull fits; only on failure does it stop the container, prune unused
+images, and retry. That retry is the one window where a failed deploy leaves the
+API down until the next successful rollout. A larger or separate volume for
+`/data` remains the durable fix.
 
 ### V1 host
 
