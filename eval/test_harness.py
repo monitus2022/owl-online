@@ -1,4 +1,7 @@
-"""Mini-eval harness tests: metric math and judge parsing, no network."""
+"""Mini-eval harness tests: metric math and judge parsing, no network.
+
+Lives in eval/ so the documented gate `pytest eval/` collects it.
+"""
 
 from app.schemas import Chunk, ChunkMetadata
 from eval.harness import (
@@ -25,8 +28,10 @@ class _Retriever:
 
     def __init__(self, mapping: dict[str, list[str]]) -> None:
         self._mapping = mapping
+        self.top_k_seen: list[int] = []
 
     async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
+        self.top_k_seen.append(top_k)
         return [_chunk(cid) for cid in self._mapping.get(query, [])[:top_k]]
 
 
@@ -55,21 +60,36 @@ async def test_retrieval_metrics_miss_is_zero():
     assert metrics.mrr == 0.0
 
 
-async def test_abstention_metrics_counts_refusals():
-    items = [GoldItem("u1", "z", False, [])]
-    metrics = await abstention_metrics(_Retriever({}), _Llm(), items)
+async def test_abstention_metrics_counts_refusals_and_forwards_top_k():
+    retriever = _Retriever({})
+    metrics = await abstention_metrics(
+        retriever, _Llm(), [GoldItem("u1", "z", False, [])], top_k=3
+    )
     assert metrics.n == 1
     assert metrics.refused == 1
     assert metrics.rate == 1.0
+    assert retriever.top_k_seen == [3]
 
 
-def test_parse_verdict_tolerates_surrounding_prose():
+def test_parse_verdict_tolerates_prose():
     assert parse_verdict('Sure: {"correctness": "partial", "grounded": true} done') == (
         "partial",
         True,
     )
     assert parse_verdict("no json here") == ("wrong", False)
     assert parse_verdict('{"correctness": "amazing", "grounded": 1}') == ("wrong", True)
+
+
+def test_parse_verdict_normalizes_string_booleans():
+    assert parse_verdict('{"correctness": "correct", "grounded": "false"}') == (
+        "correct",
+        False,
+    )
+
+
+def test_parse_verdict_uses_the_first_object():
+    raw = '{"correctness": "wrong", "grounded": false} {"correctness": "correct"}'
+    assert parse_verdict(raw) == ("wrong", False)
 
 
 def test_load_gold_reads_records(tmp_path):

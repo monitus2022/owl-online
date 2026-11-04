@@ -49,16 +49,28 @@ Configuration:
 | Judge | `deepseek/deepseek-v4.1-flash-1017` |
 | Retrieval | hybrid (dense + BM25, RRF), `k = 5` |
 
+## Judge
+
+Pinned to `deepseek/deepseek-v4.1-flash-1017`, probed live before use
+(`uv run python scripts/probe_openrouter.py --model deepseek/deepseek-v4.1-flash-1017`,
+generate and stream PASS) and open-weight (MIT). A different family from the Qwen
+generator, as AGENTS.md requires. The same model family drafted this harness,
+which is a soft self-evaluation: a future run should repeat it with a judge
+independent of the authoring agent.
+
 ## Notes and limitations
 
-- The gold set is small and hand-built. Several questions have more than one
-  valid answer chunk; those are listed, so `Hit@5` is a fair but not generous
-  estimate.
-- The judge is a different family from the generator, as AGENTS.md requires. It
-  is the same model family that drafted this harness, which is a soft
-  self-evaluation: a future run should repeat this with a judge independent of
-  the authoring agent.
-- Abstention here leans on the uncited-answer path as much as the retrieval-score
-  floor; the retrieval floor alone is a weak signal and is V2 work (#23).
+- Gold ids were each checked against the corpus to confirm the chunk answers the
+  question. The set is small and hand-built; questions with more than one valid
+  answer chunk list them all, so `Hit@5` is fair rather than generous.
+- Judge correctness is graded against the retrieved excerpts, not a gold answer,
+  so it partly measures retrieval and cannot catch an answer that matches wrong
+  excerpts. Grounded is close to tautological: `ask()` already abstains when no
+  retrieved id is cited.
+- Of the 5 unanswerable items, 4 abstained at the retrieval-score floor and 1 via
+  the uncited-answer path. The floor alone is a weak signal and is V2 work (#23).
 - Retrieval is the weak stage (Hit@5 0.60). Rerank (#6) and a stronger embedder
   are the intended levers.
+- The eval uses OpenRouter for the generator and judge (hosted models required);
+  the embedder comes from `OWL_EMBEDDER_PROVIDER`. `CachedLlm` caches `generate()`
+  only; `stream` is passed through.

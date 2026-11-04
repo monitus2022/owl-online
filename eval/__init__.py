@@ -1,4 +1,4 @@
-"""Mini-eval harness, gold set, and thresholds. Full CI gate is V2 (#9-#12)."""
+"""Mini-eval harness and gold set. The full CI gate is V2 (#9-#12)."""
 
 from eval.harness import (
     JUDGE_MODEL,

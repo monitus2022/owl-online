@@ -101,13 +101,13 @@ class AbstentionMetrics:
 
 
 async def abstention_metrics(
-    retriever: Retriever, llm: Llm, items: list[GoldItem]
+    retriever: Retriever, llm: Llm, items: list[GoldItem], top_k: int = DEFAULT_TOP_K
 ) -> AbstentionMetrics:
     """Run the unanswerable items through ask() and count refusals."""
     unanswerable = [item for item in items if not item.answerable]
     refused = 0
     for item in unanswerable:
-        result = await ask(item.question, retriever=retriever, llm=llm)
+        result = await ask(item.question, retriever=retriever, llm=llm, top_k=top_k)
         if result.abstained:
             refused += 1
     return AbstentionMetrics(len(unanswerable), refused)
@@ -123,19 +123,27 @@ class JudgeVerdict:
     abstained: bool
 
 
+def _as_bool(value: object) -> bool:
+    """Accept JSON booleans and the string forms a judge might emit."""
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"true", "yes", "1"}
+
+
 def parse_verdict(raw: str) -> tuple[str, bool]:
     """Pull correctness and grounded from a judge reply; tolerate extra prose."""
-    match = re.search(r"\{.*\}", raw, re.DOTALL)
-    if match:
-        try:
-            data = json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return "wrong", False
-        correctness = str(data.get("correctness", "wrong")).lower()
-        if correctness not in {"correct", "partial", "wrong"}:
-            correctness = "wrong"
-        return correctness, bool(data.get("grounded", False))
-    return "wrong", False
+    # First flat JSON object only: a greedy match could span several objects.
+    match = re.search(r"\{[^{}]*\}", raw, re.DOTALL)
+    if not match:
+        return "wrong", False
+    try:
+        data = json.loads(match.group(0))
+    except json.JSONDecodeError:
+        return "wrong", False
+    correctness = str(data.get("correctness", "wrong")).lower()
+    if correctness not in {"correct", "partial", "wrong"}:
+        correctness = "wrong"
+    return correctness, _as_bool(data.get("grounded", False))
 
 
 async def judge_sample(
@@ -144,13 +152,14 @@ async def judge_sample(
     judge: Llm,
     items: list[GoldItem],
     sample: int = 10,
+    top_k: int = DEFAULT_TOP_K,
 ) -> list[JudgeVerdict]:
     """Generate answers for the first `sample` answerable items and judge them."""
     answerable = [item for item in items if item.answerable][:sample]
     verdicts: list[JudgeVerdict] = []
     for item in answerable:
-        chunks = await retriever.retrieve(item.question, DEFAULT_TOP_K)
-        result = await ask(item.question, retriever=retriever, llm=llm)
+        chunks = await retriever.retrieve(item.question, top_k)
+        result = await ask(item.question, retriever=retriever, llm=llm, top_k=top_k)
         if result.abstained:
             verdicts.append(JudgeVerdict(item.id, "abstained", False, True))
             continue
@@ -188,4 +197,5 @@ class CachedLlm:
     def stream(
         self, system: str, prompt: str, *, context: str | None = None
     ) -> AsyncIterator[str]:
+        # Not cached: the eval only calls generate(); stream is passed through.
         return self._inner.stream(system, prompt, context=context)

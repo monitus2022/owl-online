@@ -16,6 +16,7 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+from app.config import settings  # noqa: E402
 from app.pipeline.retrieve import compose_retriever  # noqa: E402
 from app.providers.factory import make_embedder, make_llm  # noqa: E402
 from app.providers.openrouter import DEFAULT_MODEL  # noqa: E402
@@ -30,14 +31,19 @@ from eval.harness import (  # noqa: E402
 
 
 async def _run(args: argparse.Namespace) -> int:
-    setup = await compose_retriever(args.chunks, args.index, make_embedder("local"))
+    setup = await compose_retriever(
+        args.chunks, args.index, make_embedder(settings.embedder_provider)
+    )
+    # The eval needs real hosted models; the judge is pinned to OpenRouter.
     generator = CachedLlm(make_llm("openrouter"), DEFAULT_MODEL, args.cache)
     judge = CachedLlm(make_llm("openrouter", model=JUDGE_MODEL), JUDGE_MODEL, args.cache)
     gold = load_gold(args.gold)
 
     retrieval = await retrieval_metrics(setup.retriever, gold, args.k)
-    abstention = await abstention_metrics(setup.retriever, generator, gold)
-    verdicts = await judge_sample(setup.retriever, generator, judge, gold, args.sample)
+    abstention = await abstention_metrics(setup.retriever, generator, gold, args.k)
+    verdicts = await judge_sample(
+        setup.retriever, generator, judge, gold, args.sample, args.k
+    )
 
     correct = sum(v.correctness == "correct" for v in verdicts)
     partial = sum(v.correctness == "partial" for v in verdicts)
