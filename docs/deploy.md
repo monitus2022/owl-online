@@ -116,6 +116,11 @@ no keys live on the host. The container binds `127.0.0.1:8000`; nginx terminates
 TLS on 80/443 and proxies to it, and reads its runtime secrets from the env file
 in the next section.
 
+The rollout removes the old container and prunes the previous image before
+pulling, because the root volume is 8 GB and the image is about 1.5 GB: the new
+image does not fit next to the old one. A deploy therefore briefly restarts the
+container.
+
 ### V1 host
 
 | Field | Value |

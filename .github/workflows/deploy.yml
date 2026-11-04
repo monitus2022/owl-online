@@ -87,8 +87,11 @@ jobs:
           set -euo pipefail
           aws ecr get-login-password --region __REGION__ \
             | docker login --username AWS --password-stdin __REGISTRY__
-          docker pull __IMAGE__
+          # The root volume is small and the image is ~1.5 GB, so the new pull
+          # cannot fit next to the old image. Free the previous one first.
           docker rm -f __NAME__ >/dev/null 2>&1 || true
+          docker image prune -af >/dev/null 2>&1 || true
+          docker pull __IMAGE__
           docker run -d --name __NAME__ --restart unless-stopped \
             -p __HOST_PORT__:8000 \
             --env-file __ENV_FILE__ \
