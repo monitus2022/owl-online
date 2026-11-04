@@ -1,5 +1,6 @@
 """Shared test fixtures: guards for tests that need real external services."""
 
+import boto3
 import httpx
 import pytest
 
@@ -22,3 +23,14 @@ def ollama_running() -> bool:
 def openrouter_live() -> bool:
     """True only when live provider calls are opted in and a key is present."""
     return settings.live_tests and bool(settings.openrouter_api_key)
+
+
+@pytest.fixture(scope="session")
+def bedrock_live() -> bool:
+    """True only when live Bedrock calls are opted in and credentials exist."""
+    if not settings.live_tests:
+        return False
+    try:
+        return boto3.Session().get_credentials() is not None
+    except Exception:
+        return False

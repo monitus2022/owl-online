@@ -3,6 +3,7 @@
 from fastapi.testclient import TestClient
 
 from app.api.runtime import Runtime
+from app.logging import get_request_id
 from app.main import create_app
 from app.providers.errors import ProviderError
 from app.schemas import Chunk, ChunkMetadata
@@ -98,6 +99,28 @@ def test_ask_response_matches_the_typed_schema():
     with _client() as client:
         body = client.post("/ask", json={"question": "Who?"}).json()
     assert set(body) == {"answer", "citations", "abstained"}
+
+
+def test_response_carries_a_request_id():
+    with _client() as client:
+        response = client.post("/ask", json={"question": "Who?"})
+    assert response.headers.get("x-request-id")
+
+
+def test_request_id_propagates_into_the_handler():
+    """The ContextVar set in the middleware is visible to the endpoint."""
+    seen: dict[str, str] = {}
+
+    class _RidRetriever:
+        async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
+            seen["rid"] = get_request_id()
+            return []
+
+    app = create_app(runtime=Runtime(retriever=_RidRetriever(), llm=_Llm()))
+    with TestClient(app) as client:
+        response = client.post("/ask", json={"question": "q"})
+    assert seen["rid"] == response.headers["x-request-id"]
+    assert seen["rid"] != "-"
 
 
 def test_cors_allows_the_pages_origin():

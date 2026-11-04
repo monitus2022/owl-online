@@ -28,18 +28,18 @@ cutoff and the judged sample size.
 
 ## Results
 
-First measured run, 2026-11-04.
+Measured 2026-11-04, with rerank on (default) and off.
 
-| Metric | Value |
-|---|---|
-| Hit@5 | 0.60 |
-| Recall@5 | 0.42 |
-| MRR | 0.45 |
-| Abstention on unanswerable | 1.00 (5/5) |
-| Judge correct | 7 / 10 |
-| Judge partial | 1 / 10 |
-| Judge wrong | 2 / 10 |
-| Grounded | 8 / 10 |
+| Metric | Rerank on | Rerank off |
+|---|---|---|
+| Hit@5 | 0.70 | 0.60 |
+| Recall@5 | 0.53 | 0.42 |
+| MRR | 0.45 | 0.45 |
+| Abstention on unanswerable | 1.00 (5/5) | 1.00 (5/5) |
+| Judge correct | 9 / 10 | 7 / 10 |
+| Judge partial | 0 / 10 | 1 / 10 |
+| Judge wrong | 0 / 10 | 2 / 10 |
+| Grounded | 9 / 10 | 8 / 10 |
 
 Configuration:
 
@@ -47,6 +47,7 @@ Configuration:
 |---|---|
 | Generator | `qwen/qwen3-30b-a3b-instruct-2507` |
 | Judge | `deepseek/deepseek-v4.1-flash-1017` |
+| Reranker | `amazon.rerank-v1:0` (Bedrock), pool 50 |
 | Retrieval | hybrid (dense + BM25, RRF), `k = 5` |
 
 ## Judge
@@ -74,3 +75,9 @@ independent of the authoring agent.
 - The eval uses OpenRouter for the generator and judge (hosted models required);
   the embedder comes from `OWL_EMBEDDER_PROVIDER`. `CachedLlm` caches `generate()`
   only; `stream` is passed through.
+- Rerank (V1, #6) is wired on by default (`amazon.rerank-v1:0`, pool 50); set
+  `OWL_RERANK_PROVIDER=none` for the baseline column.
+- Rerank ceiling: the expected chunk is in the top-50 pool for 0.75 of answerable
+  items, so a perfect reranker can reach Hit@5 = 0.75 here. With rerank we measure
+  0.70, up from 0.60 without it. Closing the rest of the gap needs a stronger
+  embedder, not rerank alone.

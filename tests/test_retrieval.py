@@ -1,6 +1,7 @@
 """Hybrid retrieval tests: a real local index on a tiny fixture + fusion math."""
 
 import asyncio
+import time
 
 import pytest
 
@@ -153,3 +154,125 @@ async def test_rrf_prefers_multi_leg_hits():
     assert [c.id for c in hits] == ["b1-c02-0000", "b1-c01-0000", "b1-c03-0000"]
     expected = 1.0 / 61 + 1.0 / 62  # dense rank 2 + sparse rank 1, rrf_k=60
     assert abs(hits[0].score - expected) < 1e-9
+
+
+class _StubReranker:
+    """Records the pool it was handed and reverses it, stamping a score."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, list[str], int]] = []
+
+    async def rerank(self, query, chunks, top_k):
+        self.calls.append((query, [c.id for c in chunks], top_k))
+        picked = list(reversed(chunks))[:top_k]
+        return [c.model_copy(update={"score": 1.0}) for c in picked]
+
+
+async def test_reranker_reorders_the_pool_and_replaces_the_floor():
+    """With a reranker attached, retrieve reranks the pool and the floor switches."""
+    chunks_by_id = {c.id: c for c in _CHUNKS}
+    reranker = _StubReranker()
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000", "b1-c02-0000", "b1-c03-0000"]),
+        bm25=_StubBM25([5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id=chunks_by_id,
+        reranker=reranker,
+        pool=3,
+        candidates=3,
+    )
+    hits = await retriever.retrieve("anything", top_k=2)
+    assert len(reranker.calls) == 1
+    assert reranker.calls[0][2] == 2  # top_k passed through to the reranker
+    assert [c.id for c in hits] == ["b1-c03-0000", "b1-c02-0000"]
+    assert retriever.min_score == 0.0  # rerank relevance floor, not the RRF floor
+
+
+async def test_reranker_respects_a_configured_relevance_floor():
+    chunks_by_id = {c.id: c for c in _CHUNKS}
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000"]),
+        bm25=_StubBM25([5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id=chunks_by_id,
+        reranker=_StubReranker(),
+        pool=3,
+        candidates=3,
+        rerank_min_score=0.3,
+    )
+    assert retriever.min_score == 0.3
+
+
+async def test_reranker_abstains_when_the_top_hit_is_one_leg():
+    """A one-leg top hit is below the two-leg floor, so nothing reaches the reranker."""
+    chunks_by_id = {c.id: c for c in _CHUNKS}
+    reranker = _StubReranker()
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000"]),
+        bm25=_StubBM25([0.0] * len(_CHUNKS)),  # sparse finds nothing -> one-leg only
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id=chunks_by_id,
+        reranker=reranker,
+        pool=3,
+        candidates=3,
+    )
+    assert await retriever.retrieve("anything", top_k=2) == []
+    assert reranker.calls == []
+
+
+async def test_pool_of_fifty_reaches_the_reranker():
+    many = [_chunk(i, f"T{i}", f"text {i}") for i in range(60)]
+    reranker = _StubReranker()
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection([c.id for c in many]),
+        bm25=_StubBM25([1.0] * 60),
+        chunk_ids=[c.id for c in many],
+        chunks_by_id={c.id: c for c in many},
+        reranker=reranker,
+        pool=50,
+        candidates=50,
+    )
+    await retriever.retrieve("q", top_k=5)
+    assert len(reranker.calls[0][1]) == 50
+
+
+async def test_retrieve_does_not_block_the_event_loop():
+    """The sync Chroma query runs in a thread; the loop keeps ticking meanwhile."""
+    ticks = 0
+
+    class _SlowCollection:
+        def count(self) -> int:
+            return 1
+
+        def query(self, *, query_embeddings, n_results):
+            time.sleep(0.2)  # a blocking sqlite call that must not freeze the loop
+            return {"ids": [["b1-c01-0000"]]}
+
+    class _FlatBM25:
+        def get_scores(self, tokens):
+            return [1.0] * len(_CHUNKS)
+
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_SlowCollection(),
+        bm25=_FlatBM25(),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+    )
+
+    async def ticker() -> None:
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.01)
+            ticks += 1
+
+    task = asyncio.create_task(ticker())
+    try:
+        await retriever.retrieve("q", top_k=1)
+    finally:
+        task.cancel()
+    assert ticks >= 5  # the loop ran while the 0.2s blocking query was in a thread

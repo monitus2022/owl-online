@@ -1,0 +1,27 @@
+# O.W.L. Online API.
+#
+# The corpus and the vector index are NOT baked in: the source text is
+# copyrighted, so they are provided at runtime via a mounted volume (see
+# docs/deploy.md). Secrets come from the environment only, never the image.
+
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Dependencies first, for layer caching. The project is not installed
+# (tool.uv.package = false); app/ is imported from the working directory.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
+
+COPY app ./app
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    OWL_CHUNKS_PATH=/data/chunks.jsonl \
+    OWL_INDEX_DIR=/data/index/chroma
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

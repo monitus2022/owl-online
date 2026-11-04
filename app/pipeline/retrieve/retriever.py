@@ -4,13 +4,18 @@ Implements the Retriever contract. top_k is a call parameter; rrf_k and the
 candidate pool size are manifest values in D7 (#53) with defaults here.
 """
 
+import asyncio
+import logging
+import time
 from typing import Any, Protocol
 
 from rank_bm25 import BM25Okapi
 
 from app.pipeline.index import tokenize
-from app.providers.contracts import Embedder
+from app.providers.contracts import Embedder, Reranker
 from app.schemas import Chunk
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_RRF_K = 60
 QUERY_CANDIDATES = 20
@@ -36,6 +41,9 @@ class HybridRetriever:
         chunks_by_id: dict[str, Chunk],
         rrf_k: int = DEFAULT_RRF_K,
         candidates: int = QUERY_CANDIDATES,
+        reranker: Reranker | None = None,
+        pool: int | None = None,
+        rerank_min_score: float = 0.0,
     ) -> None:
         self._embedder = embedder
         self._collection = collection
@@ -44,11 +52,21 @@ class HybridRetriever:
         self._chunks_by_id = chunks_by_id
         self._rrf_k = rrf_k
         self._candidates = candidates
+        self._reranker = reranker
+        self._pool = pool if pool is not None else candidates
+        self._rerank_min_score = rerank_min_score
+
+    @property
+    def _two_leg_floor(self) -> float:
+        """Fused score a chunk must reach to be found by both retrieval legs."""
+        return 2.0 / (self._rrf_k + self._candidates)
 
     @property
     def min_score(self) -> float:
-        """Fused score a chunk must reach to be found by both retrieval legs."""
-        return 2.0 / (self._rrf_k + self._candidates)
+        """Abstention floor: a rerank relevance floor, or the RRF two-leg score."""
+        if self._reranker is not None:
+            return self._rerank_min_score
+        return self._two_leg_floor
 
     async def aclose(self) -> None:
         """Release the embedder's HTTP pool when the retriever is torn down."""
@@ -57,18 +75,38 @@ class HybridRetriever:
             await close()
 
     async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
-        """top_k chunks whose ids both legs can reach, ranked by fused score."""
-        dense_ids = await self._dense_run(query)
-        sparse_ids = self._sparse_run(query)
+        """top_k chunks: hybrid RRF, then reranked when a reranker is attached."""
+        # Both legs are synchronous under the hood; run them concurrently off the
+        # event loop so one request cannot stall the others.
+        dense_ids, sparse_ids = await asyncio.gather(
+            self._dense_run(query), self._sparse_run(query)
+        )
         fused = self._fuse(dense_ids, sparse_ids)
-        return [
+        ranked = [
             self._chunks_by_id[cid].model_copy(update={"score": score})
-            for cid, score in fused[:top_k]
+            for cid, score in fused
         ]
+        if self._reranker is None:
+            return ranked[:top_k]
+        # Secondary lexical gate: a top hit reached by one leg only means the
+        # corpus does not lexically cover the question, so abstain (return none)
+        # rather than hand the reranker noise. This keeps abstention working when
+        # a reranker is attached.
+        if not ranked or ranked[0].score < self._two_leg_floor:
+            return []
+        start = time.perf_counter()
+        reranked = await self._reranker.rerank(query, ranked[: self._pool], top_k)
+        logger.debug(
+            "rerank: pool=%d -> %d in %.0fms",
+            min(len(ranked), self._pool),
+            len(reranked),
+            (time.perf_counter() - start) * 1000,
+        )
+        return reranked
 
     async def _dense_run(self, query: str) -> list[str]:
         """Query the Chroma collection for the top candidates by embedding similarity."""
-        n_results = min(self._candidates, self._collection.count())
+        start = time.perf_counter()
         vectors = await self._embedder.embed([query])
         # Query-time dims guard: a wrong-model query against an existing index
         # must fail loudly rather than return neighbors in a foreign vector space.
@@ -77,11 +115,31 @@ class HybridRetriever:
             raise ValueError(
                 f"embedder returned {len(vectors[0])} dims; index was built with {recorded}"
             )
-        result = self._collection.query(query_embeddings=vectors, n_results=n_results)
-        return result["ids"][0]
+        # chromadb is synchronous; keep the sqlite query off the event loop.
+        result = await asyncio.to_thread(self._dense_query, vectors)
+        ids = result["ids"][0]
+        logger.debug(
+            "dense: %d candidates in %.0fms", len(ids), (time.perf_counter() - start) * 1000
+        )
+        return ids
 
-    def _sparse_run(self, query: str) -> list[str]:
+    def _dense_query(self, vectors: list[list[float]]) -> Any:
+        """The blocking part of the dense leg: count + query the collection."""
+        n_results = min(self._candidates, self._collection.count())
+        return self._collection.query(query_embeddings=vectors, n_results=n_results)
+
+    async def _sparse_run(self, query: str) -> list[str]:
         """Query the BM25 index for the top candidates by token overlap."""
+        # BM25 scoring over the whole corpus is CPU-bound; keep it off the loop.
+        start = time.perf_counter()
+        ids = await asyncio.to_thread(self._sparse_query, query)
+        logger.debug(
+            "sparse: %d candidates in %.0fms", len(ids), (time.perf_counter() - start) * 1000
+        )
+        return ids
+
+    def _sparse_query(self, query: str) -> list[str]:
+        """The blocking part of the sparse leg: score and rank every chunk."""
         scores = self._bm25.get_scores(tokenize(query))
         order = sorted(range(len(scores)), key=scores.__getitem__, reverse=True)
         return [self._chunk_ids[i] for i in order[: self._candidates] if scores[i] > 0]

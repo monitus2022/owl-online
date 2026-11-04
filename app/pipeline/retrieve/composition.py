@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.pipeline.index import build_index, build_lexical_index, load_chunks
-from app.pipeline.retrieve.retriever import HybridRetriever
-from app.providers.contracts import Embedder
+from app.pipeline.retrieve.retriever import QUERY_CANDIDATES, HybridRetriever
+from app.providers.contracts import Embedder, Reranker
 from app.schemas import Chunk
 
 
@@ -30,9 +30,12 @@ async def compose_retriever(
     index_dir: Path,
     embedder: Embedder,
     *,
+    reranker: Reranker | None = None,
+    pool: int | None = None,
+    min_score: float = 0.0,
     progress: Callable[[int, int], None] | None = None,
 ) -> RetrievalSetup:
-    """Load chunks, (re)build the vector index, attach BM25, and wire the retriever."""
+    """Load chunks, (re)build the vector index, attach BM25 and rerank, wire the retriever."""
     chunks: list[Chunk] = load_chunks(chunks_path)
     built = await build_index(chunks, index_dir, embedder, progress=progress)
     bm25, ids, by_id = build_lexical_index(chunks)
@@ -42,6 +45,11 @@ async def compose_retriever(
         bm25=bm25,
         chunk_ids=ids,
         chunks_by_id=by_id,
+        reranker=reranker,
+        pool=pool,
+        rerank_min_score=min_score,
+        # Retrieve a wide pool for the reranker to reorder down to top_k.
+        candidates=pool if pool is not None else QUERY_CANDIDATES,
     )
     return RetrievalSetup(
         retriever=retriever,

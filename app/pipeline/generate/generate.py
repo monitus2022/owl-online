@@ -5,12 +5,16 @@ excerpts, and every citation must be a retrieved chunk id. No evidence, a weak
 top hit, or an uncited answer means abstain rather than guess.
 """
 
+import logging
 import re
+import time
 from dataclasses import dataclass, field
 
 from app.pipeline.retrieve.retriever import DEFAULT_RRF_K, QUERY_CANDIDATES
 from app.providers.contracts import Llm, Retriever
 from app.schemas import Chunk
+
+logger = logging.getLogger(__name__)
 
 ABSTAIN_MESSAGE = "I cannot answer that from the books."
 DEFAULT_TOP_K = 5
@@ -57,15 +61,39 @@ async def ask(
         if min_score is not None
         else getattr(retriever, "min_score", DEFAULT_MIN_SCORE)
     )
+    retrieve_start = time.perf_counter()
     chunks = await retriever.retrieve(question, top_k)
+    retrieve_ms = (time.perf_counter() - retrieve_start) * 1000
     if not chunks or chunks[0].score < floor:
+        logger.info(
+            "abstain (no evidence): hits=%d top=%s floor=%.4f retrieve=%.0fms",
+            len(chunks),
+            f"{chunks[0].score:.4f}" if chunks else "none",
+            floor,
+            retrieve_ms,
+        )
         return AskResult(ABSTAIN_MESSAGE, abstained=True)
+
+    generate_start = time.perf_counter()
     answer = await llm.generate(_SYSTEM, _prompt(question, chunks))
+    generate_ms = (time.perf_counter() - generate_start) * 1000
+
     allowed = {c.id for c in chunks}
     citations = [cid for cid in _cited_ids(answer) if cid in allowed]
     if not citations:
         # No excerpt cited: the answer is ungrounded, so do not return it.
+        logger.info("abstain (uncited): hits=%d generate=%.0fms", len(chunks), generate_ms)
         return AskResult(ABSTAIN_MESSAGE, abstained=True)
+
+    logger.info(
+        "answered: model=%s hits=%d citations=%d top=%.4f retrieve=%.0fms generate=%.0fms",
+        getattr(llm, "name", "?"),
+        len(chunks),
+        len(citations),
+        chunks[0].score,
+        retrieve_ms,
+        generate_ms,
+    )
     return AskResult(_drop_unknown_citations(answer, allowed), citations)
 
 

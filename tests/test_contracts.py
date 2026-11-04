@@ -69,10 +69,12 @@ async def test_llm_stream_yield_text_tokens():
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
-async def test_embedder_contract_swappable(provider, ollama_running):
+async def test_embedder_contract_swappable(provider, ollama_running, bedrock_live):
     """Factory-built embedder satisfies the Embedder contract for each provider."""
     if provider == "local" and not ollama_running:
         pytest.skip("Ollama daemon not running")
+    if provider == "bedrock" and not bedrock_live:
+        pytest.skip("live Bedrock embeddings disabled (set OWL_LIVE_TESTS=1 and AWS creds)")
     embedder = make_embedder(provider)
     vectors = await embedder.embed(["hello"])
     assert len(vectors) == 1
@@ -92,8 +94,10 @@ async def test_llm_contract_swappable(provider, openrouter_live):
 
 
 @pytest.mark.parametrize("provider", MODEL_PROVIDERS)
-async def test_reranker_contract_swappable(provider):
+async def test_reranker_contract_swappable(provider, bedrock_live):
     """Factory-built Reranker satisfies the Reranker contract for each provider."""
+    if provider == "bedrock" and not bedrock_live:
+        pytest.skip("live Bedrock rerank disabled (set OWL_LIVE_TESTS=1 and AWS creds)")
     chunks = [
         Chunk(
             id=str(i),
@@ -104,7 +108,8 @@ async def test_reranker_contract_swappable(provider):
         )
         for i in range(5)
     ]
-    reranker = make_reranker(provider, model="test")
+    # bedrock uses its pinned default model; openrouter has no hosted reranker.
+    reranker = make_reranker(provider, model=None if provider == "bedrock" else "test")
     ranked = await reranker.rerank("query", chunks, top_k=2)
     assert len(ranked) <= 2
     assert all(isinstance(c, Chunk) for c in ranked)

@@ -1,0 +1,22 @@
+# Never ship the corpus, secrets, or local state.
+data
+.env
+.env.*
+!.env.example
+
+# Dev-only trees (the API image needs app/ only).
+tests
+eval
+scripts
+docs
+notebooks
+
+# Caches and VCS
+.git
+.gitignore
+.venv
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache

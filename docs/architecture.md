@@ -12,9 +12,10 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | Layer | Path | Responsibility |
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
-| Pipeline | `app/pipeline/` | ingest, index, retrieve, generate |
-| Providers | `app/providers/` | model adapters behind contracts; the only place vendor SDKs are imported |
+| Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
+| Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
+| Logging | `app/logging.py` | one formatter, level from settings, a per-request id |
 | Domain | `app/schemas.py` | `Chunk` and its metadata |
 
 Pipeline stages, in order:
@@ -23,7 +24,7 @@ Pipeline stages, in order:
 |---|---|---|
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` |
-| Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` |
+| Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (hybrid + rerank) |
 | Generate | `app/pipeline/generate/` | `ask` |
 
 ## Contracts and adapters
@@ -64,9 +65,15 @@ classDiagram
     +name str
     +aclose()
   }
+  class BedrockEmbedder {
+    +name str
+  }
   class HybridRetriever {
     +min_score float
     +aclose()
+  }
+  class BedrockReranker {
+    +name str
   }
   class FakeLlm
   class FakeEmbedder
@@ -76,7 +83,9 @@ classDiagram
   Llm <|.. OpenRouterLlm
   Llm <|.. FakeLlm
   Embedder <|.. OllamaEmbedder
+  Embedder <|.. BedrockEmbedder
   Embedder <|.. FakeEmbedder
+  Reranker <|.. BedrockReranker
   Reranker <|.. FakeReranker
   Retriever <|.. HybridRetriever
   Retriever <|.. FakeRetriever
@@ -94,12 +103,16 @@ classDiagram
   factory ..> Retriever : builds
 ```
 
-Bedrock currently resolves to the fakes; the real adapter is V2 (#36).
+Bedrock hosts the reranker (`amazon.rerank-v1:0`) and, for cloud deploys where
+Ollama is unavailable, the embedder (`amazon.titan-embed-text-v2:0`). Ollama
+serves embeddings for local dev. The Bedrock Llm adapter is V2 (#36). When a
+reranker is attached, `HybridRetriever` retrieves a wide pool and reranks it down
+to `top_k`, and the abstention floor becomes the rerank relevance floor.
 
 ## Module dependencies
 
-Dependencies point inward. Vendor SDKs (`openai`, `httpx`, `chromadb`) are imported
-only inside `app/providers` and the index builder, never by the API or the agent.
+Dependencies point inward. Vendor SDKs (`openai`, `boto3`, `httpx`, `chromadb`) are
+imported only inside `app/providers` and the index builder, never by the API or the agent.
 
 ```mermaid
 flowchart TD
@@ -107,12 +120,13 @@ flowchart TD
   main --> pipeline[app/pipeline]
   main --> providers[app/providers]
   main --> config[app/config.py]
+  main --> log[app/logging.py]
   api --> pipeline
   api --> providers
   pipeline --> providers
   pipeline --> schemas[app/schemas.py]
   providers --> schemas
-  providers --> sdk[[openai, httpx, chromadb]]
+  providers --> sdk[[openai, boto3, httpx, chromadb]]
 ```
 
 ## Request flow: POST /ask
@@ -124,14 +138,19 @@ sequenceDiagram
   participant R as Runtime
   participant A as ask()
   participant RET as HybridRetriever
+  participant RR as Reranker
   participant LLM as OpenRouterLlm
 
   C->>API: POST /ask {question}
   API->>R: get_retriever / get_llm
   API->>A: ask(question, retriever, llm)
   A->>RET: retrieve(question, top_k)
-  RET-->>A: list[Chunk] with fused RRF scores
-  alt top score below min_score
+  alt reranker attached and the lexical gate passes
+    RET->>RR: rerank(pool, top_k)
+    RR-->>RET: top_k by relevance
+  end
+  RET-->>A: list[Chunk] (relevance or RRF scores, or empty)
+  alt empty or top score below min_score
     A-->>API: AskResult(abstain)
   else grounded
     A->>LLM: generate(system, prompt)
@@ -141,15 +160,21 @@ sequenceDiagram
   API-->>C: AskResponse {answer, citations, abstained}
 ```
 
-The `Runtime` (retriever + llm) is built once in the app lifespan, never per
-request. Provider failures surface as a normalized `ProviderError` and become a
-502 at the edge.
+The `Runtime` (the retriever with its optional reranker, plus the llm) is built
+once in the app lifespan, never per request. Provider failures surface as a
+normalized `ProviderError` and become a 502 at the edge.
+
+Logging is one formatter at `OWL_LOG_LEVEL`. Each request gets a short id
+(echoed as `X-Request-ID`), and `ask()` logs per-stage timings (retrieve,
+generate) so a slow request can be attributed to a stage without a profiler.
+The retriever and the providers add DEBUG lines (dense, sparse, rerank, embed,
+generate) for the per-call detail.
 
 ## Data shapes
 
 | Type | Module | Kind | Purpose |
 |---|---|---|---|
-| `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, fused score |
+| `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |

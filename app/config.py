@@ -6,7 +6,13 @@ Model slugs, chunk params, top_k and rrf_k belong to the repro manifest, not her
 from pathlib import Path
 from typing import Literal
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# pydantic-settings reads .env for OWL_ settings but does not populate the
+# process environment. boto3 reads AWS_* from the environment, so credentials in
+# .env would be invisible to it. Load .env here; existing env vars still win.
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -19,7 +25,11 @@ class Settings(BaseSettings):
     app_name: str = "O.W.L. Online"
     # OpenRouter is the V1 path; the Bedrock adapter lands in V2 (#36).
     provider: Literal["bedrock", "openrouter"] = "openrouter"
+    # Embedder: "local" (Ollama) for dev, "bedrock" (Titan) for cloud.
     embedder_provider: str = "local"
+    ollama_base_url: str = "http://localhost:11434"
+    bedrock_embed_model: str = "amazon.titan-embed-text-v2:0"
+    bedrock_embed_dims: int = 1024
     log_level: str = "INFO"
     live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 
@@ -31,6 +41,13 @@ class Settings(BaseSettings):
     index_dir: Path = Path("data/index/chroma")
     cors_origins: str = "http://localhost:5500,http://127.0.0.1:5500"
     cors_origin_regex: str = r"https://.*\.pages\.dev"
+
+    # Reranking (V1, #6). Set OWL_RERANK_PROVIDER=none to disable.
+    rerank_provider: str = "bedrock"
+    rerank_model: str = "amazon.rerank-v1:0"
+    rerank_pool: int = 50
+    rerank_min_score: float = 0.0  # relevance floor when reranking; calibrate via #51
+    rerank_cache_path: Path = Path("data/rerank_cache.jsonl")
 
     @property
     def cors_origin_list(self) -> list[str]:

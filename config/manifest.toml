@@ -1,0 +1,40 @@
+# Repro manifest: the pinned values a run depends on.
+#
+# Model slugs, chunk parameters, and retrieval constants the pipeline and the
+# eval use. eval/test_manifest.py asserts the code agrees, and the eval reads the
+# judge slug from here, so this file and the code cannot drift. Change a value
+# here only with a matching code change and a recorded result.
+
+[generator]
+model = "qwen/qwen3-30b-a3b-instruct-2507"
+
+[judge]
+model = "deepseek/deepseek-v4.1-flash-1017"
+# AGENTS.md: the judge must be a different family from the generator.
+
+[reranker]
+model = "amazon.rerank-v1:0"
+pool = 50
+
+[embedder.cloud]
+# Deployed (vendor-only) path: Amazon Titan on Bedrock.
+model = "amazon.titan-embed-text-v2:0"
+dimensions = 1024
+
+[embedder.local]
+# Dev path: Ollama. The index is built with whichever embedder is pinned; the
+# slug guard keeps the two apart.
+model = "qwen3-embedding:0.6b"
+dimensions = 1024
+
+[chunking]
+size = 500
+overlap = 75
+min_size = 200
+
+[retrieval]
+top_k = 5
+rrf_k = 60
+# Candidates per leg. With a reranker attached (the pinned run) this equals
+# [reranker].pool; the no-rerank default is 20.
+candidates = 50

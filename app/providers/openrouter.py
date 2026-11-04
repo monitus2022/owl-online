@@ -3,6 +3,8 @@
 Only this module imports the vendor SDK. Everything else holds the Llm contract.
 """
 
+import logging
+import time
 from collections.abc import AsyncIterator
 from typing import cast
 
@@ -17,6 +19,8 @@ from openai import (
 from openai.types.chat import ChatCompletionChunk, ChatCompletionMessageParam
 
 from app.providers.errors import ProviderError, ProviderRateLimited, ProviderTimeout
+
+logger = logging.getLogger(__name__)
 
 # TODO: move to config
 DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
@@ -51,12 +55,16 @@ class OpenRouterLlm:
         *,
         context: str | None = None,
     ) -> str:
+        start = time.perf_counter()
         try:
             response = await self._client.chat.completions.create(
                 model=self._model, messages=self._messages(system, prompt, context)
             )
         except OpenAIError as exc:
             raise _normalize(exc) from exc
+        logger.debug(
+            "generate %s in %.0fms", self._model, (time.perf_counter() - start) * 1000
+        )
         content = response.choices[0].message.content if response.choices else None
         return content or ""
 
