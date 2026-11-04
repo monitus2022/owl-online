@@ -13,7 +13,8 @@ Provisional until the code layout exists; update these as the project takes shap
 - Install: `uv sync` (installs the dev, ingest and agent groups)
 - Run API: `uvicorn app.main:app --reload`
 - Tests: `pytest`
-- Eval gate: `pytest eval/`
+- Eval harness tests: `pytest eval/`
+- Eval gate: `uv run python scripts/run_eval.py --check`
 
 Dependencies are split by environment. `[project] dependencies` is what the
 served API needs; `ingest` (PDF parsing) and `agent` (V2 LangGraph, SSE) are

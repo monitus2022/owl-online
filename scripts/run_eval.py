@@ -33,6 +33,9 @@ def main() -> int:
     parser.add_argument("--cache", type=Path, default=REPO / "eval" / ".cache")
     parser.add_argument("--results", type=Path, default=RESULTS_DIR)
     parser.add_argument("--baseline", type=Path, default=BASELINE_PATH)
+    parser.add_argument(
+        "--thresholds", type=Path, default=REPO / "eval" / "thresholds.toml"
+    )
     parser.add_argument("--k", type=int, default=5)
     parser.add_argument("--sample", type=int, default=15)
     parser.add_argument("--write-baseline", action="store_true")
@@ -43,12 +46,12 @@ def main() -> int:
 
     if args.check:
         try:
-            report = check(args.results, args.baseline)
+            report = check(args.results, args.baseline, args.thresholds)
         except CheckError as error:
             print(error, file=sys.stderr)
             return 1
         print(render_check(report))
-        return 0
+        return 0 if report.passed else 1
 
     run_report = asyncio.run(
         run(

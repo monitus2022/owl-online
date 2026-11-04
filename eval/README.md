@@ -15,11 +15,13 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/harness/judging.py` | judge prompts, reply parsers, sample selection |
 | `eval/harness/cache.py` | `CachedLlm` |
 | `eval/results.py` | result CSV, baseline copy and diff |
+| `eval/thresholds.toml` | gate bands per metric, with slice overrides |
 | `eval/test_harness.py` | harness tests, no network |
 | `eval/test_results.py` | result CSV tests, no network |
 | `eval/runner.py` | one run: compose, score, write the CSV |
 | `eval/report.py` | result rows and printed summary |
-| `eval/check.py` | baseline diff for `--check` |
+| `eval/check.py` | baseline diff and gate for `--check` |
+| `eval/test_check.py` | gate tests, no network |
 | `eval/test_report.py` | row and rendering tests, no network |
 | `scripts/run_eval.py` | CLI params and dispatch |
 
@@ -38,7 +40,7 @@ gold/questions.jsonl (60 items)
 eval/results/<timestamp>.csv   (one row per config, slice, metric)
         |
         +-- --write-baseline --> eval/results/baseline.csv
-        +-- --check ----------> per-metric deltas vs baseline
+        +-- --check ----------> deltas + gate pass/fail
         |
         v
 docs/runs/<date>-<ticket>-<slug>.md   (committed run record)
@@ -90,11 +92,19 @@ Diff the current run against the baseline:
 uv run python scripts/run_eval.py --check
 ```
 
-`--check` prints per-metric deltas and lists metrics that appear on only one
-side. It refuses to diff two runs whose recorded manifest values differ (models,
-chunking, retrieval settings or judged sample), because those deltas would not be
-comparable. It does not fail on a drop yet; thresholds and a required CI workflow
-are V2 D2 (#77).
+`--check` prints per-metric deltas, lists metrics that appear on only one side,
+and applies the gate in `eval/thresholds.toml`. It exits 0 with `gate: PASS` when
+every gated metric stays inside its band, and exits 1 with `gate: FAIL` when one
+drops further. It also refuses to diff two runs whose recorded manifest values
+differ (models, chunking, retrieval settings or judged sample), because those
+deltas would not be comparable. The CI workflow that runs this on pull requests
+is still open in #77.
+
+Bands are absolute. Overall metrics use `[bands]`; named slices use
+`[slice_bands]` because one gold item is 0.125 on the 8-item retrieval slices and
+0.20 on the 5-item generation slices. Count metrics (`retrieval_n`,
+`generation_n`, `abstention_n`) have a zero band, so a gold-set or sample change
+fails instead of hiding inside an average.
 
 Generation and judge outputs are cached under `eval/.cache/` by `(model, input)`,
 so reruns are cheap and deterministic. `--k` controls the retrieval cutoff and
