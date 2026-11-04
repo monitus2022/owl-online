@@ -191,6 +191,8 @@ def _load_cache(path: Path | None) -> dict[str, list[dict[str, Any]]]:
                 record = json.loads(line)
             except json.JSONDecodeError:
                 continue  # skip a truncated line rather than break all reranking
+            if not isinstance(record, dict) or "key" not in record or "ranking" not in record:
+                continue  # a well-formed line with the wrong shape must not raise
             cache[record["key"]] = record["ranking"]
     return cache
 

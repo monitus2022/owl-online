@@ -83,7 +83,9 @@ the same:
    static keys where the platform supports it.
 3. Attach the data volume at `/data` (or point `OWL_CHUNKS_PATH` /
    `OWL_INDEX_DIR` at the mounted files).
-4. Make an embedder reachable and set `OWL_OLLAMA_BASE_URL`.
+4. A query-time embedder. Use the vendor path, `OWL_EMBEDDER_PROVIDER=bedrock`
+   (Amazon Titan), so no Ollama daemon is needed; the index must be built with
+   the same embedder. See the two runtime constraints above.
 5. Health check: `GET /health`.
 
 For Fly.io, roughly: `fly launch --no-deploy`, add a volume mounted at `/data`,
@@ -142,6 +144,7 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_CHUNKS_PATH=/data/chunks.jsonl
    OWL_INDEX_DIR=/data/index/titan
    OWL_RERANK_PROVIDER=bedrock
+   OWL_RERANK_CACHE_PATH=/data/rerank_cache.jsonl
    OWL_AWS_REGION=ap-northeast-1
    OWL_CORS_ORIGINS=https://your-chat-page.pages.dev
    ```

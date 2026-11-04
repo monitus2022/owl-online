@@ -18,7 +18,8 @@ dependencies = [
     "boto3",
     "openai",
     "tenacity",
-    "pymupdf"
+    "pymupdf",
+    "python-dotenv"
 ]
 
 # Served as an application only. Never published, so uv does not build or

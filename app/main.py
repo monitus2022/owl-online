@@ -47,6 +47,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         allow_origin_regex=app_settings.cors_origin_regex,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
+        # Let a cross-origin chat page read the request id for support.
+        expose_headers=["X-Request-ID"],
     )
 
     @app.middleware("http")
