@@ -32,6 +32,7 @@ data/*
 # Eval artifacts
 eval/results.csv
 eval/runs/
+eval/.cache/
 
 # Notebooks
 notebooks/.ipynb_checkpoints/
