@@ -46,11 +46,24 @@ def _unique(ids: Iterable[str]) -> list[str]:
     return out
 
 
+def _combine_filter(
+    part: MetadataFilter | None, base: MetadataFilter | None
+) -> MetadataFilter | None:
+    """Merge a sub-query filter with the original question's book context."""
+    if part is None:
+        return base
+    if part.book_num is None and base is not None and base.book_num is not None:
+        return MetadataFilter(base.book_num, part.chapter_num)
+    return part
+
+
 class _VectorStore(Protocol):
     """The slice of a vector store the dense leg uses; stubs stay duck-typed."""
 
     def count(self) -> int: ...
-    def query(self, *, query_embeddings: Any, n_results: int) -> Any: ...
+    def query(
+        self, *, query_embeddings: Any, n_results: int, where: dict | None = None
+    ) -> Any: ...
 
 
 class HybridRetriever:
@@ -120,7 +133,8 @@ class HybridRetriever:
         retrieval_queries = sub_queries + ([query] if decomposed else [])
         base_filter = parse_metadata_filter(query)
         filters = [
-            parse_metadata_filter(part) or base_filter for part in retrieval_queries
+            _combine_filter(parse_metadata_filter(part), base_filter)
+            for part in retrieval_queries
         ]
         legs = await asyncio.gather(
             *(
@@ -134,6 +148,19 @@ class HybridRetriever:
         )
         dense_lists = list(legs[: len(retrieval_queries)])
         sparse_lists = list(legs[len(retrieval_queries) :])
+        filtered = any(spec is not None for spec in filters)
+        explicit_filter = any(
+            spec is not None and spec.explicit for spec in filters
+        )
+        if filtered and not any(dense_lists + sparse_lists):
+            # The filtered pool would be empty: retry both legs unfiltered.
+            legs = await asyncio.gather(
+                *(self._dense_run(part, None) for part in retrieval_queries),
+                *(self._sparse_run(part, None) for part in retrieval_queries),
+            )
+            dense_lists = list(legs[: len(retrieval_queries)])
+            sparse_lists = list(legs[len(retrieval_queries) :])
+            filtered = False
         dense_ids = _unique(cid for ids in dense_lists for cid in ids)
         sparse_ids = _unique(cid for ids in sparse_lists for cid in ids)
         fused = self._fuse_many(dense_lists + sparse_lists)
@@ -142,10 +169,9 @@ class HybridRetriever:
             for cid, score in fused
         ]
         pool_ids = tuple(cid for cid, _ in fused[: self._pool])
-        filtered = any(spec is not None for spec in filters)
         # A parsed filter or a decomposed question is explicit evidence, so the
         # two-leg lexical floor is relaxed for those queries.
-        floor = 0.0 if decomposed or filtered else self._two_leg_floor
+        floor = 0.0 if decomposed or explicit_filter else self._two_leg_floor
         if self._reranker is None:
             result = ranked[:top_k]
         elif not ranked or ranked[0].score < floor:
@@ -184,10 +210,6 @@ class HybridRetriever:
         where = metadata_filter.chroma_where() if metadata_filter is not None else None
         result = await asyncio.to_thread(self._dense_query, vectors, where)
         ids = result["ids"][0]
-        if where is not None and not ids:
-            # Empty filtered result: fall back to the unfiltered leg.
-            result = await asyncio.to_thread(self._dense_query, vectors, None)
-            ids = result["ids"][0]
         logger.debug(
             "dense: %d candidates in %.0fms", len(ids), (time.perf_counter() - start) * 1000
         )
@@ -216,8 +238,6 @@ class HybridRetriever:
             else None
         )
         ids = await asyncio.to_thread(self._sparse_query, query, allowed)
-        if metadata_filter is not None and not ids:
-            ids = await asyncio.to_thread(self._sparse_query, query, None)
         logger.debug(
             "sparse: %d candidates in %.0fms", len(ids), (time.perf_counter() - start) * 1000
         )
@@ -256,7 +276,3 @@ class HybridRetriever:
             for rank, cid in enumerate(ids, start=1):
                 fused[cid] = fused.get(cid, 0.0) + 1.0 / (self._rrf_k + rank)
         return sorted(fused.items(), key=lambda item: item[1], reverse=True)
-
-    def _fuse(self, dense_ids: list[str], sparse_ids: list[str]) -> list[tuple[str, float]]:
-        """Two-leg RRF; kept for callers and tests that fuse exactly two lists."""
-        return self._fuse_many([dense_ids, sparse_ids])

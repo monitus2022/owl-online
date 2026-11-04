@@ -22,10 +22,18 @@ def test_parses_number_words():
 
 
 def test_book_only_and_chapter_only():
-    assert parse_metadata_filter("What happens in Goblet of Fire?") == MetadataFilter(4, None)
+    assert parse_metadata_filter("In Goblet of Fire chapter 4, what happens?") == MetadataFilter(
+        4, 4
+    )
     assert parse_metadata_filter("What happens in chapter 12?") == MetadataFilter(
         None, 12
     )
+
+
+def test_in_world_title_filters_without_relaxing_the_floor():
+    parsed = parse_metadata_filter("What is the monster in the Chamber of Secrets?")
+    assert parsed == MetadataFilter(2, None)
+    assert parsed is not None and parsed.explicit is False
 
 
 def test_plain_question_has_no_filter():

@@ -213,6 +213,33 @@ async def test_empty_filtered_result_falls_back_to_unfiltered():
     assert hits[0].id == "b1-c02-0000"
 
 
+def test_sparse_query_restricts_to_allowed_ids():
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000"]),
+        bm25=_StubBM25([1.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+    )
+    assert retriever._sparse_query("q", ["b1-c01-0000"]) == ["b1-c01-0000"]
+    assert retriever._sparse_query("q")[0] == "b1-c02-0000"
+
+
+def test_fuse_many_accumulates_three_lists():
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000"]),
+        bm25=_StubBM25([0.0] * len(_CHUNKS)),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+    )
+    fused = retriever._fuse_many(
+        [["a", "b"], ["b", "c"], ["b", "a"]]
+    )
+    assert fused[0][0] == "b"
+    assert fused[1][0] == "a"
+
+
 class _StubReranker:
     """Records the pool it was handed and reverses it, stamping a score."""
 

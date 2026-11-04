@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 _UNITS = {
     "zero": 0,
@@ -53,7 +53,10 @@ def _number(raw: str) -> int | None:
     parts = value.replace("-", " ").split()
     if len(parts) == 1:
         part = parts[0]
-        return _UNITS.get(part) or _TEENS.get(part) or _TENS.get(part)
+        for table in (_UNITS, _TEENS, _TENS):
+            if part in table:
+                return table[part]
+        return None
     if len(parts) == 2:
         tens = _TENS.get(parts[0])
         units = _UNITS.get(parts[1])
@@ -68,6 +71,7 @@ class MetadataFilter:
 
     book_num: int | None = None
     chapter_num: int | None = None
+    explicit: bool = field(default=False, compare=False)
 
     def chroma_where(self) -> dict | None:
         clauses: list[dict] = []
@@ -88,12 +92,24 @@ class MetadataFilter:
 
 
 def parse_metadata_filter(query: str) -> MetadataFilter | None:
-    """Extract numeric or named book/chapter references from a question."""
+    """Extract numeric or named book/chapter references from a question.
+
+    `explicit` is true for a numeric reference or a title followed by "book" or
+    "chapter". A bare title such as "Chamber of Secrets" may be an in-world name,
+    so it still filters but does not relax the lexical abstention gate.
+    """
     text = query.lower().replace("\u2019", "'")
     book_match = _BOOK_NUM.search(text)
     chapter_match = _CHAPTER_NUM.search(text)
     book_num = _number(book_match.group(1)) if book_match else None
     chapter_num = _number(chapter_match.group(1)) if chapter_match else None
+    explicit = book_match is not None or chapter_match is not None
+    if book_num is None:
+        for name, number in _BOOKS.items():
+            if re.search(rf"\b{re.escape(name)}\s+(?:book|chapter)\b", text):
+                book_num = number
+                explicit = True
+                break
     if book_num is None:
         for name, number in _BOOKS.items():
             if name in text:
@@ -101,4 +117,6 @@ def parse_metadata_filter(query: str) -> MetadataFilter | None:
                 break
     if book_num is None and chapter_num is None:
         return None
-    return MetadataFilter(book_num=book_num, chapter_num=chapter_num)
+    return MetadataFilter(
+        book_num=book_num, chapter_num=chapter_num, explicit=explicit
+    )

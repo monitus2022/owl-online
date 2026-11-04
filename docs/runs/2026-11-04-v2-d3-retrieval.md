@@ -1,10 +1,10 @@
 # Run record: V2 D3 retrieval filter and decomposition
 
 - Date: 2026-11-04
-- Run id: `20261104T153229Z`
+- Run id: `20261104T154503Z`
 - Ticket: #78 (V2 D3)
 - Config: `pinned` (reranker on)
-- Artifacts: `eval/results/baseline.csv` (committed), `eval/results/20261104T153229Z.csv` (local, gitignored)
+- Artifacts: `eval/results/baseline.csv` (committed), `eval/results/20261104T154503Z.csv` (local, gitignored)
 - Status: pinned D3 baseline
 - Supersedes: run `20261104T144856Z` (V2 D1 baseline r4)
 
@@ -27,8 +27,8 @@
 
 | Slice | n | Hit@5 | Recall@5 | MRR |
 |---|---|---|---|---|
-| overall | 50 | 0.78 | 0.66 | 0.51 |
-| simple | 34 | 0.76 | 0.62 | 0.47 |
+| overall | 50 | 0.76 | 0.66 | 0.50 |
+| simple | 34 | 0.74 | 0.62 | 0.46 |
 | multi_part | 8 | 0.62 | 0.50 | 0.40 |
 | named_reference | 8 | 1.00 | 1.00 | 0.78 |
 
@@ -36,9 +36,9 @@
 
 | Slice | n | dense | sparse | pool | lift | loss | near |
 |---|---|---|---|---|---|---|---|
-| overall | 50 | 0.78 | 0.69 | 0.82 | 0.87 | 0.13 | 0.06 |
-| simple | 34 | 0.72 | 0.58 | 0.75 | 0.90 | 0.10 | 0.09 |
-| multi_part | 8 | 0.81 | 0.81 | 0.94 | 0.62 | 0.38 | 0.00 |
+| overall | 50 | 0.77 | 0.68 | 0.81 | 0.86 | 0.14 | 0.06 |
+| simple | 34 | 0.72 | 0.58 | 0.75 | 0.89 | 0.11 | 0.09 |
+| multi_part | 8 | 0.77 | 0.77 | 0.90 | 0.62 | 0.38 | 0.00 |
 | named_reference | 8 | 1.00 | 1.00 | 1.00 | 1.00 | 0.00 | 0.00 |
 
 ## Abstention
@@ -66,15 +66,16 @@ sample abstained. Both judge parsers returned a usable verdict on all 15 answers
 - Named references moved from 0.38 to 1.00. The query already carried the book
   and chapter; the retriever now uses it. This is the largest single retrieval
   gain and it came without touching the index.
-- Overall Hit@5 moved from 0.58 to 0.78, and simple moved from 0.65 to 0.76. Part
+- Overall Hit@5 moved from 0.58 to 0.76, and simple moved from 0.65 to 0.74. Part
   of the simple gain is the gold-label audit, not a retrieval change; the audit
-  replaced adjacent or wrong evidence ids for `q03`, `q08`, `q13` and `q16`.
-- Multi-part moved from 0.50 to 0.62. Pool recall is 0.94, so seven of eight
-  items now have all expected ids in the merged pool. Item `m07` still misses
-  `b3-c10-0020`: the second fact shares no terms with the question, and the chunk
-  is outside the top 150 of both legs. That is a query-expansion or embedder
-  problem, not a fusion bug.
-- The reranker is no longer the main loss. Overall lift is 0.87; multi-part lost
+  corrected wrong or incomplete evidence ids for `q08`, `q13`, `q16` and `m08`.
+  `q03` was reverted to a genuine miss after the review found the original chunk
+  already states the answer.
+- Multi-part moved from 0.50 to 0.62. Pool recall is 0.90. `m06` misses one of
+  its three valid ids (`b2-c16-0026`, the Basilisk entry) and `m07` misses
+  `b3-c10-0020`; both are outside the current candidates. That is a query
+  expansion or embedder problem, not a fusion bug.
+- The reranker is no longer the main loss. Overall lift is 0.86; multi-part lost
   38% of its pool hits to rerank, so reranking the merged pool is the next
   multi-part tuning target.
 - Faithfulness rose from 11/15 to 12/15. `multi_part` remains weak at 2/5
@@ -107,16 +108,16 @@ judge: openrouter/deepseek/deepseek-v4.1-flash-1017
 reranker: bedrock
 
 retrieval
-  overall                n=50  Hit@5=0.78 Recall@5=0.66 MRR=0.51
+  overall                n=50  Hit@5=0.76 Recall@5=0.66 MRR=0.50
   multi_part             n=8   Hit@5=0.62 Recall@5=0.50 MRR=0.40
   named_reference        n=8   Hit@5=1.00 Recall@5=1.00 MRR=0.78
-  simple                 n=34  Hit@5=0.76 Recall@5=0.62 MRR=0.47
+  simple                 n=34  Hit@5=0.74 Recall@5=0.62 MRR=0.46
 
 retrieval diagnostics
-  overall                n=50  dense=0.78 sparse=0.69 pool=0.82 lift=0.87 loss=0.13 near=0.06
-  multi_part             n=8   dense=0.81 sparse=0.81 pool=0.94 lift=0.62 loss=0.38 near=0.00
+  overall                n=50  dense=0.77 sparse=0.68 pool=0.81 lift=0.86 loss=0.14 near=0.06
+  multi_part             n=8   dense=0.77 sparse=0.77 pool=0.90 lift=0.62 loss=0.38 near=0.00
   named_reference        n=8   dense=1.00 sparse=1.00 pool=1.00 lift=1.00 loss=0.00 near=0.00
-  simple                 n=34  dense=0.72 sparse=0.58 pool=0.75 lift=0.90 loss=0.10 near=0.09
+  simple                 n=34  dense=0.72 sparse=0.58 pool=0.75 lift=0.89 loss=0.11 near=0.09
 
 abstention
   overall                10/10 (1.00)
@@ -129,6 +130,6 @@ generation (judged sample)
   named_reference        n=5   answered=5   abstained=0   EM=0.00 F1=0.28 faithful=5/5 (1.00) judge correct=5 partial=0 wrong=0 grounded=5 judge_parse=0 faithful_parse=0
   simple                 n=5   answered=5   abstained=0   EM=0.00 F1=0.30 faithful=5/5 (1.00) judge correct=5 partial=0 wrong=0 grounded=5 judge_parse=0 faithful_parse=0
 
-wrote /Users/tc/Documents/Github/owl-online/eval/results/20261104T153229Z.csv
+wrote /Users/tc/Documents/Github/owl-online/eval/results/20261104T154503Z.csv
 wrote baseline /Users/tc/Documents/Github/owl-online/eval/results/baseline.csv
 ```

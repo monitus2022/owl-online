@@ -24,7 +24,7 @@ Pipeline stages, in order:
 |---|---|---|
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` |
-| Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (hybrid + rerank) |
+| Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
 | Generate | `app/pipeline/generate/` | `ask` |
 
 ## Contracts and adapters
@@ -70,6 +70,7 @@ classDiagram
   }
   class HybridRetriever {
     +min_score float
+    +diagnose(query, top_k)
     +aclose()
   }
   class BedrockReranker {
@@ -145,8 +146,11 @@ sequenceDiagram
   API->>R: get_retriever / get_llm
   API->>A: ask(question, retriever, llm)
   A->>RET: retrieve(question, top_k)
+  RET->>RET: parse book/chapter reference
+  RET->>RET: split into up to three sub-queries + original
+  RET->>RET: dense (optional where) + BM25 legs, fuse with RRF
   alt reranker attached and the lexical gate passes
-    RET->>RR: rerank(pool, top_k)
+    RET->>RR: rerank(merged pool, top_k)
     RR-->>RET: top_k by relevance
   end
   RET-->>A: list[Chunk] (relevance or RRF scores, or empty)

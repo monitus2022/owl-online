@@ -44,8 +44,8 @@ chapter one position either side is returned.
 | named_reference | 8 | 0.50 | 0.38 | 0.38 | 1.00 | 0.00 | 0.00 |
 
 Stage outcome over 50 answerable items: 29 exact hits, 14 leg misses, 2 fusion
-losses and 5 rerank losses. Four of the 19 misses are neighbour hits, all on the
-simple slice.
+losses and 5 rerank losses, so 21 misses. Four of the 21 misses are neighbour
+hits, all on the simple slice.
 
 ## Ten-miss audit
 
@@ -54,13 +54,17 @@ simple slice.
 | `q03` | simple | leg miss | Gold `b1-c09-0026` is the Wood introduction; `b4-c05-0048` states the Seeker position. Label too strict. |
 | `q08` | simple | leg miss | Gold `b2-c16-0026/0028`; top `b2-c16-0027` is the adjacent passage and names the Basilisk. Neighbour hit. |
 | `q13` | simple | leg miss | Gold `b4-c05-0045` is about wands; top `b4-c07-0032` explicitly names Viktor Krum as the Bulgarian Seeker. Wrong label. |
-| `q16` | simple | leg miss | Gold `b6-c04-0032` introduces Slughorn but not the Potions post; `b6-c08-0045` names him as new staff. Ambiguous label. |
+| `q16` | simple | leg miss | Gold `b6-c04-0032` introduces Slughorn but not the Potions post; `b6-c08-0045` names him as new staff. Label corrected. |
 | `n01` | named_reference | leg miss | Gold `b1-c07-0028`; `b1-c07-0032` is in the requested chapter. The retriever never uses the book/chapter in the query. |
 | `n02` | named_reference | leg miss | Gold `b2-c13-0017`; results come from other books and chapters. Filter target. |
 | `n05` | named_reference | leg miss | Gold `b4-c20-0048`; top `b4-c20-0014` is the requested chapter. Filter target. |
 | `m03` | multi_part | leg miss | Gold `b1-c11-0042` names Fluffy and the loan to Dumbledore; the query says three-headed dog. Lexical gap. |
 | `q09` | simple | leg miss | Gold `b2-c03-0029` contains THE BURROW; the query says Weasley family home. Semantic gap. |
 | `s13` | simple | leg miss | Gold `b1-c15-0055` names Firenze; the query asks which centaur rescues Harry. Semantic gap. |
+
+Additional label corrections after the audit: `m06` keeps the valid Basilisk entry and adds its continuation, and `m08` uses the new-staff passage that names Slughorn. `q03` was reverted to a genuine miss after review found the original chunk already states the answer.
+
+Abstention was 10/10 overall. Generation was unchanged from the D1 r4 baseline: F1 0.28, faithful 11/15, judge correct 11/15. The full generation table is in the D1 record; this record is about retrieval.
 
 ## Reading
 

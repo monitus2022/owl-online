@@ -26,6 +26,7 @@ from eval.harness import (
     summarize_generation,
     token_f1,
 )
+from eval.harness.retrieval import _neighbor_hit
 
 
 def _chunk(chunk_id: str) -> Chunk:
@@ -101,6 +102,12 @@ def test_neighbor_hit_marks_an_adjacent_chunk():
     metrics = summarize_diagnostics([score])
     assert metrics.neighbor_hit_n == 1
     assert metrics.neighbor_hit_rate == 1.0
+
+
+def test_neighbor_hit_detects_the_same_chapter_adjacent_chunk():
+    assert _neighbor_hit({"b1-c01-0010"}, ("b1-c01-0011",))
+    assert not _neighbor_hit({"b1-c01-0010"}, ("b1-c02-0011",))
+    assert not _neighbor_hit({"b1-c01-0010"}, ("b1-c01-0012",))
 
 
 async def test_cached_llm_variant_separates_cache_keys(tmp_path):
