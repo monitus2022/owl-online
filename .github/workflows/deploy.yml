@@ -87,11 +87,11 @@ jobs:
           set -euo pipefail
           aws ecr get-login-password --region __REGION__ \
             | docker login --username AWS --password-stdin __REGISTRY__
-          # The root volume is small and the image is ~1.5 GB, so the pull may not
-          # fit next to the running image. Pull first: if it succeeds the old
-          # version kept serving the whole time. Only on failure evict the running
-          # container and unused images, then retry (that retry is the only window
-          # where a failure leaves the service down).
+          # The root volume is small and /data shares it. Pull first: if it fits
+          # (the image is ~213 MB now), the old version kept serving the whole
+          # time. Only on failure evict the running container and unused images,
+          # then retry (that retry is the only window where a failure leaves the
+          # service down).
           if ! docker pull __IMAGE__; then
             docker rm -f __NAME__ >/dev/null 2>&1 || true
             docker image prune -af >/dev/null

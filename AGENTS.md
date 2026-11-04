@@ -10,10 +10,17 @@ A retrieval-augmented question-answering engine with three modes: revision chat,
 
 Provisional until the code layout exists; update these as the project takes shape.
 
-- Install: `uv sync`
+- Install: `uv sync` (installs the dev, ingest and agent groups)
 - Run API: `uvicorn app.main:app --reload`
 - Tests: `pytest`
 - Eval gate: `pytest eval/`
+
+Dependencies are split by environment. `[project] dependencies` is what the
+served API needs; `ingest` (PDF parsing) and `agent` (V2 LangGraph, SSE) are
+dependency groups, installed by default for dev. The runtime image installs base
+only (`uv sync --no-default-groups`). chromadb's unused `kubernetes` and
+`onnxruntime` are excluded in `[tool.uv]`, so they are absent in every
+environment, dev included.
 
 ## Verification (required)
 

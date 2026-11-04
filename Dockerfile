@@ -14,10 +14,20 @@ WORKDIR /app
 
 # Dependencies first, for layer caching. The project is not installed
 # (tool.uv.package = false); app/ is imported from the working directory.
+#
+# Runtime image gets only [project] dependencies. The ingest and agent groups
+# (local ingestion, V2) are dev defaults, so opt out with --no-default-groups;
+# chromadb's unused kubernetes/onnxruntime are excluded in pyproject.toml.
+# --no-cache keeps the ~570 MB uv cache out of the image. This matters because
+# the host root volume is 8 GB.
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-default-groups --no-cache
 
 COPY app ./app
+
+# Build-time smoke test: fail the build if the runtime import graph is broken,
+# for example if chromadb needed an excluded backend at import time.
+RUN python -c "import app.main, app.api.runtime, app.pipeline.retrieve, app.pipeline.generate"
 
 ENV PATH="/app/.venv/bin:$PATH" \
     OWL_CHUNKS_PATH=/data/chunks.jsonl \
