@@ -128,6 +128,17 @@ async def test_build_index_slug_guard_offline(tmp_path):
     assert third.rebuilt is False
 
 
+async def test_build_index_text_change_forces_rebuild(tmp_path):
+    first = await build_index(_CHUNKS[:3], tmp_path, FakeEmbedder(name="fake/one"))
+    assert first.rebuilt is True
+    changed = [
+        chunk.model_copy(update={"text": f"{chunk.text} changed"})
+        for chunk in _CHUNKS[:3]
+    ]
+    second = await build_index(changed, tmp_path, FakeEmbedder(name="fake/one"))
+    assert second.rebuilt is True
+
+
 class _StubCollection:
     """Dense run stub: fixed id order, whatever candidate count is asked."""
 
