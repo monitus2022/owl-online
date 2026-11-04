@@ -89,6 +89,62 @@ the same:
 For Fly.io, roughly: `fly launch --no-deploy`, add a volume mounted at `/data`,
 `fly secrets set ...`, upload the data into the volume, then `fly deploy`.
 
+## CI/CD (GitHub Actions)
+
+`.github/workflows/deploy.yml` is the minimal pipeline: on a push to `main` it
+builds the image, pushes it to ECR, and rolls it out on the EC2 instance over
+SSM. It runs no tests and touches no data; the corpus and index are a one-time
+upload (see below). The full pipeline (ECS, gated tests) stays in #37.
+
+Repo secrets required:
+
+| Secret | Value |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | the `monitus-companion` IAM user access key |
+| `AWS_SECRET_ACCESS_KEY` | the matching secret |
+
+The workflow settings live in the `env:` block at the top of the file (region,
+ECR repository, instance id, container name, host port, env-file path, data
+dir). Trigger it by pushing to `main`, or run it manually with
+`workflow_dispatch`.
+
+The instance pulls the image with its own role
+(`AmazonEC2ContainerRegistryReadOnly`) and calls Bedrock with its own role, so
+no keys live on the host. The container publishes host port 80 and reads its
+runtime secrets from the env file in the next section.
+
+## One-time host setup
+
+The pipeline ships only the image. Do these once on the instance:
+
+1. The ECR repository `owl-online` (the workflow creates it if missing).
+
+2. The runtime env file, outside the repo and the image, at
+   `/home/ec2-user/owl.env`:
+
+   ```
+   OWL_PROVIDER=openrouter
+   OWL_OPENROUTER_API_KEY=...
+   OWL_EMBEDDER_PROVIDER=bedrock
+   OWL_CHUNKS_PATH=/data/chunks.jsonl
+   OWL_INDEX_DIR=/data/index/titan
+   OWL_RERANK_PROVIDER=bedrock
+   OWL_AWS_REGION=ap-northeast-1
+   OWL_CORS_ORIGINS=https://your-chat-page.pages.dev
+   ```
+
+3. The data at `/data`: `chunks.jsonl` plus the index built with the same
+   embedder. Build the Titan index locally, then upload both:
+
+   ```
+   uv run python scripts/build_index.py --provider bedrock --index data/index/titan
+   # copy data/chunks.jsonl and data/index/titan/ to /data on the host
+   ```
+
+4. A TLS terminator in front of port 80 if the chat page is served over HTTPS
+   (a mixed-content block otherwise). Cloudflare in front of the instance, or a
+   small Caddy reverse proxy with a domain, both work.
+
 ## Cloudflare Pages for the chat page
 
 The chat page is a single file, `app/api/static/index.html`, with no build step.
