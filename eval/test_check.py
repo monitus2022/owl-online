@@ -2,7 +2,18 @@
 
 import pytest
 
-from eval.check import CheckError, check, load_thresholds, render_check
+from eval.check import (
+    DENOMINATOR_COUNTS,
+    DROP_METRICS,
+    GATED_METRICS,
+    RATE_DENOMINATOR,
+    RISE_METRICS,
+    THRESHOLDS_PATH,
+    CheckError,
+    check,
+    load_thresholds,
+    render_check,
+)
 from eval.results import ResultRow, manifest_row, write_results
 
 OVERALL = {
@@ -16,7 +27,9 @@ OVERALL = {
     "generation_n": 15,
     "answered": 15,
     "abstained": 0,
+    "abstained_rate": 0.0,
     "f1": 0.30,
+    "judged": 15,
     "faithfulness_n": 15,
     "faithful": 12,
     "faithfulness_rate": 0.80,
@@ -25,6 +38,7 @@ OVERALL = {
     "judge_wrong": 1,
     "judge_correct_rate": 0.80,
     "grounded": 12,
+    "grounded_rate": 0.80,
     "judge_parse_failures": 0,
     "faithful_parse_failures": 0,
 }
@@ -37,7 +51,9 @@ NAMED = {
     "generation_n": 5,
     "answered": 5,
     "abstained": 0,
+    "abstained_rate": 0.0,
     "f1": 0.25,
+    "judged": 5,
     "faithfulness_n": 5,
     "faithful": 4,
     "faithfulness_rate": 0.80,
@@ -46,6 +62,7 @@ NAMED = {
     "judge_wrong": 0,
     "judge_correct_rate": 0.80,
     "grounded": 4,
+    "grounded_rate": 0.80,
     "judge_parse_failures": 0,
     "faithful_parse_failures": 0,
 }
@@ -88,6 +105,15 @@ def _files(tmp_path, baseline: dict[str, float], latest: dict[str, float]):
     return tmp_path, baseline_path
 
 
+def test_every_gated_metric_has_exactly_one_rule():
+    assert DENOMINATOR_COUNTS | DROP_METRICS | RISE_METRICS == GATED_METRICS
+    assert not (DENOMINATOR_COUNTS & DROP_METRICS)
+    assert not (DENOMINATOR_COUNTS & RISE_METRICS)
+    assert not (DROP_METRICS & RISE_METRICS)
+    assert set(RATE_DENOMINATOR) <= DROP_METRICS | RISE_METRICS
+    assert set(RATE_DENOMINATOR.values()) <= DENOMINATOR_COUNTS
+
+
 def test_thresholds_load_and_validate_the_real_file():
     thresholds = load_thresholds()
     assert thresholds.baseline == "eval/results/baseline.csv"
@@ -112,7 +138,7 @@ def test_gate_fails_beyond_the_band(tmp_path):
     report = check(results, baseline)
     assert not report.passed
     assert len(report.failures) == 1
-    assert report.failures[0].drop == pytest.approx(0.10)
+    assert report.failures[0].amount == pytest.approx(0.10)
     text = render_check(report)
     assert "gate: FAIL" in text
     assert "dropped 0.1000, band 0.0500" in text
@@ -144,11 +170,30 @@ def test_count_change_fails_with_a_zero_band(tmp_path):
 
 
 def test_answerability_change_fails_even_when_rates_rise(tmp_path):
-    latest = dict(OVERALL, answered=13, abstained=2, faithfulness_n=13)
+    latest = dict(
+        OVERALL, answered=13, abstained=2, abstained_rate=2 / 15
+    )
     results, baseline = _files(tmp_path, OVERALL, latest)
     report = check(results, baseline)
     assert not report.passed
-    assert {f.delta.metric for f in report.failures} >= {"answered", "abstained"}
+    assert "abstained_rate" in {f.delta.metric for f in report.failures}
+
+
+def test_improving_outcome_counts_do_not_fail(tmp_path):
+    latest = dict(
+        OVERALL,
+        faithful=13,
+        faithfulness_rate=13 / 15,
+        judge_correct=13,
+        judge_partial=1,
+        judge_correct_rate=13 / 15,
+        grounded=13,
+        grounded_rate=13 / 15,
+    )
+    results, baseline = _files(tmp_path, OVERALL, latest)
+    report = check(results, baseline)
+    assert report.passed
+    assert "gate: PASS" in render_check(report)
 
 
 def test_missing_gated_metric_fails_the_gate(tmp_path):
@@ -209,6 +254,44 @@ def test_config_mismatch_is_refused(tmp_path):
         latest, [ResultRow("latest", "pinned", "overall", "hit_at_k", 0.70, manifest)]
     )
     with pytest.raises(CheckError, match="different configurations"):
+        check(results, baseline)
+
+
+def test_self_comparison_is_refused(tmp_path):
+    results, baseline = _files(tmp_path, OVERALL, OVERALL)
+    latest = results / "20260101T000000Z.csv"
+    with pytest.raises(CheckError, match="same file"):
+        check(results, latest, latest_path=latest)
+
+
+def test_toml_baseline_path_is_used_when_omitted(tmp_path):
+    results, baseline = _files(tmp_path, OVERALL, OVERALL)
+    text = THRESHOLDS_PATH.read_text(encoding="utf-8")
+    thresholds_path = tmp_path / "thresholds.toml"
+    thresholds_path.write_text(
+        text.replace(
+            'baseline = "eval/results/baseline.csv"',
+            f'baseline = "{baseline}"',
+        ),
+        encoding="utf-8",
+    )
+    report = check(results, None, thresholds_path)
+    assert report.passed
+
+
+def test_non_finite_band_is_rejected(tmp_path):
+    text = THRESHOLDS_PATH.read_text(encoding="utf-8")
+    path = tmp_path / "thresholds.toml"
+    path.write_text(text.replace("hit_at_k = 0.05", "hit_at_k = nan"), encoding="utf-8")
+    with pytest.raises(CheckError, match="finite non-negative"):
+        load_thresholds(path)
+
+
+def test_unknown_slice_is_rejected(tmp_path):
+    results, baseline = _files(tmp_path, OVERALL, OVERALL)
+    latest = results / "20260101T000000Z.csv"
+    write_results(latest, _rows("latest", OVERALL, "new_slice"))
+    with pytest.raises(CheckError, match="unknown slice"):
         check(results, baseline)
 
 

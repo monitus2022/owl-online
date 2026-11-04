@@ -22,52 +22,49 @@ MetricKey = tuple[str, str, str]
 
 THRESHOLDS_PATH = REPO / "eval" / "thresholds.toml"
 
-RETRIEVAL_METRICS = frozenset({"retrieval_n", "hit_at_k", "recall_at_k", "mrr"})
-ABSTENTION_METRICS = frozenset({"abstention_n", "abstention_refused", "abstention_rate"})
-GENERATION_METRICS = frozenset(
+RETRIEVAL_GATED = frozenset({"retrieval_n", "hit_at_k", "recall_at_k", "mrr"})
+ABSTENTION_GATED = frozenset({"abstention_n", "abstention_rate"})
+GENERATION_GATED = frozenset(
     {
         "generation_n",
-        "answered",
-        "abstained",
+        "judged",
         "f1",
         "faithfulness_n",
-        "faithful",
         "faithfulness_rate",
-        "judge_correct",
-        "judge_partial",
-        "judge_wrong",
         "judge_correct_rate",
-        "grounded",
+        "grounded_rate",
+        "abstained_rate",
         "judge_parse_failures",
         "faithful_parse_failures",
     }
 )
-UNANSWERABLE_SLICES = frozenset({"near_miss_unanswerable", "off_topic"})
 
-# Metrics the gate compares. EM is reported but not gated: it is structurally
-# low for sentence answers.
-GATED_METRICS = RETRIEVAL_METRICS | ABSTENTION_METRICS | GENERATION_METRICS
+# Denominator counts must not change; a gold-set or sample edit would otherwise
+# hide inside a rate.
+DENOMINATOR_COUNTS = frozenset(
+    {"retrieval_n", "abstention_n", "generation_n", "faithfulness_n", "judged"}
+)
 
-# Count metrics use the base band directly. A change in any of them means the
-# gold set, the judged sample or the answerability mix moved, which makes the
-# rate deltas incomparable.
-COUNT_METRICS = frozenset(
+# Quality metrics fail on a drop; over-abstention and parser failures fail on a
+# rise. EM is reported but not gated: it is structurally low for sentence answers.
+DROP_METRICS = frozenset(
     {
-        "retrieval_n",
-        "abstention_n",
-        "abstention_refused",
-        "generation_n",
-        "answered",
-        "abstained",
-        "faithfulness_n",
-        "faithful",
-        "judge_correct",
-        "judge_partial",
-        "judge_wrong",
-        "grounded",
-        "judge_parse_failures",
-        "faithful_parse_failures",
+        "hit_at_k",
+        "recall_at_k",
+        "mrr",
+        "f1",
+        "faithfulness_rate",
+        "judge_correct_rate",
+        "grounded_rate",
+        "abstention_rate",
     }
+)
+RISE_METRICS = frozenset(
+    {"abstained_rate", "judge_parse_failures", "faithful_parse_failures"}
+)
+
+GATED_METRICS = (
+    RETRIEVAL_GATED | ABSTENTION_GATED | GENERATION_GATED
 )
 
 # Rate metric -> the count that sets its denominator, used for the 1/n floor.
@@ -77,7 +74,9 @@ RATE_DENOMINATOR = {
     "mrr": "retrieval_n",
     "f1": "generation_n",
     "faithfulness_rate": "faithfulness_n",
-    "judge_correct_rate": "faithfulness_n",
+    "judge_correct_rate": "judged",
+    "grounded_rate": "judged",
+    "abstained_rate": "generation_n",
     "abstention_rate": "abstention_n",
 }
 
@@ -88,15 +87,21 @@ class CheckError(RuntimeError):
 
 @dataclass(frozen=True)
 class Thresholds:
-    """The baseline path and the absolute bands keyed by metric."""
+    """The baseline path, the absolute bands and the slice kinds."""
 
     baseline: str
     bands: Mapping[str, float]
+    slice_kinds: Mapping[str, str]
 
     def band(self, metric: str, n: float | None) -> float:
         """The band for one metric, widened to one item for rate metrics."""
         base = self.bands[metric]
-        if metric in COUNT_METRICS or n is None or n <= 0:
+        if metric in DENOMINATOR_COUNTS or metric in {
+            "judge_parse_failures",
+            "faithful_parse_failures",
+        }:
+            return base
+        if n is None or n <= 0:
             return base
         return max(base, 1.0 / n)
 
@@ -107,14 +112,11 @@ class GateFailure:
 
     delta: MetricDelta
     band: float
+    direction: str
 
     @property
-    def drop(self) -> float:
-        return -self.delta.delta
-
-    @property
-    def change(self) -> float:
-        return self.delta.delta
+    def amount(self) -> float:
+        return abs(self.delta.delta)
 
 
 @dataclass(frozen=True)
@@ -144,13 +146,29 @@ class CheckReport:
         )
 
 
-def _expected_metrics(slice_name: str) -> frozenset[str]:
-    """The gated metrics a slice must carry, based on what the run emits."""
+def _expected_metrics(
+    slice_name: str, slice_kinds: Mapping[str, str]
+) -> frozenset[str]:
+    """The gated metrics a slice must carry, based on its gold-set kind."""
     if slice_name == "overall":
         return GATED_METRICS
-    if slice_name in UNANSWERABLE_SLICES:
-        return ABSTENTION_METRICS
-    return RETRIEVAL_METRICS | GENERATION_METRICS
+    kind = slice_kinds.get(slice_name)
+    if kind is None:
+        raise CheckError(
+            f"unknown slice {slice_name!r}; add it to [slice_kinds] in "
+            "eval/thresholds.toml"
+        )
+    if kind == "unanswerable":
+        return ABSTENTION_GATED
+    return RETRIEVAL_GATED | GENERATION_GATED
+
+
+def _finite(value: object) -> float | None:
+    """A finite, non-boolean float, or None."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    return number if math.isfinite(number) else None
 
 
 def load_thresholds(path: Path = THRESHOLDS_PATH) -> Thresholds:
@@ -162,10 +180,15 @@ def load_thresholds(path: Path = THRESHOLDS_PATH) -> Thresholds:
     except tomllib.TOMLDecodeError as exc:
         raise CheckError(f"invalid TOML in {path}: {exc}") from exc
 
-    try:
-        bands = {str(key): float(value) for key, value in data["bands"].items()}
-    except (KeyError, TypeError, ValueError) as exc:
-        raise CheckError(f"invalid bands in {path}: {exc}") from exc
+    raw_bands = data.get("bands")
+    if not isinstance(raw_bands, dict):
+        raise CheckError(f"missing [bands] table in {path}")
+    bands: dict[str, float] = {}
+    for key, value in raw_bands.items():
+        number = _finite(value)
+        if number is None or number < 0:
+            raise CheckError(f"band for {key!r} must be a finite non-negative number")
+        bands[str(key)] = number
 
     unknown = set(bands) - GATED_METRICS
     missing = GATED_METRICS - set(bands)
@@ -175,9 +198,22 @@ def load_thresholds(path: Path = THRESHOLDS_PATH) -> Thresholds:
     if missing:
         names = ", ".join(sorted(missing))
         raise CheckError(f"missing gated metrics in {path}: {names}")
+
+    raw_kinds = data.get("slice_kinds")
+    if not isinstance(raw_kinds, dict) or not raw_kinds:
+        raise CheckError(f"missing [slice_kinds] table in {path}")
+    slice_kinds: dict[str, str] = {}
+    for key, value in raw_kinds.items():
+        if value not in {"answerable", "unanswerable"}:
+            raise CheckError(
+                f"slice kind for {key!r} must be 'answerable' or 'unanswerable'"
+            )
+        slice_kinds[str(key)] = str(value)
+
     return Thresholds(
         baseline=str(data.get("baseline", "eval/results/baseline.csv")),
         bands=bands,
+        slice_kinds=slice_kinds,
     )
 
 
@@ -196,14 +232,22 @@ def check(
     results_dir: Path,
     baseline: Path | None = None,
     thresholds_path: Path = THRESHOLDS_PATH,
+    latest_path: Path | None = None,
 ) -> CheckReport:
     """Diff the newest run against the pinned baseline and apply the gate."""
     thresholds = load_thresholds(thresholds_path)
     if baseline is None:
         baseline = REPO / thresholds.baseline
-    latest = latest_run(results_dir)
+    latest = latest_path if latest_path is not None else latest_run(results_dir)
     if latest is None:
         raise CheckError(f"no runs in {results_dir}; run the eval first")
+    if not latest.exists():
+        raise CheckError(f"latest run does not exist: {latest}")
+    if latest.resolve() == baseline.resolve():
+        raise CheckError(
+            f"latest run and baseline are the same file: {latest}; "
+            "gate the run the job just produced"
+        )
     if not baseline.exists():
         raise CheckError(
             f"no baseline at {baseline}; run once with --write-baseline to pin one"
@@ -234,7 +278,7 @@ def check(
     expected = {
         (config, slice_name, metric)
         for config, slice_name in config_slices
-        for metric in _expected_metrics(slice_name)
+        for metric in _expected_metrics(slice_name, thresholds.slice_kinds)
     }
     missing = tuple(sorted(baseline_keys - latest_keys))
     failing_missing = tuple(sorted(expected - latest_keys))
@@ -249,9 +293,12 @@ def check(
     invalid = tuple(
         sorted(
             key
-            for key in expected
-            if (key in baseline_values and _number(baseline_values[key]) is None)
-            or (key in latest_values and _number(latest_values[key]) is None)
+            for key, row in {**baseline_values, **latest_values}.items()
+            if key[2] in GATED_METRICS
+            and (
+                (key in baseline_values and _number(baseline_values[key]) is None)
+                or (key in latest_values and _number(latest_values[key]) is None)
+            )
         )
     )
 
@@ -271,11 +318,14 @@ def check(
             else None
         )
         band = thresholds.band(delta.metric, n)
-        if delta.metric in COUNT_METRICS:
+        if delta.metric in DENOMINATOR_COUNTS:
             if abs(delta.delta) > band:
-                failures.append(GateFailure(delta, band))
+                failures.append(GateFailure(delta, band, "changed"))
+        elif delta.metric in RISE_METRICS:
+            if delta.delta > band:
+                failures.append(GateFailure(delta, band, "rose"))
         elif delta.delta < -band:
-            failures.append(GateFailure(delta, band))
+            failures.append(GateFailure(delta, band, "dropped"))
 
     return CheckReport(
         baseline=baseline,
@@ -321,12 +371,19 @@ def render_check(report: CheckReport) -> str:
 
     lines.append("gate: FAIL")
     for failure in report.failures:
-        verb = "dropped" if failure.change < 0 else "changed"
-        amount = failure.drop if failure.change < 0 else failure.change
-        sign = "" if failure.change < 0 else "+"
+        if failure.direction == "changed":
+            amount = failure.delta.delta
+            sign = "+" if amount >= 0 else ""
+        elif failure.direction == "rose":
+            amount = failure.delta.delta
+            sign = "+"
+        else:
+            amount = -failure.delta.delta
+            sign = ""
         lines.append(
-            f"  {failure.delta.slice:<22} {failure.delta.metric:<18} "
-            f"{verb} {sign}{amount:.4f}, band {failure.band:.4f}"
+            f"  {failure.delta.config:<10} {failure.delta.slice:<22} "
+            f"{failure.delta.metric:<18} {failure.direction} "
+            f"{sign}{amount:.4f}, band {failure.band:.4f}"
         )
     for key in report.failing_missing:
         lines.append(f"  missing gated metric from latest: {key}")

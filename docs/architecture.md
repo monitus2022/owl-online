@@ -92,7 +92,7 @@ classDiagram
 
   class factory {
     <<module>>
-    make_llm(provider)
+    make_llm(provider, model, temperature)
     make_embedder(provider)
     make_reranker(provider)
     make_retriever(provider)

@@ -64,6 +64,8 @@ def test_manifest_row_records_run_time_overrides():
         embedder_dims=512,
         gold_hash="abc123",
         rerank_min_score=0.25,
+        generator_temperature=0.0,
+        judge_temperature=0.0,
     )
     assert row["top_k"] == "3"
     assert row["reranker_pool"] == "30"
@@ -74,6 +76,8 @@ def test_manifest_row_records_run_time_overrides():
     assert row["embedder_dims"] == "512"
     assert row["gold_hash"] == "abc123"
     assert row["rerank_min_score"] == "0.25"
+    assert row["generator_temperature"] == "0.0"
+    assert row["judge_temperature"] == "0.0"
 
 
 def test_load_manifest_pins_the_real_file():
@@ -183,4 +187,4 @@ def test_result_fields_are_stable():
 
     assert RESULT_FIELDS[:5] == ["run_id", "config", "slice", "metric", "value"]
     assert RESULT_FIELDS[5:] == MANIFEST_FIELDS
-    assert len(MANIFEST_FIELDS) == 16
+    assert len(MANIFEST_FIELDS) == 18

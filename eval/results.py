@@ -41,6 +41,8 @@ MANIFEST_FIELDS = [
     "judged_sample",
     "gold_hash",
     "rerank_min_score",
+    "generator_temperature",
+    "judge_temperature",
 ]
 
 RESULT_FIELDS = ["run_id", "config", "slice", "metric", "value", *MANIFEST_FIELDS]
@@ -65,6 +67,8 @@ def manifest_row(
     embedder_dims: int | None = None,
     gold_hash: str | None = None,
     rerank_min_score: float | None = None,
+    generator_temperature: float | None = None,
+    judge_temperature: float | None = None,
 ) -> dict[str, str]:
     """Flatten the manifest plus the run-time choices into CSV columns.
 
@@ -109,6 +113,12 @@ def manifest_row(
         "gold_hash": gold_hash or "",
         "rerank_min_score": (
             str(rerank_min_score) if rerank_min_score is not None else ""
+        ),
+        "generator_temperature": (
+            str(generator_temperature) if generator_temperature is not None else ""
+        ),
+        "judge_temperature": (
+            str(judge_temperature) if judge_temperature is not None else ""
         ),
     }
 

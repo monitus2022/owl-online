@@ -15,7 +15,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/harness/judging.py` | judge prompts, reply parsers, sample selection |
 | `eval/harness/cache.py` | `CachedLlm` |
 | `eval/results.py` | result CSV, baseline copy and diff |
-| `eval/thresholds.toml` | gate bands per metric, with slice overrides |
+| `eval/thresholds.toml` | baseline, gate bands and slice kinds |
 | `eval/test_harness.py` | harness tests, no network |
 | `eval/test_results.py` | result CSV tests, no network |
 | `eval/runner.py` | one run: compose, score, write the CSV |
@@ -105,22 +105,38 @@ workflow that runs this on pull requests is still open in #77.
 Bands are absolute. For rate metrics the effective band is `max(base, 1 / n)` for
 that slice, so one item is always allowed: 0.05 on overall retrieval with n=50,
 0.125 on an 8-item slice, 0.067 on the 15-item F1 sample, and 0.20 on a 5-item
-slice. Count metrics use the base band directly, normally zero. The gated counts
-are `retrieval_n`, `abstention_n`, `abstention_refused`, `generation_n`,
-`answered`, `abstained`, `faithfulness_n`, `faithful`, the judge buckets,
-`grounded` and the two parse-failure counters. A gold-set or sample change
-therefore fails instead of hiding inside an average. EM is reported but not gated.
+slice. The gate treats metrics by direction:
 
-Generation and judge calls are pinned to temperature 0, and the cache key carries
-the `temperature=0` variant, so a cached reply from an earlier sampling setup is
-not reused. `--k` controls the retrieval cutoff and `--sample` controls the judged
+| Group | Metrics | Failure rule |
+|---|---|---|
+| Denominators | `retrieval_n`, `abstention_n`, `generation_n`, `faithfulness_n`, `judged` | any change |
+| Quality, drop | Hit@k, Recall@k, MRR, F1, faithfulness rate, judge-correct rate, grounded rate, abstention rate | drop beyond band |
+| Quality, rise | `abstained_rate`, `judge_parse_failures`, `faithful_parse_failures` | rise beyond band |
+
+Outcome counts (`answered`, `abstained`, `faithful`, `grounded`, the judge buckets)
+stay in the CSV as diagnostics but are not gated directly; their rates carry the
+quality signal, so an improvement cannot fail the gate. A gold-set or sample
+change fails through the denominator counts instead of hiding inside an average.
+EM is reported but not gated.
+
+`[slice_kinds]` in the TOML marks each slice as `answerable` or `unanswerable`;
+a new slice must be added there before the gate can score it.
+
+Generation and judge calls are pinned to temperature 0, and the result rows
+record `generator_temperature` and `judge_temperature`. The cache key carries the
+temperature variant, so a cached reply from an earlier sampling setup is not
+reused. `--k` controls the retrieval cutoff and `--sample` controls the judged
 sample. The sample is taken round-robin across the answerable slices, so the
 default of 15 covers simple, named and multi-part.
 
 A clean checkout cannot run the full eval: the corpus and Chroma index are host
 data and stay out of git. The CI workflow will either run on a self-hosted runner
 with `/data` mounted or restore a private index artifact; that decision is part of
-#77 before `eval.yml` is written.
+#77 before `eval.yml` is written. Use `--latest <csv>` in CI so the gate scores
+the artifact the job produced instead of whatever file sorts last. Until the CI
+cache is pinned, a cold run can still move a stochastic metric inside its
+one-item band; the bands are sized for that, and the re-pin procedure is a new
+baseline run plus a new record.
 
 ## Result files
 

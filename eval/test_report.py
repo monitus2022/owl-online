@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from eval.check import CheckReport, render_check
 from eval.harness import AbstentionMetrics, GenerationMetrics, RetrievalMetrics
 from eval.report import (
@@ -66,6 +68,9 @@ def test_generation_rows_include_faithfulness_counts():
     assert values["faithful"] == 1
     assert values["faithfulness_rate"] == 0.5
     assert values["judge_correct_rate"] == 0.5
+    assert values["abstained_rate"] == pytest.approx(1 / 3)
+    assert values["grounded_rate"] == pytest.approx(2 / 3)
+    assert values["judged"] == 2
     assert values["judge_parse_failures"] == 0
     assert values["abstained"] == 1
 

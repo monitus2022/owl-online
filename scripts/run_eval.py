@@ -19,9 +19,9 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from eval.check import CheckError, check, render_check  # noqa: E402
+from eval.check import CheckError, check, load_thresholds, render_check  # noqa: E402
 from eval.report import render_run  # noqa: E402
-from eval.results import BASELINE_PATH, RESULTS_DIR  # noqa: E402
+from eval.results import RESULTS_DIR  # noqa: E402
 from eval.runner import run  # noqa: E402
 
 
@@ -40,13 +40,28 @@ def main() -> int:
     parser.add_argument("--sample", type=int, default=15)
     parser.add_argument("--write-baseline", action="store_true")
     parser.add_argument("--check", action="store_true")
+    parser.add_argument(
+        "--latest",
+        type=Path,
+        default=None,
+        help="gate this CSV instead of the newest timestamped run",
+    )
     args = parser.parse_args()
     if args.check and args.write_baseline:
         parser.error("--check and --write-baseline are mutually exclusive")
+    if args.latest is not None and not args.check:
+        parser.error("--latest is only used with --check")
+
+    try:
+        thresholds = load_thresholds(args.thresholds)
+    except CheckError as error:
+        print(error, file=sys.stderr)
+        return 1
+    baseline = args.baseline or REPO / thresholds.baseline
 
     if args.check:
         try:
-            report = check(args.results, args.baseline, args.thresholds)
+            report = check(args.results, baseline, args.thresholds, args.latest)
         except CheckError as error:
             print(error, file=sys.stderr)
             return 1
@@ -60,7 +75,7 @@ def main() -> int:
             index_dir=args.index,
             cache_dir=args.cache,
             results_dir=args.results,
-            baseline=args.baseline or BASELINE_PATH,
+            baseline=baseline,
             k=args.k,
             sample=args.sample,
             pin_baseline=args.write_baseline,

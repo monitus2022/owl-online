@@ -59,17 +59,18 @@ async def run(
         min_score=settings.rerank_min_score,
     )
     # The eval needs real hosted models; the judge is pinned to OpenRouter.
+    temperature = 0.0
     generator = CachedLlm(
-        make_llm("openrouter", temperature=0.0),
+        make_llm("openrouter", temperature=temperature),
         DEFAULT_MODEL,
         cache_dir,
-        variant="temperature=0",
+        variant=f"temperature={temperature}",
     )
     judge = CachedLlm(
-        make_llm("openrouter", model=JUDGE_MODEL, temperature=0.0),
+        make_llm("openrouter", model=JUDGE_MODEL, temperature=temperature),
         JUDGE_MODEL,
         cache_dir,
-        variant="temperature=0",
+        variant=f"temperature={temperature}",
     )
     gold = load_gold(gold_path)
     gold_hash = hashlib.sha256(gold_path.read_bytes()).hexdigest()[:12]
@@ -106,6 +107,8 @@ async def run(
         ),
         gold_hash=gold_hash,
         rerank_min_score=settings.rerank_min_score,
+        generator_temperature=temperature,
+        judge_temperature=temperature,
     )
     rows = [
         *retrieval_rows(run_id, config, values, retrieval, retrieval_by_slice),
