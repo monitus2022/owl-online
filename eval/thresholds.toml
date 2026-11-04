@@ -1,0 +1,43 @@
+# Eval gate: the pinned baseline and the largest allowed movement per metric.
+#
+# `scripts/run_eval.py --check` fails when a gated metric moves further than its
+# band. Outcome quality is gated as a rate, not as a raw count, so a genuine
+# improvement cannot fail the gate. Denominator counts are bidirectional with a
+# zero band: a gold-set or sample change must not hide inside a rate.
+#
+# For rate metrics the effective band is max(base, 1/n) for that slice, so one
+# item is always allowed and a small slice cannot fail on a single flip.
+
+baseline = "eval/results/baseline.csv"
+
+[bands]
+# Rate metrics, fail on a drop.
+hit_at_k = 0.05
+recall_at_k = 0.05
+mrr = 0.05
+f1 = 0.05
+faithfulness_rate = 0.10
+judge_correct_rate = 0.10
+grounded_rate = 0.10
+abstention_rate = 0.0
+
+# Rate metric, fail on a rise.
+abstained_rate = 0.0
+
+# Denominator counts, fail on any change.
+retrieval_n = 0.0
+abstention_n = 0.0
+generation_n = 0.0
+faithfulness_n = 0.0
+judged = 0.0
+
+# Parser failures, fail on a rise.
+judge_parse_failures = 0.0
+faithful_parse_failures = 0.0
+
+[slice_kinds]
+simple = "answerable"
+named_reference = "answerable"
+multi_part = "answerable"
+near_miss_unanswerable = "unanswerable"
+off_topic = "unanswerable"

@@ -28,8 +28,10 @@ class _FakeCompletions:
         self._error = error
         self.calls: list[dict] = []
 
-    async def create(self, *, model, messages, stream=False):
-        self.calls.append({"model": model, "messages": messages, "stream": stream})
+    async def create(self, *, model, messages, stream=False, **kwargs):
+        self.calls.append(
+            {"model": model, "messages": messages, "stream": stream, **kwargs}
+        )
         if self._error is not None:
             raise self._error
         if stream:
@@ -47,8 +49,12 @@ class _FakeClient:
         self.chat = SimpleNamespace(completions=completions)
 
 
-def _llm(completions: _FakeCompletions) -> OpenRouterLlm:
-    return OpenRouterLlm(model="test/model", client=_FakeClient(completions))
+def _llm(
+    completions: _FakeCompletions, *, temperature: float | None = None
+) -> OpenRouterLlm:
+    return OpenRouterLlm(
+        model="test/model", client=_FakeClient(completions), temperature=temperature
+    )
 
 
 async def test_generate_returns_content_and_sends_system_then_user():
@@ -74,6 +80,21 @@ async def test_stream_yields_pieces_in_order():
 
 async def test_name_is_the_manifest_slug():
     assert _llm(_FakeCompletions()).name == "openrouter/test/model"
+
+
+async def test_temperature_is_sent_when_pinned():
+    completions = _FakeCompletions(text="ok")
+    llm = _llm(completions, temperature=0.0)
+    await llm.generate("sys", "ask")
+    tokens = [token async for token in llm.stream("sys", "ask")]
+    assert "".join(tokens) == "ok"
+    assert all(call["temperature"] == 0.0 for call in completions.calls)
+
+
+async def test_temperature_is_omitted_when_unset():
+    completions = _FakeCompletions()
+    await _llm(completions).generate("sys", "ask")
+    assert "temperature" not in completions.calls[0]
 
 
 async def test_missing_key_without_client_raises():

@@ -15,11 +15,13 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/harness/judging.py` | judge prompts, reply parsers, sample selection |
 | `eval/harness/cache.py` | `CachedLlm` |
 | `eval/results.py` | result CSV, baseline copy and diff |
+| `eval/thresholds.toml` | baseline, gate bands and slice kinds |
 | `eval/test_harness.py` | harness tests, no network |
 | `eval/test_results.py` | result CSV tests, no network |
 | `eval/runner.py` | one run: compose, score, write the CSV |
 | `eval/report.py` | result rows and printed summary |
-| `eval/check.py` | baseline diff for `--check` |
+| `eval/check.py` | baseline diff and gate for `--check` |
+| `eval/test_check.py` | gate tests, no network |
 | `eval/test_report.py` | row and rendering tests, no network |
 | `scripts/run_eval.py` | CLI params and dispatch |
 
@@ -38,7 +40,7 @@ gold/questions.jsonl (60 items)
 eval/results/<timestamp>.csv   (one row per config, slice, metric)
         |
         +-- --write-baseline --> eval/results/baseline.csv
-        +-- --check ----------> per-metric deltas vs baseline
+        +-- --check ----------> deltas + gate pass/fail
         |
         v
 docs/runs/<date>-<ticket>-<slug>.md   (committed run record)
@@ -90,16 +92,56 @@ Diff the current run against the baseline:
 uv run python scripts/run_eval.py --check
 ```
 
-`--check` prints per-metric deltas and lists metrics that appear on only one
-side. It refuses to diff two runs whose recorded manifest values differ (models,
-chunking, retrieval settings or judged sample), because those deltas would not be
-comparable. It does not fail on a drop yet; thresholds and a required CI workflow
-are V2 D2 (#77).
+`--check` prints per-metric deltas, lists metrics that appear on only one side,
+and applies the gate in `eval/thresholds.toml`. It exits 0 with `gate: PASS` when
+every gated metric stays inside its band, and exits 1 with `gate: FAIL` when one
+drops further, a gated metric is missing on either side, or a value is not a
+finite number. The TOML `baseline` key is the default; pass `--baseline` only to
+compare against a different file. It also refuses to diff two runs whose recorded
+manifest values differ (models, chunking, retrieval settings, judged sample, gold
+set hash or rerank floor), because those deltas would not be comparable. The CI
+workflow that runs this on pull requests is still open in #77.
 
-Generation and judge outputs are cached under `eval/.cache/` by `(model, input)`,
-so reruns are cheap and deterministic. `--k` controls the retrieval cutoff and
-`--sample` controls the judged sample. The sample is taken round-robin across
-the answerable slices, so the default of 15 covers simple, named and multi-part.
+Bands are absolute. For rate metrics the effective band is `max(base, 1 / n)` for
+that slice, so one item is normally allowed: 0.05 on overall retrieval with n=50,
+0.125 on an 8-item slice, 0.067 on the 15-item F1 sample, and 0.20 on a 5-item
+slice. The exception is over-abstention, which fails through `judged` and
+`faithfulness_n` as well as `abstained_rate`, because losing an answer is not a
+sampling artifact. The gate treats metrics by direction:
+
+| Group | Metrics | Failure rule |
+|---|---|---|
+| Sample invariants | `retrieval_n`, `abstention_n`, `generation_n` | any change |
+| Quality, drop | Hit@k, Recall@k, MRR, F1, faithfulness rate, judge-correct rate, grounded rate, abstention rate | drop beyond band |
+| Answerability, drop | `judged`, `faithfulness_n` | drop beyond band |
+| Quality, rise | `abstained_rate`, `judge_parse_failures`, `faithful_parse_failures` | rise beyond band |
+
+Outcome counts (`answered`, `abstained`, `faithful`, `grounded`, the judge buckets)
+stay in the CSV as diagnostics but are not gated directly; their rates carry the
+quality signal, so an improvement cannot fail the gate. A gold-set or sample
+change fails through the sample invariants instead of hiding inside an average.
+EM is reported but not gated.
+
+`[slice_kinds]` in the TOML marks each slice as `answerable` or `unanswerable`;
+a new slice must be added there before the gate can score it. `--sample` must be
+at least the number of answerable slices, otherwise a slice has no generation
+rows and the gate fails closed.
+
+Generation and judge calls are pinned to temperature 0, and the result rows
+record `generator_temperature` and `judge_temperature`. The cache key carries the
+temperature variant, so a cached reply from an earlier sampling setup is not
+reused. `--k` controls the retrieval cutoff and `--sample` controls the judged
+sample. The sample is taken round-robin across the answerable slices, so the
+default of 15 covers simple, named and multi-part.
+
+A clean checkout cannot run the full eval: the corpus and Chroma index are host
+data and stay out of git. The CI workflow will either run on a self-hosted runner
+with `/data` mounted or restore a private index artifact; that decision is part of
+#77 before `eval.yml` is written. Use `--latest <csv>` in CI so the gate scores
+the artifact the job produced instead of whatever file sorts last. Until the CI
+cache is pinned, a cold run can still move a stochastic metric inside its
+one-item band; the bands are sized for that, and the re-pin procedure is a new
+baseline run plus a new record.
 
 ## Result files
 
@@ -108,9 +150,11 @@ the answerable slices, so the default of 15 covers simple, named and multi-part.
 | `eval/results/<timestamp>.csv` | no | one run, gitignored |
 | `eval/results/baseline.csv` | yes | the pinned comparison point |
 
-The V2 baseline is written by the first `--write-baseline` run against the pinned
-manifest. This file does not invent a baseline; rerun the command after a
-deliberate configuration change and review the diff.
+The pinned V2 baseline is run `20261104T144856Z`, recorded as
+`docs/runs/2026-11-04-v2-d1-baseline-r4.md`. Earlier D1 runs are kept as separate
+records because their metric definitions and sampling changed. Rerun
+`--write-baseline` only after a deliberate configuration change, and add a new
+record instead of editing the old one.
 
 ## Run record
 

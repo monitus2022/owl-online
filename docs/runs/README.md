@@ -22,13 +22,18 @@ history of how the RAG strategy moved over the sprint.
 docs/runs/YYYY-MM-DD-<ticket>-<slug>.md
 ```
 
-Example: `docs/runs/2026-11-04-v2-d1-baseline.md`.
+Example: `docs/runs/2026-11-04-v2-d1-baseline.md`. When the same ticket produces
+another baseline, keep the old record and add a suffix: `-r2.md`, `-r3.md`, and
+so on.
 
 ## Runs
 
 | Date | Ticket | Run id | Config | Overall Hit@5 | Overall F1 | Faithful | Record |
 |---|---|---|---|---|---|---|---|
-| 2026-11-04 | #76 (V2 D1) | `20261104T134619Z` | `pinned` | 0.58 | 0.26 | 11/15 | [V2 D1 baseline](2026-11-04-v2-d1-baseline.md) |
+| 2026-11-04 | #76 (V2 D1) | `20261104T131118Z` | `pinned` | 0.58 | 0.22 | 11/15 | [V2 D1 baseline](2026-11-04-v2-d1-baseline.md) |
+| 2026-11-04 | #76 (V2 D1) | `20261104T134619Z` | `pinned` | 0.58 | 0.26 | 11/15 | [V2 D1 baseline r2](2026-11-04-v2-d1-baseline-r2.md) |
+| 2026-11-04 | #76 (V2 D1) | `20261104T143343Z` | `pinned` | 0.58 | 0.30 | 11/15 | [V2 D1 baseline r3](2026-11-04-v2-d1-baseline-r3.md) |
+| 2026-11-04 | #76 (V2 D1) | `20261104T144856Z` | `pinned` | 0.58 | 0.28 | 11/15 | [V2 D1 baseline r4](2026-11-04-v2-d1-baseline-r4.md) |
 
 ## Template
 
@@ -99,6 +104,9 @@ in the sample abstained.
 uv run python scripts/run_eval.py
 uv run python scripts/run_eval.py --check
 ```
+
+Pin with `--write-baseline` only when replacing the baseline. A check immediately
+after pinning compares the baseline to its own copied run and is refused.
 
 ## Raw summary
 

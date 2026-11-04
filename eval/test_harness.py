@@ -5,6 +5,7 @@ Lives in eval/ so the documented gate `pytest eval/` collects it.
 
 from app.schemas import Chunk, ChunkMetadata
 from eval.harness import (
+    CachedLlm,
     GoldItem,
     JudgeVerdict,
     abstention_metrics,
@@ -48,6 +49,15 @@ class _Retriever:
 class _Llm:
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
         return "an answer [c1]"
+
+
+async def test_cached_llm_variant_separates_cache_keys(tmp_path):
+    zero = CachedLlm(_Llm(), "model", tmp_path, variant="temperature=0")
+    warm = CachedLlm(_Llm(), "model", tmp_path, variant="temperature=1")
+    await zero.generate("system", "prompt")
+    await warm.generate("system", "prompt")
+    assert len(list(tmp_path.glob("*.txt"))) == 2
+    assert await zero.generate("system", "prompt") == "an answer [c1]"
 
 
 async def test_retrieval_metrics_hit_recall_and_mrr():

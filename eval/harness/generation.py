@@ -57,6 +57,14 @@ class GenerationMetrics:
     def judge_correct_rate(self) -> float:
         return self.correct / self.judged if self.judged else 0.0
 
+    @property
+    def abstained_rate(self) -> float:
+        return self.abstained / self.n if self.n else 0.0
+
+    @property
+    def grounded_rate(self) -> float:
+        return self.grounded / self.n if self.n else 0.0
+
 
 _ARTICLES = re.compile(r"\b(a|an|the)\b")
 _PUNCTUATION = re.compile(r"[^a-z0-9\s]")
