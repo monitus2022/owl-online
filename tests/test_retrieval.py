@@ -186,3 +186,54 @@ async def test_reranker_reorders_the_pool_and_replaces_the_floor():
     assert reranker.calls[0][2] == 2  # top_k passed through to the reranker
     assert [c.id for c in hits] == ["b1-c03-0000", "b1-c02-0000"]
     assert retriever.min_score == 0.0  # rerank relevance floor, not the RRF floor
+
+
+async def test_reranker_respects_a_configured_relevance_floor():
+    chunks_by_id = {c.id: c for c in _CHUNKS}
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000"]),
+        bm25=_StubBM25([5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id=chunks_by_id,
+        reranker=_StubReranker(),
+        pool=3,
+        candidates=3,
+        rerank_min_score=0.3,
+    )
+    assert retriever.min_score == 0.3
+
+
+async def test_reranker_abstains_when_the_top_hit_is_one_leg():
+    """A one-leg top hit is below the two-leg floor, so nothing reaches the reranker."""
+    chunks_by_id = {c.id: c for c in _CHUNKS}
+    reranker = _StubReranker()
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000"]),
+        bm25=_StubBM25([0.0] * len(_CHUNKS)),  # sparse finds nothing -> one-leg only
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id=chunks_by_id,
+        reranker=reranker,
+        pool=3,
+        candidates=3,
+    )
+    assert await retriever.retrieve("anything", top_k=2) == []
+    assert reranker.calls == []
+
+
+async def test_pool_of_fifty_reaches_the_reranker():
+    many = [_chunk(i, f"T{i}", f"text {i}") for i in range(60)]
+    reranker = _StubReranker()
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection([c.id for c in many]),
+        bm25=_StubBM25([1.0] * 60),
+        chunk_ids=[c.id for c in many],
+        chunks_by_id={c.id: c for c in many},
+        reranker=reranker,
+        pool=50,
+        candidates=50,
+    )
+    await retriever.retrieve("q", top_k=5)
+    assert len(reranker.calls[0][1]) == 50

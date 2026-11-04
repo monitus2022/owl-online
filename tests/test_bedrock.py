@@ -3,7 +3,11 @@
 import json
 from pathlib import Path
 
+import pytest
+from botocore.exceptions import ClientError, EndpointConnectionError
+
 from app.providers.bedrock import BedrockReranker
+from app.providers.errors import ProviderError, ProviderRateLimited, ProviderTimeout
 from app.schemas import Chunk, ChunkMetadata
 
 
@@ -89,3 +93,36 @@ async def test_rerank_is_cached_by_model_input(tmp_path):
 
 async def test_name_is_the_manifest_slug():
     assert _reranker(_FakeClient()).name == "bedrock/amazon.rerank-v1:0"
+
+
+class _ErrorClient:
+    def __init__(self, error: Exception) -> None:
+        self._error = error
+
+    def rerank(self, **kwargs):
+        raise self._error
+
+
+async def test_throttling_is_normalized():
+    error = ClientError({"Error": {"Code": "ThrottlingException", "Message": "slow"}}, "Rerank")
+    with pytest.raises(ProviderRateLimited):
+        await _reranker(_ErrorClient(error)).rerank("q", _CHUNKS, top_k=2)
+
+
+async def test_connection_error_is_normalized_to_timeout():
+    error = EndpointConnectionError(endpoint_url="https://bedrock")
+    with pytest.raises(ProviderTimeout):
+        await _reranker(_ErrorClient(error)).rerank("q", _CHUNKS, top_k=2)
+
+
+async def test_other_client_error_is_normalized():
+    error = ClientError({"Error": {"Code": "AccessDeniedException", "Message": "no"}}, "Rerank")
+    with pytest.raises(ProviderError):
+        await _reranker(_ErrorClient(error)).rerank("q", _CHUNKS, top_k=2)
+
+
+async def test_cache_skips_a_truncated_line(tmp_path):
+    cache_path = tmp_path / "cache.jsonl"
+    cache_path.write_text('{"key": "x", "ranking": [\n{"key": "y", "ranking": []}\n')
+    reranker = _reranker(_FakeClient(), cache_path)
+    assert "y" in reranker._cache  # valid line loaded, truncated line skipped

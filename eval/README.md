@@ -77,3 +77,7 @@ independent of the authoring agent.
 - Rerank (V1, #6) is wired on by default (`amazon.rerank-v1:0`, pool 50). The
   numbers above were measured before rerank and will change; re-run with AWS
   credentials to refresh them.
+- Rerank ceiling: the expected chunk is in the top-50 pool for 0.75 of answerable
+  items, so a perfect reranker can reach Hit@5 = 0.75 here (up from 0.60 without
+  rerank). Closing the rest of the gap needs a stronger embedder, not rerank
+  alone.

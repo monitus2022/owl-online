@@ -40,6 +40,7 @@ async def _run(args: argparse.Namespace) -> int:
         make_embedder(settings.embedder_provider),
         reranker=reranker,
         pool=settings.rerank_pool if reranker is not None else None,
+        min_score=settings.rerank_min_score,
     )
     # The eval needs real hosted models; the judge is pinned to OpenRouter.
     generator = CachedLlm(make_llm("openrouter"), DEFAULT_MODEL, args.cache)
@@ -59,7 +60,7 @@ async def _run(args: argparse.Namespace) -> int:
     grounded = sum(v.grounded for v in verdicts)
 
     print(f"gold: {len(gold)} items ({retrieval.n} answerable, {abstention.n} unanswerable)")
-    print(f"reranker: {getattr(reranker, 'name', 'none')}")
+    print(f"reranker: {settings.rerank_provider if reranker is not None else 'none'}")
     print(f"generator: openrouter/{DEFAULT_MODEL}")
     print(f"judge: openrouter/{JUDGE_MODEL}")
     print()

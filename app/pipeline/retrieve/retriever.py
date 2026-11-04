@@ -52,11 +52,16 @@ class HybridRetriever:
         self._rerank_min_score = rerank_min_score
 
     @property
+    def _two_leg_floor(self) -> float:
+        """Fused score a chunk must reach to be found by both retrieval legs."""
+        return 2.0 / (self._rrf_k + self._candidates)
+
+    @property
     def min_score(self) -> float:
         """Abstention floor: a rerank relevance floor, or the RRF two-leg score."""
         if self._reranker is not None:
             return self._rerank_min_score
-        return 2.0 / (self._rrf_k + self._candidates)
+        return self._two_leg_floor
 
     async def aclose(self) -> None:
         """Release the embedder's HTTP pool when the retriever is torn down."""
@@ -75,6 +80,12 @@ class HybridRetriever:
         ]
         if self._reranker is None:
             return ranked[:top_k]
+        # Secondary lexical gate: a top hit reached by one leg only means the
+        # corpus does not lexically cover the question, so abstain (return none)
+        # rather than hand the reranker noise. This keeps abstention working when
+        # a reranker is attached.
+        if not ranked or ranked[0].score < self._two_leg_floor:
+            return []
         return await self._reranker.rerank(query, ranked[: self._pool], top_k)
 
     async def _dense_run(self, query: str) -> list[str]:

@@ -37,5 +37,6 @@ async def build_runtime(settings: Settings) -> Runtime:
         make_embedder(settings.embedder_provider),
         reranker=reranker,
         pool=settings.rerank_pool if reranker is not None else None,
+        min_score=settings.rerank_min_score,
     )
     return Runtime(retriever=setup.retriever, llm=make_llm(settings.provider))

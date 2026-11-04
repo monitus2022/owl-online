@@ -131,14 +131,19 @@ sequenceDiagram
   participant R as Runtime
   participant A as ask()
   participant RET as HybridRetriever
+  participant RR as Reranker
   participant LLM as OpenRouterLlm
 
   C->>API: POST /ask {question}
   API->>R: get_retriever / get_llm
   API->>A: ask(question, retriever, llm)
   A->>RET: retrieve(question, top_k)
-  RET-->>A: list[Chunk] with fused RRF scores
-  alt top score below min_score
+  alt reranker attached and the lexical gate passes
+    RET->>RR: rerank(pool, top_k)
+    RR-->>RET: top_k by relevance
+  end
+  RET-->>A: list[Chunk] (relevance or RRF scores, or empty)
+  alt empty or top score below min_score
     A-->>API: AskResult(abstain)
   else grounded
     A->>LLM: generate(system, prompt)

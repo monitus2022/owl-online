@@ -27,7 +27,7 @@ Layout:
 
 - `app/api/` - FastAPI HTTP surface (single-shot `/ask`; streaming is V2)
 - `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate
-- `app/providers/` - model adapters (OpenRouter now; Bedrock is V2)
+- `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker now; Bedrock Llm is V2)
 - `app/agent/` - LangGraph graph, nodes, state (V2)
 - `app/schemas.py` - domain data (`Chunk`)
 - `app/config.py` - settings (env-based, `OWL_` prefix)
