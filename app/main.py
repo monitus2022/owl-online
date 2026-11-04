@@ -17,6 +17,7 @@ from app.providers.contracts import Llm, Retriever
 from app.providers.errors import ProviderError
 
 _INDEX_HTML = Path(__file__).parent / "api" / "static" / "index.html"
+_INDEX_HTML_TEXT = _INDEX_HTML.read_text(encoding="utf-8")
 
 
 def create_app(app_settings: Settings | None = None, runtime: Runtime | None = None) -> FastAPI:
@@ -27,12 +28,16 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Built once, here, never per request.
         app.state.runtime = runtime or await build_runtime(app_settings)
-        yield
+        try:
+            yield
+        finally:
+            await app.state.runtime.aclose()
 
     app = FastAPI(title=app_settings.app_name, version="0.1.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=app_settings.cors_origin_list,
+        allow_origin_regex=app_settings.cors_origin_regex,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
@@ -49,7 +54,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
 
     @app.get("/", response_class=HTMLResponse)
     def chat_page() -> HTMLResponse:
-        return HTMLResponse(_INDEX_HTML.read_text(encoding="utf-8"))
+        return HTMLResponse(_INDEX_HTML_TEXT)
 
     @app.post("/ask", response_model=AskResponse)
     async def ask_endpoint(

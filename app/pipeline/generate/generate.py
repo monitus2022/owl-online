@@ -47,11 +47,18 @@ async def ask(
     retriever: Retriever,
     llm: Llm,
     top_k: int = DEFAULT_TOP_K,
-    min_score: float = DEFAULT_MIN_SCORE,
+    min_score: float | None = None,
 ) -> AskResult:
     """Answer from the corpus, citing chunk ids, or abstain on weak retrieval."""
+    # Prefer the retriever's own floor so it tracks the rrf_k/candidates it was
+    # built with; fall back to the module default for simple/fake retrievers.
+    floor = (
+        min_score
+        if min_score is not None
+        else getattr(retriever, "min_score", DEFAULT_MIN_SCORE)
+    )
     chunks = await retriever.retrieve(question, top_k)
-    if not chunks or chunks[0].score < min_score:
+    if not chunks or chunks[0].score < floor:
         return AskResult(ABSTAIN_MESSAGE, abstained=True)
     answer = await llm.generate(_SYSTEM, _prompt(question, chunks))
     allowed = {c.id for c in chunks}

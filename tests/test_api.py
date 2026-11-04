@@ -86,3 +86,36 @@ def test_chat_page_is_served():
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "O.W.L. Online" in response.text
+
+
+def test_ask_rejects_a_blank_question():
+    with _client() as client:
+        response = client.post("/ask", json={"question": "   "})
+    assert response.status_code == 422
+
+
+def test_ask_response_matches_the_typed_schema():
+    with _client() as client:
+        body = client.post("/ask", json={"question": "Who?"}).json()
+    assert set(body) == {"answer", "citations", "abstained"}
+
+
+def test_cors_allows_the_pages_origin():
+    with _client() as client:
+        response = client.get(
+            "/health", headers={"Origin": "https://owl-online.pages.dev"}
+        )
+    assert response.headers.get("access-control-allow-origin") == "https://owl-online.pages.dev"
+
+
+def test_unexpected_error_returns_500_without_a_traceback():
+    class _BoomRetriever:
+        async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
+            raise RuntimeError("kaboom")
+
+    app = create_app(runtime=Runtime(retriever=_BoomRetriever(), llm=_Llm()))
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.post("/ask", json={"question": "q"})
+    assert response.status_code == 500
+    assert "kaboom" not in response.text
+    assert "traceback" not in response.text.lower()

@@ -45,6 +45,17 @@ class HybridRetriever:
         self._rrf_k = rrf_k
         self._candidates = candidates
 
+    @property
+    def min_score(self) -> float:
+        """Fused score a chunk must reach to be found by both retrieval legs."""
+        return 2.0 / (self._rrf_k + self._candidates)
+
+    async def aclose(self) -> None:
+        """Release the embedder's HTTP pool when the retriever is torn down."""
+        close = getattr(self._embedder, "aclose", None)
+        if close is not None:
+            await close()
+
     async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
         """top_k chunks whose ids both legs can reach, ranked by fused score."""
         dense_ids = await self._dense_run(query)

@@ -88,6 +88,12 @@ class OpenRouterLlm:
         except OpenAIError as exc:
             raise _normalize(exc) from exc
 
+    async def aclose(self) -> None:
+        """Close the underlying HTTP client, if the SDK exposes one."""
+        close = getattr(self._client, "close", None)
+        if close is not None:
+            await close()
+
     @staticmethod
     def _messages(
         system: str, prompt: str, context: str | None

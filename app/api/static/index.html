@@ -92,7 +92,11 @@
           });
           const data = await response.json();
           if (!response.ok) {
-            answerEl.textContent = data.detail || "Something went wrong.";
+            // Validation errors carry a list detail; keep the UI text a string.
+            answerEl.textContent =
+              typeof data.detail === "string"
+                ? data.detail
+                : "Please enter a question and try again.";
             return;
           }
           // textContent only: model output is never rendered as HTML.

@@ -18,12 +18,19 @@ class Runtime:
     retriever: Retriever
     llm: Llm
 
+    async def aclose(self) -> None:
+        """Release provider clients on shutdown (embedder pool, model client)."""
+        for component in (self.retriever, self.llm):
+            close = getattr(component, "aclose", None)
+            if close is not None:
+                await close()
+
 
 async def build_runtime(settings: Settings) -> Runtime:
     """Load the local hybrid index and build the configured model adapters."""
     setup = await compose_retriever(
         settings.chunks_path,
         settings.index_dir,
-        make_embedder("local"),
+        make_embedder(settings.embedder_provider),
     )
     return Runtime(retriever=setup.retriever, llm=make_llm(settings.provider))
