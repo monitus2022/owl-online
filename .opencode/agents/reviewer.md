@@ -29,5 +29,6 @@ Given a ticket and the current changes:
 4. Report findings in severity order: blocker / major / minor / nit. Each with file:line and a concrete suggestion.
 5. State explicitly whether the acceptance criteria are met (met / partially / not met).
 6. Flag anything that would regress the eval gate.
+7. Flag a stale diagram in `docs/architecture.md` when a provider contract, an adapter, or the `/ask` flow changed without the page being updated.
 
 Do not restate the diff. Do not praise. Findings and a verdict only.

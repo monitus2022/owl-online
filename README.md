@@ -51,6 +51,8 @@ flowchart TD
 
 Every model call goes through an adapter, so the provider is a config value, not an architecture.
 
+See [`docs/architecture.md`](docs/architecture.md) for the V1 contracts, module dependencies, and the `/ask` request flow. The diagram above is the full V1-V3 vision; that page is what is built today.
+
 ---
 
 ## Evaluation

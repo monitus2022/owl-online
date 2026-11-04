@@ -25,11 +25,13 @@ Provisional until the code layout exists; update these as the project takes shap
 
 Layout:
 
-- `app/pipeline/` - ingest, index, retrieve, rerank, generate
-- `app/providers/` - model adapters (Bedrock, OpenRouter)
-- `app/agent/` - LangGraph graph, nodes, state
-- `app/api/` - FastAPI + SSE
+- `app/api/` - FastAPI HTTP surface (single-shot `/ask`; streaming is V2)
+- `app/pipeline/` - ingest, index, retrieve, generate (rerank is V2)
+- `app/providers/` - model adapters (OpenRouter now; Bedrock is V2)
+- `app/agent/` - LangGraph graph, nodes, state (V2)
+- `app/schemas.py` - domain data (`Chunk`)
 - `app/config.py` - settings (env-based, `OWL_` prefix)
+- `docs/architecture.md` - living diagrams (contracts, module deps, `/ask` flow); update when a contract, an adapter, or the top-level flow changes
 - `eval/` - harness, gold set, thresholds
 
 Every model call goes through an adapter; the provider is a config value.
