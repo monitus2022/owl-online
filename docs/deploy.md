@@ -116,10 +116,13 @@ no keys live on the host. The container binds `127.0.0.1:8000`; nginx terminates
 TLS on 80/443 and proxies to it, and reads its runtime secrets from the env file
 in the next section.
 
-The rollout removes the old container and prunes the previous image before
-pulling, because the root volume is 8 GB and the image is about 1.5 GB: the new
-image does not fit next to the old one. A deploy therefore briefly restarts the
-container.
+The root volume is 8 GB and the image is about 1.5 GB, so the new image may not
+fit next to the running one (and `/data`, the corpus plus the index, shares that
+same volume). The rollout pulls first, so the old version keeps serving while
+the pull fits; only if the pull fails does it stop the container, prune unused
+images, and retry. That retry is the one window where a failed deploy leaves the
+API down until the next successful rollout. A larger or separate volume for
+`/data` is the durable fix.
 
 ### V1 host
 
