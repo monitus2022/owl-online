@@ -67,18 +67,18 @@ The harness scores each stage separately, so a failure can be attributed to retr
 | Abstention | refusal on `unanswerable` | high |
 | Leakage | closed-book gap | augmented >> closed-book |
 
-First measured run (V1 mini-eval, #51; details in `eval/README.md`):
+First measured run (V1 mini-eval #51, reranker #6; details in `eval/README.md`):
 
-| Metric | Value |
-|---|---|
-| Hit@5 | 0.60 |
-| Recall@5 | 0.42 |
-| MRR | 0.45 |
-| Abstention on unanswerable | 1.00 |
-| Judge correct / partial / wrong | 7 / 1 / 2 of 10 |
-| Grounded | 8 / 10 |
+| Metric | With rerank | No rerank |
+|---|---|---|
+| Hit@5 | 0.70 | 0.60 |
+| Recall@5 | 0.53 | 0.42 |
+| MRR | 0.45 | 0.45 |
+| Abstention on unanswerable | 1.00 | 1.00 |
+| Judge correct / partial / wrong | 9 / 0 / 0 of 10 | 7 / 1 / 2 of 10 |
+| Grounded | 9 / 10 | 8 / 10 |
 
-Generator `qwen/qwen3-30b-a3b-instruct-2507`; judge `deepseek/deepseek-v4.1-flash-1017` (different family).
+Generator `qwen/qwen3-30b-a3b-instruct-2507`; judge `deepseek/deepseek-v4.1-flash-1017` (different family); reranker `amazon.rerank-v1:0`.
 
 ---
 

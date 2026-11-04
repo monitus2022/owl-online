@@ -6,7 +6,13 @@ Model slugs, chunk params, top_k and rrf_k belong to the repro manifest, not her
 from pathlib import Path
 from typing import Literal
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# pydantic-settings reads .env for OWL_ settings but does not populate the
+# process environment. boto3 reads AWS_* from the environment, so credentials in
+# .env would be invisible to it. Load .env here; existing env vars still win.
+load_dotenv()
 
 
 class Settings(BaseSettings):
