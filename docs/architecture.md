@@ -64,6 +64,9 @@ classDiagram
     +name str
     +aclose()
   }
+  class BedrockEmbedder {
+    +name str
+  }
   class HybridRetriever {
     +min_score float
     +aclose()
@@ -79,6 +82,7 @@ classDiagram
   Llm <|.. OpenRouterLlm
   Llm <|.. FakeLlm
   Embedder <|.. OllamaEmbedder
+  Embedder <|.. BedrockEmbedder
   Embedder <|.. FakeEmbedder
   Reranker <|.. BedrockReranker
   Reranker <|.. FakeReranker
@@ -98,10 +102,11 @@ classDiagram
   factory ..> Retriever : builds
 ```
 
-Bedrock hosts the real reranker (`amazon.rerank-v1:0`, V1 #6); the Bedrock Llm
-adapter is V2 (#36). When a reranker is attached, `HybridRetriever` retrieves a
-wide pool and reranks it down to `top_k`, and the abstention floor becomes the
-rerank relevance floor.
+Bedrock hosts the reranker (`amazon.rerank-v1:0`) and, for cloud deploys where
+Ollama is unavailable, the embedder (`amazon.titan-embed-text-v2:0`). Ollama
+serves embeddings for local dev. The Bedrock Llm adapter is V2 (#36). When a
+reranker is attached, `HybridRetriever` retrieves a wide pool and reranks it down
+to `top_k`, and the abstention floor becomes the rerank relevance floor.
 
 ## Module dependencies
 

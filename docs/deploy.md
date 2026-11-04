@@ -14,15 +14,19 @@ embedder. Read the two constraints before picking a host.
    SQLite store read-write at startup, so mount it writable (or copy it to a
    writable path) rather than read-only.
 
-2. A query-time embedder. Retrieval embeds every question, and the current
-   embedder is Ollama (`OWL_EMBEDDER_PROVIDER=local`). The container has no
-   Ollama, so the host must run one of:
-   - Ollama reachable over the network, set `OWL_OLLAMA_BASE_URL` to it (the
-     default is `http://localhost:11434`). The embedding model must match the one
-     the index was built with (`qwen3-embedding:0.6b`), or the index slug guard
-     will force a rebuild.
-   - a hosted embedder, added later behind the `Embedder` contract. A Bedrock
-     embedding model is the natural fit, but the index would need rebuilding.
+2. A query-time embedder. Retrieval embeds every question. There are two
+   providers, and the index must be built with the same one:
+   - `OWL_EMBEDDER_PROVIDER=local` (Ollama): for dev. Point `OWL_OLLAMA_BASE_URL`
+     at the daemon, and use the index built with `qwen3-embedding:0.6b`.
+   - `OWL_EMBEDDER_PROVIDER=bedrock` (Amazon Titan): the vendor path for cloud,
+     no daemon needed. Build a separate index once:
+
+     ```
+     uv run python scripts/build_index.py --provider bedrock --index data/index/titan
+     ```
+
+     then set `OWL_EMBEDDER_PROVIDER=bedrock` and `OWL_INDEX_DIR=/data/index/titan`
+     on the host. The slug guard keeps the two indexes apart.
 
 ## Run locally with Docker
 

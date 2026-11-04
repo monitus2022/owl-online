@@ -63,10 +63,12 @@ uv run python scripts/build_index.py                 # once: build the vector in
 OWL_PROVIDER=openrouter uv run uvicorn app.main:app --reload
 ```
 
-Needs an `OWL_OPENROUTER_API_KEY` and an Ollama daemon for embeddings. Reranking
-uses Bedrock `amazon.rerank-v1:0` and needs AWS credentials; set
-`OWL_RERANK_PROVIDER=none` to run without AWS. Copy `.env.example` to `.env` and
-fill it in. For containers and hosting, see [`docs/deploy.md`](docs/deploy.md).
+Needs an `OWL_OPENROUTER_API_KEY` and an Ollama daemon for embeddings; for cloud,
+set `OWL_EMBEDDER_PROVIDER=bedrock` (Amazon Titan) instead, so no daemon is
+needed, and build the index with that embedder. Reranking uses Bedrock
+`amazon.rerank-v1:0` and needs AWS credentials; set `OWL_RERANK_PROVIDER=none` to
+run without AWS. Copy `.env.example` to `.env` and fill it in. For containers and
+hosting, see [`docs/deploy.md`](docs/deploy.md).
 
 ---
 

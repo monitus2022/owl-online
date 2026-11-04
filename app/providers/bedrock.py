@@ -1,7 +1,8 @@
-"""Bedrock reranker: amazon.rerank-v1:0 via the bedrock-agent-runtime Rerank API.
+"""Bedrock adapters: reranker (amazon.rerank-v1:0) and embedder (Titan).
 
-Only this module imports the AWS SDK. Results are disk-cached by
-(model, query, top_n, candidate ids) per AGENTS.md.
+Only this module imports the AWS SDK. Rerank results are disk-cached by
+(model, query, top_n, candidate ids) per AGENTS.md. The embedder is the vendor
+path for cloud deploys, where the local Ollama daemon is not available.
 """
 
 from __future__ import annotations
@@ -34,6 +35,10 @@ _THROTTLE_CODES = {
     "TooManyRequestsException",
     "ServiceQuotaExceededException",
 }
+
+DEFAULT_EMBED_MODEL = "amazon.titan-embed-text-v2:0"
+DEFAULT_EMBED_DIMS = 1024
+_EMBED_CONCURRENCY = 8
 
 
 class BedrockReranker:
@@ -105,6 +110,53 @@ class BedrockReranker:
             {"chunk_id": chunks[item["index"]].id, "score": float(item["relevanceScore"])}
             for item in response["results"][:top_k]
         ]
+
+
+class BedrockEmbedder:
+    """Embedder contract over Bedrock's Amazon Titan text embeddings."""
+
+    def __init__(
+        self,
+        *,
+        model: str = DEFAULT_EMBED_MODEL,
+        region: str = DEFAULT_REGION,
+        dimensions: int = DEFAULT_EMBED_DIMS,
+        client: Any | None = None,
+        timeout: float = DEFAULT_TIMEOUT,
+    ) -> None:
+        # Dims are part of the slug: the index slug guard must not reuse a
+        # collection built with a different vector width.
+        self.name = f"bedrock/{model}:{dimensions}"
+        self._model = model
+        self._dimensions = dimensions
+        self._client = client or boto3.client(
+            "bedrock-runtime",
+            region_name=region,
+            config=Config(read_timeout=timeout, retries={"max_attempts": _MAX_RETRIES}),
+        )
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Embed a batch; Titan takes one text per call, so calls run bounded-concurrent."""
+        semaphore = asyncio.Semaphore(_EMBED_CONCURRENCY)
+
+        async def one(text: str) -> list[float]:
+            async with semaphore:
+                try:
+                    return await asyncio.to_thread(self._embed_one, text)
+                except (BotoCoreError, ClientError) as exc:
+                    raise _normalize(exc) from exc
+
+        return await asyncio.gather(*(one(text) for text in texts))
+
+    def _embed_one(self, text: str) -> list[float]:
+        response = self._client.invoke_model(
+            modelId=self._model,
+            body=json.dumps(
+                {"inputText": text, "dimensions": self._dimensions, "normalize": True}
+            ),
+        )
+        payload = json.loads(response["body"].read())
+        return payload["embedding"]
 
 
 def _cache_key(model: str, query: str, top_n: int, chunks: list[Chunk]) -> str:

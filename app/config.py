@@ -25,8 +25,11 @@ class Settings(BaseSettings):
     app_name: str = "O.W.L. Online"
     # OpenRouter is the V1 path; the Bedrock adapter lands in V2 (#36).
     provider: Literal["bedrock", "openrouter"] = "openrouter"
+    # Embedder: "local" (Ollama) for dev, "bedrock" (Titan) for cloud.
     embedder_provider: str = "local"
     ollama_base_url: str = "http://localhost:11434"
+    bedrock_embed_model: str = "amazon.titan-embed-text-v2:0"
+    bedrock_embed_dims: int = 1024
     log_level: str = "INFO"
     live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 

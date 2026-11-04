@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from botocore.exceptions import ClientError, EndpointConnectionError
 
-from app.providers.bedrock import BedrockReranker
+from app.providers.bedrock import BedrockEmbedder, BedrockReranker
 from app.providers.errors import ProviderError, ProviderRateLimited, ProviderTimeout
 from app.schemas import Chunk, ChunkMetadata
 
@@ -102,6 +102,29 @@ class _ErrorClient:
     def rerank(self, **kwargs):
         raise self._error
 
+    def invoke_model(self, **kwargs):
+        raise self._error
+
+
+class _FakeBody:
+    def __init__(self, data: dict) -> None:
+        self._data = data
+
+    def read(self) -> bytes:
+        return json.dumps(self._data).encode("utf-8")
+
+
+class _FakeEmbedClient:
+    """Returns an embedding of the requested width and records calls."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def invoke_model(self, **kwargs):
+        self.calls.append(kwargs)
+        dims = json.loads(kwargs["body"]).get("dimensions", 1024)
+        return {"body": _FakeBody({"embedding": [0.5] * dims})}
+
 
 async def test_throttling_is_normalized():
     error = ClientError({"Error": {"Code": "ThrottlingException", "Message": "slow"}}, "Rerank")
@@ -126,3 +149,42 @@ async def test_cache_skips_a_truncated_line(tmp_path):
     cache_path.write_text('{"key": "x", "ranking": [\n{"key": "y", "ranking": []}\n')
     reranker = _reranker(_FakeClient(), cache_path)
     assert "y" in reranker._cache  # valid line loaded, truncated line skipped
+
+
+def _embedder(client, dimensions: int = 1024) -> BedrockEmbedder:
+    return BedrockEmbedder(
+        model="amazon.titan-embed-text-v2:0",
+        region="us-east-1",
+        dimensions=dimensions,
+        client=client,
+    )
+
+
+async def test_embedder_returns_one_vector_per_input():
+    vectors = await _embedder(_FakeEmbedClient()).embed(["a", "b"])
+    assert len(vectors) == 2
+    assert len(vectors[0]) == 1024
+
+
+async def test_embedder_request_body_and_dims():
+    client = _FakeEmbedClient()
+    await _embedder(client, dimensions=512).embed(["hello"])
+    assert json.loads(client.calls[0]["body"]) == {
+        "inputText": "hello",
+        "dimensions": 512,
+        "normalize": True,
+    }
+
+
+def test_embedder_name_includes_dims():
+    assert _embedder(_FakeEmbedClient(), dimensions=512).name == (
+        "bedrock/amazon.titan-embed-text-v2:0:512"
+    )
+
+
+async def test_embedder_error_is_normalized():
+    error = ClientError(
+        {"Error": {"Code": "ThrottlingException", "Message": "slow"}}, "InvokeModel"
+    )
+    with pytest.raises(ProviderRateLimited):
+        await _embedder(_ErrorClient(error)).embed(["x"])

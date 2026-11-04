@@ -6,7 +6,7 @@ a provider name.
 """
 
 from app.config import settings
-from app.providers.bedrock import BedrockReranker
+from app.providers.bedrock import BedrockEmbedder, BedrockReranker
 from app.providers.contracts import Embedder, Llm, Reranker, Retriever
 from app.providers.fakes import FakeEmbedder, FakeLlm, FakeReranker, FakeRetriever
 from app.providers.local import OllamaEmbedder
@@ -26,8 +26,14 @@ def make_embedder(provider: str, *, model: str | None = None) -> Embedder:
             if model is None:
                 return OllamaEmbedder(base_url=base_url)
             return OllamaEmbedder(model=model, base_url=base_url)
-        case "bedrock" | "openrouter":
-            return FakeEmbedder()
+        case "bedrock":
+            return BedrockEmbedder(
+                model=model or settings.bedrock_embed_model,
+                region=settings.aws_region,
+                dimensions=settings.bedrock_embed_dims,
+            )
+        case "openrouter":
+            return FakeEmbedder()  # OpenRouter serves no embeddings
         case _:
             raise ValueError(f"unknown provider: {provider}")
 

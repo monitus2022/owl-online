@@ -69,10 +69,12 @@ async def test_llm_stream_yield_text_tokens():
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
-async def test_embedder_contract_swappable(provider, ollama_running):
+async def test_embedder_contract_swappable(provider, ollama_running, bedrock_live):
     """Factory-built embedder satisfies the Embedder contract for each provider."""
     if provider == "local" and not ollama_running:
         pytest.skip("Ollama daemon not running")
+    if provider == "bedrock" and not bedrock_live:
+        pytest.skip("live Bedrock embeddings disabled (set OWL_LIVE_TESTS=1 and AWS creds)")
     embedder = make_embedder(provider)
     vectors = await embedder.embed(["hello"])
     assert len(vectors) == 1
