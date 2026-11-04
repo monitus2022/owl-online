@@ -28,7 +28,7 @@ Example: `docs/runs/2026-11-04-v2-d1-baseline.md`.
 
 | Date | Ticket | Run id | Config | Overall Hit@5 | Overall F1 | Faithful | Record |
 |---|---|---|---|---|---|---|---|
-| 2026-11-04 | #76 (V2 D1) | `20261104T134619Z` | `pinned` | 0.58 | 0.26 | 11/15 | [V2 D1 baseline](2026-11-04-v2-d1-baseline.md) |
+| 2026-11-04 | #76 (V2 D1) | `20261104T143343Z` | `pinned` | 0.58 | 0.30 | 11/15 | [V2 D1 baseline](2026-11-04-v2-d1-baseline.md) |
 
 ## Template
 

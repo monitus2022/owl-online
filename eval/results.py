@@ -39,6 +39,8 @@ MANIFEST_FIELDS = [
     "rrf_k",
     "candidates",
     "judged_sample",
+    "gold_hash",
+    "rerank_min_score",
 ]
 
 RESULT_FIELDS = ["run_id", "config", "slice", "metric", "value", *MANIFEST_FIELDS]
@@ -61,6 +63,8 @@ def manifest_row(
     reranker_model: str | None = None,
     embedder_model: str | None = None,
     embedder_dims: int | None = None,
+    gold_hash: str | None = None,
+    rerank_min_score: float | None = None,
 ) -> dict[str, str]:
     """Flatten the manifest plus the run-time choices into CSV columns.
 
@@ -102,6 +106,10 @@ def manifest_row(
         "rrf_k": str(retrieval["rrf_k"]),
         "candidates": str(actual_candidates),
         "judged_sample": str(judged_sample) if judged_sample is not None else "",
+        "gold_hash": gold_hash or "",
+        "rerank_min_score": (
+            str(rerank_min_score) if rerank_min_score is not None else ""
+        ),
     }
 
 

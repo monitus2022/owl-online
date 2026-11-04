@@ -1,10 +1,11 @@
 # Eval gate: the pinned baseline and the largest allowed drop per metric.
 #
-# `scripts/run_eval.py --check` fails when a gated metric falls more than its
-# band below the baseline. Bands are absolute, not relative: 0.05 means five
-# points. `[slice_bands]` overrides `[bands]` for named slices because the small
-# slices move in large steps: one item is 0.125 on the 8-item retrieval slices
-# and 0.20 on the 5-item generation slices.
+# `scripts/run_eval.py --check` fails when a gated metric falls further than its
+# band below the baseline. Bands are absolute. For rate metrics the effective
+# band is max(base, 1/n) for that slice, so one item is always allowed and a
+# small slice cannot fail on a single flip. Count metrics use the base band
+# directly, normally zero, so a gold-set or sample change cannot hide inside an
+# average.
 
 baseline = "eval/results/baseline.csv"
 
@@ -19,15 +20,14 @@ abstention_rate = 0.0
 retrieval_n = 0.0
 generation_n = 0.0
 abstention_n = 0.0
-
-[slice_bands]
-hit_at_k = 0.13
-recall_at_k = 0.13
-mrr = 0.13
-f1 = 0.13
-faithfulness_rate = 0.20
-judge_correct_rate = 0.20
-abstention_rate = 0.0
-retrieval_n = 0.0
-generation_n = 0.0
-abstention_n = 0.0
+abstention_refused = 0.0
+answered = 0.0
+abstained = 0.0
+faithfulness_n = 0.0
+faithful = 0.0
+judge_correct = 0.0
+judge_partial = 0.0
+judge_wrong = 0.0
+grounded = 0.0
+judge_parse_failures = 0.0
+faithful_parse_failures = 0.0

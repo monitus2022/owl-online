@@ -95,21 +95,32 @@ uv run python scripts/run_eval.py --check
 `--check` prints per-metric deltas, lists metrics that appear on only one side,
 and applies the gate in `eval/thresholds.toml`. It exits 0 with `gate: PASS` when
 every gated metric stays inside its band, and exits 1 with `gate: FAIL` when one
-drops further. It also refuses to diff two runs whose recorded manifest values
-differ (models, chunking, retrieval settings or judged sample), because those
-deltas would not be comparable. The CI workflow that runs this on pull requests
-is still open in #77.
+drops further, a gated metric is missing on either side, or a value is not a
+finite number. The TOML `baseline` key is the default; pass `--baseline` only to
+compare against a different file. It also refuses to diff two runs whose recorded
+manifest values differ (models, chunking, retrieval settings, judged sample, gold
+set hash or rerank floor), because those deltas would not be comparable. The CI
+workflow that runs this on pull requests is still open in #77.
 
-Bands are absolute. Overall metrics use `[bands]`; named slices use
-`[slice_bands]` because one gold item is 0.125 on the 8-item retrieval slices and
-0.20 on the 5-item generation slices. Count metrics (`retrieval_n`,
-`generation_n`, `abstention_n`) have a zero band, so a gold-set or sample change
-fails instead of hiding inside an average.
+Bands are absolute. For rate metrics the effective band is `max(base, 1 / n)` for
+that slice, so one item is always allowed: 0.05 on overall retrieval with n=50,
+0.125 on an 8-item slice, 0.067 on the 15-item F1 sample, and 0.20 on a 5-item
+slice. Count metrics use the base band directly, normally zero. The gated counts
+are `retrieval_n`, `abstention_n`, `abstention_refused`, `generation_n`,
+`answered`, `abstained`, `faithfulness_n`, `faithful`, the judge buckets,
+`grounded` and the two parse-failure counters. A gold-set or sample change
+therefore fails instead of hiding inside an average. EM is reported but not gated.
 
-Generation and judge outputs are cached under `eval/.cache/` by `(model, input)`,
-so reruns are cheap and deterministic. `--k` controls the retrieval cutoff and
-`--sample` controls the judged sample. The sample is taken round-robin across
-the answerable slices, so the default of 15 covers simple, named and multi-part.
+Generation and judge calls are pinned to temperature 0, and the cache key carries
+the `temperature=0` variant, so a cached reply from an earlier sampling setup is
+not reused. `--k` controls the retrieval cutoff and `--sample` controls the judged
+sample. The sample is taken round-robin across the answerable slices, so the
+default of 15 covers simple, named and multi-part.
+
+A clean checkout cannot run the full eval: the corpus and Chroma index are host
+data and stay out of git. The CI workflow will either run on a self-hosted runner
+with `/data` mounted or restore a private index artifact; that decision is part of
+#77 before `eval.yml` is written.
 
 ## Result files
 

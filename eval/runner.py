@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from app.config import settings
@@ -58,9 +59,20 @@ async def run(
         min_score=settings.rerank_min_score,
     )
     # The eval needs real hosted models; the judge is pinned to OpenRouter.
-    generator = CachedLlm(make_llm("openrouter"), DEFAULT_MODEL, cache_dir)
-    judge = CachedLlm(make_llm("openrouter", model=JUDGE_MODEL), JUDGE_MODEL, cache_dir)
+    generator = CachedLlm(
+        make_llm("openrouter", temperature=0.0),
+        DEFAULT_MODEL,
+        cache_dir,
+        variant="temperature=0",
+    )
+    judge = CachedLlm(
+        make_llm("openrouter", model=JUDGE_MODEL, temperature=0.0),
+        JUDGE_MODEL,
+        cache_dir,
+        variant="temperature=0",
+    )
     gold = load_gold(gold_path)
+    gold_hash = hashlib.sha256(gold_path.read_bytes()).hexdigest()[:12]
 
     retrieval, retrieval_by_slice = await retrieval_metrics_all(setup.retriever, gold, k)
     abstention, abstention_by_slice = await abstention_metrics_all(
@@ -92,6 +104,8 @@ async def run(
             if settings.embedder_provider == "bedrock"
             else None
         ),
+        gold_hash=gold_hash,
+        rerank_min_score=settings.rerank_min_score,
     )
     rows = [
         *retrieval_rows(run_id, config, values, retrieval, retrieval_by_slice),

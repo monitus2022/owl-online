@@ -13,15 +13,25 @@ from app.providers.contracts import Llm
 class CachedLlm:
     """Llm wrapper caching generate() by (name, input) on disk (AGENTS.md)."""
 
-    def __init__(self, inner: Llm, name: str, cache_dir: Path) -> None:
+    def __init__(
+        self,
+        inner: Llm,
+        name: str,
+        cache_dir: Path,
+        *,
+        variant: str | None = None,
+    ) -> None:
         self.name = name
         self._inner = inner
         self._dir = cache_dir
+        self._variant = variant
         cache_dir.mkdir(parents=True, exist_ok=True)
 
     async def generate(self, system: str, prompt: str, *, context: str | None = None) -> str:
         key = hashlib.sha256(
-            json.dumps([self.name, system, prompt, context]).encode("utf-8")
+            json.dumps([self.name, self._variant, system, prompt, context]).encode(
+                "utf-8"
+            )
         ).hexdigest()
         path = self._dir / f"{key}.txt"
         if path.exists():

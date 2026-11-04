@@ -32,7 +32,7 @@ def main() -> int:
     parser.add_argument("--index", type=Path, default=REPO / "data" / "index" / "chroma")
     parser.add_argument("--cache", type=Path, default=REPO / "eval" / ".cache")
     parser.add_argument("--results", type=Path, default=RESULTS_DIR)
-    parser.add_argument("--baseline", type=Path, default=BASELINE_PATH)
+    parser.add_argument("--baseline", type=Path, default=None)
     parser.add_argument(
         "--thresholds", type=Path, default=REPO / "eval" / "thresholds.toml"
     )
@@ -60,7 +60,7 @@ def main() -> int:
             index_dir=args.index,
             cache_dir=args.cache,
             results_dir=args.results,
-            baseline=args.baseline,
+            baseline=args.baseline or BASELINE_PATH,
             k=args.k,
             sample=args.sample,
             pin_baseline=args.write_baseline,

@@ -38,13 +38,16 @@ def make_embedder(provider: str, *, model: str | None = None) -> Embedder:
             raise ValueError(f"unknown provider: {provider}")
 
 
-def make_llm(provider: str, *, model: str | None = None) -> Llm:
+def make_llm(
+    provider: str, *, model: str | None = None, temperature: float | None = None
+) -> Llm:
     """Build an Llm for a provider name"""
     match provider:
         case "openrouter":
             return OpenRouterLlm(
                 model=model or DEFAULT_MODEL,
                 api_key=settings.openrouter_api_key,
+                temperature=temperature,
             )
         case "bedrock":
             return FakeLlm()  # real Bedrock adapter is V2 (#36)
