@@ -13,7 +13,7 @@ from app.providers.contracts import Embedder
 from app.schemas import Chunk
 
 DEFAULT_RRF_K = 60
-_QUERY_CANDIDATES = 20
+QUERY_CANDIDATES = 20
 
 
 class _VectorStore(Protocol):
@@ -35,7 +35,7 @@ class HybridRetriever:
         chunk_ids: list[str],
         chunks_by_id: dict[str, Chunk],
         rrf_k: int = DEFAULT_RRF_K,
-        candidates: int = _QUERY_CANDIDATES,
+        candidates: int = QUERY_CANDIDATES,
     ) -> None:
         self._embedder = embedder
         self._collection = collection
@@ -44,6 +44,17 @@ class HybridRetriever:
         self._chunks_by_id = chunks_by_id
         self._rrf_k = rrf_k
         self._candidates = candidates
+
+    @property
+    def min_score(self) -> float:
+        """Fused score a chunk must reach to be found by both retrieval legs."""
+        return 2.0 / (self._rrf_k + self._candidates)
+
+    async def aclose(self) -> None:
+        """Release the embedder's HTTP pool when the retriever is torn down."""
+        close = getattr(self._embedder, "aclose", None)
+        if close is not None:
+            await close()
 
     async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
         """top_k chunks whose ids both legs can reach, ranked by fused score."""

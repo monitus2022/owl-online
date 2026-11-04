@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>O.W.L. Online</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --line: #8884;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0 auto;
+        max-width: 46rem;
+        padding: 2rem 1rem;
+        line-height: 1.5;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+      form {
+        display: flex;
+        gap: 0.5rem;
+      }
+      input {
+        flex: 1;
+        padding: 0.6rem;
+        font-size: 1rem;
+      }
+      button {
+        padding: 0.6rem 1rem;
+        font-size: 1rem;
+      }
+      #result {
+        margin-top: 1.5rem;
+        border-top: 1px solid var(--line);
+        padding-top: 1rem;
+      }
+      #citations {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        padding: 0;
+      }
+      #citations li {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0.1rem 0.6rem;
+        font-size: 0.85rem;
+        font-family: ui-monospace, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>O.W.L. Online</h1>
+      <p>Ask a question; answers are grounded in the books and cite their sources.</p>
+      <form id="ask-form">
+        <input
+          id="question"
+          name="question"
+          placeholder="Ask about the books"
+          autocomplete="off"
+          required
+        />
+        <button type="submit">Ask</button>
+      </form>
+      <section id="result" hidden>
+        <p id="answer"></p>
+        <ul id="citations"></ul>
+      </section>
+    </main>
+    <script>
+      const form = document.getElementById("ask-form");
+      const result = document.getElementById("result");
+      const answerEl = document.getElementById("answer");
+      const citationsEl = document.getElementById("citations");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const question = document.getElementById("question").value;
+        result.hidden = false;
+        citationsEl.replaceChildren();
+        answerEl.textContent = "Thinking...";
+        try {
+          const response = await fetch("/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question }),
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            // Validation errors carry a list detail; keep the UI text a string.
+            answerEl.textContent =
+              typeof data.detail === "string"
+                ? data.detail
+                : "Please enter a question and try again.";
+            return;
+          }
+          // textContent only: model output is never rendered as HTML.
+          answerEl.textContent = data.answer;
+          for (const id of data.citations) {
+            const li = document.createElement("li");
+            li.textContent = id;
+            citationsEl.appendChild(li);
+          }
+        } catch (error) {
+          answerEl.textContent = "Could not reach the server.";
+        }
+      });
+    </script>
+  </body>
+</html>
