@@ -25,13 +25,14 @@ RUN uv sync --frozen --no-default-groups --no-cache
 
 COPY app ./app
 
-# Build-time smoke test: fail the build if the runtime import graph is broken,
-# for example if chromadb needed an excluded backend at import time.
-RUN python -c "import app.main, app.api.runtime, app.pipeline.retrieve, app.pipeline.generate"
-
 ENV PATH="/app/.venv/bin:$PATH" \
     OWL_CHUNKS_PATH=/data/chunks.jsonl \
     OWL_INDEX_DIR=/data/index/chroma
+
+# Build-time smoke test: fail the build if the runtime import graph is broken,
+# for example if chromadb needed an excluded backend at import time. Runs with
+# the venv python (PATH above).
+RUN python -c "import app.main, app.api.runtime, app.pipeline.retrieve, app.pipeline.generate"
 
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
