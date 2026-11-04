@@ -18,7 +18,7 @@ if str(REPO) not in sys.path:
 
 from app.config import settings  # noqa: E402
 from app.pipeline.retrieve import compose_retriever  # noqa: E402
-from app.providers.factory import make_embedder, make_llm  # noqa: E402
+from app.providers.factory import make_embedder, make_llm, make_reranker  # noqa: E402
 from app.providers.openrouter import DEFAULT_MODEL  # noqa: E402
 from eval.harness import (  # noqa: E402
     JUDGE_MODEL,
@@ -31,8 +31,15 @@ from eval.harness import (  # noqa: E402
 
 
 async def _run(args: argparse.Namespace) -> int:
+    reranker = (
+        None if settings.rerank_provider == "none" else make_reranker(settings.rerank_provider)
+    )
     setup = await compose_retriever(
-        args.chunks, args.index, make_embedder(settings.embedder_provider)
+        args.chunks,
+        args.index,
+        make_embedder(settings.embedder_provider),
+        reranker=reranker,
+        pool=settings.rerank_pool if reranker is not None else None,
     )
     # The eval needs real hosted models; the judge is pinned to OpenRouter.
     generator = CachedLlm(make_llm("openrouter"), DEFAULT_MODEL, args.cache)
@@ -52,6 +59,7 @@ async def _run(args: argparse.Namespace) -> int:
     grounded = sum(v.grounded for v in verdicts)
 
     print(f"gold: {len(gold)} items ({retrieval.n} answerable, {abstention.n} unanswerable)")
+    print(f"reranker: {getattr(reranker, 'name', 'none')}")
     print(f"generator: openrouter/{DEFAULT_MODEL}")
     print(f"judge: openrouter/{JUDGE_MODEL}")
     print()

@@ -153,3 +153,36 @@ async def test_rrf_prefers_multi_leg_hits():
     assert [c.id for c in hits] == ["b1-c02-0000", "b1-c01-0000", "b1-c03-0000"]
     expected = 1.0 / 61 + 1.0 / 62  # dense rank 2 + sparse rank 1, rrf_k=60
     assert abs(hits[0].score - expected) < 1e-9
+
+
+class _StubReranker:
+    """Records the pool it was handed and reverses it, stamping a score."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, list[str], int]] = []
+
+    async def rerank(self, query, chunks, top_k):
+        self.calls.append((query, [c.id for c in chunks], top_k))
+        picked = list(reversed(chunks))[:top_k]
+        return [c.model_copy(update={"score": 1.0}) for c in picked]
+
+
+async def test_reranker_reorders_the_pool_and_replaces_the_floor():
+    """With a reranker attached, retrieve reranks the pool and the floor switches."""
+    chunks_by_id = {c.id: c for c in _CHUNKS}
+    reranker = _StubReranker()
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000", "b1-c02-0000", "b1-c03-0000"]),
+        bm25=_StubBM25([5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id=chunks_by_id,
+        reranker=reranker,
+        pool=3,
+        candidates=3,
+    )
+    hits = await retriever.retrieve("anything", top_k=2)
+    assert len(reranker.calls) == 1
+    assert reranker.calls[0][2] == 2  # top_k passed through to the reranker
+    assert [c.id for c in hits] == ["b1-c03-0000", "b1-c02-0000"]
+    assert retriever.min_score == 0.0  # rerank relevance floor, not the RRF floor

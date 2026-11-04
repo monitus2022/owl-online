@@ -9,7 +9,7 @@ from typing import Any, Protocol
 from rank_bm25 import BM25Okapi
 
 from app.pipeline.index import tokenize
-from app.providers.contracts import Embedder
+from app.providers.contracts import Embedder, Reranker
 from app.schemas import Chunk
 
 DEFAULT_RRF_K = 60
@@ -36,6 +36,9 @@ class HybridRetriever:
         chunks_by_id: dict[str, Chunk],
         rrf_k: int = DEFAULT_RRF_K,
         candidates: int = QUERY_CANDIDATES,
+        reranker: Reranker | None = None,
+        pool: int | None = None,
+        rerank_min_score: float = 0.0,
     ) -> None:
         self._embedder = embedder
         self._collection = collection
@@ -44,10 +47,15 @@ class HybridRetriever:
         self._chunks_by_id = chunks_by_id
         self._rrf_k = rrf_k
         self._candidates = candidates
+        self._reranker = reranker
+        self._pool = pool if pool is not None else candidates
+        self._rerank_min_score = rerank_min_score
 
     @property
     def min_score(self) -> float:
-        """Fused score a chunk must reach to be found by both retrieval legs."""
+        """Abstention floor: a rerank relevance floor, or the RRF two-leg score."""
+        if self._reranker is not None:
+            return self._rerank_min_score
         return 2.0 / (self._rrf_k + self._candidates)
 
     async def aclose(self) -> None:
@@ -57,14 +65,17 @@ class HybridRetriever:
             await close()
 
     async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
-        """top_k chunks whose ids both legs can reach, ranked by fused score."""
+        """top_k chunks: hybrid RRF, then reranked when a reranker is attached."""
         dense_ids = await self._dense_run(query)
         sparse_ids = self._sparse_run(query)
         fused = self._fuse(dense_ids, sparse_ids)
-        return [
+        ranked = [
             self._chunks_by_id[cid].model_copy(update={"score": score})
-            for cid, score in fused[:top_k]
+            for cid, score in fused
         ]
+        if self._reranker is None:
+            return ranked[:top_k]
+        return await self._reranker.rerank(query, ranked[: self._pool], top_k)
 
     async def _dense_run(self, query: str) -> list[str]:
         """Query the Chroma collection for the top candidates by embedding similarity."""

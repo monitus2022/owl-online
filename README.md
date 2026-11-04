@@ -92,7 +92,7 @@ Execution is phased:
 
 | Phase | Scope | Status |
 |---|---|---|
-| V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval, cited generation with abstention, API, mini-eval, deployed | in progress (one-week sprint, issues #47-#53) |
+| V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval + rerank, cited generation with abstention, API, mini-eval, deployed | in progress (one-week sprint, issues #6, #47-#53) |
 | V2 - Deepening | guardrails, agentic loop (LangGraph), Bedrock adapter, full eval harness as CI gate | planned |
 | V3 - Product | exam mode, lesson mode | Exam mode priority, lesson mode in the future |
 

@@ -54,7 +54,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 python_version = "3.12"
 
-# rank-bm25 ships no type stubs or py.typed marker; treat it as untyped.
+# These ship no type stubs or py.typed marker; treat them as untyped.
 [[tool.mypy.overrides]]
-module = ["rank_bm25.*"]
+module = ["rank_bm25.*", "boto3.*", "botocore.*"]
 ignore_missing_imports = true

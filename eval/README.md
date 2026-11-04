@@ -74,3 +74,6 @@ independent of the authoring agent.
 - The eval uses OpenRouter for the generator and judge (hosted models required);
   the embedder comes from `OWL_EMBEDDER_PROVIDER`. `CachedLlm` caches `generate()`
   only; `stream` is passed through.
+- Rerank (V1, #6) is wired on by default (`amazon.rerank-v1:0`, pool 50). The
+  numbers above were measured before rerank and will change; re-run with AWS
+  credentials to refresh them.

@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5500,http://127.0.0.1:5500"
     cors_origin_regex: str = r"https://.*\.pages\.dev"
 
+    # Reranking (V1, #6). Set OWL_RERANK_PROVIDER=none to disable.
+    rerank_provider: str = "bedrock"
+    rerank_model: str = "amazon.rerank-v1:0"
+    rerank_pool: int = 50
+    rerank_min_score: float = 0.0  # relevance floor when reranking; calibrate via #51
+    rerank_cache_path: Path = Path("data/rerank_cache.jsonl")
+
     @property
     def cors_origin_list(self) -> list[str]:
         """The configured CORS origins, split from the comma-separated value."""

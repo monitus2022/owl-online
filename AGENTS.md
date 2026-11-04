@@ -26,7 +26,7 @@ Provisional until the code layout exists; update these as the project takes shap
 Layout:
 
 - `app/api/` - FastAPI HTTP surface (single-shot `/ask`; streaming is V2)
-- `app/pipeline/` - ingest, index, retrieve, generate (rerank is V2)
+- `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate
 - `app/providers/` - model adapters (OpenRouter now; Bedrock is V2)
 - `app/agent/` - LangGraph graph, nodes, state (V2)
 - `app/schemas.py` - domain data (`Chunk`)

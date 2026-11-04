@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from app.config import Settings
 from app.pipeline.retrieve import compose_retriever
 from app.providers.contracts import Llm, Retriever
-from app.providers.factory import make_embedder, make_llm
+from app.providers.factory import make_embedder, make_llm, make_reranker
 
 
 @dataclass(frozen=True)
@@ -28,9 +28,14 @@ class Runtime:
 
 async def build_runtime(settings: Settings) -> Runtime:
     """Load the local hybrid index and build the configured model adapters."""
+    reranker = (
+        None if settings.rerank_provider == "none" else make_reranker(settings.rerank_provider)
+    )
     setup = await compose_retriever(
         settings.chunks_path,
         settings.index_dir,
         make_embedder(settings.embedder_provider),
+        reranker=reranker,
+        pool=settings.rerank_pool if reranker is not None else None,
     )
     return Runtime(retriever=setup.retriever, llm=make_llm(settings.provider))

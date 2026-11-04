@@ -68,6 +68,9 @@ classDiagram
     +min_score float
     +aclose()
   }
+  class BedrockReranker {
+    +name str
+  }
   class FakeLlm
   class FakeEmbedder
   class FakeReranker
@@ -77,6 +80,7 @@ classDiagram
   Llm <|.. FakeLlm
   Embedder <|.. OllamaEmbedder
   Embedder <|.. FakeEmbedder
+  Reranker <|.. BedrockReranker
   Reranker <|.. FakeReranker
   Retriever <|.. HybridRetriever
   Retriever <|.. FakeRetriever
@@ -94,7 +98,10 @@ classDiagram
   factory ..> Retriever : builds
 ```
 
-Bedrock currently resolves to the fakes; the real adapter is V2 (#36).
+Bedrock hosts the real reranker (`amazon.rerank-v1:0`, V1 #6); the Bedrock Llm
+adapter is V2 (#36). When a reranker is attached, `HybridRetriever` retrieves a
+wide pool and reranks it down to `top_k`, and the abstention floor becomes the
+rerank relevance floor.
 
 ## Module dependencies
 

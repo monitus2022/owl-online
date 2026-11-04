@@ -6,6 +6,7 @@ a provider name.
 """
 
 from app.config import settings
+from app.providers.bedrock import BedrockReranker
 from app.providers.contracts import Embedder, Llm, Reranker, Retriever
 from app.providers.fakes import FakeEmbedder, FakeLlm, FakeReranker, FakeRetriever
 from app.providers.local import OllamaEmbedder
@@ -45,8 +46,14 @@ def make_llm(provider: str, *, model: str | None = None) -> Llm:
 def make_reranker(provider: str, *, model: str | None = None) -> Reranker:
     """Build a Reranker for a provider name"""
     match provider:
-        case "bedrock" | "openrouter":
-            return FakeReranker()
+        case "bedrock":
+            return BedrockReranker(
+                model=model or settings.rerank_model,
+                region=settings.aws_region,
+                cache_path=settings.rerank_cache_path,
+            )
+        case "openrouter" | "local":
+            return FakeReranker()  # no hosted reranker on OpenRouter; local is V2
         case _:
             raise ValueError(f"unknown provider: {provider}")
 
