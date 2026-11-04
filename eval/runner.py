@@ -47,6 +47,7 @@ async def run(
     k: int,
     sample: int,
     pin_baseline: bool,
+    embedder_model: str | None = None,
 ) -> RunReport:
     """Score the pinned stack, write one result CSV, and optionally pin it."""
     reranker = (
@@ -55,7 +56,7 @@ async def run(
     setup = await compose_retriever(
         chunks_path,
         index_dir,
-        make_embedder(settings.embedder_provider),
+        make_embedder(settings.embedder_provider, model=embedder_model),
         reranker=reranker,
         pool=settings.rerank_pool if reranker is not None else None,
         min_score=settings.rerank_min_score,
@@ -101,15 +102,14 @@ async def run(
         judged_sample=sample,
         reranker_model=settings.rerank_model if reranker is not None else None,
         embedder_model=(
-            settings.bedrock_embed_model
-            if settings.embedder_provider == "bedrock"
-            else None
+            embedder_model
+            or (
+                settings.bedrock_embed_model
+                if settings.embedder_provider == "bedrock"
+                else None
+            )
         ),
-        embedder_dims=(
-            settings.bedrock_embed_dims
-            if settings.embedder_provider == "bedrock"
-            else None
-        ),
+        embedder_dims=setup.dims,
         gold_hash=gold_hash,
         rerank_min_score=settings.rerank_min_score,
         generator_temperature=temperature,

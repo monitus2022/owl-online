@@ -38,6 +38,11 @@ def main() -> int:
     )
     parser.add_argument("--k", type=int, default=5)
     parser.add_argument("--sample", type=int, default=15)
+    parser.add_argument(
+        "--embedder-model",
+        default=None,
+        help="override the local/Bedrock embedder model slug",
+    )
     parser.add_argument("--write-baseline", action="store_true")
     parser.add_argument("--check", action="store_true")
     parser.add_argument(
@@ -79,6 +84,7 @@ def main() -> int:
             k=args.k,
             sample=args.sample,
             pin_baseline=args.write_baseline,
+            embedder_model=args.embedder_model,
         )
     )
     print(render_run(run_report))

@@ -74,9 +74,10 @@ async def build(args: argparse.Namespace) -> int:
     )
     semaphore = asyncio.Semaphore(args.concurrency)
     done = 0
+    missing = 0
 
     async def contextualize(chunk) -> None:
-        nonlocal done
+        nonlocal done, missing
         siblings = by_chapter[(chunk.metadata.book_num, chunk.metadata.chapter_num)]
         index = siblings.index(chunk)
         prev = siblings[index - 1].text if index > 0 else ""
@@ -90,11 +91,18 @@ async def build(args: argparse.Namespace) -> int:
             nxt,
         )
         async with semaphore:
-            context = (await llm.generate(SYSTEM, prompt)).strip()
-        chunk.context = _shorten(context, args.max_chars)
+            if args.cache_only:
+                context = llm.get_cached(SYSTEM, prompt)
+            else:
+                context = await llm.generate(SYSTEM, prompt)
+        if context is None:
+            missing += 1
+            chunk.context = ""
+        else:
+            chunk.context = _shorten(context.strip(), args.max_chars)
         done += 1
         if done % 25 == 0 or done == len(chunks):
-            print(f"{done}/{len(chunks)}", file=sys.stderr)
+            print(f"{done}/{len(chunks)} missing={missing}", file=sys.stderr)
 
     await asyncio.gather(*(contextualize(chunk) for chunk in chunks))
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -103,6 +111,8 @@ async def build(args: argparse.Namespace) -> int:
         encoding="utf-8",
     )
     print(f"wrote {args.out} ({len(chunks)} chunks)")
+    if missing:
+        print(f"text-only fallback: {missing} chunks")
     return 0
 
 
@@ -118,6 +128,11 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--max-chars", type=int, default=300)
+    parser.add_argument(
+        "--cache-only",
+        action="store_true",
+        help="use cached contexts and leave missing chunks text-only",
+    )
     return asyncio.run(build(parser.parse_args()))
 
 
