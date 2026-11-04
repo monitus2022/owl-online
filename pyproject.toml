@@ -7,18 +7,14 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "uvicorn[standard]",
-    "sse-starlette",
     "pydantic",
     "pydantic-settings",
     "httpx",
-    "langgraph",
     "chromadb",
     "rank-bm25",
     "numpy",
     "boto3",
     "openai",
-    "tenacity",
-    "pymupdf",
     "python-dotenv"
 ]
 
@@ -29,6 +25,13 @@ dependencies = [
 [tool.uv]
 package = false
 python-preference = "only-managed"
+# Local-only and V2 deps are groups, not base deps. `uv sync` installs these by
+# default (same dev environment as before); the runtime image syncs with
+# --no-default-groups and gets only [project] dependencies.
+default-groups = ["dev", "ingest", "agent"]
+# chromadb pulls these for its distributed mode and its default embedder, neither
+# of which we use (we supply our own embeddings). Excluded everywhere.
+exclude-dependencies = ["kubernetes", "onnxruntime"]
 
 [dependency-groups]
 dev = [
@@ -38,6 +41,10 @@ dev = [
     "mypy",
     "ipykernel",
 ]
+# Local corpus ingestion (PDF parsing); the served API never ingests.
+ingest = ["pymupdf"]
+# V2: the LangGraph agent loop and SSE streaming.
+agent = ["langgraph", "sse-starlette"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "eval"]

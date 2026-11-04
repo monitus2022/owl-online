@@ -47,6 +47,12 @@ docker run --rm -p 8000:8000 \
 `host.docker.internal` reaches an Ollama daemon running on the host (macOS and
 Windows; on Linux use the host gateway address).
 
+The image is runtime-only: `uv sync --no-default-groups` installs `[project]`
+dependencies, not the `ingest` (PDF parsing) or `agent` (V2) groups, and
+chromadb's unused `kubernetes` and `onnxruntime` are excluded in
+`pyproject.toml`. That keeps the image near 235 MB, which matters because the
+host root volume is 8 GB.
+
 To keep Ollama next to the API instead, run both with Compose:
 
 ```yaml
