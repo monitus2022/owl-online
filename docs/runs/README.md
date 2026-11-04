@@ -37,6 +37,7 @@ so on.
 | 2026-11-04 | #78 (V2 D3) | `20261104T152008Z` | `pinned` | 0.58 | 0.28 | 11/15 | [V2 D3 diagnostics](2026-11-04-v2-d3-retrieval-diagnostics.md) |
 | 2026-11-04 | #78 (V2 D3) | `20261104T154503Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D3 baseline](2026-11-04-v2-d3-retrieval.md) |
 | 2026-11-05 | #78 (V2 D3) | `20261104T185945Z` | `context` | 0.72 | 0.31 | 12/15 | [Contextual retrieval, rejected](2026-11-05-v2-d3-contextual-retrieval.md) |
+| 2026-11-05 | #78 (V2 D3) | `20261104T214110Z` | `4b` | 0.76 | 0.32 | 12/15 | [Retrieval ablations](2026-11-05-v2-d3-retrieval-ablations.md) |
 
 ## Template
 
