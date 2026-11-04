@@ -22,7 +22,10 @@ def make_embedder(provider: str, *, model: str | None = None) -> Embedder:
     """Build an Embedder for a provider name"""
     match provider:
         case "local":
-            return OllamaEmbedder() if model is None else OllamaEmbedder(model=model)
+            base_url = settings.ollama_base_url
+            if model is None:
+                return OllamaEmbedder(base_url=base_url)
+            return OllamaEmbedder(model=model, base_url=base_url)
         case "bedrock" | "openrouter":
             return FakeEmbedder()
         case _:

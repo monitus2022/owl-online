@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     # OpenRouter is the V1 path; the Bedrock adapter lands in V2 (#36).
     provider: Literal["bedrock", "openrouter"] = "openrouter"
     embedder_provider: str = "local"
+    ollama_base_url: str = "http://localhost:11434"
     log_level: str = "INFO"
     live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 

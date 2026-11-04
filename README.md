@@ -55,6 +55,21 @@ See [`docs/architecture.md`](docs/architecture.md) for the V1 contracts, module 
 
 ---
 
+## Run
+
+```
+uv sync
+uv run python scripts/build_index.py                 # once: build the vector index
+OWL_PROVIDER=openrouter uv run uvicorn app.main:app --reload
+```
+
+Needs an `OWL_OPENROUTER_API_KEY` and an Ollama daemon for embeddings. Reranking
+uses Bedrock `amazon.rerank-v1:0` and needs AWS credentials; set
+`OWL_RERANK_PROVIDER=none` to run without AWS. Copy `.env.example` to `.env` and
+fill it in. For containers and hosting, see [`docs/deploy.md`](docs/deploy.md).
+
+---
+
 ## Evaluation
 
 The harness scores each stage separately, so a failure can be attributed to retrieval or generation.

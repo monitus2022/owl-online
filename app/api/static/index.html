@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="owl-api-base" content="" />
     <title>O.W.L. Online</title>
     <style>
       :root {
@@ -77,6 +78,11 @@
       const result = document.getElementById("result");
       const answerEl = document.getElementById("answer");
       const citationsEl = document.getElementById("citations");
+      // Empty base means same origin (served by the API). Set the meta tag to
+      // the live API URL when hosting this page separately, e.g. Cloudflare Pages.
+      const apiBase = document
+        .querySelector('meta[name="owl-api-base"]')
+        .content.replace(/\/$/, "");
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -85,7 +91,7 @@
         citationsEl.replaceChildren();
         answerEl.textContent = "Thinking...";
         try {
-          const response = await fetch("/ask", {
+          const response = await fetch(`${apiBase}/ask`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ question }),
