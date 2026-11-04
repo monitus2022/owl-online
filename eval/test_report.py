@@ -5,12 +5,18 @@ from pathlib import Path
 import pytest
 
 from eval.check import CheckReport, render_check
-from eval.harness import AbstentionMetrics, GenerationMetrics, RetrievalMetrics
+from eval.harness import (
+    AbstentionMetrics,
+    GenerationMetrics,
+    RetrievalDiagnostics,
+    RetrievalMetrics,
+)
 from eval.report import (
     RunReport,
     abstention_rows,
     generation_rows,
     render_run,
+    retrieval_diagnostic_rows,
     retrieval_rows,
 )
 from eval.results import MetricDelta
@@ -36,6 +42,22 @@ def test_retrieval_rows_cover_overall_and_slices():
     ]
     assert rows[0].value == 2
     assert rows[1].value == 0.5
+
+
+def test_retrieval_diagnostic_rows_cover_each_stage():
+    overall = RetrievalDiagnostics(
+        2, 2, 1, 2, 1, 0, 0.75, 0.25, 0.75, 0.5, 0.5, 0.0
+    )
+    rows = retrieval_diagnostic_rows("run1", "pinned", _manifest(), overall, {})
+    values = {row.metric: row.value for row in rows}
+    assert values["dense_recall_at_pool"] == 0.75
+    assert values["sparse_recall_at_pool"] == 0.25
+    assert values["pool_recall_at_pool"] == 0.75
+    assert values["rerank_lift"] == 0.5
+    assert values["rerank_loss"] == 0.5
+    assert values["pool_hit_n"] == 2
+    assert values["result_hit_n"] == 1
+    assert values["neighbor_hit_n"] == 0
 
 
 def test_abstention_rows_use_the_rate_property():
@@ -94,10 +116,14 @@ def test_render_run_reports_sections_and_paths():
         abstention_by_slice={},
         generation=GenerationMetrics(15, 15, 0, 0.2, 0.4, 9, 5, 1, 15, 14, 15),
         generation_by_slice={},
+        diagnostics=RetrievalDiagnostics(
+            50, 40, 30, 35, 28, 0, 0.7, 0.5, 0.6, 0.8, 0.2, 0.0
+        ),
     )
     text = render_run(report)
     assert "gold: 60 items (50 answerable, 10 unanswerable)" in text
     assert "retrieval\n  overall" in text
+    assert "retrieval diagnostics" in text
     assert "abstention\n  overall" in text
     assert "generation (judged sample)" in text
     assert "wrote eval/results/20260101T000000Z.csv" in text

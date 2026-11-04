@@ -34,6 +34,8 @@ so on.
 | 2026-11-04 | #76 (V2 D1) | `20261104T134619Z` | `pinned` | 0.58 | 0.26 | 11/15 | [V2 D1 baseline r2](2026-11-04-v2-d1-baseline-r2.md) |
 | 2026-11-04 | #76 (V2 D1) | `20261104T143343Z` | `pinned` | 0.58 | 0.30 | 11/15 | [V2 D1 baseline r3](2026-11-04-v2-d1-baseline-r3.md) |
 | 2026-11-04 | #76 (V2 D1) | `20261104T144856Z` | `pinned` | 0.58 | 0.28 | 11/15 | [V2 D1 baseline r4](2026-11-04-v2-d1-baseline-r4.md) |
+| 2026-11-04 | #78 (V2 D3) | `20261104T152008Z` | `pinned` | 0.58 | 0.28 | 11/15 | [V2 D3 diagnostics](2026-11-04-v2-d3-retrieval-diagnostics.md) |
+| 2026-11-04 | #78 (V2 D3) | `20261104T153229Z` | `pinned` | 0.78 | 0.32 | 12/15 | [V2 D3 baseline](2026-11-04-v2-d3-retrieval.md) |
 
 ## Template
 

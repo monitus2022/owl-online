@@ -150,8 +150,8 @@ baseline run plus a new record.
 | `eval/results/<timestamp>.csv` | no | one run, gitignored |
 | `eval/results/baseline.csv` | yes | the pinned comparison point |
 
-The pinned V2 baseline is run `20261104T144856Z`, recorded as
-`docs/runs/2026-11-04-v2-d1-baseline-r4.md`. Earlier D1 runs are kept as separate
+The pinned V2 baseline is the D3 run `20261104T153229Z`, recorded as
+`docs/runs/2026-11-04-v2-d3-retrieval.md`. Earlier D1 runs are kept as separate
 records because their metric definitions and sampling changed. Rerun
 `--write-baseline` only after a deliberate configuration change, and add a new
 record instead of editing the old one.
@@ -176,6 +176,34 @@ After the pipeline finishes, before closing the ticket:
 One record per run id. Do not rewrite the metrics of a past run; a changed
 configuration is a new record. Timestamped CSVs stay local, so the record must
 stand alone without them.
+
+## V2 D3 retrieval (2026-11-04)
+
+The D3 baseline is run `20261104T144856Z` (Hit@5 0.58). After the named filter,
+decomposition and the gold-label audit, run `20261104T153229Z` measures:
+
+| Slice | Hit@5 before | Hit@5 after | Recall@5 before | Recall@5 after |
+|---|---|---|---|---|
+| overall | 0.58 | 0.78 | 0.48 | 0.66 |
+| named_reference | 0.38 | 1.00 | 0.38 | 1.00 |
+| simple | 0.65 | 0.76 | 0.55 | 0.62 |
+| multi_part | 0.50 | 0.62 | 0.31 | 0.50 |
+
+Stage diagnostics for the same run: dense recall@50 0.75, sparse 0.66, pool 0.82,
+rerank lift 0.87, loss 0.13. The reranker was not the bottleneck; pool recall
+was. The named filter is the largest single change: explicit book/chapter
+references are now applied to both legs, with an unfiltered fallback when the
+filtered result is empty. Multi-part questions are split into at most three
+sub-queries, the original question is kept as an extra leg, and the merged pool
+is reranked.
+
+`multi_part` pool recall is 0.9375, not 1.0. Item `m07` still misses
+`b3-c10-0020` because the second fact shares no terms with the question; this is
+a query-expansion or embedder problem, not a fusion bug.
+
+The gold audit corrected `q03`, `q08`, `q13`, `q16`, `m06` and `m08`: some
+expected ids were an adjacent chunk or did not state the answer. See
+`docs/runs/2026-11-04-v2-d3-retrieval-diagnostics.md` for the ten-miss audit.
 
 ## V1 mini-eval (historical)
 

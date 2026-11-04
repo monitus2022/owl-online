@@ -3,9 +3,11 @@
 Lives in eval/ so the documented gate `pytest eval/` collects it.
 """
 
+from app.pipeline.retrieve.retriever import RetrievalTrace
 from app.schemas import Chunk, ChunkMetadata
 from eval.harness import (
     CachedLlm,
+    DiagnosticScore,
     GoldItem,
     JudgeVerdict,
     abstention_metrics,
@@ -15,10 +17,12 @@ from eval.harness import (
     normalize_answer,
     parse_faithful,
     parse_verdict,
+    retrieval_diagnostics_all,
     retrieval_metrics,
     retrieval_metrics_all,
     retrieval_metrics_by_slice,
     sample_answerable,
+    summarize_diagnostics,
     summarize_generation,
     token_f1,
 )
@@ -49,6 +53,54 @@ class _Retriever:
 class _Llm:
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
         return "an answer [c1]"
+
+
+class _DiagnosingRetriever:
+    def __init__(self, traces: dict[str, RetrievalTrace]) -> None:
+        self._traces = traces
+
+    async def diagnose(self, query: str, top_k: int) -> RetrievalTrace:
+        return self._traces[query]
+
+
+async def test_retrieval_diagnostics_split_each_stage():
+    items = [
+        GoldItem("q1", "q1", True, ["a", "b"], ("simple",)),
+        GoldItem("q2", "q2", True, ["c"], ("named_reference",)),
+    ]
+    traces = {
+        "q1": RetrievalTrace(("a",), ("x",), ("a", "x"), ("x",)),
+        "q2": RetrievalTrace(("c",), ("c",), ("c",), ("c",)),
+    }
+    overall, by_slice = await retrieval_diagnostics_all(
+        _DiagnosingRetriever(traces), items, k=5
+    )
+    assert overall.n == 2
+    assert overall.dense_hit_n == 2
+    assert overall.sparse_hit_n == 1
+    assert overall.pool_hit_n == 2
+    assert overall.result_hit_n == 1
+    assert overall.neighbor_hit_n == 0
+    assert abs(overall.dense_recall_at_pool - 0.75) < 1e-9
+    assert abs(overall.pool_recall_at_pool - 0.75) < 1e-9
+    assert overall.rerank_lift == 0.5
+    assert set(by_slice) == {"simple", "named_reference"}
+
+
+def test_neighbor_hit_marks_an_adjacent_chunk():
+    score = DiagnosticScore(
+        item_id="q1",
+        slice_name="simple",
+        dense_recall=0.0,
+        sparse_recall=0.0,
+        pool_recall=0.0,
+        pool_hit=False,
+        result_hit=False,
+        neighbor_hit=True,
+    )
+    metrics = summarize_diagnostics([score])
+    assert metrics.neighbor_hit_n == 1
+    assert metrics.neighbor_hit_rate == 1.0
 
 
 async def test_cached_llm_variant_separates_cache_keys(tmp_path):

@@ -77,6 +77,17 @@ async def test_topic_question_finds_the_right_chunk(index_parts):
     assert chunks[0].score > 0
 
 
+async def test_diagnose_returns_each_retrieval_stage(index_parts):
+    retriever = _retriever_for(index_parts)
+    query = "playing a sport on a flying broomstick"
+    trace = await retriever.diagnose(query, top_k=3)
+    chunks = await retriever.retrieve(query, top_k=3)
+    assert trace.result_ids == tuple(chunk.id for chunk in chunks)
+    assert trace.pool_ids
+    assert trace.dense_ids
+    assert trace.sparse_ids
+
+
 async def test_compose_retriever_from_disk(tmp_path, ollama_running):
     """The composition function wires a retriever straight from a chunks file."""
     if not ollama_running:
@@ -126,7 +137,7 @@ class _StubCollection:
     def count(self):
         return len(self._ids)
 
-    def query(self, *, query_embeddings, n_results):
+    def query(self, *, query_embeddings, n_results, where=None):
         return {"ids": [self._ids[:n_results]]}
 
 
@@ -154,6 +165,52 @@ async def test_rrf_prefers_multi_leg_hits():
     assert [c.id for c in hits] == ["b1-c02-0000", "b1-c01-0000", "b1-c03-0000"]
     expected = 1.0 / 61 + 1.0 / 62  # dense rank 2 + sparse rank 1, rrf_k=60
     assert abs(hits[0].score - expected) < 1e-9
+
+
+class _FilterCollection:
+    """Dense stub that honours a Chroma where clause and records it."""
+
+    def __init__(self, filtered_ids, unfiltered_ids):
+        self._filtered = filtered_ids
+        self._unfiltered = unfiltered_ids
+        self.wheres: list[dict | None] = []
+
+    def count(self):
+        return len(self._unfiltered)
+
+    def query(self, *, query_embeddings, n_results, where=None):
+        self.wheres.append(where)
+        ids = self._filtered if where is not None else self._unfiltered
+        return {"ids": [ids[:n_results]]}
+
+
+async def test_metadata_filter_is_applied_to_both_legs():
+    collection = _FilterCollection(["b1-c01-0000"], ["b1-c02-0000"])
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=collection,
+        bm25=_StubBM25([5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+    )
+    hits = await retriever.retrieve("In book 1, chapter 1, what happens?", top_k=1)
+    assert collection.wheres == [{"$and": [{"book_num": {"$eq": 1}}, {"chapter_num": {"$eq": 1}}]}]
+    assert hits[0].id == "b1-c01-0000"
+
+
+async def test_empty_filtered_result_falls_back_to_unfiltered():
+    collection = _FilterCollection([], ["b1-c02-0000"])
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=collection,
+        bm25=_StubBM25([0.0] * len(_CHUNKS)),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+    )
+    hits = await retriever.retrieve("In book 6, chapter 30, what happens?", top_k=1)
+    assert collection.wheres[0] is not None
+    assert collection.wheres[1] is None
+    assert hits[0].id == "b1-c02-0000"
 
 
 class _StubReranker:

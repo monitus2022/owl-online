@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
-from eval.harness import AbstentionMetrics, GenerationMetrics, RetrievalMetrics
+from eval.harness import (
+    AbstentionMetrics,
+    GenerationMetrics,
+    RetrievalDiagnostics,
+    RetrievalMetrics,
+)
 from eval.results import ResultRow
 
 
@@ -29,6 +34,8 @@ class RunReport:
     abstention_by_slice: dict[str, AbstentionMetrics]
     generation: GenerationMetrics
     generation_by_slice: dict[str, GenerationMetrics]
+    diagnostics: RetrievalDiagnostics | None = None
+    diagnostics_by_slice: dict[str, RetrievalDiagnostics] = field(default_factory=dict)
 
 
 def retrieval_rows(
@@ -54,6 +61,64 @@ def retrieval_rows(
                 ResultRow(run_id, config, name, "mrr", metrics.mrr, manifest),
             ]
         )
+    return rows
+
+
+def retrieval_diagnostic_rows(
+    run_id: str,
+    config: str,
+    manifest: dict[str, str],
+    overall: RetrievalDiagnostics,
+    by_slice: dict[str, RetrievalDiagnostics],
+) -> list[ResultRow]:
+    """Stage recall and rerank conversion for the overall set and each slice."""
+
+    def metrics(name: str, m: RetrievalDiagnostics) -> list[ResultRow]:
+        return [
+            ResultRow(
+                run_id,
+                config,
+                name,
+                "dense_recall_at_pool",
+                m.dense_recall_at_pool,
+                manifest,
+            ),
+            ResultRow(
+                run_id,
+                config,
+                name,
+                "sparse_recall_at_pool",
+                m.sparse_recall_at_pool,
+                manifest,
+            ),
+            ResultRow(
+                run_id,
+                config,
+                name,
+                "pool_recall_at_pool",
+                m.pool_recall_at_pool,
+                manifest,
+            ),
+            ResultRow(run_id, config, name, "rerank_lift", m.rerank_lift, manifest),
+            ResultRow(run_id, config, name, "rerank_loss", m.rerank_loss, manifest),
+            ResultRow(run_id, config, name, "dense_hit_n", m.dense_hit_n, manifest),
+            ResultRow(run_id, config, name, "sparse_hit_n", m.sparse_hit_n, manifest),
+            ResultRow(run_id, config, name, "pool_hit_n", m.pool_hit_n, manifest),
+            ResultRow(run_id, config, name, "result_hit_n", m.result_hit_n, manifest),
+            ResultRow(run_id, config, name, "neighbor_hit_n", m.neighbor_hit_n, manifest),
+            ResultRow(
+                run_id,
+                config,
+                name,
+                "neighbor_hit_rate",
+                m.neighbor_hit_rate,
+                manifest,
+            ),
+        ]
+
+    rows = metrics("overall", overall)
+    for name, m in by_slice.items():
+        rows.extend(metrics(name, m))
     return rows
 
 
@@ -153,6 +218,24 @@ def _retrieval_lines(
     return lines
 
 
+def _diagnostic_lines(
+    overall: RetrievalDiagnostics,
+    by_slice: dict[str, RetrievalDiagnostics],
+) -> list[str]:
+    def line(name: str, m: RetrievalDiagnostics) -> str:
+        return (
+            f"  {name:<22} n={m.n:<3} dense={m.dense_recall_at_pool:.2f} "
+            f"sparse={m.sparse_recall_at_pool:.2f} pool={m.pool_recall_at_pool:.2f} "
+            f"lift={m.rerank_lift:.2f} loss={m.rerank_loss:.2f} "
+            f"near={m.neighbor_hit_rate:.2f}"
+        )
+
+    lines = ["retrieval diagnostics", line("overall", overall)]
+    for name, m in by_slice.items():
+        lines.append(line(name, m))
+    return lines
+
+
 def _abstention_lines(
     overall: AbstentionMetrics,
     by_slice: dict[str, AbstentionMetrics],
@@ -199,6 +282,11 @@ def render_run(report: RunReport) -> str:
         "",
     ]
     lines.extend(_retrieval_lines(report.k, report.retrieval, report.retrieval_by_slice))
+    if report.diagnostics is not None:
+        lines.append("")
+        lines.extend(
+            _diagnostic_lines(report.diagnostics, report.diagnostics_by_slice)
+        )
     lines.append("")
     lines.extend(_abstention_lines(report.abstention, report.abstention_by_slice))
     lines.append("")

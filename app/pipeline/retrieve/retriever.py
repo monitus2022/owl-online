@@ -7,11 +7,15 @@ candidate pool size are manifest values in D7 (#53) with defaults here.
 import asyncio
 import logging
 import time
+from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 from rank_bm25 import BM25Okapi
 
 from app.pipeline.index import tokenize
+from app.pipeline.retrieve.decompose import split_question
+from app.pipeline.retrieve.filters import MetadataFilter, parse_metadata_filter
 from app.providers.contracts import Embedder, Reranker
 from app.schemas import Chunk
 
@@ -19,6 +23,27 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_RRF_K = 60
 QUERY_CANDIDATES = 20
+
+
+@dataclass(frozen=True)
+class RetrievalTrace:
+    """Per-query ids at each stage, for eval diagnosis."""
+
+    dense_ids: tuple[str, ...]
+    sparse_ids: tuple[str, ...]
+    pool_ids: tuple[str, ...]
+    result_ids: tuple[str, ...]
+
+
+def _unique(ids: Iterable[str]) -> list[str]:
+    """Keep first-seen order while removing duplicates."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for chunk_id in ids:
+        if chunk_id not in seen:
+            seen.add(chunk_id)
+            out.append(chunk_id)
+    return out
 
 
 class _VectorStore(Protocol):
@@ -76,35 +101,75 @@ class HybridRetriever:
 
     async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
         """top_k chunks: hybrid RRF, then reranked when a reranker is attached."""
-        # Both legs are synchronous under the hood; run them concurrently off the
-        # event loop so one request cannot stall the others.
-        dense_ids, sparse_ids = await asyncio.gather(
-            self._dense_run(query), self._sparse_run(query)
+        _, chunks = await self._run(query, top_k)
+        return chunks
+
+    async def diagnose(self, query: str, top_k: int) -> RetrievalTrace:
+        """Run the same stages as retrieve and return the ids at each one."""
+        trace, _ = await self._run(query, top_k)
+        return trace
+
+    async def _run(
+        self, query: str, top_k: int
+    ) -> tuple[RetrievalTrace, list[Chunk]]:
+        """One retrieval pass, decomposed when the question asks two things."""
+        sub_queries = split_question(query)
+        decomposed = len(sub_queries) > 1
+        # Keep the original question as an extra leg: it carries the context that
+        # a bare sub-query loses, such as a pronoun in "who escapes from it?".
+        retrieval_queries = sub_queries + ([query] if decomposed else [])
+        base_filter = parse_metadata_filter(query)
+        filters = [
+            parse_metadata_filter(part) or base_filter for part in retrieval_queries
+        ]
+        legs = await asyncio.gather(
+            *(
+                self._dense_run(part, spec)
+                for part, spec in zip(retrieval_queries, filters, strict=True)
+            ),
+            *(
+                self._sparse_run(part, spec)
+                for part, spec in zip(retrieval_queries, filters, strict=True)
+            ),
         )
-        fused = self._fuse(dense_ids, sparse_ids)
+        dense_lists = list(legs[: len(retrieval_queries)])
+        sparse_lists = list(legs[len(retrieval_queries) :])
+        dense_ids = _unique(cid for ids in dense_lists for cid in ids)
+        sparse_ids = _unique(cid for ids in sparse_lists for cid in ids)
+        fused = self._fuse_many(dense_lists + sparse_lists)
         ranked = [
             self._chunks_by_id[cid].model_copy(update={"score": score})
             for cid, score in fused
         ]
+        pool_ids = tuple(cid for cid, _ in fused[: self._pool])
+        filtered = any(spec is not None for spec in filters)
+        # A parsed filter or a decomposed question is explicit evidence, so the
+        # two-leg lexical floor is relaxed for those queries.
+        floor = 0.0 if decomposed or filtered else self._two_leg_floor
         if self._reranker is None:
-            return ranked[:top_k]
-        # Secondary lexical gate: a top hit reached by one leg only means the
-        # corpus does not lexically cover the question, so abstain (return none)
-        # rather than hand the reranker noise. This keeps abstention working when
-        # a reranker is attached.
-        if not ranked or ranked[0].score < self._two_leg_floor:
-            return []
-        start = time.perf_counter()
-        reranked = await self._reranker.rerank(query, ranked[: self._pool], top_k)
-        logger.debug(
-            "rerank: pool=%d -> %d in %.0fms",
-            min(len(ranked), self._pool),
-            len(reranked),
-            (time.perf_counter() - start) * 1000,
+            result = ranked[:top_k]
+        elif not ranked or ranked[0].score < floor:
+            result = []
+        else:
+            start = time.perf_counter()
+            result = await self._reranker.rerank(query, ranked[: self._pool], top_k)
+            logger.debug(
+                "rerank: pool=%d -> %d in %.0fms",
+                min(len(ranked), self._pool),
+                len(result),
+                (time.perf_counter() - start) * 1000,
+            )
+        trace = RetrievalTrace(
+            dense_ids=tuple(dense_ids),
+            sparse_ids=tuple(sparse_ids),
+            pool_ids=pool_ids,
+            result_ids=tuple(chunk.id for chunk in result),
         )
-        return reranked
+        return trace, result
 
-    async def _dense_run(self, query: str) -> list[str]:
+    async def _dense_run(
+        self, query: str, metadata_filter: MetadataFilter | None = None
+    ) -> list[str]:
         """Query the Chroma collection for the top candidates by embedding similarity."""
         start = time.perf_counter()
         vectors = await self._embedder.embed([query])
@@ -116,38 +181,82 @@ class HybridRetriever:
                 f"embedder returned {len(vectors[0])} dims; index was built with {recorded}"
             )
         # chromadb is synchronous; keep the sqlite query off the event loop.
-        result = await asyncio.to_thread(self._dense_query, vectors)
+        where = metadata_filter.chroma_where() if metadata_filter is not None else None
+        result = await asyncio.to_thread(self._dense_query, vectors, where)
         ids = result["ids"][0]
+        if where is not None and not ids:
+            # Empty filtered result: fall back to the unfiltered leg.
+            result = await asyncio.to_thread(self._dense_query, vectors, None)
+            ids = result["ids"][0]
         logger.debug(
             "dense: %d candidates in %.0fms", len(ids), (time.perf_counter() - start) * 1000
         )
         return ids
 
-    def _dense_query(self, vectors: list[list[float]]) -> Any:
+    def _dense_query(self, vectors: list[list[float]], where: dict | None = None) -> Any:
         """The blocking part of the dense leg: count + query the collection."""
         n_results = min(self._candidates, self._collection.count())
-        return self._collection.query(query_embeddings=vectors, n_results=n_results)
+        query: dict[str, Any] = {
+            "query_embeddings": vectors,
+            "n_results": n_results,
+        }
+        if where is not None:
+            query["where"] = where
+        return self._collection.query(**query)
 
-    async def _sparse_run(self, query: str) -> list[str]:
+    async def _sparse_run(
+        self, query: str, metadata_filter: MetadataFilter | None = None
+    ) -> list[str]:
         """Query the BM25 index for the top candidates by token overlap."""
         # BM25 scoring over the whole corpus is CPU-bound; keep it off the loop.
         start = time.perf_counter()
-        ids = await asyncio.to_thread(self._sparse_query, query)
+        allowed = (
+            self._allowed_ids(metadata_filter)
+            if metadata_filter is not None
+            else None
+        )
+        ids = await asyncio.to_thread(self._sparse_query, query, allowed)
+        if metadata_filter is not None and not ids:
+            ids = await asyncio.to_thread(self._sparse_query, query, None)
         logger.debug(
             "sparse: %d candidates in %.0fms", len(ids), (time.perf_counter() - start) * 1000
         )
         return ids
 
-    def _sparse_query(self, query: str) -> list[str]:
-        """The blocking part of the sparse leg: score and rank every chunk."""
+    def _allowed_ids(self, metadata_filter: MetadataFilter) -> list[str]:
+        """Chunk ids that match a parsed book/chapter filter."""
+        return [
+            chunk_id
+            for chunk_id in self._chunk_ids
+            if metadata_filter.matches(
+                self._chunks_by_id[chunk_id].metadata.model_dump()
+            )
+        ]
+
+    def _sparse_query(self, query: str, allowed_ids: list[str] | None = None) -> list[str]:
+        """The blocking part of the sparse leg: score and rank the corpus or a subset."""
         scores = self._bm25.get_scores(tokenize(query))
-        order = sorted(range(len(scores)), key=scores.__getitem__, reverse=True)
+        if allowed_ids is None:
+            order = sorted(range(len(scores)), key=scores.__getitem__, reverse=True)
+        else:
+            allowed = set(allowed_ids)
+            order = sorted(
+                (i for i, cid in enumerate(self._chunk_ids) if cid in allowed),
+                key=scores.__getitem__,
+                reverse=True,
+            )
         return [self._chunk_ids[i] for i in order[: self._candidates] if scores[i] > 0]
 
-    def _fuse(self, dense_ids: list[str], sparse_ids: list[str]) -> list[tuple[str, float]]:
-        """RRF: each leg contributes 1/(rrf_k + rank), hits on both legs win."""
+    def _fuse_many(
+        self, lists: Iterable[list[str]]
+    ) -> list[tuple[str, float]]:
+        """RRF over one or more ranked lists; hits on more lists win."""
         fused: dict[str, float] = {}
-        for ids in (dense_ids, sparse_ids):
+        for ids in lists:
             for rank, cid in enumerate(ids, start=1):
                 fused[cid] = fused.get(cid, 0.0) + 1.0 / (self._rrf_k + rank)
         return sorted(fused.items(), key=lambda item: item[1], reverse=True)
+
+    def _fuse(self, dense_ids: list[str], sparse_ids: list[str]) -> list[tuple[str, float]]:
+        """Two-leg RRF; kept for callers and tests that fuse exactly two lists."""
+        return self._fuse_many([dense_ids, sparse_ids])
