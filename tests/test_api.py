@@ -100,6 +100,12 @@ def test_ask_response_matches_the_typed_schema():
     assert set(body) == {"answer", "citations", "abstained"}
 
 
+def test_response_carries_a_request_id():
+    with _client() as client:
+        response = client.post("/ask", json={"question": "Who?"})
+    assert response.headers.get("x-request-id")
+
+
 def test_cors_allows_the_pages_origin():
     with _client() as client:
         response = client.get(

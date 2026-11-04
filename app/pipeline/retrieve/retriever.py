@@ -5,6 +5,8 @@ candidate pool size are manifest values in D7 (#53) with defaults here.
 """
 
 import asyncio
+import logging
+import time
 from typing import Any, Protocol
 
 from rank_bm25 import BM25Okapi
@@ -12,6 +14,8 @@ from rank_bm25 import BM25Okapi
 from app.pipeline.index import tokenize
 from app.providers.contracts import Embedder, Reranker
 from app.schemas import Chunk
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_RRF_K = 60
 QUERY_CANDIDATES = 20
@@ -90,10 +94,19 @@ class HybridRetriever:
         # a reranker is attached.
         if not ranked or ranked[0].score < self._two_leg_floor:
             return []
-        return await self._reranker.rerank(query, ranked[: self._pool], top_k)
+        start = time.perf_counter()
+        reranked = await self._reranker.rerank(query, ranked[: self._pool], top_k)
+        logger.debug(
+            "rerank: pool=%d -> %d in %.0fms",
+            min(len(ranked), self._pool),
+            len(reranked),
+            (time.perf_counter() - start) * 1000,
+        )
+        return reranked
 
     async def _dense_run(self, query: str) -> list[str]:
         """Query the Chroma collection for the top candidates by embedding similarity."""
+        start = time.perf_counter()
         vectors = await self._embedder.embed([query])
         # Query-time dims guard: a wrong-model query against an existing index
         # must fail loudly rather than return neighbors in a foreign vector space.
@@ -104,7 +117,11 @@ class HybridRetriever:
             )
         # chromadb is synchronous; keep the sqlite query off the event loop.
         result = await asyncio.to_thread(self._dense_query, vectors)
-        return result["ids"][0]
+        ids = result["ids"][0]
+        logger.debug(
+            "dense: %d candidates in %.0fms", len(ids), (time.perf_counter() - start) * 1000
+        )
+        return ids
 
     def _dense_query(self, vectors: list[list[float]]) -> Any:
         """The blocking part of the dense leg: count + query the collection."""
@@ -114,7 +131,12 @@ class HybridRetriever:
     async def _sparse_run(self, query: str) -> list[str]:
         """Query the BM25 index for the top candidates by token overlap."""
         # BM25 scoring over the whole corpus is CPU-bound; keep it off the loop.
-        return await asyncio.to_thread(self._sparse_query, query)
+        start = time.perf_counter()
+        ids = await asyncio.to_thread(self._sparse_query, query)
+        logger.debug(
+            "sparse: %d candidates in %.0fms", len(ids), (time.perf_counter() - start) * 1000
+        )
+        return ids
 
     def _sparse_query(self, query: str) -> list[str]:
         """The blocking part of the sparse leg: score and rank every chunk."""

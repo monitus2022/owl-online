@@ -31,6 +31,7 @@ Layout:
 - `app/agent/` - LangGraph graph, nodes, state (V2)
 - `app/schemas.py` - domain data (`Chunk`)
 - `app/config.py` - settings (env-based, `OWL_` prefix)
+- `app/logging.py` - logging setup: one formatter, level from settings, per-request id
 - `docs/architecture.md` - living diagrams (contracts, module deps, `/ask` flow); update when a contract, an adapter, or the top-level flow changes
 - `eval/` - harness, gold set, thresholds
 

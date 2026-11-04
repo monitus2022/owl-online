@@ -15,6 +15,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
+| Logging | `app/logging.py` | one formatter, level from settings, a per-request id |
 | Domain | `app/schemas.py` | `Chunk` and its metadata |
 
 Pipeline stages, in order:
@@ -119,6 +120,7 @@ flowchart TD
   main --> pipeline[app/pipeline]
   main --> providers[app/providers]
   main --> config[app/config.py]
+  main --> log[app/logging.py]
   api --> pipeline
   api --> providers
   pipeline --> providers
@@ -161,6 +163,12 @@ sequenceDiagram
 The `Runtime` (the retriever with its optional reranker, plus the llm) is built
 once in the app lifespan, never per request. Provider failures surface as a
 normalized `ProviderError` and become a 502 at the edge.
+
+Logging is one formatter at `OWL_LOG_LEVEL`. Each request gets a short id
+(echoed as `X-Request-ID`), and `ask()` logs per-stage timings (retrieve,
+generate) so a slow request can be attributed to a stage without a profiler.
+The retriever and the providers add DEBUG lines (dense, sparse, rerank, embed,
+generate) for the per-call detail.
 
 ## Data shapes
 

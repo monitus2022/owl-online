@@ -10,6 +10,8 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +27,8 @@ from botocore.exceptions import (
 
 from app.providers.errors import ProviderError, ProviderRateLimited, ProviderTimeout
 from app.schemas import Chunk
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "amazon.rerank-v1:0"
 DEFAULT_REGION = "us-east-1"
@@ -86,6 +90,7 @@ class BedrockReranker:
         ]
 
     def _call(self, query: str, chunks: list[Chunk], top_k: int) -> list[dict[str, Any]]:
+        start = time.perf_counter()
         response = self._client.rerank(
             queries=[{"type": "TEXT", "textQuery": {"text": query}}],
             sources=[
@@ -105,6 +110,12 @@ class BedrockReranker:
                     "numberOfResults": top_k,
                 },
             },
+        )
+        logger.debug(
+            "rerank %s: %d docs in %.0fms",
+            self._model,
+            len(chunks),
+            (time.perf_counter() - start) * 1000,
         )
         return [
             {"chunk_id": chunks[item["index"]].id, "score": float(item["relevanceScore"])}
@@ -149,11 +160,15 @@ class BedrockEmbedder:
         return await asyncio.gather(*(one(text) for text in texts))
 
     def _embed_one(self, text: str) -> list[float]:
+        start = time.perf_counter()
         response = self._client.invoke_model(
             modelId=self._model,
             body=json.dumps(
                 {"inputText": text, "dimensions": self._dimensions, "normalize": True}
             ),
+        )
+        logger.debug(
+            "embed %s in %.0fms", self._model, (time.perf_counter() - start) * 1000
         )
         payload = json.loads(response["body"].read())
         return payload["embedding"]
