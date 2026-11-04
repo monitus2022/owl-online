@@ -39,10 +39,12 @@ def configure_logging(level: str = "INFO") -> None:
     root.setLevel(level.upper())
 
     # The API middleware logs the access line (with the request id and timing),
-    # so uvicorn's own access line would be a duplicate. The model SDKs' httpx
-    # request lines are noise next to the providers' own DEBUG timings.
+    # so uvicorn's own access line would be a duplicate. The model SDKs' HTTP
+    # request lines are noise next to the providers' own DEBUG timings; the
+    # OpenAI SDK here imports its HTTP client under the name httpx2.
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    for noisy in ("httpx", "httpx2"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
 def set_request_id(value: str) -> None:
