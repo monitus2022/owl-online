@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import tomllib
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,8 +17,11 @@ from pathlib import Path
 from app.pipeline.generate import DEFAULT_TOP_K, ask
 from app.providers.contracts import Llm, Retriever
 
-# Judge pinned per AGENTS.md; a different family from the Qwen generator.
-JUDGE_MODEL = "deepseek/deepseek-v4.1-flash-1017"
+# Judge pinned in config/manifest.toml (AGENTS.md: a different family from the
+# Qwen generator). The eval reads it from the manifest rather than restating it.
+JUDGE_MODEL = tomllib.loads(
+    (Path(__file__).resolve().parents[1] / "config" / "manifest.toml").read_text(encoding="utf-8")
+)["judge"]["model"]
 
 JUDGE_SYSTEM = (
     "You grade a revision answer against the book excerpts provided. "

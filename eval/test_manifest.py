@@ -1,7 +1,7 @@
 """The repro manifest must agree with the code's pinned defaults.
 
-This is how the eval "cites" the manifest: if a slug or a parameter changes in
-one place and not the other, this test fails.
+Lives in eval/ so the documented gate `pytest eval/` enforces it: the eval
+"cites" the manifest by refusing to run against a manifest that has drifted.
 """
 
 import tomllib
@@ -10,12 +10,15 @@ from pathlib import Path
 from app.config import Settings
 from app.pipeline.generate import DEFAULT_TOP_K
 from app.pipeline.ingest.chunker import _CHUNK_SIZE, _MIN_CHUNK_SIZE, _OVERLAP
-from app.pipeline.retrieve.retriever import DEFAULT_RRF_K, QUERY_CANDIDATES
+from app.pipeline.retrieve.retriever import DEFAULT_RRF_K
 from app.providers.bedrock import DEFAULT_EMBED_DIMS, DEFAULT_EMBED_MODEL, DEFAULT_MODEL
+from app.providers.local import DEFAULT_MODEL as LOCAL_EMBED_MODEL
 from app.providers.openrouter import DEFAULT_MODEL as GENERATOR_MODEL
 from eval.harness import JUDGE_MODEL
 
-MANIFEST = tomllib.loads(Path("config/manifest.toml").read_text(encoding="utf-8"))
+MANIFEST = tomllib.loads(
+    (Path(__file__).resolve().parents[1] / "config" / "manifest.toml").read_text(encoding="utf-8")
+)
 # The declared field default, independent of any OWL_ value in the environment.
 RERANK_POOL_DEFAULT = Settings.model_fields["rerank_pool"].default
 
@@ -33,9 +36,10 @@ def test_manifest_pins_the_reranker():
     assert MANIFEST["reranker"]["pool"] == RERANK_POOL_DEFAULT
 
 
-def test_manifest_pins_the_embedder():
-    assert MANIFEST["embedder"]["model"] == DEFAULT_EMBED_MODEL
-    assert MANIFEST["embedder"]["dimensions"] == DEFAULT_EMBED_DIMS
+def test_manifest_pins_the_embedders():
+    assert MANIFEST["embedder"]["cloud"]["model"] == DEFAULT_EMBED_MODEL
+    assert MANIFEST["embedder"]["cloud"]["dimensions"] == DEFAULT_EMBED_DIMS
+    assert MANIFEST["embedder"]["local"]["model"] == LOCAL_EMBED_MODEL
 
 
 def test_manifest_pins_the_chunking():
@@ -47,4 +51,5 @@ def test_manifest_pins_the_chunking():
 def test_manifest_pins_the_retrieval():
     assert MANIFEST["retrieval"]["top_k"] == DEFAULT_TOP_K
     assert MANIFEST["retrieval"]["rrf_k"] == DEFAULT_RRF_K
-    assert MANIFEST["retrieval"]["candidates"] == QUERY_CANDIDATES
+    # The pinned run attaches a reranker, so the per-leg candidate count is the pool.
+    assert MANIFEST["retrieval"]["candidates"] == RERANK_POOL_DEFAULT
