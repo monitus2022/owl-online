@@ -51,10 +51,10 @@ hits, all on the simple slice.
 
 | Item | Slice | Stage | Finding |
 |---|---|---|---|
-| `q03` | simple | leg miss | Gold `b1-c09-0026` is the Wood introduction; `b4-c05-0048` states the Seeker position. Label too strict. |
-| `q08` | simple | leg miss | Gold `b2-c16-0026/0028`; top `b2-c16-0027` is the adjacent passage and names the Basilisk. Neighbour hit. |
+| `q03` | simple | leg miss | Gold `b1-c09-0026` ends with "I've found you a Seeker". Genuine miss; the label was left unchanged. |
+| `q08` | simple | leg miss | Gold `b2-c16-0026/0028`; the adjacent `b2-c16-0027` also names the Basilisk. Added to the gold set as valid evidence. |
 | `q13` | simple | leg miss | Gold `b4-c05-0045` is about wands; top `b4-c07-0032` explicitly names Viktor Krum as the Bulgarian Seeker. Wrong label. |
-| `q16` | simple | leg miss | Gold `b6-c04-0032` introduces Slughorn but not the Potions post; `b6-c08-0045` names him as new staff. Label corrected. |
+| `q16` | simple | leg miss | The original `b6-c04-0032` introduces Slughorn but not the Potions post; `b6-c08-0045` names him as new staff. Label corrected. |
 | `n01` | named_reference | leg miss | Gold `b1-c07-0028`; `b1-c07-0032` is in the requested chapter. The retriever never uses the book/chapter in the query. |
 | `n02` | named_reference | leg miss | Gold `b2-c13-0017`; results come from other books and chapters. Filter target. |
 | `n05` | named_reference | leg miss | Gold `b4-c20-0048`; top `b4-c20-0014` is the requested chapter. Filter target. |
