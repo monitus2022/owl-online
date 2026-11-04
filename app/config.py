@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     app_name: str = "O.W.L. Online"
     provider: Literal["bedrock", "openrouter"] = "bedrock"
     log_level: str = "INFO"
+    live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 
     openrouter_api_key: str | None = None
     aws_region: str = "us-east-1"

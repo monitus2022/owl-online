@@ -10,11 +10,12 @@ A grounded, agentic RAG application - a revision tool that answers questions, ge
 
 O.W.L. Online is a grounded question-answering engine with three surfaces on one core:
 
-| Mode | What it does |
-|---|---|
-| Revision chat | Ask anything, get a grounded answer with citations |
-| Exam mode | Generate practice O.W.L. / N.E.W.T. questions by subject |
-| Grading | Grade your answers on the O.W.L. scale: O / E / A / P / D / T |
+| Mode | What it does | Priority |
+|---|---|---|
+| Revision chat | Ask anything, get a grounded answer with citations | MVP item 1 (Highest Priority) |
+| Exam mode | Generate practice O.W.L. / N.E.W.T. questions by subject | MVP item 2 |
+| Grading | Grade your answers on the O.W.L. scale: O / E / A / P / D / T | MVP item 3 |
+| Lesson mode | Generate a lesson plan with questions and answers | Future iteration |
 
 The corpus is a single well-known work of fiction. The source text is not included (see Disclaimer). The point of the project is not the corpus - it is the evaluation discipline and the full-stack agent around it.
 
@@ -32,7 +33,7 @@ A portfolio project that does the two hard things, then wraps them in a served a
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
   C[Client] --> API[FastAPI + SSE]
   API --> G[LangGraph agent]
   subgraph G
@@ -68,14 +69,17 @@ The harness scores each stage separately, so a failure can be attributed to retr
 
 ## Roadmap
 
-- M1 Package the pipeline
-- M2 Eval harness as CI gate
-- M3 Single-shot streaming API
-- M4 Grounding and guardrails
-- M5 Agentic loop (LangGraph)
-- M6 Observability and deploy
-- M7 Exam mode
-- Future: lesson mode (a virtual professor)
+The full vision (bottom-up): a packaged pipeline, an eval harness as a CI gate,
+a streaming API, grounding guardrails, an agentic loop, observability and deploy,
+and an exam mode.
+
+Execution is phased:
+
+| Phase | Scope | Status |
+|---|---|---|
+| V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval, cited generation with abstention, API, mini-eval, deployed | in progress (one-week sprint, issues #47-#53) |
+| V2 - Deepening | guardrails, agentic loop (LangGraph), Bedrock adapter, full eval harness as CI gate | planned |
+| V3 - Product | exam mode, lesson mode | Exam mode priority, lesson mode in the future |
 
 ---
 
@@ -99,7 +103,7 @@ This repository is developed with AI coding agents under human review.
 
 This project is developed with AI coding agents under human review, and that usage is recorded per ticket.
 
-- AI drafted parts of the code: for ticket #1, the factory (`app/providers/factory.py`) and parts of the test suite were agent-written; the contracts and schemas were human-written with agent review. The human reviewed, tested, and owns every line.
+- AI drafted parts of the code: for ticket #1, the factory (`app/providers/factory.py`) and parts of the test suite were agent-written; the contracts and schemas were human-written with agent review. For ticket #49, the OpenRouter adapter (`app/providers/openrouter.py`), the probe logic (`app/providers/probe.py`), the grounded `ask()` path (`app/pipeline/generate/generate.py`) and their tests were agent-drafted. The human reviewed, tested, and owns every line.
 - The system design and architecture decisions (contracts, provider abstraction, eval discipline) are human-directed; the AI assistant advised and explained, the human decided.
 - AI also drafted documentation (this README, issue descriptions).
 

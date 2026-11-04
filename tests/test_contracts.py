@@ -71,7 +71,6 @@ async def test_llm_stream_yield_text_tokens():
 @pytest.mark.parametrize("provider", PROVIDERS)
 async def test_embedder_contract_swappable(provider, ollama_running):
     """Factory-built embedder satisfies the Embedder contract for each provider."""
-    # No model kwarg: "local" is real, so it must resolve to the default Ollama model.
     if provider == "local" and not ollama_running:
         pytest.skip("Ollama daemon not running")
     embedder = make_embedder(provider)
@@ -80,9 +79,12 @@ async def test_embedder_contract_swappable(provider, ollama_running):
 
 
 @pytest.mark.parametrize("provider", MODEL_PROVIDERS)
-async def test_llm_contract_swappable(provider):
+async def test_llm_contract_swappable(provider, openrouter_live):
     """Factory-built Llm satisfies the Llm contract for each provider."""
-    llm = make_llm(provider, model="test")
+    if provider == "openrouter" and not openrouter_live:
+        pytest.skip("live OpenRouter disabled (set OWL_LIVE_TESTS=1 and a key)")
+    # openrouter has no fake: use its pinned default model, not the sentinel.
+    llm = make_llm(provider, model=None if provider == "openrouter" else "test")
     response = await llm.generate("system", "prompt")
     assert isinstance(response, str)
     tokens = [t async for t in llm.stream("system", "prompt")]
