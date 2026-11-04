@@ -1,0 +1,25 @@
+{"id": "q01", "question": "What job does Hagrid hold at Hogwarts?", "answerable": true, "expected_chunk_ids": ["b1-c04-0049", "b1-c05-0057"]}
+{"id": "q02", "question": "What is the name of the three-headed dog guarding the forbidden corridor?", "answerable": true, "expected_chunk_ids": ["b1-c11-0041"]}
+{"id": "q03", "question": "Which position does Harry play on the Gryffindor Quidditch team?", "answerable": true, "expected_chunk_ids": ["b1-c09-0026"]}
+{"id": "q04", "question": "What is the name of the wizarding bank in Diagon Alley?", "answerable": true, "expected_chunk_ids": ["b1-c05-0007", "b2-c04-0048", "b2-c04-0049"]}
+{"id": "q05", "question": "What does the Mirror of Erised show a person?", "answerable": true, "expected_chunk_ids": ["b1-c12-0070"]}
+{"id": "q06", "question": "Which ghost is the Slytherin house ghost?", "answerable": true, "expected_chunk_ids": ["b1-c07-0039"]}
+{"id": "q07", "question": "What is the name of Harry's owl?", "answerable": true, "expected_chunk_ids": ["b1-c06-0001"]}
+{"id": "q08", "question": "What creature is the monster in the Chamber of Secrets?", "answerable": true, "expected_chunk_ids": ["b2-c16-0026", "b2-c16-0028"]}
+{"id": "q09", "question": "What is the name of the Weasley family home?", "answerable": true, "expected_chunk_ids": ["b2-c03-0029"]}
+{"id": "q10", "question": "Who is Harry's godfather?", "answerable": true, "expected_chunk_ids": ["b3-c10-0081", "b3-c20-0002"]}
+{"id": "q11", "question": "What kind of creature is Buckbeak?", "answerable": true, "expected_chunk_ids": ["b3-c06-0067", "b3-c21-0050", "b3-c21-0099", "b4-c27-0046", "b6-c03-0055"]}
+{"id": "q12", "question": "Who teaches Defence Against the Dark Arts in Harry's third year?", "answerable": true, "expected_chunk_ids": ["b3-c05-0019", "b3-c05-0020"]}
+{"id": "q13", "question": "Who is the Seeker for the Bulgarian Quidditch team?", "answerable": true, "expected_chunk_ids": ["b4-c05-0045"]}
+{"id": "q14", "question": "Where is the headquarters of the Order of the Phoenix?", "answerable": true, "expected_chunk_ids": ["b5-c03-0072", "b5-c04-0000"]}
+{"id": "q15", "question": "What Ministry position does Dolores Umbridge hold before coming to Hogwarts?", "answerable": true, "expected_chunk_ids": ["b5-c08-0041", "b5-c20-0067", "b5-c33-0012"]}
+{"id": "q16", "question": "Who becomes the Potions professor in Harry's sixth year?", "answerable": true, "expected_chunk_ids": ["b6-c04-0032"]}
+{"id": "q17", "question": "What does Voldemort use to hide pieces of his soul?", "answerable": true, "expected_chunk_ids": ["b6-c17-0083", "b6-c23-0029", "b6-c23-0043", "b6-c23-0047"]}
+{"id": "q18", "question": "What are the three Deathly Hallows?", "answerable": true, "expected_chunk_ids": ["b7-c21-0017"]}
+{"id": "q19", "question": "Which goblin works at Gringotts in the first book?", "answerable": true, "expected_chunk_ids": ["b1-c05-0042"]}
+{"id": "q20", "question": "What is the name of the wand that is one of the Deathly Hallows?", "answerable": true, "expected_chunk_ids": ["b7-c21-0012", "b7-c21-0017"]}
+{"id": "u01", "question": "What is the capital of Iceland?", "answerable": false, "expected_chunk_ids": []}
+{"id": "u02", "question": "Who painted the Mona Lisa?", "answerable": false, "expected_chunk_ids": []}
+{"id": "u03", "question": "How do you change a car tyre?", "answerable": false, "expected_chunk_ids": []}
+{"id": "u04", "question": "What is the chemical formula for table salt?", "answerable": false, "expected_chunk_ids": []}
+{"id": "u05", "question": "Who composed the Ninth Symphony?", "answerable": false, "expected_chunk_ids": []}

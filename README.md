@@ -67,6 +67,19 @@ The harness scores each stage separately, so a failure can be attributed to retr
 | Abstention | refusal on `unanswerable` | high |
 | Leakage | closed-book gap | augmented >> closed-book |
 
+First measured run (V1 mini-eval, #51; details in `eval/README.md`):
+
+| Metric | Value |
+|---|---|
+| Hit@5 | 0.60 |
+| Recall@5 | 0.42 |
+| MRR | 0.45 |
+| Abstention on unanswerable | 1.00 |
+| Judge correct / partial / wrong | 7 / 1 / 2 of 10 |
+| Grounded | 8 / 10 |
+
+Generator `qwen/qwen3-30b-a3b-instruct-2507`; judge `deepseek/deepseek-v4.1-flash-1017` (different family).
+
 ---
 
 ## Roadmap
@@ -105,7 +118,7 @@ This repository is developed with AI coding agents under human review.
 
 This project is developed with AI coding agents under human review, and that usage is recorded per ticket.
 
-- AI drafted parts of the code: for ticket #1, the factory (`app/providers/factory.py`) and parts of the test suite were agent-written; the contracts and schemas were human-written with agent review. For ticket #49, the OpenRouter adapter (`app/providers/openrouter.py`), the probe logic (`app/providers/probe.py`), the grounded `ask()` path (`app/pipeline/generate/generate.py`) and their tests were agent-drafted. For ticket #50, the API composition root (`app/api/runtime.py`), schemas, the `/ask` endpoint and static chat page (`app/main.py`, `app/api/static/index.html`) and the API tests were agent-drafted. The human reviewed, tested, and owns every line.
+- AI drafted parts of the code: for ticket #1, the factory (`app/providers/factory.py`) and parts of the test suite were agent-written; the contracts and schemas were human-written with agent review. For ticket #49, the OpenRouter adapter (`app/providers/openrouter.py`), the probe logic (`app/providers/probe.py`), the grounded `ask()` path (`app/pipeline/generate/generate.py`) and their tests were agent-drafted. For ticket #50, the API composition root (`app/api/runtime.py`), schemas, the `/ask` endpoint and static chat page (`app/main.py`, `app/api/static/index.html`) and the API tests were agent-drafted. For ticket #51, the mini-eval harness and gold set (`eval/`) and the eval runner were agent-drafted. The human reviewed, tested, and owns every line.
 - The system design and architecture decisions (contracts, provider abstraction, eval discipline) are human-directed; the AI assistant advised and explained, the human decided.
 - AI also drafted documentation (this README, issue descriptions).
 
