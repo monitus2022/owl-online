@@ -12,8 +12,8 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | Layer | Path | Responsibility |
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
-| Pipeline | `app/pipeline/` | ingest, index, retrieve, generate |
-| Providers | `app/providers/` | model adapters behind contracts; the only place vendor SDKs are imported |
+| Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
+| Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
 | Domain | `app/schemas.py` | `Chunk` and its metadata |
 
@@ -23,7 +23,7 @@ Pipeline stages, in order:
 |---|---|---|
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` |
-| Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` |
+| Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (hybrid + rerank) |
 | Generate | `app/pipeline/generate/` | `ask` |
 
 ## Contracts and adapters
@@ -105,8 +105,8 @@ rerank relevance floor.
 
 ## Module dependencies
 
-Dependencies point inward. Vendor SDKs (`openai`, `httpx`, `chromadb`) are imported
-only inside `app/providers` and the index builder, never by the API or the agent.
+Dependencies point inward. Vendor SDKs (`openai`, `boto3`, `httpx`, `chromadb`) are
+imported only inside `app/providers` and the index builder, never by the API or the agent.
 
 ```mermaid
 flowchart TD
@@ -119,7 +119,7 @@ flowchart TD
   pipeline --> providers
   pipeline --> schemas[app/schemas.py]
   providers --> schemas
-  providers --> sdk[[openai, httpx, chromadb]]
+  providers --> sdk[[openai, boto3, httpx, chromadb]]
 ```
 
 ## Request flow: POST /ask
@@ -153,15 +153,15 @@ sequenceDiagram
   API-->>C: AskResponse {answer, citations, abstained}
 ```
 
-The `Runtime` (retriever + llm) is built once in the app lifespan, never per
-request. Provider failures surface as a normalized `ProviderError` and become a
-502 at the edge.
+The `Runtime` (the retriever with its optional reranker, plus the llm) is built
+once in the app lifespan, never per request. Provider failures surface as a
+normalized `ProviderError` and become a 502 at the edge.
 
 ## Data shapes
 
 | Type | Module | Kind | Purpose |
 |---|---|---|---|
-| `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, fused score |
+| `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
