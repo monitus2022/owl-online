@@ -20,8 +20,7 @@ dependencies = [
 
 # Served as an application only. Never published, so uv does not build or
 # install the project itself; `uv run` resolves imports from the project root.
-# Prefer uv-managed interpreters: the host is arm64 and some deps (onnxruntime)
-# ship no x86_64-macOS wheel.
+# Prefer uv-managed interpreters so local, CI and the image share one Python.
 [tool.uv]
 package = false
 python-preference = "only-managed"
