@@ -80,6 +80,18 @@ async def run(
         top_k=k,
         reranker_pool=settings.rerank_pool if reranker is not None else None,
         candidates=settings.rerank_pool if reranker is not None else None,
+        judged_sample=sample,
+        reranker_model=settings.rerank_model if reranker is not None else None,
+        embedder_model=(
+            settings.bedrock_embed_model
+            if settings.embedder_provider == "bedrock"
+            else None
+        ),
+        embedder_dims=(
+            settings.bedrock_embed_dims
+            if settings.embedder_provider == "bedrock"
+            else None
+        ),
     )
     rows = [
         *retrieval_rows(run_id, config, values, retrieval, retrieval_by_slice),
@@ -87,6 +99,10 @@ async def run(
         *generation_rows(run_id, config, values, generation, generation_by_slice),
     ]
     run_path = results_dir / f"{run_id}.csv"
+    if run_path.exists():
+        raise FileExistsError(
+            f"{run_path} already exists; wait for the next second and rerun"
+        )
     write_results(run_path, rows)
 
     pinned: Path | None = None

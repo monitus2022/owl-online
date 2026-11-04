@@ -28,12 +28,13 @@ Example: `docs/runs/2026-11-04-v2-d1-baseline.md`.
 
 | Date | Ticket | Run id | Config | Overall Hit@5 | Overall F1 | Faithful | Record |
 |---|---|---|---|---|---|---|---|
-| 2026-11-04 | #76 (V2 D1) | `20261104T131118Z` | `pinned` | 0.58 | 0.22 | 11/15 | [V2 D1 baseline](2026-11-04-v2-d1-baseline.md) |
+| 2026-11-04 | #76 (V2 D1) | `20261104T134619Z` | `pinned` | 0.58 | 0.26 | 11/15 | [V2 D1 baseline](2026-11-04-v2-d1-baseline.md) |
 
 ## Template
 
 Copy this into the new file and replace every value. Keep the raw summary block
-verbatim; it is the text `render_run()` printed at the end of the run.
+verbatim: it is the `render_run()` output, including its `wrote` lines, but not
+the final `next: write a run record` reminder.
 
 ````markdown
 # Run record: <ticket> <short name>

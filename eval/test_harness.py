@@ -122,8 +122,8 @@ def test_parse_verdict_tolerates_prose():
         "partial",
         True,
     )
-    assert parse_verdict("no json here") == ("wrong", False)
-    assert parse_verdict('{"correctness": "amazing", "grounded": 1}') == ("wrong", True)
+    assert parse_verdict("no json here") is None
+    assert parse_verdict('{"correctness": "amazing", "grounded": 1}') is None
 
 
 def test_parse_verdict_normalizes_string_booleans():
@@ -141,12 +141,19 @@ def test_parse_verdict_uses_the_first_object():
 def test_parse_faithful():
     assert parse_faithful('{"faithful": true}') is True
     assert parse_faithful('Sure: {"faithful": "false"}') is False
-    assert parse_faithful("no json here") is False
+    assert parse_faithful("no json here") is None
+    assert parse_faithful('{"correctness": "correct"}') is None
 
 
 def test_normalize_answer_strips_articles_and_punctuation():
     assert normalize_answer("The Elder Wand!") == "elder wand"
     assert normalize_answer("  A   Hippogriff. ") == "hippogriff"
+
+
+def test_citations_do_not_count_as_answer_tokens():
+    assert normalize_answer("Fluffy. [b1-c11-0041]") == "fluffy"
+    assert exact_match("Fluffy. [b1-c11-0041]", "Fluffy.") == 1.0
+    assert token_f1("Fluffy. [b1-c11-0041]", "Fluffy.") == 1.0
 
 
 def test_exact_match_and_token_f1():
@@ -161,7 +168,17 @@ def test_exact_match_and_token_f1():
 def test_summarize_generation_counts_abstentions_and_faithfulness():
     verdicts = [
         JudgeVerdict("a", "correct", True, False, faithful=True, em=1.0, f1=1.0),
-        JudgeVerdict("b", "wrong", False, False, faithful=False, em=0.0, f1=0.5),
+        JudgeVerdict(
+            "b",
+            "wrong",
+            False,
+            False,
+            faithful=False,
+            em=0.0,
+            f1=0.5,
+            judge_parse_failed=True,
+            faithful_parse_failed=True,
+        ),
         JudgeVerdict("c", "abstained", False, True, faithful=None, em=0.0, f1=0.0),
     ]
     metrics = summarize_generation(verdicts)
@@ -175,6 +192,9 @@ def test_summarize_generation_counts_abstentions_and_faithfulness():
     assert metrics.faithfulness_n == 2
     assert metrics.faithful == 1
     assert metrics.faithfulness_rate == 0.5
+    assert metrics.judge_correct_rate == 0.5
+    assert metrics.judge_parse_failures == 1
+    assert metrics.faithful_parse_failures == 1
 
 
 def test_sample_answerable_round_robins_slices():

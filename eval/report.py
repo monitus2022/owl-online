@@ -40,6 +40,7 @@ def retrieval_rows(
 ) -> list[ResultRow]:
     """Hit/Recall/MRR for the overall set and each answerable slice."""
     rows = [
+        ResultRow(run_id, config, "overall", "retrieval_n", overall.n, manifest),
         ResultRow(run_id, config, "overall", "hit_at_k", overall.hit_at_k, manifest),
         ResultRow(run_id, config, "overall", "recall_at_k", overall.recall_at_k, manifest),
         ResultRow(run_id, config, "overall", "mrr", overall.mrr, manifest),
@@ -47,6 +48,7 @@ def retrieval_rows(
     for name, metrics in by_slice.items():
         rows.extend(
             [
+                ResultRow(run_id, config, name, "retrieval_n", metrics.n, manifest),
                 ResultRow(run_id, config, name, "hit_at_k", metrics.hit_at_k, manifest),
                 ResultRow(run_id, config, name, "recall_at_k", metrics.recall_at_k, manifest),
                 ResultRow(run_id, config, name, "mrr", metrics.mrr, manifest),
@@ -101,6 +103,26 @@ def generation_rows(
             ResultRow(run_id, config, name, "grounded", m.grounded, manifest),
             ResultRow(run_id, config, name, "faithful", m.faithful, manifest),
             ResultRow(run_id, config, name, "faithfulness_n", m.faithfulness_n, manifest),
+            ResultRow(run_id, config, name, "faithfulness_rate", m.faithfulness_rate, manifest),
+            ResultRow(
+                run_id, config, name, "judge_correct_rate", m.judge_correct_rate, manifest
+            ),
+            ResultRow(
+                run_id,
+                config,
+                name,
+                "judge_parse_failures",
+                m.judge_parse_failures,
+                manifest,
+            ),
+            ResultRow(
+                run_id,
+                config,
+                name,
+                "faithful_parse_failures",
+                m.faithful_parse_failures,
+                manifest,
+            ),
         ]
 
     rows = metrics("overall", overall)
@@ -148,9 +170,12 @@ def _generation_lines(
     def line(name: str, m: GenerationMetrics) -> str:
         return (
             f"  {name:<22} n={m.n:<3} answered={m.answered:<3} abstained={m.abstained:<3} "
-            f"EM={m.em:.2f} F1={m.f1:.2f} faithful={m.faithful}/{m.faithfulness_n} "
+            f"EM={m.em:.2f} F1={m.f1:.2f} "
+            f"faithful={m.faithful}/{m.faithfulness_n} ({m.faithfulness_rate:.2f}) "
             f"judge correct={m.correct} partial={m.partial} wrong={m.wrong} "
-            f"grounded={m.grounded}"
+            f"grounded={m.grounded} "
+            f"judge_parse={m.judge_parse_failures} "
+            f"faithful_parse={m.faithful_parse_failures}"
         )
 
     lines = ["generation (judged sample)", line("overall", overall)]
