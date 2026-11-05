@@ -48,6 +48,7 @@ async def build_runtime(settings: Settings) -> Runtime:
         reranker=reranker,
         pool=settings.rerank_pool if reranker is not None else None,
         min_score=settings.rerank_min_score,
+        subquery_quota=settings.subquery_quota,
     )
     llm = make_llm(settings.provider)
     small_llm = (

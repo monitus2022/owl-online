@@ -39,6 +39,21 @@ Planned exam-bank stages, not built yet:
 | Exam store | `app/storage/` | SQLite models and repository for exams, questions, attempts |
 | Grading | `app/grading/` | hybrid: deterministic objective scoring, LLM rubric judge for free text, deterministic totals and bands |
 
+## Build vs managed
+
+| Decision | Choice | Why |
+|---|---|---|
+| Vector store | Chroma | Local, inspectable, no managed dependency |
+| Sparse retrieval | `rank_bm25` | Shows hybrid fusion and tokenization trade-offs |
+| Rerank | Bedrock adapter | Vendor boundary with a measured floor and pool |
+| Orchestration | LangGraph | Explicit state and edges, traceable per node |
+| Evaluation | Own harness | The differentiator; managed tools hide the gold set and gate |
+| Serving | FastAPI plus SSE | Full control of streaming, limits and the cache |
+| Logs and traces | JSONL, optional S3 | Own the schema; no SaaS lock-in |
+
+The point is to own the pipeline logic, not the primitives. Reimplementing a
+vector index or an LLM would add bugs without demonstrating retrieval design.
+
 ## Contracts and adapters
 
 The four Protocols in `app/providers/contracts.py` are the architecture. Adapters
