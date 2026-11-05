@@ -191,6 +191,9 @@ class ChatLimiter:
         self._ip_windows = {
             key: window for key, window in self._ip_windows.items() if window.day == day
         }
-        if len(self._windows) > 20_000 or len(self._ip_windows) > 20_000:
-            self._windows.clear()
-            self._ip_windows.clear()
+        if len(self._windows) > 20_000:
+            for key in list(self._windows)[: len(self._windows) // 4]:
+                self._windows.pop(key, None)
+        if len(self._ip_windows) > 20_000:
+            for key in list(self._ip_windows)[: len(self._ip_windows) // 4]:
+                self._ip_windows.pop(key, None)

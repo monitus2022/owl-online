@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import hmac
+import ipaddress
 import json
 import logging
 import re
@@ -40,13 +41,27 @@ _INDEX_HTML_TEXT = _INDEX_HTML.read_text(encoding="utf-8")
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 
 
+_TRUSTED_PEERS = {"127.0.0.1", "::1"}
+
+
 def _client_ip(request: Request) -> str:
-    """The client address set by the trusted proxy, never the leftmost XFF."""
+    """The client address set by the trusted proxy, never the leftmost XFF.
+
+    The proxy headers are only honoured when the peer is loopback, which is how
+    the host nginx reaches this process. Anything else is treated as direct.
+    """
+    peer = request.client.host if request.client is not None else "unknown"
+    if peer not in _TRUSTED_PEERS:
+        return peer
     for header in ("cf-connecting-ip", "x-real-ip"):
         value = request.headers.get(header)
-        if value:
-            return value.strip()
-    return request.client.host if request.client is not None else "unknown"
+        if not value:
+            continue
+        try:
+            return str(ipaddress.ip_address(value.strip()))
+        except ValueError:
+            continue
+    return peer
 
 
 def _sign(value: str, secret: str) -> str:
@@ -97,6 +112,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         CORSMiddleware,
         allow_origins=app_settings.cors_origin_list,
         allow_origin_regex=app_settings.cors_origin_regex,
+        allow_credentials=True,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
         # Let a cross-origin chat page read the request id for support.
@@ -133,7 +149,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 "owl_session",
                 f"{session}.{_sign(session, secret)}",
                 httponly=True,
-                samesite="lax",
+                samesite="none" if secure else "lax",
                 secure=secure,
                 max_age=86_400,
             )
@@ -162,7 +178,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 runtime.index_hash,
                 str(DEFAULT_TOP_K),
                 app_settings.embedder_provider,
+                app_settings.bedrock_embed_model,
+                str(app_settings.bedrock_embed_dims),
                 app_settings.rerank_provider,
+                app_settings.rerank_model,
+                str(app_settings.rerank_pool),
                 str(app_settings.rerank_min_score),
                 str(app_settings.retry_budget),
                 model,
@@ -398,10 +418,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 finally:
                     limiter.release(decision.token)
 
+            async def release_cached() -> None:
+                limiter.release(decision.token)
+
             return EventSourceResponse(
                 cached_events(),
                 headers=headers,
-                background=BackgroundTask(limiter.release, decision.token),
+                background=BackgroundTask(release_cached),
             )
 
         async def events() -> AsyncIterator[dict[str, str]]:
@@ -485,24 +508,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     ensure_ascii=False,
                 ),
             }
-            result = AskResult(
-                answer=str(final.get("answer", "")),
-                citations=list(final.get("citations", [])),
-                abstained=bool(final.get("abstained", False)),
-                chunks=list(final.get("chunks", [])),
-                attempts=int(final.get("attempts", 1)),
-            )
-            if key is not None and not result.abstained:
-                app.state.cache.put(key, result)
-            record_usage(
-                request,
-                intent=str(final.get("mode", intent)),
-                model=model,
-                cache_hit=False,
-                question=body.question,
-                result=result,
-                latency_ms=(time.perf_counter() - start) * 1000,
-            )
+
 
         async def guarded() -> AsyncIterator[dict[str, str]]:
             try:
@@ -511,10 +517,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             finally:
                 limiter.release(decision.token)
 
+        async def release_lease() -> None:
+            limiter.release(decision.token)
+
         return EventSourceResponse(
             guarded(),
             headers=headers,
-            background=BackgroundTask(limiter.release, decision.token),
+            background=BackgroundTask(release_lease),
         )
 
     return app

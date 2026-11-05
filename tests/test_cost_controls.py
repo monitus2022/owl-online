@@ -71,13 +71,17 @@ def _sse_events(body: str) -> list[tuple[str, dict]]:
 def test_burst_returns_429_with_retry_after():
     llm = _Llm()
     with _client(llm, chat_per_minute=2) as client:
-        assert client.post("/ask", json={"question": "Who trims?"}).status_code == 200
-        assert client.post("/ask", json={"question": "Who trims?"}).status_code == 200
-        response = client.post("/ask", json={"question": "Who trims?"})
+        questions = ("Who trims?", "Who keeps the lighthouse?", "Who is the keeper?")
+        statuses = [
+            client.post("/ask", json={"question": question}).status_code
+            for question in questions
+        ]
+        response = client.post("/ask", json={"question": "Who else?"})
+    assert statuses == [200, 200, 429]
     assert response.status_code == 429
     assert response.headers["retry-after"]
     assert response.json()["reason"] == "minute"
-    assert llm.calls == 1  # the burst answer came from the cache
+    assert llm.calls == 2
 
 
 def test_repeated_question_is_served_from_cache_and_logged(caplog):
@@ -96,6 +100,7 @@ def test_repeated_question_is_served_from_cache_and_logged(caplog):
 def test_feedback_is_not_served_from_the_shared_cache():
     llm = _Llm()
     with _client(llm) as client:
+        client.post("/ask", json={"question": "Give me feedback on this answer"})
         for answer in ("Rowan trims the wick.", "Rowan does not trim the wick."):
             with client.stream(
                 "POST",
@@ -106,7 +111,7 @@ def test_feedback_is_not_served_from_the_shared_cache():
                 },
             ) as response:
                 response.read()
-    assert llm.calls == 2
+    assert llm.calls == 3
 
 
 def test_budget_degrades_chat_but_health_stays_up():
@@ -123,7 +128,8 @@ def test_rate_limited_requests_do_not_call_the_model():
     llm = _Llm()
     with _client(llm, chat_per_minute=1) as client:
         client.post("/ask", json={"question": "Who trims?"})
-        client.post("/ask", json={"question": "Who trims the wick?"})
+        second = client.post("/ask", json={"question": "Who trims the wick?"})
+    assert second.status_code == 429
     assert llm.calls == 1
 
 
@@ -168,3 +174,28 @@ def test_cached_answer_is_served_after_the_budget_is_exhausted():
         repeat = client.post("/ask", json={"question": "Who trims?"})
     assert repeat.status_code == 200
     assert llm.calls == 1
+
+
+def test_stream_records_usage_once(caplog):
+    caplog.set_level(logging.INFO)
+    llm = _Llm()
+    with _client(llm) as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who trims the wick?"}
+        ) as response:
+            response.read()
+    assert caplog.text.count("chat usage") == 1
+    assert llm.calls == 1
+
+
+def test_forged_cookie_is_replaced():
+    llm = _Llm()
+    with _client(llm) as client:
+        client.cookies.clear()
+        response = client.post(
+            "/ask",
+            json={"question": "Who trims?"},
+            headers={"Cookie": "owl_session=forged.deadbeef"},
+        )
+    assert response.status_code == 200
+    assert "set-cookie" in response.headers
