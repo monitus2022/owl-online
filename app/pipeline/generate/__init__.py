@@ -13,6 +13,7 @@ from app.pipeline.generate.generate import (
     ground_answer,
     render_evidence,
     retrieval_floor,
+    sanitize_evidence,
 )
 from app.pipeline.generate.verify import Verification, verify_draft
 
@@ -30,5 +31,6 @@ __all__ = [
     "ground_answer",
     "render_evidence",
     "retrieval_floor",
+    "sanitize_evidence",
     "verify_draft",
 ]

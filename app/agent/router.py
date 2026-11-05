@@ -8,6 +8,7 @@ a separate offline pipeline with stored mark schemes and deterministic scoring.
 import re
 
 from app.agent.state import AgentState, Mode, RequestedMode
+from app.trace import current_tracer
 
 _FEEDBACK_ACTION = re.compile(
     r"^\s*(please\s+)?(grade|mark|score|assess|evaluate)\b",
@@ -74,4 +75,12 @@ def route(state: AgentState) -> dict[str, str]:
         requested_mode=state.get("requested_mode", "auto"),
         student_answer=state.get("student_answer"),
     )
+    tracer = current_tracer()
+    if tracer is not None:
+        tracer.emit(
+            "router",
+            intent=mode,
+            requested=state.get("requested_mode", "auto"),
+            question_chars=len(state["question"]),
+        )
     return {"mode": mode}

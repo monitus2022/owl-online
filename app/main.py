@@ -33,6 +33,7 @@ from app.logging import configure_logging, get_request_id, set_request_id
 from app.pipeline.generate import DEFAULT_TOP_K, SYSTEM_PROMPT, AskResult, ask
 from app.providers.contracts import Llm, Retriever
 from app.providers.errors import ProviderError
+from app.trace import TraceSink, current_tracer, end_trace, start_trace
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             )
         app.state.session_secret = app_settings.session_secret or secrets.token_hex(32)
         app.state.limiter = ChatLimiter(app_settings)
+        app.state.trace_sink = TraceSink(
+            app_settings.trace_file, app_settings.trace_max_bytes
+        )
         app.state.cache = AnswerCache(
             app_settings.chat_cache_entries, app_settings.chat_cache_ttl_s
         )
@@ -286,8 +290,12 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         def mark(name: str) -> None:
             stage["name"] = name
 
+        trace_token = start_trace(get_request_id(), app.state.trace_sink)
         try:
             if cached is not None:
+                tracer = current_tracer()
+                if tracer is not None:
+                    tracer.emit("cache", hit=True, intent="answer")
                 record_usage(
                     request,
                     intent="answer",
@@ -347,6 +355,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             )
         finally:
             limiter.release(decision.token)
+            try:
+                end_trace(trace_token)
+            except ValueError:
+                pass
 
     @app.post("/ask/stream", response_model=None)
     async def ask_stream_endpoint(
@@ -389,7 +401,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         if cached is not None:
 
             async def cached_events() -> AsyncIterator[dict[str, str]]:
+                token = start_trace(get_request_id(), app.state.trace_sink)
                 try:
+                    tracer = current_tracer()
+                    if tracer is not None:
+                        tracer.emit("cache", hit=True, intent="answer")
                     yield {
                         "event": "mode",
                         "data": json.dumps({"mode": "answer"}, ensure_ascii=False),
@@ -428,6 +444,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     }
                 finally:
                     limiter.release(decision.token)
+                    try:
+                        end_trace(token)
+                    except ValueError:
+                        pass
 
             async def release_cached() -> None:
                 limiter.release(decision.token)
@@ -522,11 +542,16 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
 
 
         async def guarded() -> AsyncIterator[dict[str, str]]:
+            token = start_trace(get_request_id(), app.state.trace_sink)
             try:
                 async for event in events():
                     yield event
             finally:
                 limiter.release(decision.token)
+                try:
+                    end_trace(token)
+                except ValueError:
+                    pass
 
         async def release_lease() -> None:
             limiter.release(decision.token)

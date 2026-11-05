@@ -49,6 +49,7 @@ so on.
 | 2026-11-05 | #79 (V2 D6) | `20261105T154940Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D6 retrieval guardrails](2026-11-05-v2-d6-retrieval-guardrails.md) |
 | 2026-11-06 | #79 (V2 D6) | `20261105T160001Z` | `pinned` | 0.76 | 0.30 | 12/14 | [V2 D6 r2](2026-11-06-v2-d6-retrieval-guardrails-r2.md) |
 | 2026-11-06 | #79 (V2 D6) | `20261105T160032Z` | `pinned` | 0.76 | 0.30 | 12/14 | [V2 D6 r2](2026-11-06-v2-d6-retrieval-guardrails-r2.md) |
+| 2026-11-06 | #82 (V2 D7) | `20261105T171800Z` | `pinned` | 0.76 | 0.30 | 13/14 | [V2 D7 tracing and injection](2026-11-06-v2-d7-observability.md) |
 
 ## Template
 
