@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     retry_budget: int = Field(default=1, ge=0, le=1)
     # Per-sub-query candidate quota for decomposed questions. 0 keeps the
     # original global fusion.
-    subquery_quota: int = Field(default=2, ge=0)
+    subquery_quota: int = Field(default=0, ge=0)
 
     # Deadline for one /ask request (retrieve plus generate). /ask/stream is not
     # bounded because a legitimate stream can outlive it.

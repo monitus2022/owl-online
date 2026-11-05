@@ -170,8 +170,10 @@ class HybridRetriever:
             # part of a two-part question cannot crowd out the other.
             fused: list[tuple[str, float]] = []
             seen: set[str] = set()
-            for dense_ids, sparse_ids in zip(dense_lists, sparse_lists, strict=True):
-                for cid, score in self._fuse_many([dense_ids, sparse_ids])[
+            for part_dense, part_sparse in zip(
+                dense_lists, sparse_lists, strict=True
+            ):
+                for cid, score in self._fuse_many([part_dense, part_sparse])[
                     : self._subquery_quota
                 ]:
                     if cid not in seen:

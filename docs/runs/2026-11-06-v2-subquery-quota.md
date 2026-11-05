@@ -3,7 +3,7 @@
 - Date: 2026-11-06
 - Run id: `20261105T204517Z`
 - Ticket: #96
-- Config: `pinned`, reranker on, `OWL_SUBQUERY_QUOTA=2`
+- Config: `pinned`, reranker on, `OWL_SUBQUERY_QUOTA=2` (experiment; default remains 0)
 - Artifacts: `eval/results/baseline.csv` (unchanged), `eval/results/20261105T204517Z.csv` (local, gitignored)
 
 ## Configuration
@@ -15,7 +15,7 @@
 | Reranker | `amazon.rerank-v1:0`, pool 50, floor 0.0 |
 | Embedder | `local` / `qwen3-embedding:0.6b`, 1024 dims |
 | Retrieval | hybrid, `k = 5`, `rrf_k = 60`, candidates 50 |
-| Sub-query quota | 2 per sub-query when the question decomposes |
+| Sub-query quota | 2 per retrieval leg in this experiment; default 0 |
 | Gold set | 61 items: 51 answerable, 10 unanswerable |
 | Judged sample | 15 |
 
@@ -30,12 +30,9 @@
 
 ## Diagnostics
 
-| Slice | n | dense | sparse | pool | lift | loss | near |
-|---|---|---|---|---|---|---|---|
-| overall | 51 | 0.77 | 0.65 | 0.75 | 0.93 | 0.07 | 0.06 |
-| simple | 34 | 0.72 | 0.58 | 0.75 | 0.89 | 0.11 | 0.09 |
-| multi_part | 9 | 0.74 | 0.59 | 0.56 | 1.00 | 0.00 | 0.00 |
-| named_reference | 8 | 1.00 | 1.00 | 1.00 | 1.00 | 0.00 | 0.00 |
+Invalid in this run: the quota loop shadowed the trace's `dense_ids` and
+`sparse_ids`, so the table reported only the original-question leg. The bug is
+fixed; re-run before using diagnostics.
 
 ## Abstention
 
@@ -66,15 +63,19 @@ gate: PASS
 ## Reading
 
 - Multi-part Hit@5 moves from 0.667 to 0.778, overall from 0.765 to 0.784.
-- The judged sample improves from 13/14 to 14/14 on both judge correctness and
-  faithfulness; F1 moves from 0.30 to 0.29, within noise.
-- The multi-part candidate pool recall falls from 0.91 to 0.56 because the quota
-  narrows the pool, but rerank lift becomes 1.00: every candidate that reaches
-  the reranker is kept. Selection, not recall, was the loss.
+- The judged sample improves from the committed baseline's 12/14 to 14/14 on
+  both judge correctness and faithfulness; F1 moves from 0.30 to 0.29, within
+  noise. The D7 run at 13/14 was not the pinned baseline.
+- The diagnostics table in this record is invalid: the quota loop shadowed the
+  trace's `dense_ids`/`sparse_ids`, so it reported only the original-question leg.
+  The bug is fixed; the diagnostics need a re-run before they are used.
 - The change also fixes a real reranker edge: with a quota the pool can be
   smaller than `top_k`, and Bedrock rejects `numberOfResults` above the source
   count. `HybridRetriever` now caps the request at the pool size.
-- Quota 2 is enabled by default and pinned in the manifest.
+- Quota 2 remains a candidate behind `OWL_SUBQUERY_QUOTA`, default 0. The setting
+  is not yet a CSV manifest field, so the gate cannot distinguish the two
+  configurations; enabling it by default needs that field and a deliberate
+  baseline repin.
 
 ## Reproduce
 
