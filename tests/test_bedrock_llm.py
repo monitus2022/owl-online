@@ -2,6 +2,7 @@
 
 import asyncio
 import threading
+import time
 
 import pytest
 from botocore.exceptions import ClientError, EndpointConnectionError
@@ -134,6 +135,18 @@ async def test_model_timeout_code_is_normalized():
         await _llm(_FakeConversationClient(error=error)).generate("s", "p")
 
 
+async def _wait_for_stream_worker_exit(timeout: float = 3.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not any(
+            thread.name == "bedrock-stream" and thread.is_alive()
+            for thread in threading.enumerate()
+        ):
+            return True
+        await asyncio.sleep(0.01)
+    return False
+
+
 async def test_stream_close_stops_worker_and_closes_stream():
     client = _BlockingClient()
     stream = _llm(client).stream("sys", "ask")
@@ -141,6 +154,7 @@ async def test_stream_close_stops_worker_and_closes_stream():
     await stream.aclose()
     assert client.stream.close_called.wait(timeout=1)
     assert await asyncio.to_thread(client.stream.exited.wait, 3)
+    assert await _wait_for_stream_worker_exit()
     assert client.stream.close_count == 1
 
 
