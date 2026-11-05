@@ -31,6 +31,7 @@ class _Retriever:
 class _Llm:
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
         return "Rowan trims the wick [b1-c01-0000]."
+
     async def stream(self, system: str, prompt: str, *, context=None):
         for piece in ("Rowan", " trims", " the wick", " [b1-c01-0000]."):
             yield piece
@@ -277,6 +278,22 @@ def test_ask_stream_rejects_the_old_generate_mode():
     assert response.status_code == 422
 
 
+def test_ask_stream_reports_missing_feedback_answer():
+    with _client() as client:
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "Give me feedback on this answer", "mode": "feedback"},
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    names = [name for name, _ in events]
+    finals = [data for name, data in events if name == "final"]
+    assert "reset" not in names
+    assert finals[0]["needs_input"] is True
+    assert finals[0]["abstained"] is False
+
+
 def test_ask_stream_rejects_student_answer_outside_feedback_mode():
     with _client() as client:
         response = client.post(
@@ -288,6 +305,7 @@ def test_ask_stream_rejects_student_answer_outside_feedback_mode():
             },
         )
     assert response.status_code == 422
+
 
 class _BoomStreamLlm(_Llm):
     def stream(self, system: str, prompt: str, *, context=None):

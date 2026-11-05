@@ -18,3 +18,4 @@ class AgentState(TypedDict, total=False):
     answer: str
     citations: list[str]
     abstained: bool
+    needs_input: bool

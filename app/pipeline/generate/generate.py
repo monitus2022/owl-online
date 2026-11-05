@@ -46,6 +46,7 @@ class AskResult:
     answer: str
     citations: list[str] = field(default_factory=list)
     abstained: bool = False
+    chunks: list[Chunk] = field(default_factory=list)
 
 
 def retrieval_floor(
@@ -75,7 +76,11 @@ def ground_answer(answer: str, chunks: list[Chunk]) -> AskResult:
     citations = [cid for cid in _cited_ids(answer) if cid in allowed]
     if not citations:
         return AskResult(ABSTAIN_MESSAGE, abstained=True)
-    return AskResult(_drop_unknown_citations(answer, allowed), citations)
+    return AskResult(
+        _drop_unknown_citations(answer, allowed),
+        citations,
+        chunks=chunks,
+    )
 
 
 async def ask(

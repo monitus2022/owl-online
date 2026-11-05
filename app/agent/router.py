@@ -24,7 +24,8 @@ _FEEDBACK_TARGET = re.compile(
     re.IGNORECASE,
 )
 _FEEDBACK_REQUEST = re.compile(
-    r"\b(give|provide|send|need|want)\b[^.?!]*\bfeedback\b",
+    r"\b(give|provide|send|need|want)\b[^.?!]*\b"
+    r"(feedback|assessment|grade|mark|score)\b",
     re.IGNORECASE,
 )
 _PRACTICE_REQUEST = re.compile(
@@ -50,7 +51,9 @@ def classify(
         return requested_mode
     if student_answer and student_answer.strip():
         return "feedback"
-    if _FEEDBACK_REQUEST.search(question) or _FEEDBACK_ACTION.search(question):
+    if _FEEDBACK_REQUEST.search(question):
+        return "feedback"
+    if _FEEDBACK_ACTION.search(question) and _FEEDBACK_TARGET.search(question):
         return "feedback"
     if _FEEDBACK_ASK.search(question) and _FEEDBACK_TARGET.search(question):
         return "feedback"

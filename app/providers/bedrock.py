@@ -16,7 +16,6 @@ import logging
 import threading
 import time
 from collections.abc import AsyncIterator
-from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from pathlib import Path
 from typing import Any
@@ -211,9 +210,9 @@ def _normalize(exc: BotoCoreError | ClientError) -> ProviderError:
         return ProviderTimeout(str(exc))
     if isinstance(exc, ClientError):
         code = exc.response.get("Error", {}).get("Code", "")
-        if code in _THROTTLE_CODES:
+        if code in _THROTTLE_CODES or code == "ModelNotReadyException":
             return ProviderRateLimited(str(exc))
-        if code in {"ModelTimeoutException", "ModelNotReadyException"}:
+        if code == "ModelTimeoutException":
             return ProviderTimeout(str(exc))
     return ProviderError(str(exc))
 
@@ -224,6 +223,7 @@ def _append_cache(path: Path | None, key: str, ranking: list[dict[str, Any]]) ->
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({"key": key, "ranking": ranking}) + "\n")
+
 
 class BedrockLlm:
     """Llm contract over Bedrock's Converse API.
@@ -295,7 +295,6 @@ class BedrockLlm:
         done = object()
         stop = threading.Event()
         stream_holder: list[Any] = []
-        executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="bedrock-stream")
 
         def put(item: Any) -> bool:
             """Put one item with bounded backpressure; return False when stopped."""
@@ -317,12 +316,17 @@ class BedrockLlm:
                     return False
 
         def worker() -> None:
+            stream: Any | None = None
             try:
+                if stop.is_set():
+                    return
                 response = self._client.converse_stream(
                     **self._request(system, prompt, context)
                 )
                 stream = response["stream"]
                 stream_holder.append(stream)
+                if stop.is_set():
+                    return
                 for event in stream:
                     if stop.is_set():
                         break
@@ -335,10 +339,19 @@ class BedrockLlm:
             except Exception as exc:  # malformed event or client bug: do not hang
                 put(ProviderError(str(exc)))
             finally:
+                if stream is not None:
+                    close = getattr(stream, "close", None)
+                    if close is not None:
+                        try:
+                            close()
+                        except Exception:
+                            pass
                 if not stop.is_set():
                     put(done)
 
-        task = loop.run_in_executor(executor, worker)
+        # A daemon thread keeps an aborted Bedrock stream from delaying process
+        # exit. The generator still sets stop and closes the stream on disconnect.
+        threading.Thread(target=worker, daemon=True, name="bedrock-stream").start()
         try:
             while True:
                 item = await queue.get()
@@ -352,9 +365,8 @@ class BedrockLlm:
                     raise ProviderError(str(item)) from item
                 yield item
         finally:
-            # A client disconnect cancels this generator. Stop the worker, close
-            # the Bedrock event stream, and keep the dedicated executor off the
-            # default pool so an aborted stream cannot stall other to_thread calls.
+            # A client disconnect cancels this generator. Stop the worker and try
+            # to close the stream so a blocked read can unwind.
             stop.set()
             if stream_holder:
                 close = getattr(stream_holder[0], "close", None)
@@ -363,8 +375,6 @@ class BedrockLlm:
                         close()
                     except Exception:
                         pass
-            task.cancel()
-            executor.shutdown(wait=False, cancel_futures=True)
 
     async def aclose(self) -> None:
         close = getattr(self._client, "close", None)

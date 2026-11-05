@@ -74,14 +74,15 @@ system prompt and prompt text. Metrics are identical to the pinned D3 baseline
 The D4 Llm was probed in `ap-northeast-1` before relying on it:
 
 ```text
+$ uv run python scripts/probe_bedrock.py
 probing bedrock/qwen.qwen3-32b-v1:0 in ap-northeast-1
-generate ok in 0.41s: 'The lighthouse keeper, Rowan, trims the wick every evening [b1-c01-0000].'
-stream ok in 0.26s, 1 chunks: 'The lighthouse keeper, Rowan, trims the wick every evening [b1-c01-0000].'
+generate ok in 0.53s: 'Rowan trims the wick each evening [b1-c01-0000].'
+stream ok in 0.24s, 1 chunks: 'The lighthouse keeper, Rowan, trims the wick every evening [b1-c01-0000].'
 PROBE PASSED
 ```
 
-The short prompt returns one stream delta; longer replies return several. The
-model is on-demand in that region.
+The short probe prompt was returned as one batched delta for the stream call;
+longer replies return several deltas. The model is on-demand in that region.
 
 ## Reading
 

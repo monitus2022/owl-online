@@ -23,9 +23,11 @@ class _Retriever:
     def __init__(self, chunks: list[Chunk] | None = None) -> None:
         self._chunks = chunks if chunks is not None else [_chunk()]
         self.queries: list[str] = []
+        self.top_k_values: list[int] = []
 
     async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
         self.queries.append(query)
+        self.top_k_values.append(top_k)
         return self._chunks[:top_k]
 
 
@@ -57,6 +59,20 @@ async def test_answer_route_grounds_and_cites():
     assert state["mode"] == "answer"
     assert state["abstained"] is False
     assert state["citations"] == ["b1-c01-0000"]
+
+
+async def test_answer_honors_state_top_k():
+    retriever = _Retriever()
+    graph = build_graph(retriever, _Llm("Rowan trims the wick [b1-c01-0000]."))
+    await graph.ainvoke(
+        {
+            "question": "Who trims the wick?",
+            "requested_mode": "answer",
+            "student_answer": None,
+            "top_k": 2,
+        }
+    )
+    assert retriever.top_k_values == [2]
 
 
 async def test_practice_route_returns_cited_practice_material():
@@ -119,7 +135,8 @@ async def test_feedback_without_an_answer_abstains_without_retrieval():
             "top_k": 5,
         }
     )
-    assert state["abstained"] is True
+    assert state["needs_input"] is True
+    assert state["abstained"] is False
     assert state["citations"] == []
 
 

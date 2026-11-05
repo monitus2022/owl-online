@@ -37,7 +37,8 @@ async def feedback_node(
             "chunks": [],
             "answer": MISSING_ANSWER,
             "citations": [],
-            "abstained": True,
+            "abstained": False,
+            "needs_input": True,
         }
     chunks = await retrieve_evidence(
         f"{state['question']}\n\n{student}",

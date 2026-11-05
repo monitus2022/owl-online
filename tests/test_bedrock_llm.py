@@ -1,10 +1,41 @@
 """Bedrock Llm tests: a fake client stands in for AWS, no network."""
 
+import threading
+
 import pytest
 from botocore.exceptions import ClientError, EndpointConnectionError
 
 from app.providers.bedrock import BedrockLlm
 from app.providers.errors import ProviderError, ProviderRateLimited, ProviderTimeout
+
+
+class _BlockingStream:
+    """One delta, then block until close so cancellation can be observed."""
+
+    def __init__(self) -> None:
+        self.close_called = threading.Event()
+        self._sent = False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self._sent:
+            self._sent = True
+            return {"contentBlockDelta": {"delta": {"text": "H"}}}
+        self.close_called.wait(timeout=2)
+        raise StopIteration
+
+    def close(self) -> None:
+        self.close_called.set()
+
+
+class _BlockingClient:
+    def __init__(self) -> None:
+        self.stream = _BlockingStream()
+
+    def converse_stream(self, **kwargs):
+        return {"stream": self.stream}
 
 
 class _FakeConversationClient:
@@ -98,10 +129,12 @@ async def test_model_timeout_code_is_normalized():
         await _llm(_FakeConversationClient(error=error)).generate("s", "p")
 
 
-async def test_stream_can_be_closed_early():
-    stream = _llm(_FakeConversationClient("Hello!")).stream("sys", "ask")
+async def test_stream_close_stops_worker_and_closes_stream():
+    client = _BlockingClient()
+    stream = _llm(client).stream("sys", "ask")
     assert await anext(stream) == "H"
     await stream.aclose()
+    assert client.stream.close_called.wait(timeout=1)
 
 
 async def test_connection_error_is_normalized_for_generate():

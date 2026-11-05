@@ -36,7 +36,7 @@ class StreamRequest(AskRequest):
     @model_validator(mode="after")
     def _check_student_answer_mode(self) -> "StreamRequest":
         if self.student_answer and self.mode in ("answer", "practice"):
-            raise ValueError("student_answer is only valid with feedback mode")
+            raise ValueError("student_answer is only valid with auto or feedback mode")
         return self
 
 

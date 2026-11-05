@@ -111,6 +111,7 @@ async def test_prompt_contains_excerpt_ids_and_question():
     assert "Rowan trims the wick" in prompt
     assert "Who trims the wick?" in prompt
 
+
 class _StreamLlm(_Llm):
     def stream(self, system: str, prompt: str, *, context=None):
         async def gen():

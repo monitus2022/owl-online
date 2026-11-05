@@ -205,6 +205,7 @@ sequenceDiagram
   C->>API: POST /ask/stream {question, mode, student_answer}
   API->>G: astream(state)
   G->>G: router -> answer | practice | feedback
+  G-->>API: mode update
   API-->>C: event: mode
   G->>R: retrieve(question, top_k)
   R->>RR: rerank when configured
@@ -215,7 +216,7 @@ sequenceDiagram
   API-->>C: event: token
   G-->>API: final state
   API-->>C: event: reset when abstained
-  API-->>C: event: final {answer, citations, abstained, mode}
+  API-->>C: event: final {answer, citations, abstained, needs_input, mode}
 ```
 
 SSE events:
@@ -224,8 +225,8 @@ SSE events:
 |---|---|---|
 | `mode` | `{"mode": "answer"}` | after the router update |
 | `token` | `{"text": "..."}` | for each streamed token |
-| `reset` | `{}` | before `final` when the answer is ungrounded |
-| `final` | `answer`, `citations`, `abstained`, `mode` | once, authoritative |
+| `reset` | `{}` | before `final` whenever `abstained` is true, including retrieval abstention |
+| `final` | `answer`, `citations`, `abstained`, `needs_input`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
@@ -376,7 +377,7 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

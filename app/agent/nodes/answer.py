@@ -29,6 +29,7 @@ async def answer_node(
         on_token=emit,
     )
     return {
+        "chunks": result.chunks,
         "answer": result.answer,
         "citations": result.citations,
         "abstained": result.abstained,

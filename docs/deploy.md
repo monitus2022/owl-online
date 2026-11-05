@@ -137,11 +137,12 @@ in the next section.
 The root volume is 8 GB and `/data` (the corpus plus the index) shares it. The
 V1 image was about 215 MB to download (about 590 MB on disk); re-measure the V2
 image after the next build. A pull should still fit comfortably next to the
-running one, and the rollout prunes the previous image after a successful start. It still pulls first, so the old version keeps serving
-while the pull fits; only on failure does it stop the container, prune unused
-images, and retry. That retry is the one window where a failed deploy leaves the
-API down until the next successful rollout. A larger or separate volume for
-`/data` remains the durable fix.
+running one, and the rollout prunes the previous image after a successful start.
+It still pulls first, so the old version keeps serving while the pull fits; only
+on failure does it stop the container, prune unused images, and retry. That retry
+is the one window where a failed deploy leaves the API down until the next
+successful rollout. A larger or separate volume for `/data` remains the durable
+fix.
 
 ### V1 host
 

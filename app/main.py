@@ -121,7 +121,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     ) -> EventSourceResponse:
         runtime = request.app.state.runtime
         agent = runtime.agent
-        assert agent is not None  # built once in the lifespan
+        if agent is None:
+            raise RuntimeError("agent graph was not built")
         initial = {
             "question": body.question,
             "requested_mode": body.mode,
@@ -180,6 +181,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         "answer": final.get("answer", ""),
                         "citations": final.get("citations", []),
                         "abstained": final.get("abstained", False),
+                        "needs_input": final.get("needs_input", False),
                         "mode": final.get("mode", "answer"),
                     },
                     ensure_ascii=False,
