@@ -118,7 +118,7 @@ async def replay(
         )
         misses += llm.misses
         if result.abstain_reason == "refused":
-            first = llm.outputs[0] if llm.outputs else ""
+            first = llm.outputs[-1] if llm.outputs else ""
             reason = (
                 "refused_exact"
                 if first.strip().startswith(ABSTAIN_MESSAGE)

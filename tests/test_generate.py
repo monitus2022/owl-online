@@ -327,3 +327,24 @@ async def test_cited_refusal_that_trails_on_abstains():
     result = await ask("Who keeps the lighthouse?", retriever=_Retriever(chunks), llm=llm)
     assert result.abstained is True
     assert result.abstain_reason == "refused"
+
+
+async def test_cited_hedge_followed_by_an_answer_is_kept():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(
+        "The excerpts do not mention his surname, but I cannot say for certain; "
+        "however, Rowan trims the wick [b1-c01-0000]."
+    )
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is False
+    assert result.citations == ["b1-c01-0000"]
+
+
+async def test_cited_refusal_explanation_abstains():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(
+        "The excerpts do not mention the keeper; no information [b1-c01-0000]."
+    )
+    result = await ask("Who keeps the lighthouse?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.abstain_reason == "refused"

@@ -55,15 +55,20 @@ _REFUSAL_PREFIX = re.compile(
     r"there is no (information|evidence))",
     re.IGNORECASE,
 )
-# A refusal that trails on into "so I cannot answer ..." stays a refusal.
-_REFUSAL_CONTINUATION = re.compile(
-    r"\b(i|we)\s+(am|are|can't|cannot|can not|do not|don't)\s+"
-    r"(unable|not able|answer|know|say|tell)\b",
+# A refusal that trails on into "so I am unable ..." stays a refusal.
+_REFUSAL_CLAUSE = re.compile(
+    r"^(?:(?:so|and|therefore|thus|also)\b[,:\s]*)?"
+    r"(i (cannot|can't|can not) (answer|say|confirm|help)|"
+    r"i (do not|don't) know|i am (unable|not able)|"
+    r"no (information|evidence|answer|mention)|"
+    r"not (enough|sufficient) (information|evidence)|"
+    r"the (excerpts|books|passages) (do not|don't) (say|contain|mention|cover)|"
+    r"nothing (in|about))",
     re.IGNORECASE,
 )
-# A contrastive or new clause after the refusal is a real partial answer.
-_CONTINUATION = re.compile(
-    r"(\b(but|however|although|though|yet)\b|[.;:]\s*\S)", re.IGNORECASE
+# Clause boundaries inside the refusal tail: punctuation and contrast.
+_CLAUSE_SPLIT = re.compile(
+    r"[.;:,!?]|\b(?:but|however|although|though|yet)\b", re.IGNORECASE
 )
 
 TokenSink = Callable[[str], None]
@@ -243,22 +248,24 @@ def _is_refusal(draft: str, *, cited: bool) -> bool:
     """A model that says it cannot answer is not a verification failure.
 
     The verbatim sentinel is a refusal even when a citation follows it. A
-    paraphrase is final when the draft cites nothing, when it trails into a
-    further refusal, or when nothing but the refusal clause remains. A cited
-    partial answer that moves on to a contrastive or new clause is kept.
+    paraphrase refusal is final when it cites nothing, or when every clause
+    after the refusal statement is itself a refusal or a bare object. A cited
+    partial answer that moves on to a clause stating content is kept.
     """
     text = draft.strip()
     if text.startswith(ABSTAIN_MESSAGE):
         return True
-    match = _REFUSAL_PREFIX.match(text)
-    if match is None:
+    clean = _CITATION.sub(" ", text).strip()
+    if _REFUSAL_PREFIX.match(clean) is None:
         return False
     if not cited:
         return True
-    remainder = _CITATION.sub(" ", text[match.end() :])
-    if _REFUSAL_CONTINUATION.search(remainder):
-        return True
-    return _CONTINUATION.search(remainder) is None
+    clauses = [part.strip() for part in _CLAUSE_SPLIT.split(clean) if part.strip()]
+    for clause in clauses[1:]:
+        words = re.findall(r"[A-Za-z0-9]+", clause)
+        if len(words) >= 2 and _REFUSAL_CLAUSE.match(clause) is None:
+            return False
+    return True
 
 
 def _cited_ids(answer: str) -> list[str]:
