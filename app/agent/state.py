@@ -19,3 +19,5 @@ class AgentState(TypedDict, total=False):
     citations: list[str]
     abstained: bool
     needs_input: bool
+    attempts: int
+    retry_reason: str | None

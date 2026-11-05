@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # pydantic-settings reads .env for OWL_ settings but does not populate the
@@ -32,6 +33,9 @@ class Settings(BaseSettings):
     bedrock_embed_dims: int = 1024
     bedrock_llm_model: str = "qwen.qwen3-32b-v1:0"
     bedrock_llm_max_tokens: int = 1024
+    # Deterministic verification retries per answer. The ticket budget is one
+    # extra draft; 0 disables it. The cap is enforced at the settings boundary.
+    retry_budget: int = Field(default=1, ge=0, le=1)
     log_level: str = "INFO"
     live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 

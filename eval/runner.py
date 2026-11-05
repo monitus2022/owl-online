@@ -77,15 +77,20 @@ async def run(
     )
     gold = load_gold(gold_path)
     gold_hash = hashlib.sha256(gold_path.read_bytes()).hexdigest()[:12]
+    manifest = load_manifest()
+    # Pinned in config/manifest.toml and asserted by eval/test_manifest.py.
+    retry_budget = int(manifest["generation"]["retry_budget"])
 
     retrieval, retrieval_by_slice = await retrieval_metrics_all(setup.retriever, gold, k)
     diagnostics, diagnostics_by_slice = await retrieval_diagnostics_all(
         setup.retriever, gold, k
     )
     abstention, abstention_by_slice = await abstention_metrics_all(
-        setup.retriever, generator, gold, k
+        setup.retriever, generator, gold, k, retry_budget
     )
-    verdicts = await judge_sample(setup.retriever, generator, judge, gold, sample, k)
+    verdicts = await judge_sample(
+        setup.retriever, generator, judge, gold, sample, k, retry_budget
+    )
     generation = summarize_generation(verdicts)
     generation_by_slice = generation_metrics_by_slice(verdicts, gold)
 
@@ -98,7 +103,6 @@ async def run(
         config = "context"
     else:
         config = "pinned"
-    manifest = load_manifest()
     values = manifest_row(
         manifest,
         embedder_provider=settings.embedder_provider,

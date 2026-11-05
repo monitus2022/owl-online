@@ -3,7 +3,13 @@
 All excerpt text is invented; the corpus is copyrighted and stays out of git.
 """
 
-from app.pipeline.generate import ABSTAIN_MESSAGE, ask
+import re
+
+from app.pipeline.generate import (
+    ABSTAIN_MESSAGE,
+    RETRY_SYSTEM_PROMPT,
+    ask,
+)
 from app.schemas import Chunk, ChunkMetadata
 
 # RRF reference scores with rrf_k=60: one leg contributes 1/(rrf_k+1) for its
@@ -80,6 +86,8 @@ async def test_weak_retrieval_abstains_without_calling_the_llm():
     assert result.answer == ABSTAIN_MESSAGE
     assert result.citations == []
     assert result.abstained is True
+    assert result.attempts == 0
+    assert result.abstain_reason == "no_evidence"
     assert [chunk.id for chunk in result.chunks] == ["b1-c01-0000"]
     assert llm.calls == []
 
@@ -136,3 +144,207 @@ async def test_streaming_forwards_tokens_and_still_grounds():
     assert "".join(tokens) == "Rowan trims the wick [b1-c01-0000]."
     assert result.citations == ["b1-c01-0000"]
     assert result.abstained is False
+
+
+class _ScriptedLlm:
+    """Return a scripted answer per call; the last answer repeats."""
+
+    def __init__(self, *answers: str) -> None:
+        self._answers = list(answers)
+        self.calls: list[tuple[str, str]] = []
+
+    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        self.calls.append((system, prompt))
+        index = min(len(self.calls), len(self._answers)) - 1
+        return self._answers[index]
+
+    def stream(self, system: str, prompt: str, *, context=None):
+        self.calls.append((system, prompt))
+        index = min(len(self.calls), len(self._answers)) - 1
+
+        async def gen():
+            for piece in re.findall(r"\S+\s*", self._answers[index]):
+                yield piece
+
+        return gen()
+
+
+async def test_uncited_draft_is_retried_and_grounded():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is False
+    assert result.citations == ["b1-c01-0000"]
+    assert result.attempts == 2
+    assert result.retry_reason == "uncited"
+    assert len(llm.calls) == 2
+    assert llm.calls[1][0] == RETRY_SYSTEM_PROMPT
+
+
+async def test_retry_budget_is_one_extra_draft():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.")
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.attempts == 2
+    assert result.retry_reason == "uncited"
+    assert len(llm.calls) == 2
+
+
+async def test_zero_budget_disables_the_retry():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
+    result = await ask(
+        "Who trims the wick?", retriever=_Retriever(chunks), llm=llm, max_retries=0
+    )
+    assert result.abstained is True
+    assert result.attempts == 1
+    assert result.retry_reason is None
+    assert len(llm.calls) == 1
+
+
+async def test_budget_of_two_allows_three_drafts():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.")
+    result = await ask(
+        "Who trims the wick?", retriever=_Retriever(chunks), llm=llm, max_retries=2
+    )
+    assert result.attempts == 3
+    assert len(llm.calls) == 3
+
+
+async def test_negative_budget_disables_the_retry():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
+    result = await ask(
+        "Who trims the wick?", retriever=_Retriever(chunks), llm=llm, max_retries=-1
+    )
+    assert result.attempts == 1
+    assert len(llm.calls) == 1
+
+
+async def test_deliberate_refusal_is_final():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(ABSTAIN_MESSAGE)
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.attempts == 1
+    assert result.abstain_reason == "refused"
+    assert len(llm.calls) == 1
+
+
+async def test_paraphrased_refusal_is_final():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("The excerpts do not mention the keeper.")
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.attempts == 1
+    assert result.abstain_reason == "refused"
+    assert len(llm.calls) == 1
+
+
+async def test_refusal_with_a_citation_is_not_returned_as_grounded():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(f"{ABSTAIN_MESSAGE} [b1-c01-0000]")
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.answer == ABSTAIN_MESSAGE
+    assert result.citations == []
+    assert result.abstain_reason == "refused"
+
+
+async def test_on_reset_runs_before_the_retry_draft():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
+    calls_at_reset: list[int] = []
+    await ask(
+        "Who trims the wick?",
+        retriever=_Retriever(chunks),
+        llm=llm,
+        on_reset=lambda: calls_at_reset.append(len(llm.calls)),
+    )
+    assert calls_at_reset == [1]
+    assert len(llm.calls) == 2
+
+
+async def test_streamed_retry_forwards_both_drafts_and_a_reset():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
+    tokens: list[str] = []
+    resets: list[bool] = []
+    result = await ask(
+        "Who trims the wick?",
+        retriever=_Retriever(chunks),
+        llm=llm,
+        on_token=tokens.append,
+        on_reset=lambda: resets.append(True),
+    )
+    assert "".join(tokens) == (
+        "Rowan trims the wick.Rowan trims the wick [b1-c01-0000]."
+    )
+    assert resets == [True]
+    assert result.citations == ["b1-c01-0000"]
+
+
+async def test_cited_partial_answer_opening_with_a_refusal_phrase_is_kept():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(
+        "The excerpts do not mention his surname, but Rowan trims the wick "
+        "[b1-c01-0000]."
+    )
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is False
+    assert result.citations == ["b1-c01-0000"]
+    assert result.attempts == 1
+
+
+async def test_cited_refusal_without_a_continuation_abstains():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("The excerpts do not mention the keeper [b1-c01-0000].")
+    result = await ask("Who keeps the lighthouse?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.citations == []
+    assert result.abstain_reason == "refused"
+
+
+async def test_cited_partial_answer_after_a_semicolon_is_kept():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(
+        "The excerpts do not mention his surname; Rowan trims the wick "
+        "[b1-c01-0000]."
+    )
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is False
+    assert result.citations == ["b1-c01-0000"]
+
+
+async def test_cited_refusal_that_trails_on_abstains():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(
+        "The excerpts do not mention the keeper, so I am unable to answer that "
+        "part of the question [b1-c01-0000]."
+    )
+    result = await ask("Who keeps the lighthouse?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.abstain_reason == "refused"
+
+
+async def test_cited_hedge_followed_by_an_answer_is_kept():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(
+        "The excerpts do not mention his surname, but I cannot say for certain; "
+        "however, Rowan trims the wick [b1-c01-0000]."
+    )
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is False
+    assert result.citations == ["b1-c01-0000"]
+
+
+async def test_cited_refusal_explanation_abstains():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(
+        "The excerpts do not mention the keeper; no information [b1-c01-0000]."
+    )
+    result = await ask("Who keeps the lighthouse?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.abstain_reason == "refused"

@@ -27,7 +27,7 @@ Pipeline stages, in order:
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
-| Generate | `app/pipeline/generate/` | `ask`, `build_prompt`, `ground_answer` |
+| Generate | `app/pipeline/generate/` | `ask`, `build_prompt`, `ground_answer`, `verify_draft` |
 | Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node` |
 
 Planned exam-bank stages, not built yet:
@@ -183,13 +183,29 @@ sequenceDiagram
   RET-->>A: list[Chunk] (relevance or RRF scores, or empty)
   alt empty or top score below min_score
     A-->>API: AskResult(abstain)
-  else grounded
+  else evidence available
     A->>LLM: generate(system, prompt)
     LLM-->>A: answer citing [chunk-id]
-    A-->>API: AskResult(answer, citations)
+    alt draft is empty or uncited and retries remain
+      A->>A: verify_draft -> retry
+      A->>LLM: generate(retry prompt, same excerpts)
+      LLM-->>A: answer citing [chunk-id]
+    end
+    alt verification passed
+      A-->>API: AskResult(answer, citations, attempts)
+    else refusal or still uncited
+      A-->>API: AskResult(abstain, abstain_reason, attempts)
+    end
   end
   API-->>C: AskResponse {answer, citations, abstained}
 ```
+
+`verify_draft` is deterministic: an empty draft or one that cites no retrieved
+chunk fails. A grounded draft passes; a deliberate refusal is final and is never
+retried, so abstention keeps its meaning. A paraphrase refusal is final when it
+cites nothing, trails into a further refusal, or has nothing but the refusal
+clause; a cited partial answer that moves on to a new or contrastive clause is
+kept. The retry budget is `OWL_RETRY_BUDGET` (default 1, so at most two drafts).
 
 ## Request flow: POST /ask/stream
 
@@ -214,9 +230,17 @@ sequenceDiagram
   LLM-->>G: token
   G-->>API: custom {type: token}
   API-->>C: event: token
+  alt draft is empty or uncited and retries remain
+    G-->>API: custom {type: reset}
+    API-->>C: event: reset
+    G->>LLM: stream(retry prompt, same excerpts)
+    LLM-->>G: token
+    G-->>API: custom {type: token}
+    API-->>C: event: token
+  end
   G-->>API: final state
   API-->>C: event: reset when abstained
-  API-->>C: event: final {answer, citations, abstained, needs_input, mode}
+  API-->>C: event: final {answer, citations, abstained, needs_input, attempts, mode}
 ```
 
 SSE events:
@@ -225,17 +249,19 @@ SSE events:
 |---|---|---|
 | `mode` | `{"mode": "answer"}` | after the router update |
 | `token` | `{"text": "..."}` | for each streamed token |
-| `reset` | `{}` | before `final` whenever `abstained` is true, including retrieval abstention |
-| `final` | `answer`, `citations`, `abstained`, `needs_input`, `mode` | once, authoritative |
-| `error` | `{"detail": "..."}` | provider or internal failure after headers |
+| `reset` | `{"reason": "retry"}` before a retry draft; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
+| `final` | `answer`, `citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
 deterministic: an explicit mode wins, a supplied student answer is a feedback
 request, a practice request is a question or short set of questions, and
 everything else is answer. Tokens are a draft. Citation validation runs on the
 complete answer, so an ungrounded stream emits `reset` before the authoritative
-`final` event. Provider failures arrive as an `error` event because HTTP headers
-are already sent.
+`final` event. A failed deterministic verification emits `reset` and streams one
+retry when the budget allows; the client drops the rejected draft on the same
+event. Provider failures arrive as an `error` event because HTTP headers are
+already sent.
 
 ## Chat intents vs exam bank
 
@@ -376,8 +402,8 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, retry_reason, abstain_reason |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input, attempts, retry_reason |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

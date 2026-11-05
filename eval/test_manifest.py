@@ -8,7 +8,7 @@ import tomllib
 from pathlib import Path
 
 from app.config import Settings
-from app.pipeline.generate import DEFAULT_TOP_K
+from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K
 from app.pipeline.ingest.chunker import _CHUNK_SIZE, _MIN_CHUNK_SIZE, _OVERLAP
 from app.pipeline.retrieve.retriever import DEFAULT_RRF_K
 from app.providers.bedrock import DEFAULT_EMBED_DIMS, DEFAULT_EMBED_MODEL, DEFAULT_MODEL
@@ -21,6 +21,7 @@ MANIFEST = tomllib.loads(
 )
 # The declared field default, independent of any OWL_ value in the environment.
 RERANK_POOL_DEFAULT = Settings.model_fields["rerank_pool"].default
+RETRY_BUDGET_DEFAULT = Settings.model_fields["retry_budget"].default
 
 
 def test_manifest_pins_the_generator():
@@ -53,3 +54,8 @@ def test_manifest_pins_the_retrieval():
     assert MANIFEST["retrieval"]["rrf_k"] == DEFAULT_RRF_K
     # The pinned run attaches a reranker, so the per-leg candidate count is the pool.
     assert MANIFEST["retrieval"]["candidates"] == RERANK_POOL_DEFAULT
+
+
+def test_manifest_pins_the_retry_budget():
+    assert MANIFEST["generation"]["retry_budget"] == RETRY_BUDGET_DEFAULT
+    assert RETRY_BUDGET_DEFAULT == DEFAULT_MAX_RETRIES

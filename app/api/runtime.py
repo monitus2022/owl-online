@@ -47,5 +47,7 @@ async def build_runtime(settings: Settings) -> Runtime:
     return Runtime(
         retriever=setup.retriever,
         llm=llm,
-        agent=build_graph(setup.retriever, llm),
+        agent=build_graph(
+            setup.retriever, llm, max_retries=settings.retry_budget
+        ),
     )
