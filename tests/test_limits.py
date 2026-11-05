@@ -145,14 +145,14 @@ def test_client_ip_trusts_headers_only_from_a_trusted_peer():
     scope = {
         "type": "http",
         "client": ("127.0.0.1", 1234),
-        "headers": [(b"cf-connecting-ip", b"203.0.113.9")],
+        "headers": [(b"x-real-ip", b"203.0.113.9")],
     }
     assert _client_ip(Request(scope), loopback) == "203.0.113.9"
 
     direct = {
         "type": "http",
         "client": ("198.51.100.4", 1234),
-        "headers": [(b"cf-connecting-ip", b"203.0.113.9")],
+        "headers": [(b"x-real-ip", b"203.0.113.9")],
     }
     assert _client_ip(Request(direct), loopback) == "198.51.100.4"
 
@@ -190,15 +190,23 @@ def test_default_proxies_trust_the_bridge_not_every_private_address():
         {
             "type": "http",
             "client": ("172.17.0.1", 1),
-            "headers": [(b"cf-connecting-ip", b"203.0.113.9")],
+            "headers": [(b"x-real-ip", b"203.0.113.9")],
         }
     )
     assert _client_ip(bridge, trusted) == "203.0.113.9"
+    co_tenant = Request(
+        {
+            "type": "http",
+            "client": ("172.17.0.2", 1),
+            "headers": [(b"x-real-ip", b"203.0.113.9")],
+        }
+    )
+    assert _client_ip(co_tenant, trusted) == "172.17.0.2"
     other = Request(
         {
             "type": "http",
             "client": ("172.20.0.5", 1),
-            "headers": [(b"cf-connecting-ip", b"203.0.113.9")],
+            "headers": [(b"x-real-ip", b"203.0.113.9")],
         }
     )
     assert _client_ip(other, trusted) == "172.20.0.5"
@@ -248,3 +256,21 @@ def test_ip_capacity_refuses_without_evicting():
     decision = limiter.admit("new-session", "new-ip")
     assert decision.reason == "capacity"
     assert len(limiter._ip_windows) == 20_000
+
+
+def test_cf_header_alone_is_ignored_even_from_the_proxy():
+    from ipaddress import ip_network
+
+    from starlette.requests import Request
+
+    from app.main import _client_ip
+
+    trusted = [ip_network("172.17.0.1/32")]
+    request = Request(
+        {
+            "type": "http",
+            "client": ("172.17.0.1", 1),
+            "headers": [(b"cf-connecting-ip", b"1.2.3.4")],
+        }
+    )
+    assert _client_ip(request, trusted) == "172.17.0.1"

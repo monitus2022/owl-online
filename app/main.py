@@ -57,14 +57,12 @@ def _client_ip(
         return "unknown"
     if not any(address in network for network in trusted):
         return peer
-    for header in ("x-real-ip", "cf-connecting-ip"):
-        value = request.headers.get(header)
-        if not value:
-            continue
+    value = request.headers.get("x-real-ip")
+    if value:
         try:
             return str(ipaddress.ip_address(value.strip()))
         except ValueError:
-            continue
+            pass
     return peer
 
 

@@ -59,9 +59,18 @@ proxy_set_header X-Forwarded-Proto $scheme;
 proxy_set_header CF-Connecting-IP "";
 ```
 
-If Cloudflare fronts nginx, also enable `ngx_http_realip_module` with the
-Cloudflare ranges so `$remote_addr` is the real client. Without it, every
-request shares the Cloudflare edge address: that is coarse but not spoofable.
+If Cloudflare fronts nginx, `ngx_http_realip_module` is required, because
+without it every request shares the edge address and the per-client IP caps
+become per-edge. Fetch the ranges from
+`https://www.cloudflare.com/ips-v4` and `https://www.cloudflare.com/ips-v6`:
+
+```
+real_ip_header CF-Connecting-IP;
+set_real_ip_from 173.245.48.0/20;   # add every published range
+real_ip_recursive on;
+```
+
+Then `$remote_addr` is the client and `X-Real-IP` carries it to the app.
 
 `OWL_TRUSTED_PROXIES` defaults to loopback plus the Docker bridge
 (`172.17.0.0/16`); widen it only for a proxy that is not on that bridge.
@@ -257,7 +266,7 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_RERANK_PROVIDER=bedrock
    OWL_RERANK_CACHE_PATH=/data/rerank_cache.jsonl
    OWL_SESSION_SECRET=<long-random-value>
-   OWL_TRUSTED_PROXIES=127.0.0.1/32,::1/128,172.17.0.0/16
+   OWL_TRUSTED_PROXIES=127.0.0.1/32,::1/128,172.17.0.1/32
    OWL_CHAT_PER_MINUTE=10
    OWL_CHAT_PER_DAY=100
    OWL_CHAT_IP_PER_DAY=100
