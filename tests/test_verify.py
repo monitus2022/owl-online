@@ -1,6 +1,7 @@
 """Deterministic verification: no model call, no network."""
 
 from app.pipeline.generate import ABSTAIN_MESSAGE, AskResult, verify_draft
+from app.pipeline.generate.generate import AbstainReason
 from app.pipeline.generate.verify import Verification
 from app.schemas import Chunk, ChunkMetadata
 
@@ -23,12 +24,14 @@ def _result(
     citations: list[str] | None = None,
     abstained: bool = False,
     chunks: list[Chunk] | None = None,
+    abstain_reason: AbstainReason | None = None,
 ) -> AskResult:
     return AskResult(
         answer=answer,
         citations=["b1-c01-0000"] if citations is None else citations,
         abstained=abstained,
         chunks=[_chunk()] if chunks is None else chunks,
+        abstain_reason=abstain_reason,
     )
 
 
@@ -42,10 +45,35 @@ def test_empty_draft_fails():
 
 
 def test_uncited_draft_fails():
-    result = _result(answer=ABSTAIN_MESSAGE, citations=[], abstained=True)
+    result = _result(
+        answer=ABSTAIN_MESSAGE,
+        citations=[],
+        abstained=True,
+        abstain_reason="uncited",
+    )
     assert verify_draft("Rowan trims the wick.", result) == Verification(False, "uncited")
 
 
-def test_retrieval_abstention_is_not_a_failure():
-    result = _result(answer=ABSTAIN_MESSAGE, citations=[], abstained=True, chunks=[])
+def test_empty_retrieval_is_not_a_failure():
+    result = _result(
+        answer=ABSTAIN_MESSAGE,
+        citations=[],
+        abstained=True,
+        chunks=[],
+        abstain_reason="no_evidence",
+    )
+    assert verify_draft(ABSTAIN_MESSAGE, result) == Verification(True)
+
+
+def test_weak_retrieval_with_hits_is_not_a_failure():
+    # The retriever can return hits that score below the floor; ask() abstains
+    # without drafting, so verification must not mistake that for an uncited
+    # answer just because chunks is non-empty.
+    result = _result(
+        answer=ABSTAIN_MESSAGE,
+        citations=[],
+        abstained=True,
+        abstain_reason="no_evidence",
+    )
+    assert result.chunks
     assert verify_draft(ABSTAIN_MESSAGE, result) == Verification(True)

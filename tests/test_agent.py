@@ -225,3 +225,33 @@ async def test_stream_emits_reset_between_the_two_drafts():
     )
     assert before == "Rowan trims the wick."
     assert after == "Rowan trims the wick [b1-c01-0000]."
+
+
+class _AlwaysUncitedLlm(_Llm):
+    """Every draft answers without a citation, so both drafts fail."""
+
+    def __init__(self) -> None:
+        super().__init__("unused")
+
+    def stream(self, system: str, prompt: str, *, context=None):
+        async def gen():
+            for piece in re.findall(r"\S+\s*", "Rowan trims the wick."):
+                yield piece
+
+        return gen()
+
+
+async def test_budget_exhaustion_abstains_at_the_graph_level():
+    graph = build_graph(_Retriever(), _AlwaysUncitedLlm())
+    state = await graph.ainvoke(
+        {
+            "question": "Who trims the wick?",
+            "requested_mode": "answer",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["abstained"] is True
+    assert state["attempts"] == 2
+    assert state["retry_reason"] == "uncited"
+    assert state["citations"] == []

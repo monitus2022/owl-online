@@ -5,6 +5,7 @@ import json
 from fastapi.testclient import TestClient
 
 from app.api.runtime import Runtime
+from app.config import Settings
 from app.logging import get_request_id
 from app.main import create_app
 from app.pipeline.generate import ABSTAIN_MESSAGE
@@ -54,7 +55,10 @@ class _WeakRetriever:
 
 
 def _client(runtime: Runtime | None = None) -> TestClient:
-    app = create_app(runtime=runtime or Runtime(retriever=_Retriever(), llm=_Llm()))
+    app = create_app(
+        app_settings=Settings(retry_budget=1),
+        runtime=runtime or Runtime(retriever=_Retriever(), llm=_Llm()),
+    )
     return TestClient(app)
 
 
@@ -326,7 +330,24 @@ def test_ask_stream_reports_a_provider_error_as_an_event():
         ) as response:
             body = "".join(response.iter_text())
     events = _parse_sse(body)
-    assert any(name == "error" for name, _ in events)
+    names = [name for name, _ in events]
+    assert "error" in names
+    assert "reset" in names
+    assert names.index("reset") < names.index("error")
+
+
+def test_retry_budget_setting_disables_the_retry():
+    runtime = Runtime(retriever=_Retriever(), llm=_RetryStreamLlm())
+    app = create_app(app_settings=Settings(retry_budget=0), runtime=runtime)
+    with TestClient(app) as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who trims the wick?"}
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    finals = [data for name, data in events if name == "final"]
+    assert finals[0]["attempts"] == 1
+    assert finals[0]["abstained"] is True
 
 
 class _RetryStreamLlm(_Llm):

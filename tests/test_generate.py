@@ -86,6 +86,8 @@ async def test_weak_retrieval_abstains_without_calling_the_llm():
     assert result.answer == ABSTAIN_MESSAGE
     assert result.citations == []
     assert result.abstained is True
+    assert result.attempts == 0
+    assert result.abstain_reason == "no_evidence"
     assert [chunk.id for chunk in result.chunks] == ["b1-c01-0000"]
     assert llm.calls == []
 
@@ -197,6 +199,27 @@ async def test_zero_budget_disables_the_retry():
     )
     assert result.abstained is True
     assert result.attempts == 1
+    assert result.retry_reason is None
+    assert len(llm.calls) == 1
+
+
+async def test_budget_of_two_allows_three_drafts():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.")
+    result = await ask(
+        "Who trims the wick?", retriever=_Retriever(chunks), llm=llm, max_retries=2
+    )
+    assert result.attempts == 3
+    assert len(llm.calls) == 3
+
+
+async def test_negative_budget_disables_the_retry():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
+    result = await ask(
+        "Who trims the wick?", retriever=_Retriever(chunks), llm=llm, max_retries=-1
+    )
+    assert result.attempts == 1
     assert len(llm.calls) == 1
 
 
@@ -206,20 +229,42 @@ async def test_deliberate_refusal_is_final():
     result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
     assert result.abstained is True
     assert result.attempts == 1
+    assert result.abstain_reason == "refused"
     assert len(llm.calls) == 1
+
+
+async def test_paraphrased_refusal_is_final():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("The excerpts do not mention the keeper.")
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.attempts == 1
+    assert result.abstain_reason == "refused"
+    assert len(llm.calls) == 1
+
+
+async def test_refusal_with_a_citation_is_not_returned_as_grounded():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(f"{ABSTAIN_MESSAGE} [b1-c01-0000]")
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.answer == ABSTAIN_MESSAGE
+    assert result.citations == []
+    assert result.abstain_reason == "refused"
 
 
 async def test_on_reset_runs_before_the_retry_draft():
     chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
     llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
-    resets: list[bool] = []
+    calls_at_reset: list[int] = []
     await ask(
         "Who trims the wick?",
         retriever=_Retriever(chunks),
         llm=llm,
-        on_reset=lambda: resets.append(True),
+        on_reset=lambda: calls_at_reset.append(len(llm.calls)),
     )
-    assert resets == [True]
+    assert calls_at_reset == [1]
+    assert len(llm.calls) == 2
 
 
 async def test_streamed_retry_forwards_both_drafts_and_a_reset():

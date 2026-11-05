@@ -168,6 +168,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                                 }
             except ProviderError:
                 logger.exception("streaming provider failure")
+                # error is terminal; clear any draft the client is showing.
+                yield {"event": "reset", "data": json.dumps({})}
                 yield {
                     "event": "error",
                     "data": json.dumps({"detail": "model provider unavailable"}),
@@ -175,6 +177,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 return
             except Exception:
                 logger.exception("streaming failure")
+                yield {"event": "reset", "data": json.dumps({})}
                 yield {
                     "event": "error",
                     "data": json.dumps({"detail": "internal error"}),

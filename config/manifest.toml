@@ -38,3 +38,8 @@ rrf_k = 60
 # Candidates per leg. With a reranker attached (the pinned run) this equals
 # [reranker].pool; the no-rerank default is 20.
 candidates = 50
+
+[generation]
+# Drafts regenerated after a failed deterministic verification. The eval reads
+# this so a run cannot silently inherit a different retry budget from the code.
+retry_budget = 1

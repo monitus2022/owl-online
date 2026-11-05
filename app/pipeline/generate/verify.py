@@ -29,9 +29,11 @@ def verify_draft(draft: str, result: AskResult) -> Verification:
     """Judge one draft against two deterministic rules.
 
     `result` is the grounded form of the same draft, so a missing citation means
-    the answer is ungrounded even when the draft text is long.
+    the answer is ungrounded even when the draft text is long. A weak retrieval
+    (`abstain_reason="no_evidence"`) is not a draft failure: there is nothing to
+    re-cite.
     """
-    if not result.chunks:
+    if result.abstain_reason == "no_evidence" or not result.chunks:
         return Verification(True)
     if not draft.strip():
         return Verification(False, "empty")

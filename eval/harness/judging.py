@@ -7,7 +7,7 @@ import re
 import tomllib
 from pathlib import Path
 
-from app.pipeline.generate import DEFAULT_TOP_K, ask
+from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K, ask
 from app.providers.contracts import Llm, Retriever
 from eval.harness.generation import JudgeVerdict, exact_match, token_f1
 from eval.harness.gold import GoldItem
@@ -111,6 +111,7 @@ async def judge_sample(
     items: list[GoldItem],
     sample: int = 15,
     top_k: int = DEFAULT_TOP_K,
+    max_retries: int = DEFAULT_MAX_RETRIES,
 ) -> list[JudgeVerdict]:
     """Generate answers for a slice-balanced sample and judge them.
 
@@ -122,7 +123,13 @@ async def judge_sample(
     verdicts: list[JudgeVerdict] = []
     for item in sampled:
         chunks = await retriever.retrieve(item.question, top_k)
-        result = await ask(item.question, retriever=retriever, llm=llm, top_k=top_k)
+        result = await ask(
+            item.question,
+            retriever=retriever,
+            llm=llm,
+            top_k=top_k,
+            max_retries=max_retries,
+        )
         reference = item.reference_answer
         if result.abstained:
             verdicts.append(

@@ -27,7 +27,7 @@ Pipeline stages, in order:
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
-| Generate | `app/pipeline/generate/` | `ask`, `build_prompt`, `ground_answer` |
+| Generate | `app/pipeline/generate/` | `ask`, `build_prompt`, `ground_answer`, `verify_draft` |
 | Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node` |
 
 Planned exam-bank stages, not built yet:
@@ -191,7 +191,11 @@ sequenceDiagram
       A->>LLM: generate(retry prompt, same excerpts)
       LLM-->>A: answer citing [chunk-id]
     end
-    A-->>API: AskResult(answer, citations, attempts)
+    alt verification passed
+      A-->>API: AskResult(answer, citations, attempts)
+    else refusal or still uncited
+      A-->>API: AskResult(abstain, abstain_reason, attempts)
+    end
   end
   API-->>C: AskResponse {answer, citations, abstained}
 ```
@@ -243,9 +247,9 @@ SSE events:
 |---|---|---|
 | `mode` | `{"mode": "answer"}` | after the router update |
 | `token` | `{"text": "..."}` | for each streamed token |
-| `reset` | `{"reason": "retry"}` before a retry draft; `{}` before `final` whenever `abstained` is true | clears the draft on either path |
+| `reset` | `{"reason": "retry"}` before a retry draft; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
 | `final` | `answer`, `citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
-| `error` | `{"detail": "..."}` | provider or internal failure after headers |
+| `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
 deterministic: an explicit mode wins, a supplied student answer is a feedback
@@ -396,7 +400,7 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, retry_reason |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, retry_reason, abstain_reason |
 | `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input, attempts, retry_reason |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |

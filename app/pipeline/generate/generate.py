@@ -10,6 +10,7 @@ import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
+from typing import Literal
 
 from app.pipeline.generate.verify import verify_draft
 from app.pipeline.retrieve.retriever import DEFAULT_RRF_K, QUERY_CANDIDATES
@@ -46,20 +47,36 @@ RETRY_SYSTEM_PROMPT = (
 
 _CITATION = re.compile(r"\[([^\]]+)\]")
 _ID_SEPARATOR = re.compile(r"[,\s]+")
+# The model is told to reply with ABSTAIN_MESSAGE verbatim. Real replies drift,
+# so common paraphrases also count as a refusal and are never retried.
+_REFUSAL_PREFIX = re.compile(
+    r"^(i (cannot|can't|can not) answer|i (do not|don't) know|"
+    r"the (excerpts|books|passages) (do not|don't) (say|contain|mention|cover)|"
+    r"there is no (information|evidence))",
+    re.IGNORECASE,
+)
 
 TokenSink = Callable[[str], None]
+AbstainReason = Literal["no_evidence", "uncited", "refused"]
 
 
 @dataclass(frozen=True)
 class AskResult:
-    """A grounded answer plus the chunk ids it rests on."""
+    """A grounded answer plus the chunk ids it rests on.
+
+    `attempts` counts drafts generated; it is 0 when retrieval abstained before
+    any draft. `abstain_reason` separates a weak retrieval (`no_evidence`) from a
+    draft that cited nothing (`uncited`) or refused (`refused`), so callers do
+    not have to infer it from the text.
+    """
 
     answer: str
     citations: list[str] = field(default_factory=list)
     abstained: bool = False
     chunks: list[Chunk] = field(default_factory=list)
-    attempts: int = 1
+    attempts: int = 0
     retry_reason: str | None = None
+    abstain_reason: AbstainReason | None = None
 
 
 def retrieval_floor(
@@ -88,7 +105,9 @@ def ground_answer(answer: str, chunks: list[Chunk]) -> AskResult:
     allowed = {c.id for c in chunks}
     citations = [cid for cid in _cited_ids(answer) if cid in allowed]
     if not citations:
-        return AskResult(ABSTAIN_MESSAGE, abstained=True, chunks=chunks)
+        return AskResult(
+            ABSTAIN_MESSAGE, abstained=True, chunks=chunks, abstain_reason="uncited"
+        )
     return AskResult(
         _drop_unknown_citations(answer, allowed),
         citations,
@@ -131,7 +150,13 @@ async def ask(
             floor,
             retrieve_ms,
         )
-        return AskResult(ABSTAIN_MESSAGE, abstained=True, chunks=chunks)
+        return AskResult(
+            ABSTAIN_MESSAGE,
+            abstained=True,
+            chunks=chunks,
+            attempts=0,
+            abstain_reason="no_evidence",
+        )
 
     prompt = build_prompt(question, chunks)
     generate_start = time.perf_counter()
@@ -155,6 +180,15 @@ async def ask(
         if on_reset is not None:
             on_reset()
     generate_ms = (time.perf_counter() - generate_start) * 1000
+    if _is_refusal(draft):
+        # A refusal is final even when the draft also carries a citation: the
+        # answer says it cannot answer, so it must not be returned as grounded.
+        result = AskResult(
+            ABSTAIN_MESSAGE,
+            abstained=True,
+            chunks=chunks,
+            abstain_reason="refused",
+        )
     result = replace(result, attempts=attempt, retry_reason=retry_reason)
 
     if result.abstained:
@@ -195,7 +229,8 @@ async def _one_draft(
 
 def _is_refusal(draft: str) -> bool:
     """A model that says it cannot answer is not a verification failure."""
-    return draft.strip().startswith(ABSTAIN_MESSAGE)
+    text = draft.strip()
+    return text.startswith(ABSTAIN_MESSAGE) or bool(_REFUSAL_PREFIX.match(text))
 
 
 def _cited_ids(answer: str) -> list[str]:

@@ -21,6 +21,7 @@ MANIFEST = tomllib.loads(
 )
 # The declared field default, independent of any OWL_ value in the environment.
 RERANK_POOL_DEFAULT = Settings.model_fields["rerank_pool"].default
+RETRY_BUDGET_DEFAULT = Settings.model_fields["retry_budget"].default
 
 
 def test_manifest_pins_the_generator():
@@ -53,3 +54,7 @@ def test_manifest_pins_the_retrieval():
     assert MANIFEST["retrieval"]["rrf_k"] == DEFAULT_RRF_K
     # The pinned run attaches a reranker, so the per-leg candidate count is the pool.
     assert MANIFEST["retrieval"]["candidates"] == RERANK_POOL_DEFAULT
+
+
+def test_manifest_pins_the_retry_budget():
+    assert MANIFEST["generation"]["retry_budget"] == RETRY_BUDGET_DEFAULT
