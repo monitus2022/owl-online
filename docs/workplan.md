@@ -44,7 +44,7 @@ Status: in progress.
 | #80 | Bedrock Converse Llm, LangGraph chat graph, answer/practice/feedback router, SSE |
 | #81 | Chat verification and bounded retry: deterministic verify, one extra draft |
 | #79 | Retrieval lexical, abstention, deadline, fabrication checks: tokenizer measured (stemming rejected), floor pinned at 0, /ask deadline, novel-entity signal |
-| #82 | Agent observability, injection guard, close-out |
+| #82 | Agent observability: request spans (router/retrieve/generate/verify/final) with prompt hashes, injection guard, close-out docs |
 | #88 | Cost controls: per-session and per-IP caps, token budget, exact cache, usage accounting, graceful degradation |
 | #77 | Eval gate and deploy hardening, where not already done |
 

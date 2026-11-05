@@ -274,6 +274,24 @@ retry when the budget allows; the client drops the rejected draft on the same
 event. Provider failures arrive as an `error` event because HTTP headers are
 already sent.
 
+## Tracing
+
+Each request can emit a flat JSONL span tree under the request id: `router`
+(intent), `retrieve` (chunk ids and top score), one `generate` per attempt
+(model, prompt hash and length), `verify` (ok and reason), `retry`, and `final`.
+Cache hits emit a `cache` span instead of retrieve/generate.
+
+Traces go to the `owl.trace` logger and, when `OWL_TRACE_FILE` is set, to a
+size-capped file that is safe to ship. Prompt text is never emitted: the span
+carries a hash and a character count so a run can be identified without storing
+the excerpts. The trace records the agent's decisions, not hidden model
+reasoning.
+
+Retrieved text is treated as untrusted. `render_evidence` removes lines that look
+like instructions ("ignore previous instructions", "reveal the prompt", "you must
+now"), and the answer system prompt tells the model to ignore instructions inside
+excerpts.
+
 ## Chat intents vs exam bank
 
 The chat graph is the online surface. Its three intents are intentionally

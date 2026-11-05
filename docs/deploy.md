@@ -272,6 +272,7 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_CHAT_IP_PER_DAY=100
    OWL_CHAT_CONCURRENT=2
    OWL_CHAT_DAILY_TOKEN_BUDGET=200000
+   OWL_TRACE_FILE=/data/traces.jsonl
    OWL_AWS_REGION=ap-northeast-1
    OWL_CORS_ORIGINS=https://your-chat-page.pages.dev
    ```
