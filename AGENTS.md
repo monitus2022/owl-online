@@ -73,9 +73,10 @@ mode. Every material has source refs; every generated question or lesson section
 must cite a material and source ref. Do not generate exam or lesson content from
 free model memory or from an unvalidated pack.
 
-Planned chat controls (#88) will enforce per-session, per-IP and per-day caps,
-token caps and an exact cache; a spend guard degrades chat before it can exhaust
-the budget.
+Chat controls (#88) enforce per-session and per-IP minute, day and concurrency
+caps through a signed session cookie, an exact cache for corpus-only answers, and
+a daily token budget that degrades chat before it can exhaust the spend. The
+counters live in the one API process and reset on restart.
 
 ## Model access
 

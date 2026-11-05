@@ -170,6 +170,8 @@ sequenceDiagram
   participant LLM as OpenRouterLlm
 
   C->>API: POST /ask {question}
+  API->>API: cache.get (hit -> return)
+  API->>API: session cookie, limiter.admit (429 / 503)
   API->>R: get_retriever / get_llm
   API->>A: ask(question, retriever, llm)
   A->>RET: retrieve(question, top_k)
@@ -226,6 +228,8 @@ sequenceDiagram
   participant LLM as Llm adapter
 
   C->>API: POST /ask/stream {question, mode, student_answer}
+  API->>API: cache.get when the intent is answer
+  API->>API: limiter.admit (429 / 503)
   API->>G: astream(state)
   G->>G: router -> answer | practice | feedback
   G-->>API: mode update
@@ -386,14 +390,26 @@ See `docs/workplan.md` for phase order and exit criteria.
 
 ### Cost controls
 
-Chat is the variable-cost surface; exam content is mostly offline. The planned
-chat controls (#88) will enforce per-session, per-IP and per-day limits, output
-and history token caps, an exact answer cache keyed by normalised question plus
-index hash, usage accounting, and a daily spend guard. At the hard cap, chat
-degrades gracefully while exam serving stays up. Auth is not a dependency.
+Chat is the variable-cost surface; exam content is mostly offline. The chat
+controls (#88) enforce per-session limits (10/min, 100/day, 2 concurrent), the same minute and
+concurrency limits per IP plus a 100/day IP cap, and a daily token budget. Over a limit the API returns 429
+with `Retry-After`; over the budget it returns 503 for chat only, so `/health`
+and future exam routes stay up. Counters live in the one API process, so a
+restart resets the windows; auth later moves them to a user id.
 
-The `Runtime` (the retriever with its optional reranker, the llm, and the
-compiled agent graph) is built once in the app lifespan, never per request.
+Corpus-only answers pass through an in-process exact cache keyed by prompt
+version, index text hash, retrieval settings, embedder and reranker config,
+model and normalised question. Practice and feedback never
+read or write it: feedback is personalised by the student answer and practice is
+meant to vary. Usage is logged for each processed request, cache hits included; a
+429, 502, 503 or 504 does not produce a line. The line carries estimated
+input/output tokens,
+model, intent, cache hit, cost and latency; a client that disconnects before the
+stream ends may not produce a line. Prices are configuration, not constants.
+
+The `Runtime` (the retriever with its optional reranker, the llm, the compiled
+agent graph and the index text hash used by the cache key) is built once in the
+app lifespan, never per request.
 Provider failures surface as a normalized `ProviderError` and become a 502 at
 the edge, or an SSE `error` event once a stream has started.
 
@@ -414,7 +430,7 @@ generate) for the per-call detail.
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
-| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm and compiled agent graph |
+| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, compiled agent graph, index hash |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 

@@ -41,6 +41,7 @@ docker run --rm -p 8000:8000 \
   -e OWL_EMBEDDER_PROVIDER=local \
   -e OWL_OLLAMA_BASE_URL=http://host.docker.internal:11434 \
   -e OWL_RERANK_PROVIDER=bedrock \
+  -e OWL_SESSION_SECRET=<long-random-value> \
   -e OWL_AWS_REGION=ap-northeast-1 \
   -e AWS_ACCESS_KEY_ID=... -e AWS_SECRET_ACCESS_KEY=... \
   owl-online
@@ -48,6 +49,31 @@ docker run --rm -p 8000:8000 \
 
 `host.docker.internal` reaches an Ollama daemon running on the host (macOS and
 Windows; on Linux use the host gateway address).
+
+Behind nginx, set the client IP and clear the Cloudflare header so a client
+cannot supply either one. The app prefers `X-Real-IP`:
+
+```
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header CF-Connecting-IP "";
+```
+
+If Cloudflare fronts nginx, `ngx_http_realip_module` is required, because
+without it every request shares the edge address and the per-client IP caps
+become per-edge. Fetch the ranges from
+`https://www.cloudflare.com/ips-v4` and `https://www.cloudflare.com/ips-v6`:
+
+```
+real_ip_header CF-Connecting-IP;
+set_real_ip_from 173.245.48.0/20;   # add every published range
+real_ip_recursive on;
+```
+
+Then `$remote_addr` is the client and `X-Real-IP` carries it to the app.
+
+`OWL_TRUSTED_PROXIES` defaults to loopback plus the Docker bridge
+(`172.17.0.0/16`); widen it only for a proxy that is not on that bridge.
 
 To use the Bedrock Llm instead of OpenRouter, set `OWL_PROVIDER=bedrock` and the
 model, for example `OWL_BEDROCK_LLM_MODEL=qwen.qwen3-32b-v1:0` and
@@ -167,6 +193,61 @@ If the chosen model is served through an inference profile, grant the same
 actions on the profile ARN instead. Converse streaming fails without
 `bedrock:InvokeModelWithResponseStream`.
 
+## Log shipping
+
+Application logs go to stdout, and Docker's json-file driver keeps them on the
+host. A deploy removes the old container, which deletes its log file, so a
+nightly copy would lose a day of logs on every rollout. Ship continuously
+instead.
+
+One-time AWS setup, with `LOG_BUCKET` and the instance role:
+
+```
+aws s3api create-bucket --bucket "$LOG_BUCKET" --region "$AWS_REGION" \
+  --create-bucket-configuration LocationConstraint="$AWS_REGION"
+aws s3api put-public-access-block --bucket "$LOG_BUCKET" \
+  --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+aws s3api put-bucket-lifecycle-configuration --bucket "$LOG_BUCKET" \
+  --lifecycle-configuration '{"Rules":[{"ID":"expire-7d","Status":"Enabled",
+  "Filter":{"Prefix":"owl-online/"},"Expiration":{"Days":7}}]}'
+```
+
+Attach `s3:PutObject` on `arn:aws:s3:::$LOG_BUCKET/owl-online/*` to the
+instance role (`monitus-ec2-ecr-role`). No list or delete permission is needed.
+
+Run Fluent Bit on the host. It tails the Docker json files, buffers on disk and
+flushes every 30 seconds or 5 MB:
+
+```
+mkdir -p /var/lib/owl/fluent-bit
+docker run -d --name owl-logs --restart unless-stopped \
+  --log-driver=none \
+  -e LOG_BUCKET="$LOG_BUCKET" -e AWS_REGION="$AWS_REGION" \
+  -v /var/lib/docker/containers:/var/lib/docker/containers:ro \
+  -v /var/lib/owl/fluent-bit:/var/lib/owl/fluent-bit \
+  -v "$PWD/deploy/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro" \
+  fluent/fluent-bit:3.1
+```
+
+`--log-driver=none` keeps the shipper from tailing its own output. The API
+container keeps `--log-driver json-file` with `max-size=10m` and `max-file=3`,
+so `docker logs` still works and a log burst cannot fill the 8 GB volume.
+
+Rules:
+
+- 7-day expiry is an S3 lifecycle rule, not a job.
+- A shipper outage only delays the copy: Fluent Bit buffers on disk up to 512 MB.
+- The tail covers every Docker container on the host; only the API and the shipper
+run there. If the shipper is down long enough to fill that buffer, new records
+are dropped; the API keeps serving.
+- Logs carry ids, counts, timings and opaque session ids. Prompts, answers and
+  student text are not logged, so nothing copyrighted or personal leaves the
+  host through this path.
+
+Verify with `aws s3 ls "s3://$LOG_BUCKET/owl-online/" --recursive | tail` and
+`aws s3api get-bucket-lifecycle-configuration --bucket "$LOG_BUCKET"`.
+
 ## One-time host setup
 
 The pipeline ships only the image. Do these once on the instance:
@@ -184,6 +265,13 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_INDEX_DIR=/data/index/titan
    OWL_RERANK_PROVIDER=bedrock
    OWL_RERANK_CACHE_PATH=/data/rerank_cache.jsonl
+   OWL_SESSION_SECRET=<long-random-value>
+   OWL_TRUSTED_PROXIES=127.0.0.1/32,::1/128,172.17.0.1/32
+   OWL_CHAT_PER_MINUTE=10
+   OWL_CHAT_PER_DAY=100
+   OWL_CHAT_IP_PER_DAY=100
+   OWL_CHAT_CONCURRENT=2
+   OWL_CHAT_DAILY_TOKEN_BUDGET=200000
    OWL_AWS_REGION=ap-northeast-1
    OWL_CORS_ORIGINS=https://your-chat-page.pages.dev
    ```
