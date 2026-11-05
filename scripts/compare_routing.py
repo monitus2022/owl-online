@@ -47,8 +47,12 @@ def _price(model: str) -> tuple[float, float]:
 async def _score(item: dict, state: dict, judge) -> dict:
     citations = list(state.get("citations", []))
     expected = set(item["expected_chunk_ids"])
-    citation_ok = bool(citations) and (not expected or bool(set(citations) & expected))
-    abstain_ok = state.get("abstained", False) if not expected else None
+    behavior = item.get("expected_behavior", "answer")
+    if behavior == "answer":
+        citation_ok = bool(citations) and bool(set(citations) & expected)
+    else:
+        citation_ok = True
+    abstain_ok = state.get("abstained", False) if behavior == "abstain" else None
     evidence = render_evidence(list(state.get("chunks", [])))
     task = item["question"]
     extra = ""
@@ -126,11 +130,12 @@ async def main() -> int:
             start = time.perf_counter()
             try:
                 state = await graph.ainvoke(state_in)
+                row = await _score(item, state, judge)
             except Exception as exc:  # noqa: BLE001 - report, do not abort the sweep
                 rows.append({"citation_ok": False, "verdict": None, "error": str(exc)})
                 continue
             latencies.append((time.perf_counter() - start) * 1000)
-            rows.append(await _score(item, state, judge))
+            rows.append(row)
         practice = [r for r, i in zip(rows, items, strict=True) if i["intent"] == "practice"]
         feedback = [r for r, i in zip(rows, items, strict=True) if i["intent"] == "feedback"]
         pv = [r["verdict"] for r in practice if r.get("verdict")]

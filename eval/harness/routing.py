@@ -33,7 +33,7 @@ def parse_routing_verdict(raw: str, intent: str) -> dict[str, Any] | None:
     if data is None:
         return None
     if intent == "practice":
-        if "on_topic" not in data:
+        if not all(k in data for k in ("on_topic", "grounded", "answerable", "boundary")):
             return None
         return {
             "on_topic": _as_bool(data.get("on_topic")),
@@ -41,7 +41,9 @@ def parse_routing_verdict(raw: str, intent: str) -> dict[str, Any] | None:
             "answerable": _as_bool(data.get("answerable")),
             "boundary": _as_bool(data.get("boundary")),
         }
-    band = str(data.get("band", "")).lower()
+    if not all(k in data for k in ("band", "error_named", "grounded", "boundary")):
+        return None
+    band = str(data.get("band", "")).strip().lower()
     if band not in {"strong", "partial", "wrong"}:
         return None
     return {
