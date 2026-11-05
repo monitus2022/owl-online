@@ -296,3 +296,12 @@ async def test_cited_partial_answer_opening_with_a_refusal_phrase_is_kept():
     assert result.abstained is False
     assert result.citations == ["b1-c01-0000"]
     assert result.attempts == 1
+
+
+async def test_cited_refusal_without_a_continuation_abstains():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("The excerpts do not mention the keeper [b1-c01-0000].")
+    result = await ask("Who keeps the lighthouse?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.citations == []
+    assert result.abstain_reason == "refused"

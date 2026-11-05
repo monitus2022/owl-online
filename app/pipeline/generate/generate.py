@@ -233,13 +233,22 @@ def _is_refusal(draft: str, *, cited: bool) -> bool:
     """A model that says it cannot answer is not a verification failure.
 
     The verbatim sentinel is a refusal even when a citation follows it. A
-    paraphrase only counts when the draft cites nothing: "the excerpts do not
-    mention X, but Y [id]" is a partial answer, not a refusal.
+    paraphrase only counts when the draft cites nothing, or when the refusal is
+    the whole answer: "the excerpts do not mention X, but Y [id]" is a partial
+    answer, not a refusal.
     """
     text = draft.strip()
     if text.startswith(ABSTAIN_MESSAGE):
         return True
-    return not cited and bool(_REFUSAL_PREFIX.match(text))
+    match = _REFUSAL_PREFIX.match(text)
+    if match is None:
+        return False
+    if not cited:
+        return True
+    remainder = _CITATION.sub(" ", text[match.end() :])
+    if re.search(r"\b(but|however|although|though|yet)\b", remainder, re.IGNORECASE):
+        return False
+    return len(re.findall(r"[A-Za-z0-9]+", remainder)) < 8
 
 
 def _cited_ids(answer: str) -> list[str]:

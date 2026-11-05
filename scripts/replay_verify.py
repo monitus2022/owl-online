@@ -101,11 +101,12 @@ async def replay(
     )
 
     unanswerable_retried = 0
+    reasons: dict[str, int] = {}
     for item in gold:
         if item.answerable:
             continue
         llm = CountingLlm(cached)
-        await ask(
+        result = await ask(
             item.question,
             retriever=setup.retriever,
             llm=llm,
@@ -113,12 +114,17 @@ async def replay(
             max_retries=retry_budget,
         )
         misses += llm.misses
+        reasons[result.abstain_reason or "answered"] = (
+            reasons.get(result.abstain_reason or "answered", 0) + 1
+        )
         if llm.calls > 1:
             unanswerable_retried += 1
             print(f"  unanswerable retried {item.id}")
     print(
         f"unanswerable: {unanswerable_retried} retried, {misses} total cache misses"
     )
+    for reason, count in sorted(reasons.items()):
+        print(f"  {reason}: {count}")
     if misses:
         print("replay is not comparable: rerun scripts/run_eval.py first")
         return 1
