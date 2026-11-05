@@ -5,7 +5,7 @@
 - Ticket: #79 (V2 D6)
 - Config: `pinned` (reranker on)
 - Artifacts: `eval/results/baseline.csv` (repinned from `20261105T154916Z`), `eval/results/20261105T154940Z.csv` (local, gitignored)
-- Status: gold set grew by one known-hard item, so the baseline was deliberately repinned; the gate run passes
+- Status: superseded by `2026-11-06-v2-d6-retrieval-guardrails-r2.md`, which corrects the floor table and moves the known-hard item into the judged sample. Original status: gold set grew by one known-hard item, so the baseline was deliberately repinned; the gate run passes
 - Scope note: the tokenizer experiment was rejected on evidence and the rerank floor stayed at zero. The shipped changes are the `/ask` deadline, the novel-entity signal, and the pinned tokenizer and floor.
 
 ## Configuration

@@ -348,3 +348,15 @@ async def test_cited_refusal_explanation_abstains():
     result = await ask("Who keeps the lighthouse?", retriever=_Retriever(chunks), llm=llm)
     assert result.abstained is True
     assert result.abstain_reason == "refused"
+
+
+async def test_on_stage_reports_retrieve_then_generate():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    stages: list[str] = []
+    await ask(
+        "Who trims the wick?",
+        retriever=_Retriever(chunks),
+        llm=_ScriptedLlm("Rowan trims the wick [b1-c01-0000]."),
+        on_stage=stages.append,
+    )
+    assert stages == ["retrieve", "generate"]

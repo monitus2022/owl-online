@@ -209,6 +209,7 @@ def novelty_rows(
 ) -> list[ResultRow]:
     """Fabrication signal: answers with an out-of-corpus entity, and the tokens."""
     return [
+        ResultRow(run_id, config, "overall", "novel_entity_n", metrics.n, manifest),
         ResultRow(
             run_id, config, "overall", "novel_entity_answers", metrics.flagged, manifest
         ),

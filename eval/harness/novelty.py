@@ -28,6 +28,10 @@ def novel_entities(answer: str, vocabulary: set[str]) -> list[str]:
     found: list[str] = []
     for match in _ENTITY.finditer(text):
         token = match.group(0)
+        before = text[: match.start()].rstrip()
+        if not before or before[-1] in ".!?":
+            # A sentence-initial capital is grammar, not evidence of a name.
+            continue
         if token.lower() in vocabulary or token in found:
             continue
         found.append(token)

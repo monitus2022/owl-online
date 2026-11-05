@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import time
 
 from fastapi.testclient import TestClient
@@ -413,3 +414,14 @@ def test_ask_returns_a_typed_504_when_the_deadline_fires():
     assert body["error"] == "deadline exceeded"
     assert body["request_id"] == response.headers["x-request-id"]
     assert elapsed < 1.0
+
+
+def test_deadline_logs_the_in_flight_stage(caplog):
+    caplog.set_level(logging.WARNING)
+    runtime = Runtime(retriever=_Retriever(), llm=_SlowLlm())
+    app = create_app(
+        app_settings=Settings(ask_timeout_s=0.05), runtime=runtime
+    )
+    with TestClient(app) as client:
+        client.post("/ask", json={"question": "Who trims the wick?"})
+    assert "deadline exceeded in generate" in caplog.text

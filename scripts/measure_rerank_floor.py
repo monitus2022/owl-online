@@ -40,20 +40,19 @@ async def measure(gold_path: Path, top_k: int) -> None:
         min_score=settings.rerank_min_score,
     )
     gold = load_gold(gold_path)
-    answerable: list[float] = []
-    unanswerable: list[float] = []
+    answerable: list[tuple[bool, float]] = []
+    unanswerable: list[tuple[bool, float]] = []
     for item in gold:
         chunks = await setup.retriever.retrieve(item.question, top_k)
-        if not chunks:
-            score = 0.0
-        else:
-            score = chunks[0].score
-        (answerable if item.answerable else unanswerable).append(score)
+        entry = (bool(chunks), chunks[0].score if chunks else 0.0)
+        (answerable if item.answerable else unanswerable).append(entry)
 
-    def summary(name: str, scores: list[float]) -> None:
+    def summary(name: str, entries: list[tuple[bool, float]]) -> None:
+        scores = [score for _, score in entries]
+        empty = sum(not has for has, _ in entries)
         ordered = sorted(scores)
         print(
-            f"{name}: n={len(ordered)} min={ordered[0]:.3f} "
+            f"{name}: n={len(ordered)} empty={empty} min={ordered[0]:.3f} "
             f"p10={ordered[len(ordered) // 10]:.3f} "
             f"median={statistics.median(ordered):.3f} "
             f"p90={ordered[(len(ordered) * 9) // 10]:.3f} "
@@ -63,10 +62,10 @@ async def measure(gold_path: Path, top_k: int) -> None:
     summary("answerable", answerable)
     summary("unanswerable", unanswerable)
     print()
-    print("floor  false-abstain(answerable)  abstain(unanswerable)")
+    print("floor  floor-abstain(answerable)  floor-abstain(unanswerable)")
     for floor in CANDIDATES:
-        false_abstain = sum(score < floor for score in answerable)
-        covered = sum(score < floor for score in unanswerable)
+        false_abstain = sum(has and score < floor for has, score in answerable)
+        covered = sum(has and score < floor for has, score in unanswerable)
         print(
             f"{floor:<5.1f}  {false_abstain:>3}/{len(answerable):<3}                 "
             f"{covered:>2}/{len(unanswerable)}"

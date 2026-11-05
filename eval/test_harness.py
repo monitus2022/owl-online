@@ -342,7 +342,7 @@ def test_load_gold_reads_records(tmp_path):
 
 def test_novel_entity_flags_an_invented_name():
     vocabulary = {"rowena", "ravenclaw", "diadem"}
-    assert novel_entities("Herbrand Ravenclaw's diadem.", vocabulary) == ["Herbrand"]
+    assert novel_entities("The diadem is Herbrand Ravenclaw's.", vocabulary) == ["Herbrand"]
 
 
 def test_novel_entity_passes_corpus_names_and_aliases():
@@ -366,7 +366,9 @@ def test_corpus_vocabulary_is_case_insensitive():
 
 
 def test_summarize_novelty_counts_flagged_answers():
-    metrics = summarize_novelty(["Rowan.", "Herbrand.", "Herbrand again."], {"rowan"})
+    metrics = summarize_novelty(
+        ["Rowan trims.", "The name is Herbrand.", "Again Herbrand."], {"rowan"}
+    )
     assert metrics.flagged == 2
     assert metrics.n == 3
     assert abs(metrics.rate - 2 / 3) < 1e-9
@@ -377,3 +379,7 @@ def test_novel_entity_keeps_a_hyphenated_name_together():
     vocabulary = {"the", "time-turner"}
     assert novel_entities("The Time-Turner.", vocabulary) == []
     assert novel_entities("The Time-Turner and Herbrand.", vocabulary) == ["Herbrand"]
+
+
+def test_novel_entity_skips_a_sentence_initial_capital():
+    assert novel_entities("Additionally, Rowan trims the wick.", {"rowan"}) == []
