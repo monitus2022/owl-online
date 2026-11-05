@@ -50,13 +50,18 @@ docker run --rm -p 8000:8000 \
 `host.docker.internal` reaches an Ollama daemon running on the host (macOS and
 Windows; on Linux use the host gateway address).
 
-Behind nginx, overwrite both headers so a client cannot supply them, and set the
-scheme so the session cookie can use `SameSite=None`:
+Behind nginx, set the client IP and clear the Cloudflare header so a client
+cannot supply either one. The app prefers `X-Real-IP`:
 
 ```
 proxy_set_header X-Real-IP $remote_addr;
 proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header CF-Connecting-IP "";
 ```
+
+If Cloudflare fronts nginx, also enable `ngx_http_realip_module` with the
+Cloudflare ranges so `$remote_addr` is the real client. Without it, every
+request shares the Cloudflare edge address: that is coarse but not spoofable.
 
 `OWL_TRUSTED_PROXIES` defaults to loopback plus the Docker bridge
 (`172.17.0.0/16`); widen it only for a proxy that is not on that bridge.

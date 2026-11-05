@@ -202,3 +202,49 @@ def test_default_proxies_trust_the_bridge_not_every_private_address():
         }
     )
     assert _client_ip(other, trusted) == "172.20.0.5"
+
+
+def test_x_real_ip_wins_over_a_client_supplied_cf_header():
+    from ipaddress import ip_network
+
+    from starlette.requests import Request
+
+    from app.main import _client_ip
+
+    trusted = [ip_network("172.17.0.0/16")]
+    request = Request(
+        {
+            "type": "http",
+            "client": ("172.17.0.1", 1),
+            "headers": [
+                (b"cf-connecting-ip", b"1.2.3.4"),
+                (b"x-real-ip", b"198.51.100.7"),
+            ],
+        }
+    )
+    assert _client_ip(request, trusted) == "198.51.100.7"
+
+
+def test_prune_drops_current_day_empty_windows():
+    limiter = _limiter()
+    day = limiter._today()
+    limiter._windows = {
+        "empty": _Window(minute_start=0.0, minute_count=0, day=day, day_count=0),
+        "live": _Window(minute_start=0.0, minute_count=1, day=day, day_count=1),
+    }
+    limiter._admits = 255
+    limiter._maybe_prune(day)
+    assert "empty" not in limiter._windows
+    assert "live" in limiter._windows
+
+
+def test_ip_capacity_refuses_without_evicting():
+    limiter = _limiter(chat_concurrent=100)
+    day = limiter._today()
+    limiter._ip_windows = {
+        f"ip{i}": _Window(minute_start=0.0, minute_count=1, day=day, day_count=1)
+        for i in range(20_000)
+    }
+    decision = limiter.admit("new-session", "new-ip")
+    assert decision.reason == "capacity"
+    assert len(limiter._ip_windows) == 20_000
