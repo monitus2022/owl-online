@@ -29,9 +29,9 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 importing from `eval.harness`.
 
 ```text
-gold/questions.jsonl (60 items)
+gold/questions.jsonl (61 items)
         |
-        +-- retrieval pass --> Hit@k, Recall@k, MRR        (50 answerable)
+        +-- retrieval pass --> Hit@k, Recall@k, MRR        (51 answerable)
         +-- abstention pass --> refused / n                 (10 unanswerable)
         +-- judged sample ---> EM, F1, judge buckets,
                                faithfulness                (15 answerable)
@@ -55,7 +55,7 @@ docs/runs/<date>-<ticket>-<slug>.md   (committed run record)
 
 ## Gold set
 
-`gold/questions.jsonl`: 50 answerable and 10 unanswerable items. Each item is an
+`gold/questions.jsonl`: 51 answerable and 10 unanswerable items. Each item is an
 original question plus the expected chunk ids and a short reference answer. No
 corpus text is stored; ids and short answers only.
 
@@ -63,7 +63,7 @@ corpus text is stored; ids and short answers only.
 |---|---|---|
 | `simple` | 34 | single-fact questions across all seven books |
 | `named_reference` | 8 | the question names a book and chapter |
-| `multi_part` | 8 | the question asks two things, and both must be retrieved |
+| `multi_part` | 9 | the question asks two or more things, and both/each must be retrieved |
 | `near_miss_unanswerable` | 5 | topically close to the corpus but not answerable from it |
 | `off_topic` | 5 | clearly outside the corpus |
 
@@ -295,3 +295,58 @@ excluded from the faithfulness denominator and reported separately.
   only; `stream` is passed through.
 - Rerank (V1, #6) is wired on by default (`amazon.rerank-v1:0`, pool 50); set
   `OWL_RERANK_PROVIDER=none` for the baseline column.
+
+## D6 retrieval guardrails (#79)
+
+### Sparse tokenizer
+
+Ablation on the 61-item gold set, reranker on, same index:
+
+| Tokenizer | Hit@5 | Recall@5 | MRR |
+|---|---:|---:|---:|
+| `regex-words` | 0.765 | 0.660 | 0.498 |
+| Snowball stemming | 0.745 | 0.640 | 0.504 |
+| Stopwords only | 0.706 | 0.591 | 0.467 |
+
+Stemming changed sparse recall but Hit@5 went from 39/51 to 38/51 and recall
+fell. That is one item, inside the
+0.05 gate band, and MRR rose slightly; the rejection is about paying a
+dependency for no measured gain, not about a large regression. The manifest pins
+`retrieval.tokenizer = "regex-words"` and `tokenize()` fails loudly on an
+unknown value.
+
+### Rerank floor
+
+Top rerank score per gold item, 61 items (51 answerable, 10 unanswerable):
+
+| Slice | min | p10 | median | p90 | max |
+|---|---:|---:|---:|---:|---:|
+| answerable | 0.003 | 0.059 | 0.477 | 0.887 | 0.991 |
+| unanswerable | 0.000 | 0.000 | 0.000 | 0.352 | 0.352 |
+
+| Floor | Floor-driven false abstention (answerable) | Floor-driven abstention (unanswerable) |
+|---:|---:|---:|
+| 0.0 | 0/51 | 0/10 |
+| 0.1 | 10/51 | 7/10 |
+| 0.4 | 22/51 | 8/10 |
+
+Two of the ten unanswerable items return no chunks at all, so `ask()` abstains
+before any score is compared; the table counts floor-driven abstentions only.
+The distributions overlap. Catching the remaining eight unanswerable items would
+cost 22 of 51 answerable items, so the floor is pinned at `0.0`. The measurement
+is `scripts/measure_rerank_floor.py`.
+
+### Novel-entity signal
+
+`eval/harness/novelty.py` flags capitalized answer tokens absent from the corpus
+vocabulary. It catches invented names such as Herbrand; it does not catch a real
+name used wrongly, a wrong count, or a misattributed object. Sentence-initial
+capitals are skipped because they are grammar. Aliases the corpus uses are safe;
+inflected forms the corpus lacks, and differently hyphenated names, can false
+positive. Reported per run as `novel_entity_n`, `novel_entity_answers`,
+`novel_entity_rate` and `novel_entity_tokens`.
+
+### Deadline
+
+`/ask` is bounded by `OWL_ASK_TIMEOUT_S` (default 30 s) and returns a typed 504
+with the request id; `/ask/stream` is not bounded.

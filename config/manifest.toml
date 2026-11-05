@@ -15,6 +15,10 @@ model = "deepseek/deepseek-v4.1-flash-1017"
 [reranker]
 model = "amazon.rerank-v1:0"
 pool = 50
+# #79 measured the answerable and unanswerable score distributions: they
+# overlap: a 0.1 floor false-abstains 10 of 51 answerable items, and catching the
+# remaining unanswerable items costs 22 of 51. Keep the floor at zero.
+min_score = 0.0
 
 [embedder.cloud]
 # Deployed (vendor-only) path: Amazon Titan on Bedrock.
@@ -38,6 +42,9 @@ rrf_k = 60
 # Candidates per leg. With a reranker attached (the pinned run) this equals
 # [reranker].pool; the no-rerank default is 20.
 candidates = 50
+# Sparse leg only: lowercase, punctuation-split. #79 measured Snowball
+# stemming and stopword removal: both lowered Hit@5, so neither ships.
+tokenizer = "regex-words"
 
 [generation]
 # Drafts regenerated after a failed deterministic verification. The eval reads

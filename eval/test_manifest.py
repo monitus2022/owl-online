@@ -9,6 +9,7 @@ from pathlib import Path
 
 from app.config import Settings
 from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K
+from app.pipeline.index.builder import TOKENIZER
 from app.pipeline.ingest.chunker import _CHUNK_SIZE, _MIN_CHUNK_SIZE, _OVERLAP
 from app.pipeline.retrieve.retriever import DEFAULT_RRF_K
 from app.providers.bedrock import DEFAULT_EMBED_DIMS, DEFAULT_EMBED_MODEL, DEFAULT_MODEL
@@ -22,6 +23,7 @@ MANIFEST = tomllib.loads(
 # The declared field default, independent of any OWL_ value in the environment.
 RERANK_POOL_DEFAULT = Settings.model_fields["rerank_pool"].default
 RETRY_BUDGET_DEFAULT = Settings.model_fields["retry_budget"].default
+RERANK_MIN_SCORE_DEFAULT = Settings.model_fields["rerank_min_score"].default
 
 
 def test_manifest_pins_the_generator():
@@ -59,3 +61,11 @@ def test_manifest_pins_the_retrieval():
 def test_manifest_pins_the_retry_budget():
     assert MANIFEST["generation"]["retry_budget"] == RETRY_BUDGET_DEFAULT
     assert RETRY_BUDGET_DEFAULT == DEFAULT_MAX_RETRIES
+
+
+def test_manifest_pins_the_tokenizer():
+    assert MANIFEST["retrieval"]["tokenizer"] == TOKENIZER
+
+
+def test_manifest_pins_the_rerank_floor():
+    assert MANIFEST["reranker"]["min_score"] == RERANK_MIN_SCORE_DEFAULT

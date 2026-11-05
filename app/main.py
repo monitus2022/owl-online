@@ -1,5 +1,6 @@
 """FastAPI entrypoint. Run: uvicorn app.main:app --reload"""
 
+import asyncio
 import json
 import logging
 import time
@@ -12,14 +13,14 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
 from app.agent import build_graph
 from app.api.runtime import Runtime, build_runtime
 from app.api.schemas import AskRequest, AskResponse, StreamRequest
 from app.config import Settings, settings
-from app.logging import configure_logging, set_request_id
+from app.logging import configure_logging, get_request_id, set_request_id
 from app.pipeline.generate import DEFAULT_TOP_K, ask
 from app.providers.contracts import Llm, Retriever
 from app.providers.errors import ProviderError
@@ -110,13 +111,32 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         body: AskRequest,
         retriever: Annotated[Retriever, Depends(get_retriever)],
         llm: Annotated[Llm, Depends(get_llm)],
-    ) -> AskResponse:
+    ) -> AskResponse | JSONResponse:
+        stage = {"name": "retrieve"}
+
+        def mark(name: str) -> None:
+            stage["name"] = name
+
         try:
-            result = await ask(
-                body.question,
-                retriever=retriever,
-                llm=llm,
-                max_retries=app_settings.retry_budget,
+            async with asyncio.timeout(app_settings.ask_timeout_s):
+                result = await ask(
+                    body.question,
+                    retriever=retriever,
+                    llm=llm,
+                    max_retries=app_settings.retry_budget,
+                    on_stage=mark,
+                )
+        except TimeoutError:
+            request_id = get_request_id()
+            logger.warning(
+                "deadline exceeded in %s after %.0fs (request %s)",
+                stage["name"],
+                app_settings.ask_timeout_s,
+                request_id,
+            )
+            return JSONResponse(
+                status_code=504,
+                content={"error": "deadline exceeded", "request_id": request_id},
             )
         except ProviderError as exc:
             # Normalized provider failure: a clean 502, never a stack trace.

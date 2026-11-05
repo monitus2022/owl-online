@@ -72,6 +72,7 @@ _CLAUSE_SPLIT = re.compile(
 )
 
 TokenSink = Callable[[str], None]
+StageSink = Callable[[str], None]
 AbstainReason = Literal["no_evidence", "uncited", "refused"]
 
 
@@ -139,6 +140,7 @@ async def ask(
     min_score: float | None = None,
     on_token: TokenSink | None = None,
     on_reset: Callable[[], None] | None = None,
+    on_stage: StageSink | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
 ) -> AskResult:
     """Answer from the corpus, citing chunk ids, or abstain on weak retrieval.
@@ -154,6 +156,8 @@ async def ask(
     draft can still end in abstention.
     """
     floor = retrieval_floor(retriever, min_score)
+    if on_stage is not None:
+        on_stage("retrieve")
     retrieve_start = time.perf_counter()
     chunks = await retriever.retrieve(question, top_k)
     retrieve_ms = (time.perf_counter() - retrieve_start) * 1000
@@ -174,6 +178,8 @@ async def ask(
         )
 
     prompt = build_prompt(question, chunks)
+    if on_stage is not None:
+        on_stage("generate")
     generate_start = time.perf_counter()
     attempt = 0
     retry_reason: str | None = None

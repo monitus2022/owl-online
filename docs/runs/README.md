@@ -45,6 +45,10 @@ so on.
 | 2026-11-05 | #80 (V2 D4) | `20261105T093948Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D4 regression check](2026-11-05-v2-d4-agent-foundation.md) |
 | 2026-11-05 | #81 (V2 D5) | `20261105T145942Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D5 verify and retry](2026-11-05-v2-d5-verify.md) |
 | 2026-11-05 | #81 (V2 D5) | `20261105T150931Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D5 verify and retry r2](2026-11-05-v2-d5-verify-r2.md) |
+| 2026-11-05 | #79 (V2 D6) | `20261105T154916Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D6 retrieval guardrails](2026-11-05-v2-d6-retrieval-guardrails.md) |
+| 2026-11-05 | #79 (V2 D6) | `20261105T154940Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D6 retrieval guardrails](2026-11-05-v2-d6-retrieval-guardrails.md) |
+| 2026-11-06 | #79 (V2 D6) | `20261105T160001Z` | `pinned` | 0.76 | 0.30 | 12/14 | [V2 D6 r2](2026-11-06-v2-d6-retrieval-guardrails-r2.md) |
+| 2026-11-06 | #79 (V2 D6) | `20261105T160032Z` | `pinned` | 0.76 | 0.30 | 12/14 | [V2 D6 r2](2026-11-06-v2-d6-retrieval-guardrails-r2.md) |
 
 ## Template
 
