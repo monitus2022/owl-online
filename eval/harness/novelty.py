@@ -1,7 +1,9 @@
 """Deterministic fabrication signal: capitalized names absent from the corpus.
 
 Not a correctness check: it catches invented entities, not a real name used
-wrongly. Corpus scope avoids false positives on aliases and morphology.
+wrongly. Corpus scope keeps aliases the corpus uses safe; inflections the corpus
+lacks and differently hyphenated names can false-positive. Sentence-initial
+capitals are skipped, so a fabrication that opens an answer is missed.
 """
 
 from __future__ import annotations

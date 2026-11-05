@@ -16,8 +16,8 @@ model = "deepseek/deepseek-v4.1-flash-1017"
 model = "amazon.rerank-v1:0"
 pool = 50
 # #79 measured the answerable and unanswerable score distributions: they
-# overlap, and any floor above zero false-abstains at least 10 of 51 answerable
-# items. Keep the floor at zero; the evidence is in eval/README.md.
+# overlap: a 0.1 floor false-abstains 10 of 51 answerable items, and catching the
+# remaining unanswerable items costs 22 of 51. Keep the floor at zero.
 min_score = 0.0
 
 [embedder.cloud]

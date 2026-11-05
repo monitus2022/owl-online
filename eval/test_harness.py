@@ -346,12 +346,18 @@ def test_novel_entity_flags_an_invented_name():
 
 
 def test_novel_entity_passes_corpus_names_and_aliases():
-    vocabulary = {"rowena", "ravenclaw", "voldemort", "riddle", "tom"}
-    assert novel_entities("Rowena Ravenclaw, Tom Riddle, Voldemort.", vocabulary) == []
+    vocabulary = {
+        "the", "founders", "are", "rowena", "ravenclaw", "tom", "riddle",
+        "and", "voldemort",
+    }
+    assert (
+        novel_entities("The founders are Rowena Ravenclaw, Tom Riddle and Voldemort.", vocabulary)
+        == []
+    )
 
 
 def test_novel_entity_ignores_citation_ids():
-    assert novel_entities("Rowan [b9-c99-0000].", {"rowan"}) == []
+    assert novel_entities("The name [Herbrand] is cited.", {"the", "name", "is", "cited"}) == []
 
 
 def test_corpus_vocabulary_is_case_insensitive():

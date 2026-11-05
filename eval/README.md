@@ -63,7 +63,7 @@ corpus text is stored; ids and short answers only.
 |---|---|---|
 | `simple` | 34 | single-fact questions across all seven books |
 | `named_reference` | 8 | the question names a book and chapter |
-| `multi_part` | 9 | the question asks two things, and both must be retrieved |
+| `multi_part` | 9 | the question asks two or more things, and both/each must be retrieved |
 | `near_miss_unanswerable` | 5 | topically close to the corpus but not answerable from it |
 | `off_topic` | 5 | clearly outside the corpus |
 
@@ -308,8 +308,8 @@ Ablation on the 61-item gold set, reranker on, same index:
 | Snowball stemming | 0.745 | 0.640 | 0.504 |
 | Stopwords only | 0.706 | 0.591 | 0.467 |
 
-Stemming raised sparse recall against the pre-D6 baseline (0.68 to 0.72) but
-Hit@5 went from 39/51 to 38/51 and recall fell. That is one item, inside the
+Stemming changed sparse recall but Hit@5 went from 39/51 to 38/51 and recall
+fell. That is one item, inside the
 0.05 gate band, and MRR rose slightly; the rejection is about paying a
 dependency for no measured gain, not about a large regression. The manifest pins
 `retrieval.tokenizer = "regex-words"` and `tokenize()` fails loudly on an

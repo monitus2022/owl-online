@@ -1,8 +1,9 @@
 """Measure top rerank scores on the answerable and unanswerable gold slices.
 
-Only the first retrieved chunk matters: ask() abstains when it scores below the
-configured floor. Prints distributions and the false-abstention cost of
-candidate floors so #23 can be pinned with evidence rather than a guess.
+Only the first retrieved chunk matters. Abstention has two causes: no chunks at
+all, or a top score below the floor. Prints distributions, the empty-retrieval
+count, and the floor-driven false-abstention cost of candidate floors so #23 can
+be pinned with evidence rather than a guess.
 """
 
 from __future__ import annotations
@@ -37,8 +38,10 @@ async def measure(gold_path: Path, top_k: int) -> None:
         make_embedder(settings.embedder_provider),
         reranker=reranker,
         pool=settings.rerank_pool,
-        min_score=settings.rerank_min_score,
     )
+    if reranker is None:
+        print("reranker is disabled; these are RRF scores, not rerank scores")
+        return
     gold = load_gold(gold_path)
     answerable: list[tuple[bool, float]] = []
     unanswerable: list[tuple[bool, float]] = []
