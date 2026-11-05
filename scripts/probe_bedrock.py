@@ -18,6 +18,7 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from app.config import settings  # noqa: E402
+from app.providers.errors import ProviderError  # noqa: E402
 from app.providers.factory import make_llm  # noqa: E402
 from app.providers.probe import ProbeReport, probe_llm  # noqa: E402
 
@@ -39,7 +40,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Probe a Bedrock Llm")
     parser.add_argument("--model", default=settings.bedrock_llm_model)
     args = parser.parse_args()
-    report = asyncio.run(probe_llm(make_llm("bedrock", model=args.model)))
+    try:
+        report = asyncio.run(probe_llm(make_llm("bedrock", model=args.model)))
+    except ProviderError as exc:
+        print(f"PROBE FAILED: {exc}")
+        return 1
     _print(report)
     return 0 if report.ok else 1
 

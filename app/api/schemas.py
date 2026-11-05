@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class AskRequest(BaseModel):
@@ -32,6 +32,12 @@ class StreamRequest(AskRequest):
             return None
         stripped = value.strip()
         return stripped or None
+
+    @model_validator(mode="after")
+    def _check_student_answer_mode(self) -> "StreamRequest":
+        if self.student_answer and self.mode in ("answer", "practice"):
+            raise ValueError("student_answer is only valid with feedback mode")
+        return self
 
 
 class AskResponse(BaseModel):

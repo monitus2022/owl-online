@@ -29,7 +29,9 @@ async def practice_node(
     top_k: int,
     min_score: float | None = None,
 ) -> dict[str, object]:
-    chunks = await retrieve_evidence(state["question"], retriever, top_k, min_score)
+    chunks = await retrieve_evidence(
+        state["question"], retriever, state.get("top_k", top_k), min_score
+    )
     if not chunks:
         return {
             "chunks": [],

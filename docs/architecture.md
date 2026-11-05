@@ -205,8 +205,7 @@ sequenceDiagram
   C->>API: POST /ask/stream {question, mode, student_answer}
   API->>G: astream(state)
   G->>G: router -> answer | practice | feedback
-  G-->>API: custom {type: token}
-  API-->>C: event: token
+  API-->>C: event: mode
   G->>R: retrieve(question, top_k)
   R->>RR: rerank when configured
   R-->>G: list[Chunk]
@@ -215,8 +214,19 @@ sequenceDiagram
   G-->>API: custom {type: token}
   API-->>C: event: token
   G-->>API: final state
+  API-->>C: event: reset when abstained
   API-->>C: event: final {answer, citations, abstained, mode}
 ```
+
+SSE events:
+
+| Event | Payload | When |
+|---|---|---|
+| `mode` | `{"mode": "answer"}` | after the router update |
+| `token` | `{"text": "..."}` | for each streamed token |
+| `reset` | `{}` | before `final` when the answer is ungrounded |
+| `final` | `answer`, `citations`, `abstained`, `mode` | once, authoritative |
+| `error` | `{"detail": "..."}` | provider or internal failure after headers |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
 deterministic: an explicit mode wins, a supplied student answer is a feedback
@@ -342,12 +352,11 @@ See `docs/workplan.md` for phase order and exit criteria.
 
 ### Cost controls
 
-Chat is the variable-cost surface; exam content is mostly offline. The chat
-endpoint enforces per-session and per-IP limits, output and history token caps,
-an exact answer cache keyed by normalised question plus index hash, usage
-accounting, and a daily spend guard. At the hard cap, chat degrades gracefully
-while exam serving stays up. Ticket #88 covers the work; auth is not a
-dependency.
+Chat is the variable-cost surface; exam content is mostly offline. The planned
+chat controls (#88) will enforce per-session, per-IP and per-day limits, output
+and history token caps, an exact answer cache keyed by normalised question plus
+index hash, usage accounting, and a daily spend guard. At the hard cap, chat
+degrades gracefully while exam serving stays up. Auth is not a dependency.
 
 The `Runtime` (the retriever with its optional reranker, the llm, and the
 compiled agent graph) is built once in the app lifespan, never per request.

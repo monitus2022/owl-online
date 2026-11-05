@@ -9,9 +9,13 @@ import re
 
 from app.agent.state import AgentState, Mode, RequestedMode
 
-_FEEDBACK = re.compile(
-    r"\b(grade|grading|mark|marking|assess|assessing|assessment|"
-    r"evaluate|evaluating|evaluation|score|scoring|feedback)\b",
+_FEEDBACK_ACTION = re.compile(
+    r"^\s*(please\s+)?(grade|mark|score|assess|evaluate)\b",
+    re.IGNORECASE,
+)
+_FEEDBACK_ASK = re.compile(
+    r"\b(can|could|would|will)\s+you\s+(please\s+)?"
+    r"(grade|mark|score|assess|evaluate)\b",
     re.IGNORECASE,
 )
 _FEEDBACK_TARGET = re.compile(
@@ -46,9 +50,9 @@ def classify(
         return requested_mode
     if student_answer and student_answer.strip():
         return "feedback"
-    if _FEEDBACK_REQUEST.search(question):
+    if _FEEDBACK_REQUEST.search(question) or _FEEDBACK_ACTION.search(question):
         return "feedback"
-    if _FEEDBACK.search(question) and _FEEDBACK_TARGET.search(question):
+    if _FEEDBACK_ASK.search(question) and _FEEDBACK_TARGET.search(question):
         return "feedback"
     if _PRACTICE_REQUEST.search(question) or _PRACTICE_PHRASE.search(question):
         return "practice"

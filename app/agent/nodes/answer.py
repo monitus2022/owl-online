@@ -24,7 +24,7 @@ async def answer_node(
         state["question"],
         retriever=retriever,
         llm=llm,
-        top_k=top_k,
+        top_k=state.get("top_k", top_k),
         min_score=min_score,
         on_token=emit,
     )

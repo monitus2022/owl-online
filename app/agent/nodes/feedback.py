@@ -39,7 +39,12 @@ async def feedback_node(
             "citations": [],
             "abstained": True,
         }
-    chunks = await retrieve_evidence(state["question"], retriever, top_k, min_score)
+    chunks = await retrieve_evidence(
+        f"{state['question']}\n\n{student}",
+        retriever,
+        state.get("top_k", top_k),
+        min_score,
+    )
     if not chunks:
         return {
             "chunks": [],

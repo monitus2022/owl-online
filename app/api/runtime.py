@@ -4,7 +4,8 @@ The API receives wired contracts and never builds a provider per request.
 """
 
 from dataclasses import dataclass
-from typing import Any
+
+from langgraph.graph.state import CompiledStateGraph
 
 from app.agent import build_graph
 from app.config import Settings
@@ -19,7 +20,7 @@ class Runtime:
 
     retriever: Retriever
     llm: Llm
-    agent: Any = None
+    agent: CompiledStateGraph | None = None
 
     async def aclose(self) -> None:
         """Release provider clients on shutdown (embedder pool, model client)."""

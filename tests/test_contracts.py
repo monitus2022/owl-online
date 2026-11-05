@@ -1,6 +1,8 @@
 # Testing providers/contracts.py
 import pytest
 
+from app.config import settings
+from app.providers.bedrock import BedrockLlm
 from app.providers.factory import (
     MODEL_PROVIDERS,
     PROVIDERS,
@@ -81,16 +83,25 @@ async def test_embedder_contract_swappable(provider, ollama_running, bedrock_liv
 
 
 @pytest.mark.parametrize("provider", MODEL_PROVIDERS)
-async def test_llm_contract_swappable(provider, openrouter_live):
+async def test_llm_contract_swappable(provider, openrouter_live, bedrock_live):
     """Factory-built Llm satisfies the Llm contract for each provider."""
     if provider == "openrouter" and not openrouter_live:
         pytest.skip("live OpenRouter disabled (set OWL_LIVE_TESTS=1 and a key)")
+    if provider == "bedrock" and not bedrock_live:
+        pytest.skip("live Bedrock Llm disabled (set OWL_LIVE_TESTS=1 and AWS creds)")
     # openrouter and bedrock use their pinned default models, not the sentinel.
     llm = make_llm(provider, model=None if provider in ("openrouter", "bedrock") else "test")
     response = await llm.generate("system", "prompt")
     assert isinstance(response, str)
     tokens = [t async for t in llm.stream("system", "prompt")]
     assert all(isinstance(t, str) for t in tokens)
+
+
+def test_bedrock_llm_factory_is_hermetic():
+    """The factory builds the adapter without a provider call."""
+    llm = make_llm("bedrock")
+    assert isinstance(llm, BedrockLlm)
+    assert llm.name == f"bedrock/{settings.bedrock_llm_model}"
 
 
 @pytest.mark.parametrize("provider", MODEL_PROVIDERS)

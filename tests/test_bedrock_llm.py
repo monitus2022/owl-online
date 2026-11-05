@@ -90,6 +90,20 @@ async def test_throttling_is_normalized():
         await _llm(_FakeConversationClient(error=error)).generate("s", "p")
 
 
+async def test_model_timeout_code_is_normalized():
+    error = ClientError(
+        {"Error": {"Code": "ModelTimeoutException", "Message": "slow"}}, "Converse"
+    )
+    with pytest.raises(ProviderTimeout):
+        await _llm(_FakeConversationClient(error=error)).generate("s", "p")
+
+
+async def test_stream_can_be_closed_early():
+    stream = _llm(_FakeConversationClient("Hello!")).stream("sys", "ask")
+    assert await anext(stream) == "H"
+    await stream.aclose()
+
+
 async def test_connection_error_is_normalized_for_generate():
     error = EndpointConnectionError(endpoint_url="https://bedrock")
     with pytest.raises(ProviderTimeout):

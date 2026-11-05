@@ -69,6 +69,20 @@ The D4 change refactors `ask()` into `retrieval_floor`, `build_prompt` and
 system prompt and prompt text. Metrics are identical to the pinned D3 baseline
 `20261104T220147Z`, which is the expected result for a plumbing change.
 
+## Bedrock probe
+
+The D4 Llm was probed in `ap-northeast-1` before relying on it:
+
+```text
+probing bedrock/qwen.qwen3-32b-v1:0 in ap-northeast-1
+generate ok in 0.41s: 'The lighthouse keeper, Rowan, trims the wick every evening [b1-c01-0000].'
+stream ok in 0.26s, 1 chunks: 'The lighthouse keeper, Rowan, trims the wick every evening [b1-c01-0000].'
+PROBE PASSED
+```
+
+The short prompt returns one stream delta; longer replies return several. The
+model is on-demand in that region.
+
 ## Reading
 
 - No regression in retrieval, abstention or generation.

@@ -1,8 +1,10 @@
-"""Bedrock adapters: reranker (amazon.rerank-v1:0) and embedder (Titan).
+"""Bedrock adapters: reranker, embedder (Titan) and Llm (Converse).
 
 Only this module imports the AWS SDK. Rerank results are disk-cached by
 (model, query, top_n, candidate ids) per AGENTS.md. The embedder is the vendor
-path for cloud deploys, where the local Ollama daemon is not available.
+path for cloud deploys, where the local Ollama daemon is not available. The Llm
+uses Converse and ConverseStream so the same adapter serves open-weight and
+Amazon models in-region.
 """
 
 from __future__ import annotations
@@ -11,8 +13,11 @@ import asyncio
 import hashlib
 import json
 import logging
+import threading
 import time
 from collections.abc import AsyncIterator
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from pathlib import Path
 from typing import Any
 
@@ -208,6 +213,8 @@ def _normalize(exc: BotoCoreError | ClientError) -> ProviderError:
         code = exc.response.get("Error", {}).get("Code", "")
         if code in _THROTTLE_CODES:
             return ProviderRateLimited(str(exc))
+        if code in {"ModelTimeoutException", "ModelNotReadyException"}:
+            return ProviderTimeout(str(exc))
     return ProviderError(str(exc))
 
 
@@ -284,27 +291,54 @@ class BedrockLlm:
         self, system: str, prompt: str, context: str | None
     ) -> AsyncIterator[str]:
         loop = asyncio.get_running_loop()
-        queue: asyncio.Queue[Any] = asyncio.Queue()
+        queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=64)
         done = object()
+        stop = threading.Event()
+        stream_holder: list[Any] = []
+        executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="bedrock-stream")
+
+        def put(item: Any) -> bool:
+            """Put one item with bounded backpressure; return False when stopped."""
+            if stop.is_set():
+                return False
+            try:
+                future = asyncio.run_coroutine_threadsafe(queue.put(item), loop)
+            except RuntimeError:  # loop already closed during shutdown
+                return False
+            while True:
+                try:
+                    future.result(timeout=0.5)
+                    return True
+                except FutureTimeout:
+                    if stop.is_set():
+                        future.cancel()
+                        return False
+                except Exception:
+                    return False
 
         def worker() -> None:
             try:
                 response = self._client.converse_stream(
                     **self._request(system, prompt, context)
                 )
-                for event in response["stream"]:
+                stream = response["stream"]
+                stream_holder.append(stream)
+                for event in stream:
+                    if stop.is_set():
+                        break
                     delta = event.get("contentBlockDelta", {}).get("delta", {})
                     text = delta.get("text")
-                    if text:
-                        loop.call_soon_threadsafe(queue.put_nowait, text)
+                    if text and not put(text):
+                        break
             except (BotoCoreError, ClientError) as exc:
-                loop.call_soon_threadsafe(queue.put_nowait, exc)
+                put(exc)
             except Exception as exc:  # malformed event or client bug: do not hang
-                loop.call_soon_threadsafe(queue.put_nowait, ProviderError(str(exc)))
+                put(ProviderError(str(exc)))
             finally:
-                loop.call_soon_threadsafe(queue.put_nowait, done)
+                if not stop.is_set():
+                    put(done)
 
-        task = asyncio.create_task(asyncio.to_thread(worker))
+        task = loop.run_in_executor(executor, worker)
         try:
             while True:
                 item = await queue.get()
@@ -318,10 +352,19 @@ class BedrockLlm:
                     raise ProviderError(str(item)) from item
                 yield item
         finally:
-            # The boto3 thread cannot be interrupted, but the caller should not
-            # wait on it after a client disconnect.
-            if not task.done():
-                task.cancel()
+            # A client disconnect cancels this generator. Stop the worker, close
+            # the Bedrock event stream, and keep the dedicated executor off the
+            # default pool so an aborted stream cannot stall other to_thread calls.
+            stop.set()
+            if stream_holder:
+                close = getattr(stream_holder[0], "close", None)
+                if close is not None:
+                    try:
+                        close()
+                    except Exception:
+                        pass
+            task.cancel()
+            executor.shutdown(wait=False, cancel_futures=True)
 
     async def aclose(self) -> None:
         close = getattr(self._client, "close", None)

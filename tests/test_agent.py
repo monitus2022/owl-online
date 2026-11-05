@@ -22,8 +22,10 @@ def _chunk(cid: str = "b1-c01-0000") -> Chunk:
 class _Retriever:
     def __init__(self, chunks: list[Chunk] | None = None) -> None:
         self._chunks = chunks if chunks is not None else [_chunk()]
+        self.queries: list[str] = []
 
     async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
+        self.queries.append(query)
         return self._chunks[:top_k]
 
 
@@ -91,6 +93,20 @@ async def test_feedback_route_uses_the_student_answer():
     assert state["mode"] == "feedback"
     assert state["citations"] == ["b1-c01-0000"]
     assert state["abstained"] is False
+
+
+async def test_feedback_retrieves_with_the_student_answer():
+    retriever = _Retriever()
+    graph = build_graph(retriever, _Llm("8/10. [b1-c01-0000]"))
+    await graph.ainvoke(
+        {
+            "question": "Give me feedback on this answer",
+            "requested_mode": "auto",
+            "student_answer": "Rowan trims the wick.",
+            "top_k": 5,
+        }
+    )
+    assert "Rowan trims the wick." in retriever.queries[0]
 
 
 async def test_feedback_without_an_answer_abstains_without_retrieval():

@@ -11,6 +11,7 @@ from app.agent.router import classify, route
         ("What is the name of the three-headed dog?", None, "answer"),
         ("Who is the Head of Gryffindor House?", None, "answer"),
         ("What is the score of the Quidditch match?", None, "answer"),
+        ("What score did the student get?", None, "answer"),
         ("Explain the rules of Quidditch", None, "answer"),
         ("What questions did Harry ask?", None, "answer"),
         ("Generate five exam questions on Horcruxes", None, "practice"),
@@ -26,6 +27,7 @@ from app.agent.router import classify, route
         ("Score this answer out of 10", None, "feedback"),
         ("Assess the essay", None, "feedback"),
         ("Give me feedback on my answer", None, "feedback"),
+        ("Can you grade this answer?", None, "feedback"),
         ("Any question", "Harry used Expelliarmus.", "feedback"),
     ],
 )

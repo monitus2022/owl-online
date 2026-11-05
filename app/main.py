@@ -6,6 +6,7 @@ import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Annotated
 
@@ -37,7 +38,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Built once, here, never per request.
-        app.state.runtime = runtime or await build_runtime(app_settings)
+        built = runtime or await build_runtime(app_settings)
+        if built.agent is None:
+            built = replace(built, agent=build_graph(built.retriever, built.llm))
+        app.state.runtime = built
         try:
             yield
         finally:
@@ -116,7 +120,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         body: StreamRequest, request: Request
     ) -> EventSourceResponse:
         runtime = request.app.state.runtime
-        agent = runtime.agent or build_graph(runtime.retriever, runtime.llm)
+        agent = runtime.agent
+        assert agent is not None  # built once in the lifespan
         initial = {
             "question": body.question,
             "requested_mode": body.mode,
