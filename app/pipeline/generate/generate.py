@@ -168,7 +168,8 @@ async def ask(
         draft = await _one_draft(system, prompt, llm, on_token)
         result = ground_answer(draft, chunks)
         verdict = verify_draft(draft, result)
-        if verdict.ok or _is_refusal(draft) or attempt > max_retries:
+        refusal = _is_refusal(draft, cited=bool(result.citations))
+        if verdict.ok or refusal or attempt > max_retries:
             break
         retry_reason = verdict.reason
         logger.info(
@@ -180,7 +181,7 @@ async def ask(
         if on_reset is not None:
             on_reset()
     generate_ms = (time.perf_counter() - generate_start) * 1000
-    if _is_refusal(draft):
+    if _is_refusal(draft, cited=bool(result.citations)):
         # A refusal is final even when the draft also carries a citation: the
         # answer says it cannot answer, so it must not be returned as grounded.
         result = AskResult(
@@ -193,7 +194,8 @@ async def ask(
 
     if result.abstained:
         logger.info(
-            "abstain (uncited): hits=%d attempts=%d generate=%.0fms",
+            "abstain (%s): hits=%d attempts=%d generate=%.0fms",
+            result.abstain_reason or "uncited",
             len(chunks),
             result.attempts,
             generate_ms,
@@ -227,10 +229,17 @@ async def _one_draft(
     return "".join(pieces)
 
 
-def _is_refusal(draft: str) -> bool:
-    """A model that says it cannot answer is not a verification failure."""
+def _is_refusal(draft: str, *, cited: bool) -> bool:
+    """A model that says it cannot answer is not a verification failure.
+
+    The verbatim sentinel is a refusal even when a citation follows it. A
+    paraphrase only counts when the draft cites nothing: "the excerpts do not
+    mention X, but Y [id]" is a partial answer, not a refusal.
+    """
     text = draft.strip()
-    return text.startswith(ABSTAIN_MESSAGE) or bool(_REFUSAL_PREFIX.match(text))
+    if text.startswith(ABSTAIN_MESSAGE):
+        return True
+    return not cited and bool(_REFUSAL_PREFIX.match(text))
 
 
 def _cited_ids(answer: str) -> list[str]:

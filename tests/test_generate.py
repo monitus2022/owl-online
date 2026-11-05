@@ -284,3 +284,15 @@ async def test_streamed_retry_forwards_both_drafts_and_a_reset():
     )
     assert resets == [True]
     assert result.citations == ["b1-c01-0000"]
+
+
+async def test_cited_partial_answer_opening_with_a_refusal_phrase_is_kept():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(
+        "The excerpts do not mention his surname, but Rowan trims the wick "
+        "[b1-c01-0000]."
+    )
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is False
+    assert result.citations == ["b1-c01-0000"]
+    assert result.attempts == 1

@@ -8,7 +8,7 @@ import tomllib
 from pathlib import Path
 
 from app.config import Settings
-from app.pipeline.generate import DEFAULT_TOP_K
+from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K
 from app.pipeline.ingest.chunker import _CHUNK_SIZE, _MIN_CHUNK_SIZE, _OVERLAP
 from app.pipeline.retrieve.retriever import DEFAULT_RRF_K
 from app.providers.bedrock import DEFAULT_EMBED_DIMS, DEFAULT_EMBED_MODEL, DEFAULT_MODEL
@@ -58,3 +58,4 @@ def test_manifest_pins_the_retrieval():
 
 def test_manifest_pins_the_retry_budget():
     assert MANIFEST["generation"]["retry_budget"] == RETRY_BUDGET_DEFAULT
+    assert RETRY_BUDGET_DEFAULT == DEFAULT_MAX_RETRIES

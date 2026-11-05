@@ -222,6 +222,7 @@ def test_ask_stream_resets_an_uncited_draft():
     events = _parse_sse(body)
     names = [name for name, _ in events]
     finals = [data for name, data in events if name == "final"]
+    assert names.count("reset") == 2
     assert "reset" in names
     assert names.index("reset") < names.index("final")
     assert finals[0]["abstained"] is True

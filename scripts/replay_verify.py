@@ -1,8 +1,9 @@
 """Replay the judged sample through ask() and count verification retries.
 
 The eval summary does not say whether a retry fired. This replays the same
-questions with a cache-only generator, so it makes no paid model calls, and
-reports how many drafts deterministic verification rejected.
+questions with a cache-only generator and reports how many drafts deterministic
+verification rejected. It makes no generation calls, but it does run retrieval,
+so run it after an eval to reuse the warm embedding and rerank caches.
 
 Run after an eval to back the run record:
 

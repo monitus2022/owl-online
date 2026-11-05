@@ -33,7 +33,9 @@ def verify_draft(draft: str, result: AskResult) -> Verification:
     (`abstain_reason="no_evidence"`) is not a draft failure: there is nothing to
     re-cite.
     """
-    if result.abstain_reason == "no_evidence" or not result.chunks:
+    if result.abstain_reason == "no_evidence" or (
+        result.abstain_reason is None and not result.chunks
+    ):
         return Verification(True)
     if not draft.strip():
         return Verification(False, "empty")

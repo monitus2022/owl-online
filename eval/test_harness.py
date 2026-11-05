@@ -3,6 +3,7 @@
 Lives in eval/ so the documented gate `pytest eval/` collects it.
 """
 
+from app.pipeline.generate import ABSTAIN_MESSAGE, AskResult
 from app.pipeline.retrieve.retriever import RetrievalTrace
 from app.schemas import Chunk, ChunkMetadata
 from eval.harness import (
@@ -13,6 +14,7 @@ from eval.harness import (
     abstention_metrics,
     abstention_metrics_by_slice,
     exact_match,
+    judge_sample,
     load_gold,
     normalize_answer,
     parse_faithful,
@@ -186,6 +188,45 @@ async def test_abstention_metrics_by_slice():
     metrics = await abstention_metrics_by_slice(_Retriever({}), _Llm(), items, top_k=3)
     assert metrics["near_miss_unanswerable"].refused == 1
     assert metrics["off_topic"].refused == 1
+
+
+async def test_abstention_forwards_the_retry_budget(monkeypatch):
+    seen: dict[str, int] = {}
+
+    async def fake_ask(question, *, retriever, llm, top_k, max_retries):
+        seen["max_retries"] = max_retries
+        return AskResult(
+            ABSTAIN_MESSAGE,
+            abstained=True,
+            chunks=[],
+            attempts=0,
+            abstain_reason="no_evidence",
+        )
+
+    monkeypatch.setattr("eval.harness.abstention.ask", fake_ask)
+    await abstention_metrics(
+        _Retriever({}), _Llm(), [GoldItem("u1", "z", False, [])], max_retries=0
+    )
+    assert seen["max_retries"] == 0
+
+
+async def test_judge_sample_forwards_the_retry_budget(monkeypatch):
+    seen: dict[str, int] = {}
+
+    async def fake_ask(question, *, retriever, llm, top_k, max_retries):
+        seen["max_retries"] = max_retries
+        return AskResult("an answer [c1]", ["c1"], chunks=[_chunk("c1")])
+
+    class _Judge:
+        async def generate(self, system: str, prompt: str, *, context=None) -> str:
+            return '{"correctness": "correct", "grounded": true}'
+
+    monkeypatch.setattr("eval.harness.judging.ask", fake_ask)
+    items = [GoldItem("q1", "q", True, ["c1"], ("simple",))]
+    await judge_sample(
+        _Retriever({"q": ["c1"]}), _Llm(), _Judge(), items, sample=1, max_retries=0
+    )
+    assert seen["max_retries"] == 0
 
 
 def test_parse_verdict_tolerates_prose():
