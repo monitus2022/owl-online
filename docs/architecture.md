@@ -202,10 +202,10 @@ sequenceDiagram
 
 `verify_draft` is deterministic: an empty draft or one that cites no retrieved
 chunk fails. A grounded draft passes; a deliberate refusal is final and is never
-retried, so abstention keeps its meaning. A paraphrase refusal only counts when
-the draft cites nothing or is nothing but the refusal; a cited partial answer
-that opens with a refusal phrase is kept. The retry budget is
-`OWL_RETRY_BUDGET` (default 1, so at most two drafts).
+retried, so abstention keeps its meaning. A paraphrase refusal is final when it
+cites nothing, trails into a further refusal, or has nothing but the refusal
+clause; a cited partial answer that moves on to a new or contrastive clause is
+kept. The retry budget is `OWL_RETRY_BUDGET` (default 1, so at most two drafts).
 
 ## Request flow: POST /ask/stream
 

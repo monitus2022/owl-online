@@ -25,7 +25,7 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from app.config import settings  # noqa: E402
-from app.pipeline.generate import DEFAULT_TOP_K, ask  # noqa: E402
+from app.pipeline.generate import ABSTAIN_MESSAGE, DEFAULT_TOP_K, ask  # noqa: E402
 from app.pipeline.retrieve import compose_retriever  # noqa: E402
 from app.providers.factory import make_embedder, make_reranker  # noqa: E402
 from app.providers.openrouter import DEFAULT_MODEL  # noqa: E402
@@ -42,14 +42,17 @@ class CountingLlm:
         self.inner = inner
         self.calls = 0
         self.misses = 0
+        self.outputs: list[str] = []
 
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
         self.calls += 1
         try:
-            return await self.inner.generate(system, prompt, context=context)
+            value = await self.inner.generate(system, prompt, context=context)
         except RuntimeError:
             self.misses += 1
-            return "cache miss"
+            value = "cache miss"
+        self.outputs.append(value)
+        return value
 
 
 async def replay(
@@ -114,9 +117,16 @@ async def replay(
             max_retries=retry_budget,
         )
         misses += llm.misses
-        reasons[result.abstain_reason or "answered"] = (
-            reasons.get(result.abstain_reason or "answered", 0) + 1
-        )
+        if result.abstain_reason == "refused":
+            first = llm.outputs[0] if llm.outputs else ""
+            reason = (
+                "refused_exact"
+                if first.strip().startswith(ABSTAIN_MESSAGE)
+                else "refused_paraphrase"
+            )
+        else:
+            reason = result.abstain_reason or "answered"
+        reasons[reason] = reasons.get(reason, 0) + 1
         if llm.calls > 1:
             unanswerable_retried += 1
             print(f"  unanswerable retried {item.id}")

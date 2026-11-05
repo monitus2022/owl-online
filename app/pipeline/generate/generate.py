@@ -55,6 +55,16 @@ _REFUSAL_PREFIX = re.compile(
     r"there is no (information|evidence))",
     re.IGNORECASE,
 )
+# A refusal that trails on into "so I cannot answer ..." stays a refusal.
+_REFUSAL_CONTINUATION = re.compile(
+    r"\b(i|we)\s+(am|are|can't|cannot|can not|do not|don't)\s+"
+    r"(unable|not able|answer|know|say|tell)\b",
+    re.IGNORECASE,
+)
+# A contrastive or new clause after the refusal is a real partial answer.
+_CONTINUATION = re.compile(
+    r"(\b(but|however|although|though|yet)\b|[.;:]\s*\S)", re.IGNORECASE
+)
 
 TokenSink = Callable[[str], None]
 AbstainReason = Literal["no_evidence", "uncited", "refused"]
@@ -233,9 +243,9 @@ def _is_refusal(draft: str, *, cited: bool) -> bool:
     """A model that says it cannot answer is not a verification failure.
 
     The verbatim sentinel is a refusal even when a citation follows it. A
-    paraphrase only counts when the draft cites nothing, or when the refusal is
-    the whole answer: "the excerpts do not mention X, but Y [id]" is a partial
-    answer, not a refusal.
+    paraphrase is final when the draft cites nothing, when it trails into a
+    further refusal, or when nothing but the refusal clause remains. A cited
+    partial answer that moves on to a contrastive or new clause is kept.
     """
     text = draft.strip()
     if text.startswith(ABSTAIN_MESSAGE):
@@ -246,9 +256,9 @@ def _is_refusal(draft: str, *, cited: bool) -> bool:
     if not cited:
         return True
     remainder = _CITATION.sub(" ", text[match.end() :])
-    if re.search(r"\b(but|however|although|though|yet)\b", remainder, re.IGNORECASE):
-        return False
-    return len(re.findall(r"[A-Za-z0-9]+", remainder)) < 8
+    if _REFUSAL_CONTINUATION.search(remainder):
+        return True
+    return _CONTINUATION.search(remainder) is None
 
 
 def _cited_ids(answer: str) -> list[str]:
