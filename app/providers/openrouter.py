@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "qwen/qwen3-30b-a3b-instruct-2507"
 DEFAULT_TIMEOUT = 60.0
+# OpenRouter attributes usage to an app from these headers; without them the
+# dashboard shows "unknown".
+DEFAULT_APP_NAME = "owl-online"
+DEFAULT_APP_URL = "https://github.com/monitus2022/owl-online"
 
 
 class OpenRouterLlm:
@@ -51,7 +55,13 @@ class OpenRouterLlm:
             raise ValueError("max_tokens must be positive")
         self._max_tokens = max_tokens
         self._client = client or AsyncOpenAI(
-            base_url=base_url, api_key=api_key, timeout=timeout
+            base_url=base_url,
+            api_key=api_key,
+            timeout=timeout,
+            default_headers={
+                "HTTP-Referer": DEFAULT_APP_URL,
+                "X-Title": DEFAULT_APP_NAME,
+            },
         )
 
     async def generate(

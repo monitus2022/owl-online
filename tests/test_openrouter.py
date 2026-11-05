@@ -152,3 +152,19 @@ def test_max_tokens_must_be_positive():
 
     with pytest.raises(ValueError):
         OpenRouterLlm(model="x", client=object(), max_tokens=0)
+
+
+def test_client_sends_app_attribution_headers(monkeypatch):
+    import app.providers.openrouter as module
+
+    captured = {}
+
+    class _Client:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(module, "AsyncOpenAI", _Client)
+    module.OpenRouterLlm(api_key="test", model="qwen/qwen3-30b-a3b-instruct-2507")
+    headers = captured["default_headers"]
+    assert headers["X-Title"] == "owl-online"
+    assert headers["HTTP-Referer"].startswith("https://")
