@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -17,11 +18,14 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
 from app.agent import build_graph
+from app.agent.router import classify
+from app.api.cache import AnswerCache, cache_key
+from app.api.limits import ChatLimiter, Decision, session_id_for
 from app.api.runtime import Runtime, build_runtime
 from app.api.schemas import AskRequest, AskResponse, StreamRequest
 from app.config import Settings, settings
 from app.logging import configure_logging, get_request_id, set_request_id
-from app.pipeline.generate import DEFAULT_TOP_K, ask
+from app.pipeline.generate import DEFAULT_TOP_K, AskResult, ask
 from app.providers.contracts import Llm, Retriever
 from app.providers.errors import ProviderError
 
@@ -29,6 +33,15 @@ logger = logging.getLogger(__name__)
 
 _INDEX_HTML = Path(__file__).parent / "api" / "static" / "index.html"
 _INDEX_HTML_TEXT = _INDEX_HTML.read_text(encoding="utf-8")
+_SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+
+
+def _client_ip(request: Request) -> str:
+    """The proxy-facing client address. One trusted reverse proxy in front."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client is not None else "unknown"
 
 
 def create_app(app_settings: Settings | None = None, runtime: Runtime | None = None) -> FastAPI:
@@ -50,6 +63,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 ),
             )
         app.state.runtime = built
+        app.state.limiter = ChatLimiter(app_settings)
+        app.state.cache = AnswerCache(
+            app_settings.chat_cache_entries, app_settings.chat_cache_ttl_s
+        )
         try:
             yield
         finally:
@@ -72,6 +89,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     ) -> Response:
         request_id = uuid.uuid4().hex[:12]
         set_request_id(request_id)
+        ip = _client_ip(request)
+        given = request.headers.get("x-session-id")
+        session = given if given and _SESSION_RE.match(given) else session_id_for(
+            ip, request.headers.get("user-agent", "")
+        )
+        request.state.client_ip = ip
+        request.state.session_id = session
         start = time.perf_counter()
         try:
             response = await call_next(request)
@@ -98,6 +122,56 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     def get_llm(request: Request) -> Llm:
         return request.app.state.runtime.llm
 
+    def limit_response(decision: Decision) -> JSONResponse:
+        if decision.status == "degraded":
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": "chat temporarily unavailable",
+                    "reason": decision.reason,
+                },
+                headers={"Retry-After": str(decision.retry_after or 3600)},
+            )
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": "rate limited",
+                "reason": decision.reason,
+                "retry_after": decision.retry_after,
+            },
+            headers={"Retry-After": str(decision.retry_after or 60)},
+        )
+
+    def record_usage(
+        request: Request,
+        *,
+        intent: str,
+        model: str,
+        cache_hit: bool,
+        question: str,
+        result: AskResult,
+        latency_ms: float,
+    ) -> None:
+        limiter: ChatLimiter = app.state.limiter
+        input_chars = len(question) + sum(len(chunk.text) for chunk in result.chunks)
+        input_tokens = max(1, input_chars // 4)
+        output_tokens = max(1, len(result.answer) // 4)
+        cost = 0.0 if cache_hit else limiter.cost(input_tokens, output_tokens)
+        if not cache_hit:
+            limiter.record(input_tokens, output_tokens)
+        logger.info(
+            "chat usage session=%s intent=%s model=%s cache=%s in_tokens=%d "
+            "out_tokens=%d cost_usd=%.6f latency_ms=%.0f",
+            request.state.session_id,
+            intent,
+            model,
+            cache_hit,
+            input_tokens,
+            output_tokens,
+            cost,
+            latency_ms,
+        )
+
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
@@ -109,61 +183,166 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     @app.post("/ask", response_model=AskResponse)
     async def ask_endpoint(
         body: AskRequest,
+        request: Request,
         retriever: Annotated[Retriever, Depends(get_retriever)],
         llm: Annotated[Llm, Depends(get_llm)],
     ) -> AskResponse | JSONResponse:
+        session = request.state.session_id
+        limiter: ChatLimiter = app.state.limiter
+        decision = limiter.admit(session, request.state.client_ip)
+        if not decision.allowed:
+            return limit_response(decision)
         stage = {"name": "retrieve"}
+        model = getattr(llm, "name", "?")
+        key = cache_key(body.question, request.app.state.runtime.index_hash, model)
 
         def mark(name: str) -> None:
             stage["name"] = name
 
         try:
-            async with asyncio.timeout(app_settings.ask_timeout_s):
-                result = await ask(
-                    body.question,
-                    retriever=retriever,
-                    llm=llm,
-                    max_retries=app_settings.retry_budget,
-                    on_stage=mark,
+            cached = app.state.cache.get(key)
+            if cached is not None:
+                record_usage(
+                    request,
+                    intent="answer",
+                    model=model,
+                    cache_hit=True,
+                    question=body.question,
+                    result=cached,
+                    latency_ms=0.0,
                 )
-        except TimeoutError:
-            request_id = get_request_id()
-            logger.warning(
-                "deadline exceeded in %s after %.0fs (request %s)",
-                stage["name"],
-                app_settings.ask_timeout_s,
-                request_id,
+                return AskResponse(
+                    answer=cached.answer,
+                    citations=cached.citations,
+                    abstained=cached.abstained,
+                )
+            start = time.perf_counter()
+            try:
+                async with asyncio.timeout(app_settings.ask_timeout_s):
+                    result = await ask(
+                        body.question,
+                        retriever=retriever,
+                        llm=llm,
+                        max_retries=app_settings.retry_budget,
+                        on_stage=mark,
+                    )
+            except TimeoutError:
+                request_id = get_request_id()
+                logger.warning(
+                    "deadline exceeded in %s after %.0fs (request %s)",
+                    stage["name"],
+                    app_settings.ask_timeout_s,
+                    request_id,
+                )
+                return JSONResponse(
+                    status_code=504,
+                    content={"error": "deadline exceeded", "request_id": request_id},
+                )
+            except ProviderError as exc:
+                # Normalized provider failure: a clean 502, never a stack trace.
+                raise HTTPException(
+                    status_code=502, detail="model provider unavailable"
+                ) from exc
+            app.state.cache.put(key, result)
+            record_usage(
+                request,
+                intent="answer",
+                model=model,
+                cache_hit=False,
+                question=body.question,
+                result=result,
+                latency_ms=(time.perf_counter() - start) * 1000,
             )
-            return JSONResponse(
-                status_code=504,
-                content={"error": "deadline exceeded", "request_id": request_id},
+            return AskResponse(
+                answer=result.answer,
+                citations=result.citations,
+                abstained=result.abstained,
             )
-        except ProviderError as exc:
-            # Normalized provider failure: a clean 502, never a stack trace.
-            raise HTTPException(status_code=502, detail="model provider unavailable") from exc
-        return AskResponse(
-            answer=result.answer,
-            citations=result.citations,
-            abstained=result.abstained,
-        )
+        finally:
+            limiter.release(session)
 
-    @app.post("/ask/stream")
+    @app.post("/ask/stream", response_model=None)
     async def ask_stream_endpoint(
         body: StreamRequest, request: Request
-    ) -> EventSourceResponse:
+    ) -> EventSourceResponse | JSONResponse:
         runtime = request.app.state.runtime
         agent = runtime.agent
         if agent is None:
             raise RuntimeError("agent graph was not built")
+        session = request.state.session_id
+        limiter: ChatLimiter = app.state.limiter
+        decision = limiter.admit(session, request.state.client_ip)
+        if not decision.allowed:
+            return limit_response(decision)
+
+        llm = runtime.llm
+        model = getattr(llm, "name", "?")
+        intent = classify(
+            body.question,
+            requested_mode=body.mode,
+            student_answer=body.student_answer,
+        )
+        # Only corpus-only answers are shared; feedback is personalised and
+        # practice is meant to vary.
+        key = (
+            cache_key(body.question, runtime.index_hash, model)
+            if intent == "answer"
+            else None
+        )
+        cached = app.state.cache.get(key) if key else None
         initial = {
             "question": body.question,
             "requested_mode": body.mode,
             "student_answer": body.student_answer,
             "top_k": DEFAULT_TOP_K,
         }
+        headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+
+        if cached is not None:
+
+            async def cached_events() -> AsyncIterator[dict[str, str]]:
+                try:
+                    yield {
+                        "event": "mode",
+                        "data": json.dumps({"mode": "answer"}, ensure_ascii=False),
+                    }
+                    yield {
+                        "event": "token",
+                        "data": json.dumps({"text": cached.answer}, ensure_ascii=False),
+                    }
+                    if cached.abstained:
+                        yield {"event": "reset", "data": json.dumps({})}
+                    yield {
+                        "event": "final",
+                        "data": json.dumps(
+                            {
+                                "answer": cached.answer,
+                                "citations": cached.citations,
+                                "abstained": cached.abstained,
+                                "needs_input": False,
+                                "attempts": 1,
+                                "mode": "answer",
+                            },
+                            ensure_ascii=False,
+                        ),
+                    }
+                    record_usage(
+                        request,
+                        intent="answer",
+                        model=model,
+                        cache_hit=True,
+                        question=body.question,
+                        result=cached,
+                        latency_ms=0.0,
+                    )
+                finally:
+                    limiter.release(session)
+
+            return EventSourceResponse(cached_events(), headers=headers)
 
         async def events() -> AsyncIterator[dict[str, str]]:
             final: dict[str, object] = dict(initial)
+            start = time.perf_counter()
             try:
                 async for mode, chunk in agent.astream(
                     initial, stream_mode=["custom", "updates"]
@@ -203,7 +382,6 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     "data": json.dumps({"detail": "internal error"}),
                 }
                 return
-
             # Tokens are a draft. The final event is authoritative: an abstained
             # answer tells the client to replace the draft, and reset does it
             # explicitly before the final payload.
@@ -223,11 +401,33 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     ensure_ascii=False,
                 ),
             }
+            result = AskResult(
+                answer=str(final.get("answer", "")),
+                citations=list(final.get("citations", [])),
+                abstained=bool(final.get("abstained", False)),
+                chunks=list(final.get("chunks", [])),
+                attempts=int(final.get("attempts", 1)),
+            )
+            if key is not None:
+                app.state.cache.put(key, result)
+            record_usage(
+                request,
+                intent=str(final.get("mode", intent)),
+                model=model,
+                cache_hit=False,
+                question=body.question,
+                result=result,
+                latency_ms=(time.perf_counter() - start) * 1000,
+            )
 
-        return EventSourceResponse(
-            events(),
-            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-        )
+        async def guarded() -> AsyncIterator[dict[str, str]]:
+            try:
+                async for event in events():
+                    yield event
+            finally:
+                limiter.release(session)
+
+        return EventSourceResponse(guarded(), headers=headers)
 
     return app
 

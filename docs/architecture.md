@@ -386,11 +386,19 @@ See `docs/workplan.md` for phase order and exit criteria.
 
 ### Cost controls
 
-Chat is the variable-cost surface; exam content is mostly offline. The planned
-chat controls (#88) will enforce per-session, per-IP and per-day limits, output
-and history token caps, an exact answer cache keyed by normalised question plus
-index hash, usage accounting, and a daily spend guard. At the hard cap, chat
-degrades gracefully while exam serving stays up. Auth is not a dependency.
+Chat is the variable-cost surface; exam content is mostly offline. The chat
+controls (#88) enforce per-session limits (10/min, 100/day, 2 concurrent), a
+per-IP daily cap (300) and a daily token budget. Over a limit the API returns 429
+with `Retry-After`; over the budget it returns 503 for chat only, so `/health`
+and future exam routes stay up. Counters live in the one API process, so a
+restart resets the windows; auth later moves them to a user id.
+
+Corpus-only answers pass through an in-process exact cache keyed by prompt
+version, index hash, model and normalised question. Practice and feedback never
+read or write it: feedback is personalised by the student answer and practice is
+meant to vary. Usage is logged per request with estimated input/output tokens,
+model, intent, cache hit, cost and latency. Prices are configuration, not
+constants.
 
 The `Runtime` (the retriever with its optional reranker, the llm, and the
 compiled agent graph) is built once in the app lifespan, never per request.

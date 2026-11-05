@@ -1,0 +1,99 @@
+"""In-process chat limits and the exact answer cache, no network."""
+
+
+from app.api.cache import AnswerCache, cache_key, normalize_question
+from app.api.limits import ChatLimiter
+from app.config import Settings
+from app.pipeline.generate import AskResult
+from app.schemas import Chunk, ChunkMetadata
+
+
+def _limiter(**overrides) -> ChatLimiter:
+    return ChatLimiter(Settings(**overrides))
+
+
+def test_minute_burst_is_limited():
+    limiter = _limiter(chat_per_minute=2)
+    assert limiter.admit("s", "ip").allowed
+    assert limiter.admit("s", "ip").allowed
+    decision = limiter.admit("s", "ip")
+    assert decision.status == "rate_limited"
+    assert decision.reason == "minute"
+    assert 1 <= (decision.retry_after or 0) <= 60
+
+
+def test_daily_cap_is_enforced():
+    limiter = _limiter(chat_per_minute=100, chat_per_day=2)
+    assert limiter.admit("s", "ip").allowed
+    assert limiter.admit("s", "ip").allowed
+    assert limiter.admit("s", "ip").reason == "day"
+
+
+def test_per_ip_cap_catches_cookie_rotation():
+    limiter = _limiter(chat_per_minute=100, chat_per_day=100, chat_ip_per_day=2)
+    assert limiter.admit("s1", "ip").allowed
+    assert limiter.admit("s2", "ip").allowed
+    assert limiter.admit("s3", "ip").reason == "ip_day"
+
+
+def test_concurrency_slot_is_released():
+    limiter = _limiter(chat_concurrent=1)
+    assert limiter.admit("s", "ip").allowed
+    assert limiter.admit("s", "ip").reason == "concurrent"
+    limiter.release("s")
+    assert limiter.admit("s", "ip").allowed
+
+
+def test_budget_degrades_instead_of_refusing(caplog):
+    caplog.set_level("WARNING")
+    limiter = _limiter(chat_daily_token_budget=10)
+    assert limiter.admit("s", "ip").allowed
+    limiter.record(8, 8)
+    assert limiter.admit("s", "ip").status == "degraded"
+    assert "chat budget at" in caplog.text
+
+
+def test_cost_uses_the_configured_prices():
+    limiter = _limiter(chat_input_price_per_mtok=1.0, chat_output_price_per_mtok=2.0)
+    assert limiter.cost(1_000_000, 0) == 1.0
+    assert limiter.cost(0, 1_000_000) == 2.0
+
+
+def _result(answer: str = "Rowan [b1-c01-0000].") -> AskResult:
+    chunk = Chunk(
+        id="b1-c01-0000",
+        text="Rowan trims the wick.",
+        metadata=ChunkMetadata(
+            book_num=1, chapter_num=1, book_name="Book 1", chapter_name="Chapter 1"
+        ),
+        score=1.0,
+    )
+    return AskResult(answer=answer, citations=["b1-c01-0000"], chunks=[chunk])
+
+
+def test_question_normalisation_and_key_identity():
+    assert normalize_question("  Who   trims the wick?! ") == "who trims the wick"
+    assert cache_key("Who trims the wick?", "idx", "m") == cache_key(
+        "who trims the wick", "idx", "m"
+    )
+    assert cache_key("q", "idx-a", "m") != cache_key("q", "idx-b", "m")
+    assert cache_key("q", "idx", "m1") != cache_key("q", "idx", "m2")
+
+
+def test_cache_hit_and_miss():
+    cache = AnswerCache(max_entries=2, ttl_s=60)
+    key = cache_key("q", "idx", "m")
+    assert cache.get(key) is None
+    cache.put(key, _result())
+    assert cache.get(key) is not None
+
+
+def test_cache_expires_and_evicts():
+    now = [0.0]
+    cache = AnswerCache(max_entries=1, ttl_s=10, clock=lambda: now[0])
+    cache.put("a", _result())
+    now[0] = 11.0
+    assert cache.get("a") is None
+    cache.put("b", _result())
+    cache.put("c", _result())
+    assert len(cache) == 1

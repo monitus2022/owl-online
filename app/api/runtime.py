@@ -21,6 +21,7 @@ class Runtime:
     retriever: Retriever
     llm: Llm
     agent: CompiledStateGraph | None = None
+    index_hash: str = "unknown-index"
 
     async def aclose(self) -> None:
         """Release provider clients on shutdown (embedder pool, model client)."""
@@ -47,6 +48,7 @@ async def build_runtime(settings: Settings) -> Runtime:
     return Runtime(
         retriever=setup.retriever,
         llm=llm,
+        index_hash=setup.text_hash,
         agent=build_graph(
             setup.retriever, llm, max_retries=settings.retry_budget
         ),

@@ -39,6 +39,19 @@ class Settings(BaseSettings):
     # Deadline for one /ask request (retrieve plus generate). /ask/stream is not
     # bounded because a legitimate stream can outlive it.
     ask_timeout_s: float = Field(default=30.0, gt=0)
+
+    # Chat cost controls (#88). Anonymous limits; auth later moves them to a
+    # user id. The counters live in one process, so a restart resets the windows.
+    chat_per_minute: int = Field(default=10, ge=1)
+    chat_per_day: int = Field(default=100, ge=1)
+    chat_ip_per_day: int = Field(default=300, ge=1)
+    chat_concurrent: int = Field(default=2, ge=1)
+    chat_daily_token_budget: int = Field(default=200_000, ge=1)
+    chat_cache_entries: int = Field(default=256, ge=1)
+    chat_cache_ttl_s: int = Field(default=3600, ge=1)
+    # Placeholders for the pinned generator; set OWL_ prices to your contract.
+    chat_input_price_per_mtok: float = Field(default=0.10, ge=0)
+    chat_output_price_per_mtok: float = Field(default=0.30, ge=0)
     log_level: str = "INFO"
     live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 
