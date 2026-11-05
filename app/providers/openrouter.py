@@ -47,6 +47,8 @@ class OpenRouterLlm:
         self.name = f"openrouter/{model}"  # manifest pin + logging
         self._model = model
         self._temperature = temperature
+        if max_tokens is not None and max_tokens < 1:
+            raise ValueError("max_tokens must be positive")
         self._max_tokens = max_tokens
         self._client = client or AsyncOpenAI(
             base_url=base_url, api_key=api_key, timeout=timeout

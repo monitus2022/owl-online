@@ -143,3 +143,12 @@ def test_sampling_can_cap_output_tokens():
         max_tokens=512,
     )
     assert llm._sampling()["max_tokens"] == 512
+
+
+def test_max_tokens_must_be_positive():
+    import pytest
+
+    from app.providers.openrouter import OpenRouterLlm
+
+    with pytest.raises(ValueError):
+        OpenRouterLlm(model="x", client=object(), max_tokens=0)

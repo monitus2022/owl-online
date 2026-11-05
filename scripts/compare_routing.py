@@ -27,7 +27,7 @@ from app.config import settings  # noqa: E402
 from app.pipeline.generate import render_evidence  # noqa: E402
 from app.pipeline.retrieve import compose_retriever  # noqa: E402
 from app.providers.factory import make_embedder, make_llm, make_reranker  # noqa: E402
-from eval.harness import JUDGE_MODEL  # noqa: E402
+from eval.harness import JUDGE_MODEL, CachedLlm  # noqa: E402
 from eval.harness.routing import (  # noqa: E402
     FEEDBACK_JUDGE_SYSTEM,
     PRACTICE_JUDGE_SYSTEM,
@@ -108,12 +108,20 @@ async def main() -> int:
         pool=settings.rerank_pool if reranker is not None else None,
         min_score=settings.rerank_min_score,
     )
-    judge = make_llm("openrouter", model=JUDGE_MODEL, temperature=0.0, max_tokens=2048)
-    print(f"fixture: {len(items)} items; judge: {JUDGE_MODEL}")
+    judge = CachedLlm(
+        make_llm("openrouter", model=JUDGE_MODEL, temperature=0.0, max_tokens=2048),
+        JUDGE_MODEL,
+        REPO / "eval" / ".cache",
+        variant="routing",
+    )
+    print(
+        f"fixture: {len(items)} items; judge: {JUDGE_MODEL}; "
+        "caps: generator=512, judge=2048"
+    )
     print(
         f"{'model':<48} {'cites':>5} {'topic':>5} {'ground':>6} "
         f"{'answer':>6} {'bound':>5} {'band':>5} {'err':>4} "
-        f"{'p50ms':>6} {'cost/1k':>8}"
+        f"{'p50ms':>6} {'fail':>4} {'parse':>5} {'cost/1k':>8}"
     )
     for slug in models:
         llm = make_llm("openrouter", model=slug, temperature=0.0, max_tokens=512)
@@ -140,11 +148,18 @@ async def main() -> int:
         feedback = [r for r, i in zip(rows, items, strict=True) if i["intent"] == "feedback"]
         pv = [r["verdict"] for r in practice if r.get("verdict")]
         fv = [r["verdict"] for r in feedback if r.get("verdict")]
+        failed = sum(1 for r in rows if r.get("error"))
+        parse_fail = len(rows) - failed - len(pv) - len(fv)
         band_ok = sum(
             1
             for r, i in zip(feedback, [x for x in items if x["intent"] == "feedback"], strict=True)
             if r.get("verdict") and r["verdict"]["band"] == i["band"]
         )
+        err_items = [
+            r["verdict"]
+            for r, i in zip(feedback, [x for x in items if x["intent"] == "feedback"], strict=True)
+            if r.get("verdict") and i["band"] != "strong"
+        ]
         input_price, output_price = _price(slug)
         cost = statistics.mean(
             (r.get("chars_in", 0) / 4 * input_price + r.get("chars_out", 0) / 4 * output_price)
@@ -159,11 +174,12 @@ async def main() -> int:
             f"{sum(v['answerable'] for v in pv):>4}/{len(pv):<2} "
             f"{sum(v['boundary'] for v in pv+fv):>3}/{len(pv+fv):<2} "
             f"{band_ok:>3}/{len(feedback):<2} "
-            f"{sum(v['error_named'] for v in fv):>3}/{len(fv):<2} "
+            f"{sum(v['error_named'] for v in err_items):>3}/{len(err_items):<2} "
             f"{statistics.median(latencies) if latencies else 0:>6.0f} "
+            f"{failed:>4} {parse_fail:>5} "
             f"${cost*1000:>7.2f}"
         )
-    return 0
+    return 0 if any(r.get('verdict') for r in rows) else 1
 
 
 if __name__ == "__main__":

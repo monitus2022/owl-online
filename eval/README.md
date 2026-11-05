@@ -350,3 +350,15 @@ positive. Reported per run as `novel_entity_n`, `novel_entity_answers`,
 
 `/ask` is bounded by `OWL_ASK_TIMEOUT_S` (default 30 s) and returns a typed 504
 with the request id; `/ask/stream` is not bounded.
+
+## Routing comparison
+
+`scripts/compare_routing.py` compares practice/feedback across two models on
+`eval/fixtures/practice_feedback.jsonl`. It runs the real graph, checks citations
+deterministically, scores with the pinned judge (cached), and prints citations,
+topic, grounding, answerability, boundary, band, named error on non-strong
+answers, p50 latency, failures, parse failures and an estimated cost per 1k
+generations. Caps are 512 output tokens for generation and 2048 for the judge,
+because the judge's reasoning tokens otherwise consume the budget. A model list
+and fixture can be passed with `--models` and `--fixture`. The script exits
+non-zero when no verdict parses, so a broken run cannot look like a result.
