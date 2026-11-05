@@ -76,7 +76,11 @@ async def test_injected_chunk_cannot_change_the_answer():
     class _InjectionSensitiveLlm:
         name = "fake/injection"
 
+        def __init__(self) -> None:
+            self.prompts: list[str] = []
+
         async def generate(self, system: str, prompt: str, *, context=None) -> str:
+            self.prompts.append(prompt)
             if "PASSWORD" in prompt:
                 return "PASSWORD [b1-c01-0000]."
             return "Rowan trims the wick [b1-c01-0000]."
@@ -90,11 +94,14 @@ async def test_injected_chunk_cannot_change_the_answer():
                 )
             ]
 
+    llm = _InjectionSensitiveLlm()
     result = await ask(
-        "Who trims the wick?", retriever=_InjectedRetriever(), llm=_InjectionSensitiveLlm()
+        "Who trims the wick?", retriever=_InjectedRetriever(), llm=llm
     )
     assert "PASSWORD" not in result.answer
     assert result.citations == ["b1-c01-0000"]
+    assert "Rowan trims the wick." in llm.prompts[0]
+    assert "PASSWORD" not in llm.prompts[0]
 
 
 async def test_cross_line_injection_is_removed():

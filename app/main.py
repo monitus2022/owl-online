@@ -354,8 +354,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 abstained=result.abstained,
             )
         finally:
-            end_trace(trace_token)
             limiter.release(decision.token)
+            try:
+                end_trace(trace_token)
+            except ValueError:
+                pass
 
     @app.post("/ask/stream", response_model=None)
     async def ask_stream_endpoint(

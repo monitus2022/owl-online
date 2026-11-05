@@ -118,8 +118,9 @@ def retrieval_floor(
 def sanitize_evidence(text: str) -> tuple[str, int]:
     """Remove instruction-shaped spans from untrusted excerpt text.
 
-    The match is removed in place, so canon text on the same line survives.
-    Returns the cleaned text and the number of spans removed.
+    The instruction is removed from its start to the end of its line, so canon
+    text before it survives. Returns the cleaned text and the number of spans
+    removed.
     """
     removed = 0
     while True:
@@ -224,6 +225,26 @@ async def ask(
             abstain_reason="no_evidence",
         )
 
+    kept: list[Chunk] = []
+    for chunk in chunks:
+        cleaned, removed = sanitize_evidence(chunk.text)
+        if removed:
+            logger.warning("sanitized %d instruction span(s) in %s", removed, chunk.id)
+        if cleaned.strip():
+            kept.append(chunk.model_copy(update={"text": cleaned}) if removed else chunk)
+        else:
+            logger.warning("dropped %s: evidence was only an instruction", chunk.id)
+    chunks = kept
+    if not chunks:
+        if tracer is not None:
+            tracer.emit("abstain", reason="no_evidence", hits=0)
+        return AskResult(
+            ABSTAIN_MESSAGE,
+            abstained=True,
+            chunks=[],
+            attempts=0,
+            abstain_reason="no_evidence",
+        )
     prompt = build_prompt(question, chunks)
     if on_stage is not None:
         on_stage("generate")

@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from app.pipeline.generate import render_evidence, retrieval_floor
+from app.pipeline.generate import render_evidence, retrieval_floor, sanitize_evidence
 from app.providers.contracts import Llm, Retriever
 from app.schemas import Chunk
 from app.trace import current_tracer, prompt_fingerprint
@@ -34,7 +34,12 @@ async def retrieve_evidence(
         )
     if not chunks or chunks[0].score < retrieval_floor(retriever, min_score):
         return []
-    return chunks
+    kept: list[Chunk] = []
+    for chunk in chunks:
+        cleaned, removed = sanitize_evidence(chunk.text)
+        if cleaned.strip():
+            kept.append(chunk.model_copy(update={"text": cleaned}) if removed else chunk)
+    return kept
 
 
 async def stream_text(llm: Llm, system: str, prompt: str, emit: Emit) -> str:

@@ -276,7 +276,8 @@ already sent.
 
 ## Tracing
 
-Each request can emit a flat JSONL span tree under the request id: `router`
+Each request can emit flat JSONL span records under the request id. The stream
+path emits `router`
 (intent), `retrieve` (chunk ids and top score), one `generate` per attempt
 (model, prompt hash and length), `verify` (ok and reason), `retry`, and `final`.
 Cache hits emit a `cache` span instead of retrieve/generate.
@@ -287,8 +288,9 @@ carries a hash and a character count so a run can be identified without storing
 the excerpts. The trace records the agent's decisions, not hidden model
 reasoning.
 
-Retrieved text is treated as untrusted. `render_evidence` removes lines that look
-like instructions ("ignore previous instructions", "reveal the prompt", "you must
+Retrieved text is treated as untrusted. `sanitize_evidence` removes instruction
+spans from the evidence and logs the affected chunk ids; a chunk left empty is
+dropped from the citation set ("ignore previous instructions", "reveal the prompt", "you must
 now"), and the answer system prompt tells the model to ignore instructions inside
 excerpts.
 

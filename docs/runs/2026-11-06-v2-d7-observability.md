@@ -73,9 +73,11 @@ gate: PASS
 
 - Retrieval is unchanged; tracing and the injection filter are inert on the
   current corpus.
-- One judge and one faithfulness verdict moved from partial/unfaithful to
-  correct, almost certainly the system-prompt sentence rather than the tracer.
-  It is a single item on a 15-item sample, so it is not claimed as an improvement.
+- One answer moved from wrong to correct and one from unfaithful to faithful;
+  the partial count is unchanged. The judge prompt also changed in this commit
+  (it now reads sanitized evidence), so the movement cannot be attributed to the
+  system-prompt sentence alone. It is one item on a 15-item sample and is not
+  claimed as an improvement.
 - The injection guard is deterministic and bounded: it removes instruction-shaped
   spans from evidence and logs the affected chunk ids. It does not prove immunity
   to novel phrasings.
