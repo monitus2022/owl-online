@@ -134,3 +134,30 @@ def test_banned_vendors_are_rejected():
         else:
             with pytest.raises(ValueError):
                 ensure_allowed_model(slug)
+
+
+async def test_routing_off_keeps_practice_on_the_strong_model():
+    strong = _Llm("strong", "Strong [b1-c01-0000].")
+    graph = build_graph(_Retriever(), strong)
+    await graph.ainvoke(_request("Give me a practice question on the wick"))
+    assert strong.calls == 1
+
+
+def test_factory_rejects_a_banned_model_before_building():
+    from app.providers.factory import make_llm
+
+    with pytest.raises(ValueError):
+        make_llm("openrouter", model="openai/gpt-4o")
+
+
+def test_small_provider_and_slug_must_match():
+    from pydantic import ValidationError
+
+    from app.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(
+            routing="intent",
+            small_provider="bedrock",
+            small_model="mistralai/mistral-small-3.2-24b-instruct",
+        )

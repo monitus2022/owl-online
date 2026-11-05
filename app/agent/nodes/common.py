@@ -71,12 +71,12 @@ async def stream_with_fallback(
 ) -> str:
     """Stream from the routed model, falling back once on a provider failure."""
     tracer = current_tracer()
-    if tracer is not None:
+    if tracer is not None and fallback is not None:
         tracer.emit(
             "route",
             intent=intent,
             model=getattr(llm, "name", "?"),
-            fallback=fallback is not None,
+            fallback=True,
         )
     try:
         return await stream_text(llm, system, prompt, emit)

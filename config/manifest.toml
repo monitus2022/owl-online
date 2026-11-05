@@ -46,6 +46,10 @@ candidates = 50
 # stemming and stopword removal: both lowered Hit@5, so neither ships.
 tokenizer = "regex-words"
 
+[routing]
+# Practice and feedback use this model when OWL_ROUTING=intent.
+model = "mistralai/mistral-small-3.2-24b-instruct"
+
 [generation]
 # Drafts regenerated after a failed deterministic verification. The eval reads
 # this so a run cannot silently inherit a different retry budget from the code.

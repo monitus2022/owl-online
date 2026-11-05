@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # pydantic-settings reads .env for OWL_ settings but does not populate the
@@ -62,6 +62,17 @@ class Settings(BaseSettings):
     # Optional JSONL trace file. Empty means stdout only (the owl.trace logger).
     trace_file: Path | None = None
     trace_max_bytes: int = 20_000_000
+
+    @model_validator(mode="after")
+    def _check_small_model_pair(self) -> "Settings":
+        if self.routing == "intent":
+            if self.small_provider == "openrouter" and "/" not in self.small_model:
+                raise ValueError("OpenRouter small models use the vendor/model slug")
+            if self.small_provider == "bedrock" and "/" in self.small_model:
+                raise ValueError(
+                    "Bedrock small models use the provider.model-id form, not a slug"
+                )
+        return self
 
     @field_validator("trace_file", mode="before")
     @classmethod

@@ -514,10 +514,16 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             )
             if key is not None and not result.abstained:
                 app.state.cache.put(key, result)
+            used_model = model
+            if (
+                str(final.get("mode", intent)) in {"practice", "feedback"}
+                and runtime.small_llm is not None
+            ):
+                used_model = getattr(runtime.small_llm, "name", model)
             record_usage(
                 request,
                 intent=str(final.get("mode", intent)),
-                model=model,
+                model=used_model,
                 cache_hit=False,
                 question=body.question,
                 result=result,

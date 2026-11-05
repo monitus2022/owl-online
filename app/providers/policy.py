@@ -6,7 +6,15 @@ releases (gpt-oss, Gemma) are excluded too, including on Bedrock or OpenRouter.
 
 from __future__ import annotations
 
-BANNED_VENDORS = ("openai", "gpt-oss", "google", "gemma", "anthropic", "claude")
+BANNED_VENDORS = (
+    "openai",
+    "gpt",
+    "google",
+    "gemini",
+    "gemma",
+    "anthropic",
+    "claude",
+)
 
 
 def ensure_allowed_model(slug: str) -> None:

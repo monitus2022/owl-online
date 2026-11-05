@@ -28,6 +28,7 @@ def make_embedder(provider: str, *, model: str | None = None) -> Embedder:
                 return OllamaEmbedder(base_url=base_url)
             return OllamaEmbedder(model=model, base_url=base_url)
         case "bedrock":
+            ensure_allowed_model(model or settings.bedrock_embed_model)
             return BedrockEmbedder(
                 model=model or settings.bedrock_embed_model,
                 region=settings.aws_region,
@@ -67,6 +68,7 @@ def make_reranker(provider: str, *, model: str | None = None) -> Reranker:
     """Build a Reranker for a provider name"""
     match provider:
         case "bedrock":
+            ensure_allowed_model(model or settings.rerank_model)
             return BedrockReranker(
                 model=model or settings.rerank_model,
                 region=settings.aws_region,

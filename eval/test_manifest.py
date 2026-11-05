@@ -63,6 +63,11 @@ def test_manifest_pins_the_retry_budget():
     assert RETRY_BUDGET_DEFAULT == DEFAULT_MAX_RETRIES
 
 
+def test_manifest_pins_the_small_model():
+    default = Settings.model_fields["small_model"].default
+    assert MANIFEST["routing"]["model"] == default
+
+
 def test_manifest_pins_the_tokenizer():
     assert MANIFEST["retrieval"]["tokenizer"] == TOKENIZER
 

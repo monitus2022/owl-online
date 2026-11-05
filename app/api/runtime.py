@@ -26,7 +26,11 @@ class Runtime:
 
     async def aclose(self) -> None:
         """Release provider clients on shutdown (embedder pool, model client)."""
-        for component in (self.retriever, self.llm):
+        seen: set[int] = set()
+        for component in (self.retriever, self.llm, self.small_llm):
+            if component is None or id(component) in seen:
+                continue
+            seen.add(id(component))
             close = getattr(component, "aclose", None)
             if close is not None:
                 await close()

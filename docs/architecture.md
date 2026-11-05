@@ -260,7 +260,7 @@ SSE events:
 |---|---|---|
 | `mode` | `{"mode": "answer"}` | after the router update |
 | `token` | `{"text": "..."}` | for each streamed token |
-| `reset` | `{"reason": "retry"}` before a retry draft; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
+| `reset` | `{"reason": "retry"}` before a retry draft, `{"reason": "fallback"}` before a routing fallback; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
 | `final` | `answer`, `citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
@@ -464,7 +464,7 @@ generate) for the per-call detail.
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
-| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, compiled agent graph, index hash |
+| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 
