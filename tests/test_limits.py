@@ -134,3 +134,24 @@ def test_release_is_idempotent():
     limiter.release(first.token)
     assert second.status == "rate_limited"
     assert limiter.admit("s", "ip").allowed
+
+
+def test_client_ip_trusts_headers_only_from_a_trusted_peer():
+    from starlette.requests import Request
+
+    from app.main import _client_ip
+
+    loopback = [__import__("ipaddress").ip_network("127.0.0.1/32")]
+    scope = {
+        "type": "http",
+        "client": ("127.0.0.1", 1234),
+        "headers": [(b"cf-connecting-ip", b"203.0.113.9")],
+    }
+    assert _client_ip(Request(scope), loopback) == "203.0.113.9"
+
+    direct = {
+        "type": "http",
+        "client": ("198.51.100.4", 1234),
+        "headers": [(b"cf-connecting-ip", b"203.0.113.9")],
+    }
+    assert _client_ip(Request(direct), loopback) == "198.51.100.4"

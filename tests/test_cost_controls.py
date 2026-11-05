@@ -199,3 +199,36 @@ def test_forged_cookie_is_replaced():
         )
     assert response.status_code == 200
     assert "set-cookie" in response.headers
+
+
+def test_cached_stream_records_one_usage_line(caplog):
+    caplog.set_level(logging.INFO)
+    llm = _Llm()
+    with _client(llm) as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who trims the wick?"}
+        ) as response:
+            response.read()
+        caplog.clear()
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "who trims the wick"}
+        ) as response:
+            response.read()
+    assert caplog.text.count("chat usage") == 1
+    assert "cache=True" in caplog.text
+    assert llm.calls == 1
+
+
+def test_cookie_is_httponly_and_cross_site_on_tls():
+    llm = _Llm()
+    with _client(llm) as client:
+        client.cookies.clear()
+        response = client.post(
+            "/ask",
+            json={"question": "Who trims?"},
+            headers={"X-Forwarded-Proto": "https"},
+        )
+    cookie = response.headers["set-cookie"].lower()
+    assert "httponly" in cookie
+    assert "samesite=none" in cookie
+    assert "secure" in cookie

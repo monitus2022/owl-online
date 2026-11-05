@@ -78,6 +78,10 @@ class ChatLimiter:
         day = self._today()
         self._roll_day(day)
         self._maybe_prune(day)
+        if len(self._windows) >= 20_000 and session not in self._windows:
+            return Decision("rate_limited", "capacity", 60)
+        if len(self._ip_windows) >= 20_000 and ip not in self._ip_windows:
+            return Decision("rate_limited", "capacity", 60)
         window = self._windows.setdefault(session, _Window())
         ip_window = self._ip_windows.setdefault(ip, _Window())
         self._roll_window(window, ip_window, now, day)
@@ -191,9 +195,13 @@ class ChatLimiter:
         self._ip_windows = {
             key: window for key, window in self._ip_windows.items() if window.day == day
         }
-        if len(self._windows) > 20_000:
-            for key in list(self._windows)[: len(self._windows) // 4]:
-                self._windows.pop(key, None)
-        if len(self._ip_windows) > 20_000:
-            for key in list(self._ip_windows)[: len(self._ip_windows) // 4]:
-                self._ip_windows.pop(key, None)
+        self._windows = {
+            key: window
+            for key, window in self._windows.items()
+            if window.day == day or window.minute_count or window.day_count
+        }
+        self._ip_windows = {
+            key: window
+            for key, window in self._ip_windows.items()
+            if window.day == day or window.minute_count or window.day_count
+        }

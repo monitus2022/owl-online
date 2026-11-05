@@ -40,8 +40,8 @@ docker run --rm -p 8000:8000 \
   -e OWL_OPENROUTER_API_KEY=... \
   -e OWL_EMBEDDER_PROVIDER=local \
   -e OWL_OLLAMA_BASE_URL=http://host.docker.internal:11434 \
-  -e OWL_RERANK_PROVIDER=bedrock
-OWL_SESSION_SECRET=<long-random-value> \
+  -e OWL_RERANK_PROVIDER=bedrock \
+  -e OWL_SESSION_SECRET=<long-random-value> \
   -e OWL_AWS_REGION=ap-northeast-1 \
   -e AWS_ACCESS_KEY_ID=... -e AWS_SECRET_ACCESS_KEY=... \
   owl-online
@@ -213,9 +213,9 @@ Rules:
 
 - 7-day expiry is an S3 lifecycle rule, not a job.
 - A shipper outage only delays the copy: Fluent Bit buffers on disk up to 512 MB.
-- The tail covers every Docker container on the host; only the API and the shipper run there.
-If the shipper is down long enough to fill that buffer, new records are dropped;
-  the API keeps serving.
+- The tail covers every Docker container on the host; only the API and the shipper
+run there. If the shipper is down long enough to fill that buffer, new records
+are dropped; the API keeps serving.
 - Logs carry ids, counts, timings and opaque session ids. Prompts, answers and
   student text are not logged, so nothing copyrighted or personal leaves the
   host through this path.

@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # Signs the anonymous session cookie. Empty means a random per-process
     # secret, which resets sessions on restart; set it in production.
     session_secret: str = ""
+    # CIDRs whose forwarded client-IP headers are trusted. Docker's bridge
+    # gateway reaches the container, so private ranges are included.
+    trusted_proxies: str = "127.0.0.1/32,::1/128,172.16.0.0/12"
     # Placeholders for the pinned generator; set OWL_ prices to your contract.
     chat_input_price_per_mtok: float = Field(default=0.10, ge=0)
     chat_output_price_per_mtok: float = Field(default=0.30, ge=0)

@@ -41,17 +41,21 @@ _INDEX_HTML_TEXT = _INDEX_HTML.read_text(encoding="utf-8")
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 
 
-_TRUSTED_PEERS = {"127.0.0.1", "::1"}
-
-
-def _client_ip(request: Request) -> str:
+def _client_ip(
+    request: Request, trusted: list[ipaddress.IPv4Network | ipaddress.IPv6Network]
+) -> str:
     """The client address set by the trusted proxy, never the leftmost XFF.
 
-    The proxy headers are only honoured when the peer is loopback, which is how
-    the host nginx reaches this process. Anything else is treated as direct.
+    Proxy headers are honoured only when the peer is in a configured trusted
+    CIDR. The Docker bridge gateway is included by default, because nginx reaches
+    the container through it.
     """
     peer = request.client.host if request.client is not None else "unknown"
-    if peer not in _TRUSTED_PEERS:
+    try:
+        address = ipaddress.ip_address(peer)
+    except ValueError:
+        return "unknown"
+    if not any(address in network for network in trusted):
         return peer
     for header in ("cf-connecting-ip", "x-real-ip"):
         value = request.headers.get(header)
@@ -82,6 +86,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     """Build the app; tests inject a Runtime so startup builds nothing real."""
     app_settings = app_settings or settings
     configure_logging(app_settings.log_level)
+    trusted = [
+        ipaddress.ip_network(item.strip())
+        for item in app_settings.trusted_proxies.split(",")
+        if item.strip()
+    ]
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -97,6 +106,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 ),
             )
         app.state.runtime = built
+        if not app_settings.session_secret:
+            logger.warning(
+                "OWL_SESSION_SECRET is unset; sessions reset on every restart"
+            )
         app.state.session_secret = app_settings.session_secret or secrets.token_hex(32)
         app.state.limiter = ChatLimiter(app_settings)
         app.state.cache = AnswerCache(
@@ -125,7 +138,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     ) -> Response:
         request_id = uuid.uuid4().hex[:12]
         set_request_id(request_id)
-        ip = _client_ip(request)
+        ip = _client_ip(request, trusted)
         secret = app.state.session_secret
         session = _session_from_cookie(request, secret)
         issue_cookie = session is None
@@ -390,6 +403,15 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                                 {"text": cached.answer}, ensure_ascii=False
                             ),
                         }
+                    record_usage(
+                        request,
+                        intent="answer",
+                        model=model,
+                        cache_hit=True,
+                        question=body.question,
+                        result=cached,
+                        latency_ms=0.0,
+                    )
                     if cached.abstained:
                         yield {"event": "reset", "data": json.dumps({})}
                     yield {
@@ -406,15 +428,6 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                             ensure_ascii=False,
                         ),
                     }
-                    record_usage(
-                        request,
-                        intent="answer",
-                        model=model,
-                        cache_hit=True,
-                        question=body.question,
-                        result=cached,
-                        latency_ms=0.0,
-                    )
                 finally:
                     limiter.release(decision.token)
 
