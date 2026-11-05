@@ -44,11 +44,14 @@ class Settings(BaseSettings):
     # user id. The counters live in one process, so a restart resets the windows.
     chat_per_minute: int = Field(default=10, ge=1)
     chat_per_day: int = Field(default=100, ge=1)
-    chat_ip_per_day: int = Field(default=300, ge=1)
+    chat_ip_per_day: int = Field(default=100, ge=1)
     chat_concurrent: int = Field(default=2, ge=1)
     chat_daily_token_budget: int = Field(default=200_000, ge=1)
     chat_cache_entries: int = Field(default=256, ge=1)
     chat_cache_ttl_s: int = Field(default=3600, ge=1)
+    # Signs the anonymous session cookie. Empty means a random per-process
+    # secret, which resets sessions on restart; set it in production.
+    session_secret: str = ""
     # Placeholders for the pinned generator; set OWL_ prices to your contract.
     chat_input_price_per_mtok: float = Field(default=0.10, ge=0)
     chat_output_price_per_mtok: float = Field(default=0.30, ge=0)

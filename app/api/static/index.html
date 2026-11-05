@@ -98,7 +98,18 @@
             body: JSON.stringify({ question }),
           });
           if (!response.ok || !response.body) {
-            answerEl.textContent = "Please enter a question and try again.";
+            let message = "Please enter a question and try again.";
+            try {
+              const problem = await response.json();
+              if (problem.error === "rate limited") {
+                message = `Too many questions. Try again in ${problem.retry_after} seconds.`;
+              } else if (problem.error) {
+                message = problem.error;
+              }
+            } catch (error) {
+              // Not JSON; keep the generic message.
+            }
+            answerEl.textContent = message;
             return;
           }
           const reader = response.body.getReader();

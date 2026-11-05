@@ -1,6 +1,8 @@
 """In-process chat limits and the exact answer cache, no network."""
 
 
+from datetime import UTC, datetime
+
 from app.api.cache import AnswerCache, cache_key, normalize_question
 from app.api.limits import ChatLimiter
 from app.config import Settings
@@ -38,9 +40,10 @@ def test_per_ip_cap_catches_cookie_rotation():
 
 def test_concurrency_slot_is_released():
     limiter = _limiter(chat_concurrent=1)
-    assert limiter.admit("s", "ip").allowed
+    first = limiter.admit("s", "ip")
+    assert first.allowed
     assert limiter.admit("s", "ip").reason == "concurrent"
-    limiter.release("s")
+    limiter.release(first.token)
     assert limiter.admit("s", "ip").allowed
 
 
@@ -97,3 +100,37 @@ def test_cache_expires_and_evicts():
     cache.put("b", _result())
     cache.put("c", _result())
     assert len(cache) == 1
+
+
+def test_per_ip_minute_cap_catches_session_rotation():
+    limiter = _limiter(chat_per_minute=1)
+    assert limiter.admit("s1", "ip").allowed
+    assert limiter.admit("s2", "ip").reason == "ip_minute"
+
+
+def test_windows_roll_over():
+    now = [0.0]
+    day = [datetime(2026, 1, 1, tzinfo=UTC)]
+    limiter = ChatLimiter(
+        Settings(chat_per_minute=1, chat_concurrent=10),
+        clock=lambda: now[0],
+        now_utc=lambda: day[0],
+    )
+    assert limiter.admit("s", "ip").allowed
+    assert limiter.admit("s", "ip").reason == "minute"
+    now[0] = 61.0
+    assert limiter.admit("s", "ip").allowed
+    now[0] = 130.0
+    day[0] = datetime(2026, 1, 2, tzinfo=UTC)
+    limiter.record(10, 10)
+    assert limiter.admit("s", "ip").allowed
+
+
+def test_release_is_idempotent():
+    limiter = _limiter(chat_concurrent=1)
+    first = limiter.admit("s", "ip")
+    second = limiter.admit("s", "ip")
+    limiter.release(first.token)
+    limiter.release(first.token)
+    assert second.status == "rate_limited"
+    assert limiter.admit("s", "ip").allowed

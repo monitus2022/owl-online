@@ -1,9 +1,12 @@
 """FastAPI entrypoint. Run: uvicorn app.main:app --reload"""
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import re
+import secrets
 import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -16,16 +19,17 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from sse_starlette.sse import EventSourceResponse
+from starlette.background import BackgroundTask
 
 from app.agent import build_graph
 from app.agent.router import classify
 from app.api.cache import AnswerCache, cache_key
-from app.api.limits import ChatLimiter, Decision, session_id_for
+from app.api.limits import ChatLimiter, Decision
 from app.api.runtime import Runtime, build_runtime
 from app.api.schemas import AskRequest, AskResponse, StreamRequest
 from app.config import Settings, settings
 from app.logging import configure_logging, get_request_id, set_request_id
-from app.pipeline.generate import DEFAULT_TOP_K, AskResult, ask
+from app.pipeline.generate import DEFAULT_TOP_K, SYSTEM_PROMPT, AskResult, ask
 from app.providers.contracts import Llm, Retriever
 from app.providers.errors import ProviderError
 
@@ -37,11 +41,26 @@ _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 
 
 def _client_ip(request: Request) -> str:
-    """The proxy-facing client address. One trusted reverse proxy in front."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    """The client address set by the trusted proxy, never the leftmost XFF."""
+    for header in ("cf-connecting-ip", "x-real-ip"):
+        value = request.headers.get(header)
+        if value:
+            return value.strip()
     return request.client.host if request.client is not None else "unknown"
+
+
+def _sign(value: str, secret: str) -> str:
+    return hmac.new(secret.encode(), value.encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def _session_from_cookie(request: Request, secret: str) -> str | None:
+    raw = request.cookies.get("owl_session")
+    if not raw or "." not in raw:
+        return None
+    value, _, signature = raw.rpartition(".")
+    if not value or not hmac.compare_digest(signature, _sign(value, secret)):
+        return None
+    return value
 
 
 def create_app(app_settings: Settings | None = None, runtime: Runtime | None = None) -> FastAPI:
@@ -63,6 +82,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 ),
             )
         app.state.runtime = built
+        app.state.session_secret = app_settings.session_secret or secrets.token_hex(32)
         app.state.limiter = ChatLimiter(app_settings)
         app.state.cache = AnswerCache(
             app_settings.chat_cache_entries, app_settings.chat_cache_ttl_s
@@ -80,7 +100,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
         # Let a cross-origin chat page read the request id for support.
-        expose_headers=["X-Request-ID"],
+        expose_headers=["X-Request-ID", "Retry-After"],
     )
 
     @app.middleware("http")
@@ -90,10 +110,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         request_id = uuid.uuid4().hex[:12]
         set_request_id(request_id)
         ip = _client_ip(request)
-        given = request.headers.get("x-session-id")
-        session = given if given and _SESSION_RE.match(given) else session_id_for(
-            ip, request.headers.get("user-agent", "")
-        )
+        secret = app.state.session_secret
+        session = _session_from_cookie(request, secret)
+        issue_cookie = session is None
+        if session is None:
+            session = secrets.token_hex(16)
         request.state.client_ip = ip
         request.state.session_id = session
         start = time.perf_counter()
@@ -104,6 +125,18 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             raise
         elapsed_ms = (time.perf_counter() - start) * 1000
         response.headers["X-Request-ID"] = request_id
+        if issue_cookie:
+            secure = request.url.scheme == "https" or (
+                request.headers.get("x-forwarded-proto") == "https"
+            )
+            response.set_cookie(
+                "owl_session",
+                f"{session}.{_sign(session, secret)}",
+                httponly=True,
+                samesite="lax",
+                secure=secure,
+                max_age=86_400,
+            )
         # /health is polled; keep it out of the INFO stream.
         level = logging.DEBUG if request.url.path == "/health" else logging.INFO
         logger.log(
@@ -121,6 +154,20 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
 
     def get_llm(request: Request) -> Llm:
         return request.app.state.runtime.llm
+
+    def cache_scope(runtime: Runtime, model: str) -> str:
+        """Everything besides the question that can change a cached answer."""
+        return "|".join(
+            [
+                runtime.index_hash,
+                str(DEFAULT_TOP_K),
+                app_settings.embedder_provider,
+                app_settings.rerank_provider,
+                str(app_settings.rerank_min_score),
+                str(app_settings.retry_budget),
+                model,
+            ]
+        )
 
     def limit_response(decision: Decision) -> JSONResponse:
         if decision.status == "degraded":
@@ -151,11 +198,16 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         question: str,
         result: AskResult,
         latency_ms: float,
+        student: str = "",
     ) -> None:
         limiter: ChatLimiter = app.state.limiter
-        input_chars = len(question) + sum(len(chunk.text) for chunk in result.chunks)
-        input_tokens = max(1, input_chars // 4)
-        output_tokens = max(1, len(result.answer) // 4)
+        attempts = max(1, result.attempts)
+        per_draft = len(SYSTEM_PROMPT) + len(question) + len(student) + sum(
+            len(chunk.text) for chunk in result.chunks
+        )
+        input_tokens = 0 if cache_hit else max(1, attempts * per_draft // 4)
+        output_chars = attempts * (200 if result.abstained else len(result.answer))
+        output_tokens = 0 if cache_hit else max(1, output_chars // 4)
         cost = 0.0 if cache_hit else limiter.cost(input_tokens, output_tokens)
         if not cache_hit:
             limiter.record(input_tokens, output_tokens)
@@ -189,18 +241,21 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     ) -> AskResponse | JSONResponse:
         session = request.state.session_id
         limiter: ChatLimiter = app.state.limiter
-        decision = limiter.admit(session, request.state.client_ip)
+        runtime = request.app.state.runtime
+        model = getattr(llm, "name", "?")
+        key = cache_key(body.question, cache_scope(runtime, model), model)
+        cached = app.state.cache.get(key)
+        decision = limiter.admit(
+            session, request.state.client_ip, cache_hit=cached is not None
+        )
         if not decision.allowed:
             return limit_response(decision)
         stage = {"name": "retrieve"}
-        model = getattr(llm, "name", "?")
-        key = cache_key(body.question, request.app.state.runtime.index_hash, model)
 
         def mark(name: str) -> None:
             stage["name"] = name
 
         try:
-            cached = app.state.cache.get(key)
             if cached is not None:
                 record_usage(
                     request,
@@ -243,7 +298,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 raise HTTPException(
                     status_code=502, detail="model provider unavailable"
                 ) from exc
-            app.state.cache.put(key, result)
+            if not result.abstained:
+                app.state.cache.put(key, result)
             record_usage(
                 request,
                 intent="answer",
@@ -259,7 +315,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 abstained=result.abstained,
             )
         finally:
-            limiter.release(session)
+            limiter.release(decision.token)
 
     @app.post("/ask/stream", response_model=None)
     async def ask_stream_endpoint(
@@ -271,10 +327,6 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             raise RuntimeError("agent graph was not built")
         session = request.state.session_id
         limiter: ChatLimiter = app.state.limiter
-        decision = limiter.admit(session, request.state.client_ip)
-        if not decision.allowed:
-            return limit_response(decision)
-
         llm = runtime.llm
         model = getattr(llm, "name", "?")
         intent = classify(
@@ -285,11 +337,16 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         # Only corpus-only answers are shared; feedback is personalised and
         # practice is meant to vary.
         key = (
-            cache_key(body.question, runtime.index_hash, model)
+            cache_key(body.question, cache_scope(runtime, model), model)
             if intent == "answer"
             else None
         )
         cached = app.state.cache.get(key) if key else None
+        decision = limiter.admit(
+            session, request.state.client_ip, cache_hit=cached is not None
+        )
+        if not decision.allowed:
+            return limit_response(decision)
         initial = {
             "question": body.question,
             "requested_mode": body.mode,
@@ -306,10 +363,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         "event": "mode",
                         "data": json.dumps({"mode": "answer"}, ensure_ascii=False),
                     }
-                    yield {
-                        "event": "token",
-                        "data": json.dumps({"text": cached.answer}, ensure_ascii=False),
-                    }
+                    if cached.abstain_reason != "no_evidence":
+                        yield {
+                            "event": "token",
+                            "data": json.dumps(
+                                {"text": cached.answer}, ensure_ascii=False
+                            ),
+                        }
                     if cached.abstained:
                         yield {"event": "reset", "data": json.dumps({})}
                     yield {
@@ -320,7 +380,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                                 "citations": cached.citations,
                                 "abstained": cached.abstained,
                                 "needs_input": False,
-                                "attempts": 1,
+                                "attempts": cached.attempts,
                                 "mode": "answer",
                             },
                             ensure_ascii=False,
@@ -336,9 +396,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         latency_ms=0.0,
                     )
                 finally:
-                    limiter.release(session)
+                    limiter.release(decision.token)
 
-            return EventSourceResponse(cached_events(), headers=headers)
+            return EventSourceResponse(
+                cached_events(),
+                headers=headers,
+                background=BackgroundTask(limiter.release, decision.token),
+            )
 
         async def events() -> AsyncIterator[dict[str, str]]:
             final: dict[str, object] = dict(initial)
@@ -385,6 +449,26 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             # Tokens are a draft. The final event is authoritative: an abstained
             # answer tells the client to replace the draft, and reset does it
             # explicitly before the final payload.
+            result = AskResult(
+                answer=str(final.get("answer", "")),
+                citations=list(final.get("citations", [])),
+                abstained=bool(final.get("abstained", False)),
+                chunks=list(final.get("chunks", [])),
+                attempts=int(final.get("attempts", 1)),
+                abstain_reason=final.get("abstain_reason"),  # type: ignore[arg-type]
+            )
+            if key is not None and not result.abstained:
+                app.state.cache.put(key, result)
+            record_usage(
+                request,
+                intent=str(final.get("mode", intent)),
+                model=model,
+                cache_hit=False,
+                question=body.question,
+                result=result,
+                latency_ms=(time.perf_counter() - start) * 1000,
+                student=body.student_answer or "",
+            )
             if final.get("abstained"):
                 yield {"event": "reset", "data": json.dumps({})}
             yield {
@@ -408,7 +492,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 chunks=list(final.get("chunks", [])),
                 attempts=int(final.get("attempts", 1)),
             )
-            if key is not None:
+            if key is not None and not result.abstained:
                 app.state.cache.put(key, result)
             record_usage(
                 request,
@@ -425,9 +509,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 async for event in events():
                     yield event
             finally:
-                limiter.release(session)
+                limiter.release(decision.token)
 
-        return EventSourceResponse(guarded(), headers=headers)
+        return EventSourceResponse(
+            guarded(),
+            headers=headers,
+            background=BackgroundTask(limiter.release, decision.token),
+        )
 
     return app
 

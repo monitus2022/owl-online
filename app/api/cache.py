@@ -13,10 +13,15 @@ import time
 from collections import OrderedDict
 from collections.abc import Callable
 
-from app.pipeline.generate import RETRY_SYSTEM_PROMPT, SYSTEM_PROMPT, AskResult
+from app.pipeline.generate import (
+    RETRY_SYSTEM_PROMPT,
+    SYSTEM_PROMPT,
+    AskResult,
+    build_prompt,
+)
 
 PROMPT_VERSION = hashlib.sha256(
-    f"{SYSTEM_PROMPT}\n{RETRY_SYSTEM_PROMPT}".encode()
+    f"{SYSTEM_PROMPT}\n{RETRY_SYSTEM_PROMPT}\n{build_prompt('{question}', [])}".encode()
 ).hexdigest()[:12]
 
 _PUNCTUATION = re.compile(r"[^\w\s]")

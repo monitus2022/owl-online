@@ -139,3 +139,32 @@ def test_stream_answer_hits_the_cache_on_repeat():
     finals = [_sse_events(body)[-1] for body in bodies]
     assert finals[0][0] == "final" and finals[1][0] == "final"
     assert llm.calls == 1
+
+
+def test_forged_session_header_does_not_bypass_the_cookie_session():
+    llm = _Llm()
+    with _client(llm, chat_per_minute=1) as client:
+        assert (
+            client.post(
+                "/ask",
+                json={"question": "Who trims the wick?"},
+                headers={"X-Session-ID": "forged-one-1234"},
+            ).status_code
+            == 200
+        )
+        second = client.post(
+            "/ask",
+            json={"question": "Who keeps the lighthouse?"},
+            headers={"X-Session-ID": "forged-two-5678"},
+        )
+    assert second.status_code == 429
+    assert second.json()["reason"] == "minute"
+
+
+def test_cached_answer_is_served_after_the_budget_is_exhausted():
+    llm = _Llm()
+    with _client(llm, chat_daily_token_budget=5) as client:
+        assert client.post("/ask", json={"question": "Who trims?"}).status_code == 200
+        repeat = client.post("/ask", json={"question": "Who trims?"})
+    assert repeat.status_code == 200
+    assert llm.calls == 1

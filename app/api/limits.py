@@ -1,16 +1,20 @@
 """In-process chat limits, usage accounting and the daily spend guard.
 
-One API process on one host, so memory is enough; a restart resets the windows,
-which is acceptable for anonymous caps. Chat only: exam routes will use their
-own dependency when they exist, so degrading chat never takes them down.
+One API process on one host, so memory is enough; a restart resets the windows.
+Chat only: exam routes will use their own dependency, so degrading chat never
+takes them down.
+
+Sessions are server-issued and signed in the API layer; this module only keys on
+the value it is given. Releases use a per-admission token, so a double release
+cannot free another request's slot.
 """
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import math
 import time
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -23,12 +27,6 @@ logger = logging.getLogger(__name__)
 DecisionStatus = Literal["ok", "rate_limited", "degraded"]
 
 
-def session_id_for(ip: str, user_agent: str) -> str:
-    """Stable anonymous session from the client fingerprint."""
-    material = f"{ip}\n{user_agent}".encode()
-    return hashlib.sha256(material).hexdigest()[:16]
-
-
 @dataclass(frozen=True)
 class Decision:
     """Admission outcome for one chat request."""
@@ -36,6 +34,7 @@ class Decision:
     status: DecisionStatus
     reason: str | None = None
     retry_after: int | None = None
+    token: str | None = None
 
     @property
     def allowed(self) -> bool:
@@ -58,47 +57,72 @@ class ChatLimiter:
         settings: Settings,
         *,
         clock: Callable[[], float] = time.monotonic,
-        today: Callable[[], str] | None = None,
+        now_utc: Callable[[], datetime] | None = None,
     ) -> None:
         self._settings = settings
         self._clock = clock
-        self._today = today or (lambda: datetime.now(UTC).strftime("%Y-%m-%d"))
+        self._now_utc = now_utc or (lambda: datetime.now(UTC))
         self._windows: dict[str, _Window] = {}
         self._ip_windows: dict[str, _Window] = {}
-        self._active: dict[str, int] = {}
+        self._active: dict[str, set[str]] = {}
+        self._active_ip: dict[str, set[str]] = {}
+        self._leases: dict[str, tuple[str, str]] = {}
+        self._admits = 0
         self._tokens_day = ""
         self._tokens = 0
         self._alerts: set[int] = set()
 
-    def admit(self, session: str, ip: str) -> Decision:
+    def admit(self, session: str, ip: str, *, cache_hit: bool = False) -> Decision:
         """Check the limits and, when allowed, count the request."""
         now = self._clock()
         day = self._today()
         self._roll_day(day)
+        self._maybe_prune(day)
         window = self._windows.setdefault(session, _Window())
         ip_window = self._ip_windows.setdefault(ip, _Window())
         self._roll_window(window, ip_window, now, day)
 
+        session_retry = max(1, math.ceil(60 - (now - window.minute_start)))
+        ip_retry = max(1, math.ceil(60 - (now - ip_window.minute_start)))
         if window.minute_count >= self._settings.chat_per_minute:
-            retry = max(1, math.ceil(60 - (now - window.minute_start)))
-            return Decision("rate_limited", "minute", retry)
+            return Decision("rate_limited", "minute", session_retry)
+        if ip_window.minute_count >= self._settings.chat_per_minute:
+            return Decision("rate_limited", "ip_minute", ip_retry)
         if window.day_count >= self._settings.chat_per_day:
-            return Decision("rate_limited", "day", 3600)
+            return Decision("rate_limited", "day", self._to_midnight())
         if ip_window.day_count >= self._settings.chat_ip_per_day:
-            return Decision("rate_limited", "ip_day", 3600)
-        if self._tokens >= self._settings.chat_daily_token_budget:
-            return Decision("degraded", "budget", 3600)
-        if self._active.get(session, 0) >= self._settings.chat_concurrent:
+            return Decision("rate_limited", "ip_day", self._to_midnight())
+        if len(self._active.get(session, ())) >= self._settings.chat_concurrent:
             return Decision("rate_limited", "concurrent", 1)
+        if len(self._active_ip.get(ip, ())) >= self._settings.chat_concurrent:
+            return Decision("rate_limited", "ip_concurrent", 1)
+        if not cache_hit and self._tokens >= self._settings.chat_daily_token_budget:
+            return Decision("degraded", "budget", self._to_midnight())
 
+        token = uuid.uuid4().hex
         window.minute_count += 1
         window.day_count += 1
+        ip_window.minute_count += 1
         ip_window.day_count += 1
-        self._active[session] = self._active.get(session, 0) + 1
-        return Decision("ok")
+        self._active.setdefault(session, set()).add(token)
+        self._active_ip.setdefault(ip, set()).add(token)
+        self._leases[token] = (session, ip)
+        return Decision("ok", token=token)
 
-    def release(self, session: str) -> None:
-        self._active[session] = max(0, self._active.get(session, 1) - 1)
+    def release(self, token: str | None) -> None:
+        """Release one admission. Safe to call twice."""
+        if token is None:
+            return
+        lease = self._leases.pop(token, None)
+        if lease is None:
+            return
+        session, ip = lease
+        self._active.get(session, set()).discard(token)
+        if not self._active.get(session):
+            self._active.pop(session, None)
+        self._active_ip.get(ip, set()).discard(token)
+        if not self._active_ip.get(ip):
+            self._active_ip.pop(ip, None)
 
     def cost(self, input_tokens: int, output_tokens: int) -> float:
         prices = self._settings
@@ -122,7 +146,16 @@ class ChatLimiter:
 
     @property
     def tokens_used(self) -> int:
+        self._roll_day(self._today())
         return self._tokens
+
+    def _today(self) -> str:
+        return self._now_utc().strftime("%Y-%m-%d")
+
+    def _to_midnight(self) -> int:
+        now = self._now_utc()
+        seconds = 24 * 3600 - (now.hour * 3600 + now.minute * 60 + now.second)
+        return max(60, seconds)
 
     def _roll_day(self, day: str) -> None:
         if self._tokens_day == day:
@@ -143,3 +176,21 @@ class ChatLimiter:
         if now - window.minute_start >= 60:
             window.minute_start = now
             window.minute_count = 0
+        if now - ip_window.minute_start >= 60:
+            ip_window.minute_start = now
+            ip_window.minute_count = 0
+
+    def _maybe_prune(self, day: str) -> None:
+        """Drop yesterday's windows and empty sessions so headers cannot grow state."""
+        self._admits += 1
+        if self._admits % 256:
+            return
+        self._windows = {
+            key: window for key, window in self._windows.items() if window.day == day
+        }
+        self._ip_windows = {
+            key: window for key, window in self._ip_windows.items() if window.day == day
+        }
+        if len(self._windows) > 20_000 or len(self._ip_windows) > 20_000:
+            self._windows.clear()
+            self._ip_windows.clear()
