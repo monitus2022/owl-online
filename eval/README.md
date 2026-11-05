@@ -209,6 +209,22 @@ outside the current candidates. That is a query-expansion or embedder problem,
 not a fusion bug. The new numbers are in
 `docs/runs/2026-11-04-v2-d3-retrieval.md`.
 
+## Residual retrieval experiments
+
+After the D3 baseline, four variants were measured and rejected:
+
+| Variant | Hit@5 | Recall@5 | MRR | Note |
+|---|---|---|---|---|
+| baseline 0.6B, pool 50 | 0.76 | 0.66 | 0.50 | kept |
+| 4B embedder, pool 50 | 0.76 | 0.65 | 0.49 | dense 0.83, rerank lift 0.84 |
+| 0.6B, pool 100 | 0.68 | 0.57 | 0.48 | reranker dilution |
+| 0.6B, pool 30 | 0.74 | 0.63 | 0.52 | named 0.88 |
+| contextual index, 0.6B | 0.72 | 0.61 | 0.50 | sparse 0.73, dense 0.76 |
+
+No variant improves overall Hit@5. The retained baseline is 0.6B, pool 50,
+text-only. Details: `docs/runs/2026-11-05-v2-d3-retrieval-ablations.md` and
+`docs/runs/2026-11-05-v2-d3-contextual-retrieval.md`.
+
 ## V1 mini-eval (historical)
 
 Measured 2026-11-04 on the V1 20+5 gold set, with rerank on (default) and off.

@@ -22,6 +22,7 @@ class RetrievalSetup:
     chunks: int
     embedder: str
     dims: int
+    text_hash: str
     rebuilt: bool
 
 
@@ -56,5 +57,6 @@ async def compose_retriever(
         chunks=len(chunks),
         embedder=built.collection.metadata.get("embedder", embedder.name),
         dims=built.dims,
+        text_hash=built.text_hash,
         rebuilt=built.rebuilt,
     )

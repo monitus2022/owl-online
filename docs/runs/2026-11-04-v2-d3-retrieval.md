@@ -1,11 +1,11 @@
 # Run record: V2 D3 retrieval filter and decomposition
 
 - Date: 2026-11-04
-- Run id: `20261104T154503Z`
+- Run id: `20261104T220147Z`
 - Ticket: #78 (V2 D3)
 - Config: `pinned` (reranker on)
-- Artifacts: `eval/results/baseline.csv` (committed), `eval/results/20261104T154503Z.csv` (local, gitignored)
-- Status: pinned D3 baseline
+- Artifacts: `eval/results/baseline.csv` (committed), `eval/results/20261104T220147Z.csv` (local, gitignored)
+- Status: pinned D3 baseline (re-pinned after adding `index_text_hash`; metrics unchanged)
 - Supersedes: run `20261104T144856Z` (V2 D1 baseline r4)
 
 ## Configuration
@@ -21,6 +21,7 @@
 | Filter | numeric/named book and chapter, dense `where` plus BM25 subset, unfiltered fallback |
 | Decomposition | at most three sub-queries plus the original question, merged with RRF |
 | Gold set | 60 items: 50 answerable, 10 unanswerable |
+| Index text hash | `230bf8b2ab9af9d5` |
 | Judged sample | 15, round-robin across the answerable slices |
 
 ## Retrieval
@@ -130,6 +131,6 @@ generation (judged sample)
   named_reference        n=5   answered=5   abstained=0   EM=0.00 F1=0.28 faithful=5/5 (1.00) judge correct=5 partial=0 wrong=0 grounded=5 judge_parse=0 faithful_parse=0
   simple                 n=5   answered=5   abstained=0   EM=0.00 F1=0.30 faithful=5/5 (1.00) judge correct=5 partial=0 wrong=0 grounded=5 judge_parse=0 faithful_parse=0
 
-wrote /Users/tc/Documents/Github/owl-online/eval/results/20261104T154503Z.csv
+wrote /Users/tc/Documents/Github/owl-online/eval/results/20261104T220147Z.csv
 wrote baseline /Users/tc/Documents/Github/owl-online/eval/results/baseline.csv
 ```

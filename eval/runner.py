@@ -47,6 +47,7 @@ async def run(
     k: int,
     sample: int,
     pin_baseline: bool,
+    embedder_model: str | None = None,
 ) -> RunReport:
     """Score the pinned stack, write one result CSV, and optionally pin it."""
     reranker = (
@@ -55,7 +56,7 @@ async def run(
     setup = await compose_retriever(
         chunks_path,
         index_dir,
-        make_embedder(settings.embedder_provider),
+        make_embedder(settings.embedder_provider, model=embedder_model),
         reranker=reranker,
         pool=settings.rerank_pool if reranker is not None else None,
         min_score=settings.rerank_min_score,
@@ -89,7 +90,14 @@ async def run(
     generation_by_slice = generation_metrics_by_slice(verdicts, gold)
 
     run_id = timestamp_run_id()
-    config = "pinned" if reranker is not None else "no-rerank"
+    if reranker is None:
+        config = "no-rerank"
+    elif embedder_model is not None:
+        config = "custom-embedder"
+    elif chunks_path.name != "chunks.jsonl" or index_dir.name != "chroma":
+        config = "context"
+    else:
+        config = "pinned"
     manifest = load_manifest()
     values = manifest_row(
         manifest,
@@ -101,16 +109,16 @@ async def run(
         judged_sample=sample,
         reranker_model=settings.rerank_model if reranker is not None else None,
         embedder_model=(
-            settings.bedrock_embed_model
-            if settings.embedder_provider == "bedrock"
-            else None
+            embedder_model
+            or (
+                settings.bedrock_embed_model
+                if settings.embedder_provider == "bedrock"
+                else None
+            )
         ),
-        embedder_dims=(
-            settings.bedrock_embed_dims
-            if settings.embedder_provider == "bedrock"
-            else None
-        ),
+        embedder_dims=setup.dims,
         gold_hash=gold_hash,
+        index_text_hash=setup.text_hash,
         rerank_min_score=settings.rerank_min_score,
         generator_temperature=temperature,
         judge_temperature=temperature,

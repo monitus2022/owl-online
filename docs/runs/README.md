@@ -10,6 +10,8 @@ history of how the RAG strategy moved over the sprint.
 - Write it after the run finishes, before closing the ticket.
 - One record per run id. Do not rewrite the metrics of a past run; a changed
   configuration is a new record.
+- An experiment record may cover several run ids when it compares
+  configurations; list every id in the table and link the same record.
 - Record files are committed. Timestamped CSVs stay local and gitignored, so the
   record must stand on its own without the CSV.
 - Add a row to the Runs table below in the same commit.
@@ -35,7 +37,11 @@ so on.
 | 2026-11-04 | #76 (V2 D1) | `20261104T143343Z` | `pinned` | 0.58 | 0.30 | 11/15 | [V2 D1 baseline r3](2026-11-04-v2-d1-baseline-r3.md) |
 | 2026-11-04 | #76 (V2 D1) | `20261104T144856Z` | `pinned` | 0.58 | 0.28 | 11/15 | [V2 D1 baseline r4](2026-11-04-v2-d1-baseline-r4.md) |
 | 2026-11-04 | #78 (V2 D3) | `20261104T152008Z` | `pinned` | 0.58 | 0.28 | 11/15 | [V2 D3 diagnostics](2026-11-04-v2-d3-retrieval-diagnostics.md) |
-| 2026-11-04 | #78 (V2 D3) | `20261104T154503Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D3 baseline](2026-11-04-v2-d3-retrieval.md) |
+| 2026-11-04 | #78 (V2 D3) | `20261104T220147Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D3 baseline](2026-11-04-v2-d3-retrieval.md) |
+| 2026-11-05 | #78 (V2 D3) | `20261104T185945Z` | `context` | 0.72 | 0.31 | 12/15 | [Contextual retrieval, rejected](2026-11-05-v2-d3-contextual-retrieval.md) |
+| 2026-11-05 | #78 (V2 D3) | `20261104T214110Z` | `4b` | 0.76 | 0.32 | 12/15 | [Retrieval ablations](2026-11-05-v2-d3-retrieval-ablations.md) |
+| 2026-11-05 | #78 (V2 D3) | `20261104T214334Z` | `pool-100` | 0.68 | 0.32 | 12/15 | [Retrieval ablations](2026-11-05-v2-d3-retrieval-ablations.md) |
+| 2026-11-05 | #78 (V2 D3) | `20261104T214458Z` | `pool-30` | 0.74 | 0.32 | 12/15 | [Retrieval ablations](2026-11-05-v2-d3-retrieval-ablations.md) |
 
 ## Template
 

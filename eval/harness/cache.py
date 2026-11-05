@@ -15,7 +15,7 @@ class CachedLlm:
 
     def __init__(
         self,
-        inner: Llm,
+        inner: Llm | None,
         name: str,
         cache_dir: Path,
         *,
@@ -28,17 +28,30 @@ class CachedLlm:
         cache_dir.mkdir(parents=True, exist_ok=True)
 
     async def generate(self, system: str, prompt: str, *, context: str | None = None) -> str:
+        path = self._path(system, prompt, context)
+        cached = self.get_cached(system, prompt, context=context)
+        if cached is not None:
+            return cached
+        if self._inner is None:
+            raise RuntimeError("cache-only CachedLlm cannot generate")
+        output = await self._inner.generate(system, prompt, context=context)
+        path.write_text(output, encoding="utf-8")
+        return output
+
+    def get_cached(
+        self, system: str, prompt: str, *, context: str | None = None
+    ) -> str | None:
+        """Return a cached reply without calling the model, or None."""
+        path = self._path(system, prompt, context)
+        return path.read_text(encoding="utf-8") if path.exists() else None
+
+    def _path(self, system: str, prompt: str, context: str | None) -> Path:
         key = hashlib.sha256(
             json.dumps([self.name, self._variant, system, prompt, context]).encode(
                 "utf-8"
             )
         ).hexdigest()
-        path = self._dir / f"{key}.txt"
-        if path.exists():
-            return path.read_text(encoding="utf-8")
-        output = await self._inner.generate(system, prompt, context=context)
-        path.write_text(output, encoding="utf-8")
-        return output
+        return self._dir / f"{key}.txt"
 
     def stream(
         self, system: str, prompt: str, *, context: str | None = None

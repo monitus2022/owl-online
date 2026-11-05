@@ -23,7 +23,7 @@ Pipeline stages, in order:
 | Stage | Module | Entry point |
 |---|---|---|
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
-| Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` |
+| Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
 | Generate | `app/pipeline/generate/` | `ask` |
 
@@ -178,7 +178,7 @@ generate) for the per-call detail.
 
 | Type | Module | Kind | Purpose |
 |---|---|---|---|
-| `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, relevance or fused score |
+| `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |

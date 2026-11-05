@@ -20,3 +20,4 @@ class Chunk(BaseModel, extra="allow"):
     text: str
     metadata: ChunkMetadata
     score: float = 0.0
+    context: str = ""

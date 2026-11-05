@@ -38,6 +38,11 @@ def main() -> int:
     )
     parser.add_argument("--k", type=int, default=5)
     parser.add_argument("--sample", type=int, default=15)
+    parser.add_argument(
+        "--embedder-model",
+        default=None,
+        help="override the local/Bedrock embedder model slug",
+    )
     parser.add_argument("--write-baseline", action="store_true")
     parser.add_argument("--check", action="store_true")
     parser.add_argument(
@@ -51,6 +56,17 @@ def main() -> int:
         parser.error("--check and --write-baseline are mutually exclusive")
     if args.latest is not None and not args.check:
         parser.error("--latest is only used with --check")
+    if args.embedder_model and args.index == REPO / "data" / "index" / "chroma":
+        parser.error("--embedder-model requires a separate --index")
+    pinned_setup = (
+        args.chunks == REPO / "data" / "chunks.jsonl"
+        and args.index == REPO / "data" / "index" / "chroma"
+        and args.embedder_model is None
+        and args.k == 5
+        and args.sample == 15
+    )
+    if args.write_baseline and not pinned_setup:
+        parser.error("--write-baseline requires the pinned chunks, index, embedder, k and sample")
 
     try:
         thresholds = load_thresholds(args.thresholds)
@@ -79,6 +95,7 @@ def main() -> int:
             k=args.k,
             sample=args.sample,
             pin_baseline=args.write_baseline,
+            embedder_model=args.embedder_model,
         )
     )
     print(render_run(run_report))
