@@ -41,7 +41,11 @@ def make_embedder(provider: str, *, model: str | None = None) -> Embedder:
 
 
 def make_llm(
-    provider: str, *, model: str | None = None, temperature: float | None = None
+    provider: str,
+    *,
+    model: str | None = None,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
 ) -> Llm:
     """Build an Llm for a provider name"""
     resolved = model or (DEFAULT_MODEL if provider == "openrouter" else settings.bedrock_llm_model)
@@ -52,6 +56,7 @@ def make_llm(
                 model=model or DEFAULT_MODEL,
                 api_key=settings.openrouter_api_key,
                 temperature=temperature,
+                max_tokens=max_tokens,
             )
         case "bedrock":
             return BedrockLlm(

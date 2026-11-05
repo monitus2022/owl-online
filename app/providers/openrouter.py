@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "qwen/qwen3-30b-a3b-instruct-2507"
 DEFAULT_TIMEOUT = 60.0
+# OpenRouter attributes usage to an app from these headers; without them the
+# dashboard shows "unknown".
+DEFAULT_APP_NAME = "owl-online"
+DEFAULT_APP_URL = "https://github.com/monitus2022/owl-online"
 
 
 class OpenRouterLlm:
@@ -40,14 +44,24 @@ class OpenRouterLlm:
         client: AsyncOpenAI | None = None,
         timeout: float = DEFAULT_TIMEOUT,
         temperature: float | None = None,
+        max_tokens: int | None = None,
     ) -> None:
         if client is None and not api_key:
             raise ProviderError("OWL_OPENROUTER_API_KEY is not set")
         self.name = f"openrouter/{model}"  # manifest pin + logging
         self._model = model
         self._temperature = temperature
+        if max_tokens is not None and max_tokens < 1:
+            raise ValueError("max_tokens must be positive")
+        self._max_tokens = max_tokens
         self._client = client or AsyncOpenAI(
-            base_url=base_url, api_key=api_key, timeout=timeout
+            base_url=base_url,
+            api_key=api_key,
+            timeout=timeout,
+            default_headers={
+                "HTTP-Referer": DEFAULT_APP_URL,
+                "X-Title": DEFAULT_APP_NAME,
+            },
         )
 
     async def generate(
@@ -107,11 +121,14 @@ class OpenRouterLlm:
         if close is not None:
             await close()
 
-    def _sampling(self) -> dict[str, float]:
+    def _sampling(self) -> dict[str, float | int]:
         """Optional sampling parameters; omitted entirely when not pinned."""
-        if self._temperature is None:
-            return {}
-        return {"temperature": self._temperature}
+        sampling: dict[str, float | int] = {}
+        if self._temperature is not None:
+            sampling["temperature"] = self._temperature
+        if self._max_tokens is not None:
+            sampling["max_tokens"] = self._max_tokens
+        return sampling
 
     @staticmethod
     def _messages(

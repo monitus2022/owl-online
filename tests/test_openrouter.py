@@ -132,3 +132,39 @@ async def test_live_generate_and_stream(openrouter_live):
     assert answer.strip()
     tokens = [t async for t in llm.stream("Reply with the single word ok.", "say ok")]
     assert "".join(tokens).strip()
+
+def test_sampling_can_cap_output_tokens():
+    from app.providers.openrouter import OpenRouterLlm
+
+    llm = OpenRouterLlm(
+        model="qwen/qwen3-30b-a3b-instruct-2507",
+        client=object(),
+        temperature=0.0,
+        max_tokens=512,
+    )
+    assert llm._sampling()["max_tokens"] == 512
+
+
+def test_max_tokens_must_be_positive():
+    import pytest
+
+    from app.providers.openrouter import OpenRouterLlm
+
+    with pytest.raises(ValueError):
+        OpenRouterLlm(model="x", client=object(), max_tokens=0)
+
+
+def test_client_sends_app_attribution_headers(monkeypatch):
+    import app.providers.openrouter as module
+
+    captured = {}
+
+    class _Client:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(module, "AsyncOpenAI", _Client)
+    module.OpenRouterLlm(api_key="test", model="qwen/qwen3-30b-a3b-instruct-2507")
+    headers = captured["default_headers"]
+    assert headers["X-Title"] == "owl-online"
+    assert headers["HTTP-Referer"].startswith("https://")

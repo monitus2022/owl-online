@@ -392,6 +392,8 @@ persists exam attempts and chat history.
 | Cost controls | #88 | A |
 | Retrieval and guardrails | #79, #72, #23, #73, #63 | A |
 | Observability and close-out | #82, #29, #31, #32, #22 | A |
+| Retrieval quality | #96, #70, #71 | A |
+| Chat persona | #97, #43 | A/C |
 | Eval gate | #77, #16, #10, #9, #12, #14, #24 | A |
 | Subject knowledge packs | #87 | B1 |
 | Exam data and generation | #38, #39 | B2 |
@@ -400,6 +402,11 @@ persists exam attempts and chat history.
 | Conversation memory | #30 | C |
 | Lesson mode | #43 | C |
 | Auth and long-term memory | #35, #44 | D |
+
+Next work: #96 retrieval quality (multi-book strategy and coverage) comes first,
+because the measured loss is selection and coverage. #97 chat persona follows,
+with a thin meta-only path allowed earlier because it does not change the answer
+system prompt.
 
 ## Decisions
 
@@ -419,6 +426,10 @@ persists exam attempts and chat history.
 | Per-session/day chat caps and exact cache | Chat is the variable-cost surface |
 | Anonymous threads before auth | Continuous chat without identity work |
 | Auth and long-term memory last | Largest privacy and security surface; not needed for a usable exam |
+| Model routing for practice/feedback is rejected | Mistral was cheaper and faster but lost citations and specific error naming; the flag stays off |
+| Multi-book questions use a bounded map-reduce path | Per-book retrieval and extraction make coverage structural; one top-5 pass cannot represent seven books |
+| Strategy delegation is deterministic | Pre-retrieval scope cues plus a post-retrieval coverage check; no model call to decide the path |
+| The professor is an original character, not a canon one | Limits IP exposure and avoids invented quotations; persona is tone and meta only, never facts |
 
 ## Evaluation
 
