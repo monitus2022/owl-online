@@ -3,7 +3,13 @@
 All excerpt text is invented; the corpus is copyrighted and stays out of git.
 """
 
-from app.pipeline.generate import ABSTAIN_MESSAGE, ask
+import re
+
+from app.pipeline.generate import (
+    ABSTAIN_MESSAGE,
+    RETRY_SYSTEM_PROMPT,
+    ask,
+)
 from app.schemas import Chunk, ChunkMetadata
 
 # RRF reference scores with rrf_k=60: one leg contributes 1/(rrf_k+1) for its
@@ -136,3 +142,100 @@ async def test_streaming_forwards_tokens_and_still_grounds():
     assert "".join(tokens) == "Rowan trims the wick [b1-c01-0000]."
     assert result.citations == ["b1-c01-0000"]
     assert result.abstained is False
+
+
+class _ScriptedLlm:
+    """Return a scripted answer per call; the last answer repeats."""
+
+    def __init__(self, *answers: str) -> None:
+        self._answers = list(answers)
+        self.calls: list[tuple[str, str]] = []
+
+    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        self.calls.append((system, prompt))
+        index = min(len(self.calls), len(self._answers)) - 1
+        return self._answers[index]
+
+    def stream(self, system: str, prompt: str, *, context=None):
+        self.calls.append((system, prompt))
+        index = min(len(self.calls), len(self._answers)) - 1
+
+        async def gen():
+            for piece in re.findall(r"\S+\s*", self._answers[index]):
+                yield piece
+
+        return gen()
+
+
+async def test_uncited_draft_is_retried_and_grounded():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is False
+    assert result.citations == ["b1-c01-0000"]
+    assert result.attempts == 2
+    assert result.retry_reason == "uncited"
+    assert len(llm.calls) == 2
+    assert llm.calls[1][0] == RETRY_SYSTEM_PROMPT
+
+
+async def test_retry_budget_is_one_extra_draft():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.")
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.attempts == 2
+    assert result.retry_reason == "uncited"
+    assert len(llm.calls) == 2
+
+
+async def test_zero_budget_disables_the_retry():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
+    result = await ask(
+        "Who trims the wick?", retriever=_Retriever(chunks), llm=llm, max_retries=0
+    )
+    assert result.abstained is True
+    assert result.attempts == 1
+    assert len(llm.calls) == 1
+
+
+async def test_deliberate_refusal_is_final():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm(ABSTAIN_MESSAGE)
+    result = await ask("Who trims the wick?", retriever=_Retriever(chunks), llm=llm)
+    assert result.abstained is True
+    assert result.attempts == 1
+    assert len(llm.calls) == 1
+
+
+async def test_on_reset_runs_before_the_retry_draft():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
+    resets: list[bool] = []
+    await ask(
+        "Who trims the wick?",
+        retriever=_Retriever(chunks),
+        llm=llm,
+        on_reset=lambda: resets.append(True),
+    )
+    assert resets == [True]
+
+
+async def test_streamed_retry_forwards_both_drafts_and_a_reset():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    llm = _ScriptedLlm("Rowan trims the wick.", "Rowan trims the wick [b1-c01-0000].")
+    tokens: list[str] = []
+    resets: list[bool] = []
+    result = await ask(
+        "Who trims the wick?",
+        retriever=_Retriever(chunks),
+        llm=llm,
+        on_token=tokens.append,
+        on_reset=lambda: resets.append(True),
+    )
+    assert "".join(tokens) == (
+        "Rowan trims the wick.Rowan trims the wick [b1-c01-0000]."
+    )
+    assert resets == [True]
+    assert result.citations == ["b1-c01-0000"]

@@ -42,7 +42,7 @@ Status: in progress.
 | Ticket | Scope |
 |---|---|
 | #80 | Bedrock Converse Llm, LangGraph chat graph, answer/practice/feedback router, SSE |
-| #81 | Chat verification and bounded retry |
+| #81 | Chat verification and bounded retry: deterministic verify, one extra draft |
 | #79 | Retrieval lexical, abstention, deadline, fabrication checks |
 | #82 | Agent observability, injection guard, close-out |
 | #88 | Cost controls: per-session caps, token budgets, exact cache, spend guard |

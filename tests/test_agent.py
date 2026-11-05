@@ -60,6 +60,7 @@ async def test_answer_route_grounds_and_cites():
     assert state["abstained"] is False
     assert state["citations"] == ["b1-c01-0000"]
     assert [chunk.id for chunk in state["chunks"]] == ["b1-c01-0000"]
+    assert state["attempts"] == 1
 
 
 async def test_answer_honors_state_top_k():
@@ -159,3 +160,68 @@ async def test_graph_streams_custom_token_events():
         if mode == "custom" and chunk.get("type") == "token":
             tokens.append(chunk["text"])
     assert "".join(tokens) == text
+
+
+class _RetryLlm(_Llm):
+    """A draft without a citation first, then a grounded one."""
+
+    def __init__(self) -> None:
+        super().__init__("unused")
+        self.drafts = 0
+
+    def stream(self, system: str, prompt: str, *, context=None):
+        self.drafts += 1
+        text = (
+            "Rowan trims the wick."
+            if self.drafts == 1
+            else "Rowan trims the wick [b1-c01-0000]."
+        )
+
+        async def gen():
+            for piece in re.findall(r"\S+\s*", text):
+                yield piece
+
+        return gen()
+
+
+async def test_answer_retries_an_uncited_draft_once():
+    graph = build_graph(_Retriever(), _RetryLlm())
+    state = await graph.ainvoke(
+        {
+            "question": "Who trims the wick?",
+            "requested_mode": "answer",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["attempts"] == 2
+    assert state["retry_reason"] == "uncited"
+    assert state["citations"] == ["b1-c01-0000"]
+    assert state["abstained"] is False
+
+
+async def test_stream_emits_reset_between_the_two_drafts():
+    graph = build_graph(_Retriever(), _RetryLlm())
+    events: list[dict] = []
+    async for mode, chunk in graph.astream(
+        {
+            "question": "Who trims the wick?",
+            "requested_mode": "answer",
+            "student_answer": None,
+            "top_k": 5,
+        },
+        stream_mode=["custom", "updates"],
+    ):
+        if mode == "custom":
+            events.append(chunk)
+    kinds = [event.get("type") for event in events]
+    assert kinds.count("reset") == 1
+    reset_at = kinds.index("reset")
+    before = "".join(
+        event["text"] for event in events[:reset_at] if event.get("type") == "token"
+    )
+    after = "".join(
+        event["text"] for event in events[reset_at:] if event.get("type") == "token"
+    )
+    assert before == "Rowan trims the wick."
+    assert after == "Rowan trims the wick [b1-c01-0000]."

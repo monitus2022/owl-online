@@ -204,6 +204,7 @@ def test_ask_stream_emits_tokens_then_a_grounded_final():
     assert "".join(tokens) == "Rowan trims the wick [b1-c01-0000]."
     assert finals[0]["citations"] == ["b1-c01-0000"]
     assert finals[0]["abstained"] is False
+    assert finals[0]["attempts"] == 1
     assert modes[0]["mode"] == "answer"
 
 
@@ -326,3 +327,40 @@ def test_ask_stream_reports_a_provider_error_as_an_event():
             body = "".join(response.iter_text())
     events = _parse_sse(body)
     assert any(name == "error" for name, _ in events)
+
+
+class _RetryStreamLlm(_Llm):
+    """An uncited first draft, then a grounded one."""
+
+    def __init__(self) -> None:
+        self.streams = 0
+
+    def stream(self, system: str, prompt: str, *, context=None):
+        self.streams += 1
+        pieces = (
+            ("Rowan", " trims", " the wick.")
+            if self.streams == 1
+            else ("Rowan", " trims", " the wick", " [b1-c01-0000].")
+        )
+
+        async def gen():
+            for piece in pieces:
+                yield piece
+
+        return gen()
+
+
+def test_ask_stream_resets_and_retries_an_uncited_draft():
+    runtime = Runtime(retriever=_Retriever(), llm=_RetryStreamLlm())
+    with _client(runtime) as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who trims the wick?"}
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    names = [name for name, _ in events]
+    finals = [data for name, data in events if name == "final"]
+    assert names.count("reset") == 1
+    assert names.index("reset") < names.index("final")
+    assert finals[0]["citations"] == ["b1-c01-0000"]
+    assert finals[0]["attempts"] == 2

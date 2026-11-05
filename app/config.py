@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     bedrock_embed_dims: int = 1024
     bedrock_llm_model: str = "qwen.qwen3-32b-v1:0"
     bedrock_llm_max_tokens: int = 1024
+    # Deterministic verification retries per answer. 0 disables the retry.
+    retry_budget: int = 1
     log_level: str = "INFO"
     live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 

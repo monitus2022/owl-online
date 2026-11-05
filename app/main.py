@@ -40,7 +40,14 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         # Built once, here, never per request.
         built = runtime or await build_runtime(app_settings)
         if built.agent is None:
-            built = replace(built, agent=build_graph(built.retriever, built.llm))
+            built = replace(
+                built,
+                agent=build_graph(
+                    built.retriever,
+                    built.llm,
+                    max_retries=app_settings.retry_budget,
+                ),
+            )
         app.state.runtime = built
         try:
             yield
@@ -105,7 +112,12 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         llm: Annotated[Llm, Depends(get_llm)],
     ) -> AskResponse:
         try:
-            result = await ask(body.question, retriever=retriever, llm=llm)
+            result = await ask(
+                body.question,
+                retriever=retriever,
+                llm=llm,
+                max_retries=app_settings.retry_budget,
+            )
         except ProviderError as exc:
             # Normalized provider failure: a clean 502, never a stack trace.
             raise HTTPException(status_code=502, detail="model provider unavailable") from exc
@@ -182,6 +194,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         "citations": final.get("citations", []),
                         "abstained": final.get("abstained", False),
                         "needs_input": final.get("needs_input", False),
+                        "attempts": final.get("attempts", 1),
                         "mode": final.get("mode", "answer"),
                     },
                     ensure_ascii=False,

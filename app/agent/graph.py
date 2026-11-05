@@ -10,7 +10,7 @@ from app.agent.nodes.feedback import feedback_node
 from app.agent.nodes.practice import practice_node
 from app.agent.router import route
 from app.agent.state import AgentState
-from app.pipeline.generate import DEFAULT_TOP_K
+from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K
 from app.providers.contracts import Llm, Retriever
 
 
@@ -20,13 +20,28 @@ def build_graph(
     *,
     top_k: int = DEFAULT_TOP_K,
     min_score: float | None = None,
+    max_retries: int = DEFAULT_MAX_RETRIES,
 ) -> CompiledStateGraph:
     """Build the stateless per-request graph; no checkpointer in D4."""
     graph = StateGraph(AgentState)
     graph.add_node("router", route)
 
+    # Only the answer path verifies and retries; practice and feedback stay
+    # single-pass and ephemeral.
+    graph.add_node(
+        "answer",
+        partial(
+            answer_node,
+            retriever=retriever,
+            llm=llm,
+            top_k=top_k,
+            min_score=min_score,
+            max_retries=max_retries,
+        ),
+    )
+    graph.add_edge("answer", END)
+
     for name, node in (
-        ("answer", answer_node),
         ("practice", practice_node),
         ("feedback", feedback_node),
     ):
