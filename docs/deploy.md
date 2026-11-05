@@ -167,6 +167,60 @@ If the chosen model is served through an inference profile, grant the same
 actions on the profile ARN instead. Converse streaming fails without
 `bedrock:InvokeModelWithResponseStream`.
 
+## Log shipping
+
+Application logs go to stdout, and Docker's json-file driver keeps them on the
+host. A deploy removes the old container, which deletes its log file, so a
+nightly copy would lose a day of logs on every rollout. Ship continuously
+instead.
+
+One-time AWS setup, with `LOG_BUCKET` and the instance role:
+
+```
+aws s3api create-bucket --bucket "$LOG_BUCKET" --region "$AWS_REGION" \
+  --create-bucket-configuration LocationConstraint="$AWS_REGION"
+aws s3api put-public-access-block --bucket "$LOG_BUCKET" \
+  --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+aws s3api put-bucket-lifecycle-configuration --bucket "$LOG_BUCKET" \
+  --lifecycle-configuration '{"Rules":[{"ID":"expire-7d","Status":"Enabled",
+  "Filter":{"Prefix":"owl-online/"},"Expiration":{"Days":7}}]}'
+```
+
+Attach `s3:PutObject` on `arn:aws:s3:::$LOG_BUCKET/owl-online/*` to the
+instance role (`monitus-ec2-ecr-role`). No list or delete permission is needed.
+
+Run Fluent Bit on the host. It tails the Docker json files, buffers on disk and
+flushes every 30 seconds or 5 MB:
+
+```
+mkdir -p /var/lib/owl/fluent-bit
+docker run -d --name owl-logs --restart unless-stopped \
+  --log-driver=none \
+  -e LOG_BUCKET="$LOG_BUCKET" -e AWS_REGION="$AWS_REGION" \
+  -v /var/lib/docker/containers:/var/lib/docker/containers:ro \
+  -v /var/lib/owl/fluent-bit:/var/lib/owl/fluent-bit \
+  -v "$PWD/deploy/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro" \
+  fluent/fluent-bit:3.1
+```
+
+`--log-driver=none` keeps the shipper from tailing its own output. The API
+container keeps `--log-driver json-file` with `max-size=10m` and `max-file=3`,
+so `docker logs` still works and a log burst cannot fill the 8 GB volume.
+
+Rules:
+
+- 7-day expiry is an S3 lifecycle rule, not a job.
+- A shipper outage only delays the copy: Fluent Bit buffers on disk up to 512 MB.
+- If the shipper is down long enough to fill that buffer, new records are dropped;
+  the API keeps serving.
+- Logs carry ids, counts, timings and hashed sessions. Prompts, answers and
+  student text are not logged, so nothing copyrighted or personal leaves the
+  host through this path.
+
+Verify with `aws s3 ls "s3://$LOG_BUCKET/owl-online/" --recursive | tail` and
+`aws s3api get-bucket-lifecycle-configuration --bucket "$LOG_BUCKET"`.
+
 ## One-time host setup
 
 The pipeline ships only the image. Do these once on the instance:

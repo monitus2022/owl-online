@@ -99,6 +99,7 @@ jobs:
           fi
           docker rm -f __NAME__ >/dev/null 2>&1 || true
           docker run -d --name __NAME__ --restart unless-stopped \
+            --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
             -p __HOST_PORT__:8000 \
             --env-file __ENV_FILE__ \
             -v __DATA_DIR__:/data \
