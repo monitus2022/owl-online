@@ -45,7 +45,7 @@ async def practice_node(
             "abstained": True,
         }
     prompt = evidence_prompt(state["question"], chunks)
-    text = await stream_with_fallback(
+    text, model_used, attempts = await stream_with_fallback(
         llm,
         fallback_llm,
         SYSTEM,
@@ -59,4 +59,6 @@ async def practice_node(
         "answer": result.answer,
         "citations": result.citations,
         "abstained": result.abstained,
+        "llm_model": model_used,
+        "attempts": attempts,
     }

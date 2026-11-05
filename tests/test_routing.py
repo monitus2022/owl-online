@@ -60,6 +60,8 @@ async def test_practice_uses_the_small_model():
     assert state["mode"] == "practice"
     assert small.calls == 1
     assert strong.calls == 0
+    assert state["llm_model"] == "small"
+    assert state["attempts"] == 1
 
 
 async def test_answer_stays_on_the_strong_model():
@@ -119,6 +121,8 @@ async def test_provider_failure_falls_back_to_the_strong_model():
     assert state["citations"] == ["b1-c01-0000"]
     assert small.calls == 1
     assert strong.calls == 1
+    assert state["llm_model"] == "strong"
+    assert state["attempts"] == 2
 
 
 def test_banned_vendors_are_rejected():

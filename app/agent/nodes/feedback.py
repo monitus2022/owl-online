@@ -63,7 +63,7 @@ async def feedback_node(
         chunks,
         extra=f"Student answer:\n{student}",
     )
-    text = await stream_with_fallback(
+    text, model_used, attempts = await stream_with_fallback(
         llm,
         fallback_llm,
         SYSTEM,
@@ -77,4 +77,6 @@ async def feedback_node(
         "answer": result.answer,
         "citations": result.citations,
         "abstained": result.abstained,
+        "llm_model": model_used,
+        "attempts": attempts,
     }

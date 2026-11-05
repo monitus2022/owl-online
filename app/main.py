@@ -244,7 +244,12 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         input_tokens = 0 if cache_hit else max(1, attempts * per_draft // 4)
         output_chars = attempts * (200 if result.abstained else len(result.answer))
         output_tokens = 0 if cache_hit else max(1, output_chars // 4)
-        cost = 0.0 if cache_hit else limiter.cost(input_tokens, output_tokens)
+        small_model = getattr(getattr(request.app.state.runtime, "small_llm", None), "name", None)
+        cost = (
+            0.0
+            if cache_hit
+            else limiter.cost(input_tokens, output_tokens, small=model == small_model)
+        )
         if not cache_hit:
             limiter.record(input_tokens, output_tokens)
         logger.info(
@@ -514,12 +519,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             )
             if key is not None and not result.abstained:
                 app.state.cache.put(key, result)
-            used_model = model
-            if (
-                str(final.get("mode", intent)) in {"practice", "feedback"}
-                and runtime.small_llm is not None
-            ):
-                used_model = getattr(runtime.small_llm, "name", model)
+            used_model = str(final.get("llm_model") or model)
             record_usage(
                 request,
                 intent=str(final.get("mode", intent)),

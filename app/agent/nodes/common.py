@@ -68,8 +68,8 @@ async def stream_with_fallback(
     emit: Emit,
     *,
     intent: str,
-) -> str:
-    """Stream from the routed model, falling back once on a provider failure."""
+) -> tuple[str, str, int]:
+    """Stream from the routed model, returning text, the model used and attempts."""
     tracer = current_tracer()
     if tracer is not None and fallback is not None:
         tracer.emit(
@@ -79,7 +79,8 @@ async def stream_with_fallback(
             fallback=True,
         )
     try:
-        return await stream_text(llm, system, prompt, emit)
+        text = await stream_text(llm, system, prompt, emit)
+        return text, getattr(llm, "name", "?"), 1
     except ProviderError:
         if fallback is None:
             raise
@@ -90,4 +91,5 @@ async def stream_with_fallback(
         # Tokens from the failed model are already on the client. Clear the draft
         # before the fallback stream, exactly as a verification retry does.
         emit({"type": "reset", "reason": "fallback"})
-        return await stream_text(fallback, system, prompt, emit)
+        text = await stream_text(fallback, system, prompt, emit)
+        return text, getattr(fallback, "name", "?"), 2

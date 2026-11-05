@@ -83,6 +83,8 @@ class Settings(BaseSettings):
     # Placeholders for the pinned generator; set OWL_ prices to your contract.
     chat_input_price_per_mtok: float = Field(default=0.10, ge=0)
     chat_output_price_per_mtok: float = Field(default=0.30, ge=0)
+    chat_small_input_price_per_mtok: float = Field(default=0.075, ge=0)
+    chat_small_output_price_per_mtok: float = Field(default=0.20, ge=0)
     log_level: str = "INFO"
     live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 
