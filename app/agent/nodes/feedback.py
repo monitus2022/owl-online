@@ -6,7 +6,11 @@ against stored mark schemes in the exam bank.
 
 from langgraph.config import get_stream_writer
 
-from app.agent.nodes.common import evidence_prompt, retrieve_evidence, stream_text
+from app.agent.nodes.common import (
+    evidence_prompt,
+    retrieve_evidence,
+    stream_with_fallback,
+)
 from app.agent.state import AgentState
 from app.pipeline.generate import ABSTAIN_MESSAGE, ground_answer
 from app.providers.contracts import Llm, Retriever
@@ -30,6 +34,7 @@ async def feedback_node(
     llm: Llm,
     top_k: int,
     min_score: float | None = None,
+    fallback_llm: Llm | None = None,
 ) -> dict[str, object]:
     student = (state.get("student_answer") or "").strip()
     if not student:
@@ -58,7 +63,14 @@ async def feedback_node(
         chunks,
         extra=f"Student answer:\n{student}",
     )
-    text = await stream_text(llm, SYSTEM, prompt, get_stream_writer())
+    text = await stream_with_fallback(
+        llm,
+        fallback_llm,
+        SYSTEM,
+        prompt,
+        get_stream_writer(),
+        intent="feedback",
+    )
     result = ground_answer(text, chunks)
     return {
         "chunks": chunks,

@@ -5,6 +5,7 @@ from typing import Any
 
 from app.pipeline.generate import render_evidence, retrieval_floor, sanitize_evidence
 from app.providers.contracts import Llm, Retriever
+from app.providers.errors import ProviderError
 from app.schemas import Chunk
 from app.trace import current_tracer, prompt_fingerprint
 
@@ -57,3 +58,33 @@ async def stream_text(llm: Llm, system: str, prompt: str, emit: Emit) -> str:
             **prompt_fingerprint(system, prompt),
         )
     return "".join(pieces)
+
+
+async def stream_with_fallback(
+    llm: Llm,
+    fallback: Llm | None,
+    system: str,
+    prompt: str,
+    emit: Emit,
+    *,
+    intent: str,
+) -> str:
+    """Stream from the routed model, falling back once on a provider failure."""
+    tracer = current_tracer()
+    if tracer is not None:
+        tracer.emit(
+            "route",
+            intent=intent,
+            model=getattr(llm, "name", "?"),
+            fallback=fallback is not None,
+        )
+    try:
+        return await stream_text(llm, system, prompt, emit)
+    except ProviderError:
+        if fallback is None:
+            raise
+        if tracer is not None:
+            tracer.emit(
+                "fallback", intent=intent, model=getattr(fallback, "name", "?")
+            )
+        return await stream_text(fallback, system, prompt, emit)

@@ -102,6 +102,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     built.retriever,
                     built.llm,
                     max_retries=app_settings.retry_budget,
+                    small_llm=built.small_llm,
                 ),
             )
         app.state.runtime = built

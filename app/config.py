@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     chat_daily_token_budget: int = Field(default=200_000, ge=1)
     chat_cache_entries: int = Field(default=256, ge=1)
     chat_cache_ttl_s: int = Field(default=3600, ge=1)
+    # Model routing (#82). Off keeps one model on every intent.
+    routing: Literal["off", "intent"] = "off"
+    small_provider: Literal["openrouter", "bedrock"] = "openrouter"
+    small_model: str = "mistralai/mistral-small-3.2-24b-instruct"
     # Signs the anonymous session cookie. Empty means a random per-process
     # secret, which resets sessions on restart; set it in production.
     session_secret: str = ""

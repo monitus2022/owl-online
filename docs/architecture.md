@@ -274,6 +274,19 @@ retry when the budget allows; the client drops the rejected draft on the same
 event. Provider failures arrive as an `error` event because HTTP headers are
 already sent.
 
+## Model routing
+
+Routing is a deterministic intent split, off by default. With
+`OWL_ROUTING=intent`, practice and feedback use `OWL_SMALL_MODEL` (default
+Mistral Small 3.2 via OpenRouter); answers stay on the main model. A provider
+error on the small model falls back to the main model once. The route and any
+fallback are trace spans, and the model is on the usage line. No model call is
+used to decide the route.
+
+A vendor policy check runs before an adapter is built. OpenAI, Anthropic and
+Google models are rejected, including their open-weight releases, because the
+deployment region bans them regardless of host.
+
 ## Tracing
 
 Each request can emit flat JSONL span records under the request id. The stream

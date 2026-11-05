@@ -80,7 +80,12 @@ counters live in the one API process and reset on restart.
 
 ## Model access
 
-Only open-weight and Amazon models are callable (Bedrock in-region; OpenRouter). Do not propose OpenAI, Anthropic, or Google models. Verify each model with a probe before building on it.
+Only open-weight and Amazon models are callable (Bedrock in-region; OpenRouter).
+The deployment region bans OpenAI, Anthropic and Google models outright, so
+their open-weight releases (gpt-oss, Gemma, Claude) are excluded too, even when
+hosted on Bedrock or OpenRouter. The vendor is what matters, not the host. Every
+model is checked by app/providers/policy.py before use. Verify each model with a
+probe before building on it.
 
 ## Conventions
 
