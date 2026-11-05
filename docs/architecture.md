@@ -200,6 +200,11 @@ sequenceDiagram
   API-->>C: AskResponse {answer, citations, abstained}
 ```
 
+One deadline covers the whole request: `OWL_ASK_TIMEOUT_S` (default 30 s) wraps
+retrieve plus generate. On expiry `/ask` returns 504 with `{error, request_id}`
+and logs the stage that was running; `/ask/stream` is not bounded, because a
+legitimate stream can outlive it.
+
 `verify_draft` is deterministic: an empty draft or one that cites no retrieved
 chunk fails. A grounded draft passes; a deliberate refusal is final and is never
 retried, so abstention keeps its meaning. A paraphrase refusal is final when it

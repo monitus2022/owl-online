@@ -1,6 +1,8 @@
 """API tests: the /ask endpoint with an injected Runtime, no network."""
 
+import asyncio
 import json
+import time
 
 from fastapi.testclient import TestClient
 
@@ -386,3 +388,28 @@ def test_ask_stream_resets_and_retries_an_uncited_draft():
     assert names.index("reset") < names.index("final")
     assert finals[0]["citations"] == ["b1-c01-0000"]
     assert finals[0]["attempts"] == 2
+
+
+class _SlowLlm:
+    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        await asyncio.sleep(0.3)
+        return "Rowan trims the wick [b1-c01-0000]."
+
+    async def stream(self, system: str, prompt: str, *, context=None):
+        yield "Rowan"
+
+
+def test_ask_returns_a_typed_504_when_the_deadline_fires():
+    runtime = Runtime(retriever=_Retriever(), llm=_SlowLlm())
+    app = create_app(
+        app_settings=Settings(ask_timeout_s=0.05), runtime=runtime
+    )
+    start = time.monotonic()
+    with TestClient(app) as client:
+        response = client.post("/ask", json={"question": "Who trims the wick?"})
+        elapsed = time.monotonic() - start
+    assert response.status_code == 504
+    body = response.json()
+    assert body["error"] == "deadline exceeded"
+    assert body["request_id"] == response.headers["x-request-id"]
+    assert elapsed < 1.0

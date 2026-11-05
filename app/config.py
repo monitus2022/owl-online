@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     # Deterministic verification retries per answer. The ticket budget is one
     # extra draft; 0 disables it. The cap is enforced at the settings boundary.
     retry_budget: int = Field(default=1, ge=0, le=1)
+    # Deadline for one /ask request (retrieve plus generate). /ask/stream is not
+    # bounded because a legitimate stream can outlive it.
+    ask_timeout_s: float = Field(default=30.0, gt=0)
     log_level: str = "INFO"
     live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 

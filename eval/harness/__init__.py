@@ -34,6 +34,12 @@ from eval.harness.judging import (
     parse_verdict,
     sample_answerable,
 )
+from eval.harness.novelty import (
+    NoveltyMetrics,
+    corpus_vocabulary,
+    novel_entities,
+    summarize_novelty,
+)
 from eval.harness.retrieval import (
     DiagnosticScore,
     RetrievalDiagnostics,
@@ -60,6 +66,7 @@ __all__ = [
     "GenerationMetrics",
     "GoldItem",
     "JudgeVerdict",
+    "NoveltyMetrics",
     "RetrievalDiagnostics",
     "RetrievalMetrics",
     "RetrievalScore",
@@ -67,10 +74,12 @@ __all__ = [
     "abstention_metrics_all",
     "abstention_metrics_by_slice",
     "abstention_scores",
+    "corpus_vocabulary",
     "exact_match",
     "generation_metrics_by_slice",
     "judge_sample",
     "load_gold",
+    "novel_entities",
     "normalize_answer",
     "parse_faithful",
     "parse_verdict",
@@ -85,6 +94,7 @@ __all__ = [
     "summarize_abstention",
     "summarize_diagnostics",
     "summarize_generation",
+    "summarize_novelty",
     "summarize_retrieval",
     "token_f1",
 ]

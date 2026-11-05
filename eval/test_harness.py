@@ -13,10 +13,12 @@ from eval.harness import (
     JudgeVerdict,
     abstention_metrics,
     abstention_metrics_by_slice,
+    corpus_vocabulary,
     exact_match,
     judge_sample,
     load_gold,
     normalize_answer,
+    novel_entities,
     parse_faithful,
     parse_verdict,
     retrieval_diagnostics_all,
@@ -26,6 +28,7 @@ from eval.harness import (
     sample_answerable,
     summarize_diagnostics,
     summarize_generation,
+    summarize_novelty,
     token_f1,
 )
 from eval.harness.retrieval import _neighbor_hit
@@ -336,3 +339,41 @@ def test_load_gold_reads_records(tmp_path):
     assert items[0].expected_chunk_ids == ["c1"]
     assert items[0].primary_slice == "simple"
     assert items[0].reference_answer == "y"
+
+def test_novel_entity_flags_an_invented_name():
+    vocabulary = {"rowena", "ravenclaw", "diadem"}
+    assert novel_entities("Herbrand Ravenclaw's diadem.", vocabulary) == ["Herbrand"]
+
+
+def test_novel_entity_passes_corpus_names_and_aliases():
+    vocabulary = {"rowena", "ravenclaw", "voldemort", "riddle", "tom"}
+    assert novel_entities("Rowena Ravenclaw, Tom Riddle, Voldemort.", vocabulary) == []
+
+
+def test_novel_entity_ignores_citation_ids():
+    assert novel_entities("Rowan [b9-c99-0000].", {"rowan"}) == []
+
+
+def test_corpus_vocabulary_is_case_insensitive():
+    chunk = Chunk(
+        id="c1",
+        text="Rowena Ravenclaw",
+        metadata=ChunkMetadata(
+            book_num=1, chapter_num=1, book_name="B", chapter_name="C"
+        ),
+    )
+    assert corpus_vocabulary([chunk]) == {"rowena", "ravenclaw"}
+
+
+def test_summarize_novelty_counts_flagged_answers():
+    metrics = summarize_novelty(["Rowan.", "Herbrand.", "Herbrand again."], {"rowan"})
+    assert metrics.flagged == 2
+    assert metrics.n == 3
+    assert abs(metrics.rate - 2 / 3) < 1e-9
+    assert metrics.tokens == ("Herbrand",)
+
+
+def test_novel_entity_keeps_a_hyphenated_name_together():
+    vocabulary = {"the", "time-turner"}
+    assert novel_entities("The Time-Turner.", vocabulary) == []
+    assert novel_entities("The Time-Turner and Herbrand.", vocabulary) == ["Herbrand"]

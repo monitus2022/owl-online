@@ -10,15 +10,15 @@ GOLD_PATH = Path(__file__).with_name("gold") / "questions.jsonl"
 
 def test_gold_set_keeps_the_pinned_shape():
     items = load_gold(GOLD_PATH)
-    assert len(items) == 60
-    assert sum(item.answerable for item in items) == 50
+    assert len(items) == 61
+    assert sum(item.answerable for item in items) == 51
     assert sum(not item.answerable for item in items) == 10
 
     slices = Counter(label for item in items for label in item.slices)
     assert slices == {
         "simple": 34,
         "named_reference": 8,
-        "multi_part": 8,
+        "multi_part": 9,
         "near_miss_unanswerable": 5,
         "off_topic": 5,
     }

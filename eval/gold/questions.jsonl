@@ -58,3 +58,4 @@
 {"id": "u03", "question": "How do you change a car tyre?", "answerable": false, "expected_chunk_ids": [], "slices": ["off_topic"], "reference_answer": "", "reason": "Clearly outside the corpus."}
 {"id": "u04", "question": "What is the chemical formula for table salt?", "answerable": false, "expected_chunk_ids": [], "slices": ["off_topic"], "reference_answer": "", "reason": "Clearly outside the corpus."}
 {"id": "u05", "question": "Who composed the Ninth Symphony?", "answerable": false, "expected_chunk_ids": [], "slices": ["off_topic"], "reference_answer": "", "reason": "Clearly outside the corpus."}
+{"id": "m09", "question": "What are the seven Horcruxes?", "answerable": true, "expected_chunk_ids": ["b6-c23-0042", "b6-c23-0043", "b7-c35-0016"], "slices": ["multi_part"], "reference_answer": "The diary, the ring, the locket, the cup, the diadem, Nagini, and Harry.", "notes": "D6 fabrication case: the answer must not invent an entity such as Herbrand."}

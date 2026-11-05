@@ -15,6 +15,10 @@ model = "deepseek/deepseek-v4.1-flash-1017"
 [reranker]
 model = "amazon.rerank-v1:0"
 pool = 50
+# #79 measured the answerable and unanswerable score distributions: they
+# overlap, and any floor above zero false-abstains at least 10 of 51 answerable
+# items. Keep the floor at zero; the evidence is in eval/README.md.
+min_score = 0.0
 
 [embedder.cloud]
 # Deployed (vendor-only) path: Amazon Titan on Bedrock.
@@ -38,6 +42,8 @@ rrf_k = 60
 # Candidates per leg. With a reranker attached (the pinned run) this equals
 # [reranker].pool; the no-rerank default is 20.
 candidates = 50
+# Sparse leg only: lowercase, stopwords, Snowball English stemmer.
+tokenizer = "regex-words"
 
 [generation]
 # Drafts regenerated after a failed deterministic verification. The eval reads

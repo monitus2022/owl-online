@@ -8,6 +8,7 @@ from pathlib import Path
 from eval.harness import (
     AbstentionMetrics,
     GenerationMetrics,
+    NoveltyMetrics,
     RetrievalDiagnostics,
     RetrievalMetrics,
 )
@@ -36,6 +37,7 @@ class RunReport:
     generation_by_slice: dict[str, GenerationMetrics]
     diagnostics: RetrievalDiagnostics | None = None
     diagnostics_by_slice: dict[str, RetrievalDiagnostics] = field(default_factory=dict)
+    novelty: NoveltyMetrics | None = None
 
 
 def retrieval_rows(
@@ -199,6 +201,29 @@ def generation_rows(
     return rows
 
 
+def novelty_rows(
+    run_id: str,
+    config: str,
+    manifest: dict[str, str],
+    metrics: NoveltyMetrics,
+) -> list[ResultRow]:
+    """Fabrication signal: answers with an out-of-corpus entity, and the tokens."""
+    return [
+        ResultRow(
+            run_id, config, "overall", "novel_entity_answers", metrics.flagged, manifest
+        ),
+        ResultRow(run_id, config, "overall", "novel_entity_rate", metrics.rate, manifest),
+        ResultRow(
+            run_id,
+            config,
+            "overall",
+            "novel_entity_tokens",
+            " ".join(metrics.tokens),
+            manifest,
+        ),
+    ]
+
+
 def _retrieval_lines(
     k: int,
     overall: RetrievalMetrics,
@@ -291,6 +316,13 @@ def render_run(report: RunReport) -> str:
     lines.extend(_abstention_lines(report.abstention, report.abstention_by_slice))
     lines.append("")
     lines.extend(_generation_lines(report.generation, report.generation_by_slice))
+    if report.novelty is not None:
+        tokens = " ".join(report.novelty.tokens) or "none"
+        lines.append("")
+        lines.append(
+            f"novel entities: {report.novelty.flagged}/{report.novelty.n} answers "
+            f"({report.novelty.rate:.2f}), tokens: {tokens}"
+        )
     lines.extend(["", f"wrote {report.run_path}"])
     if report.baseline_path is not None:
         lines.append(f"wrote baseline {report.baseline_path}")

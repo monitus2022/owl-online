@@ -295,3 +295,51 @@ excluded from the faithfulness denominator and reported separately.
   only; `stream` is passed through.
 - Rerank (V1, #6) is wired on by default (`amazon.rerank-v1:0`, pool 50); set
   `OWL_RERANK_PROVIDER=none` for the baseline column.
+
+## D6 retrieval guardrails (#79)
+
+### Sparse tokenizer
+
+Ablation on the 61-item gold set, reranker on, same index:
+
+| Tokenizer | Hit@5 | Recall@5 | MRR |
+|---|---:|---:|---:|
+| `regex-words` | 0.765 | 0.660 | 0.498 |
+| Snowball stemming | 0.745 | 0.640 | 0.504 |
+| Stopwords only | 0.706 | 0.591 | 0.467 |
+
+Stemming raised sparse recall against the pre-D6 baseline (0.68 to 0.72) but
+lowered Hit@5 and Recall, so it was rejected. The manifest pins
+`retrieval.tokenizer = "regex-words"`.
+
+### Rerank floor
+
+Top rerank score per gold item, 61 items (51 answerable, 10 unanswerable):
+
+| Slice | min | p10 | median | p90 | max |
+|---|---:|---:|---:|---:|---:|
+| answerable | 0.003 | 0.059 | 0.477 | 0.887 | 0.991 |
+| unanswerable | 0.000 | 0.000 | 0.000 | 0.352 | 0.352 |
+
+| Floor | False abstention (answerable) | Abstention (unanswerable) |
+|---:|---:|---:|
+| 0.0 | 0/51 | 0/10 |
+| 0.1 | 10/51 | 9/10 |
+| 0.4 | 22/51 | 10/10 |
+
+The distributions overlap. Unanswerable items already abstain through empty
+retrieval, and the one remaining item costs 22 answerable items to catch. The
+floor is pinned at `0.0`; the measurement is `scripts/measure_rerank_floor.py`.
+
+### Novel-entity signal
+
+`eval/harness/novelty.py` flags capitalized answer tokens absent from the corpus
+vocabulary. It catches invented names such as Herbrand; it does not catch a real
+name used wrongly, a wrong count, or a misattributed object. Aliases and
+morphology are safe because matching is corpus-scoped. Reported per run as
+`novel_entity_answers`, `novel_entity_rate` and `novel_entity_tokens`.
+
+### Deadline
+
+`/ask` is bounded by `OWL_ASK_TIMEOUT_S` (default 30 s) and returns a typed 504
+with the request id; `/ask/stream` is not bounded.

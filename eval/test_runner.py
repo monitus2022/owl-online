@@ -32,6 +32,7 @@ async def test_run_passes_the_manifest_retry_budget(monkeypatch, tmp_path):
     monkeypatch.setattr(runner, "make_llm", lambda *a, **k: object())
     monkeypatch.setattr(runner, "CachedLlm", lambda *a, **k: object())
     monkeypatch.setattr(runner, "load_gold", lambda path: [])
+    monkeypatch.setattr(runner, "load_chunks", lambda path: [])
     monkeypatch.setattr(runner, "load_manifest", lambda: manifest)
     monkeypatch.setattr(runner, "manifest_row", lambda *a, **k: {})
     monkeypatch.setattr(runner, "timestamp_run_id", lambda: "20260101T000000Z")

@@ -20,6 +20,9 @@ from app.schemas import Chunk
 
 COLLECTION_NAME = "owl-online"  # TODO: make this configurable, e.g. per corpus
 EMBED_BATCH = 128  # Temporary batch size for embedding for now; public: callers derive cadence
+# Pinned in config/manifest.toml. #79 measured Snowball stemming and stopword
+# removal: sparse recall rose but Hit@5 fell, so the plain tokenizer ships.
+TOKENIZER = "regex-words"
 
 
 @dataclass(frozen=True)
@@ -42,7 +45,11 @@ def load_chunks(path: Path) -> list[Chunk]:
 
 
 def tokenize(text: str) -> list[str]:
-    """Lowercased word tokens for BM25; punctuation-split."""
+    """Lowercased word tokens for BM25; punctuation-split.
+
+    The sparse leg only. #79 rejected stemming and stopword removal after they
+    lowered Hit@5; the measurement is in the D6 run record.
+    """
     return re.findall(r"[a-z0-9']+", text.lower())
 
 

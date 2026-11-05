@@ -6,6 +6,7 @@ import hashlib
 from pathlib import Path
 
 from app.config import settings
+from app.pipeline.index.builder import load_chunks
 from app.pipeline.retrieve import compose_retriever
 from app.providers.factory import make_embedder, make_llm, make_reranker
 from app.providers.openrouter import DEFAULT_MODEL
@@ -13,17 +14,20 @@ from eval.harness import (
     JUDGE_MODEL,
     CachedLlm,
     abstention_metrics_all,
+    corpus_vocabulary,
     generation_metrics_by_slice,
     judge_sample,
     load_gold,
     retrieval_diagnostics_all,
     retrieval_metrics_all,
     summarize_generation,
+    summarize_novelty,
 )
 from eval.report import (
     RunReport,
     abstention_rows,
     generation_rows,
+    novelty_rows,
     retrieval_diagnostic_rows,
     retrieval_rows,
 )
@@ -93,6 +97,10 @@ async def run(
     )
     generation = summarize_generation(verdicts)
     generation_by_slice = generation_metrics_by_slice(verdicts, gold)
+    vocabulary = corpus_vocabulary(load_chunks(chunks_path))
+    novelty = summarize_novelty(
+        [verdict.answer for verdict in verdicts if not verdict.abstained], vocabulary
+    )
 
     run_id = timestamp_run_id()
     if reranker is None:
@@ -134,6 +142,7 @@ async def run(
         ),
         *abstention_rows(run_id, config, values, abstention, abstention_by_slice),
         *generation_rows(run_id, config, values, generation, generation_by_slice),
+        *novelty_rows(run_id, config, values, novelty),
     ]
     run_path = results_dir / f"{run_id}.csv"
     if run_path.exists():
@@ -164,6 +173,7 @@ async def run(
         abstention_by_slice=abstention_by_slice,
         generation=generation,
         generation_by_slice=generation_by_slice,
+        novelty=novelty,
         diagnostics=diagnostics,
         diagnostics_by_slice=diagnostics_by_slice,
     )
