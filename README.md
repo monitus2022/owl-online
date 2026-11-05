@@ -46,9 +46,10 @@ Core exam content uses the seven novels. Rowling companion books and interviews
 are optional further reading, not exam-gradable in the first version. Films,
 games and fan works are excluded from the set texts.
 
-Chat is the variable-cost surface. The plan caps messages per session and per
-day, caps output and history tokens, caches exact repeated questions, and uses a
-spend guard that degrades chat before it can exhaust the budget.
+Chat is the variable-cost surface. Messages are capped per session and per IP,
+with a concurrency limit, an exact cache for repeated questions, per-request
+usage and cost logs, and a daily token budget that degrades chat before it can
+exhaust the spend.
 
 The corpus is a single well-known work of fiction. The source text is not included (see Disclaimer). The point of the project is not the corpus - it is the evaluation discipline and the full-stack agent around it.
 

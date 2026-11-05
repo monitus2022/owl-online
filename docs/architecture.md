@@ -170,6 +170,8 @@ sequenceDiagram
   participant LLM as OpenRouterLlm
 
   C->>API: POST /ask {question}
+  API->>API: session cookie, limiter.admit (429 / 503)
+  API->>API: cache.get (hit -> return)
   API->>R: get_retriever / get_llm
   API->>A: ask(question, retriever, llm)
   A->>RET: retrieve(question, top_k)
@@ -226,6 +228,8 @@ sequenceDiagram
   participant LLM as Llm adapter
 
   C->>API: POST /ask/stream {question, mode, student_answer}
+  API->>API: limiter.admit (429 / 503)
+  API->>API: cache.get when the intent is answer
   API->>G: astream(state)
   G->>G: router -> answer | practice | feedback
   G-->>API: mode update
@@ -396,12 +400,13 @@ restart resets the windows; auth later moves them to a user id.
 Corpus-only answers pass through an in-process exact cache keyed by prompt
 version, index hash, model and normalised question. Practice and feedback never
 read or write it: feedback is personalised by the student answer and practice is
-meant to vary. Usage is logged per request with estimated input/output tokens,
-model, intent, cache hit, cost and latency. Prices are configuration, not
-constants.
+meant to vary. Usage is logged for every processed request with estimated input/output tokens,
+model, intent, cache hit, cost and latency; a client that disconnects before the
+stream ends may not produce a line. Prices are configuration, not constants.
 
-The `Runtime` (the retriever with its optional reranker, the llm, and the
-compiled agent graph) is built once in the app lifespan, never per request.
+The `Runtime` (the retriever with its optional reranker, the llm, the compiled
+agent graph and the index text hash used by the cache key) is built once in the
+app lifespan, never per request.
 Provider failures surface as a normalized `ProviderError` and become a 502 at
 the edge, or an SSE `error` event once a stream has started.
 
