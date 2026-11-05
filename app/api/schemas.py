@@ -1,6 +1,8 @@
 """HTTP request and response models for the API."""
 
-from pydantic import BaseModel, Field, field_validator
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class AskRequest(BaseModel):
@@ -15,6 +17,27 @@ class AskRequest(BaseModel):
         if not stripped:
             raise ValueError("question must not be blank")
         return stripped
+
+
+class StreamRequest(AskRequest):
+    """A question plus an optional chat-intent override and answer to review."""
+
+    mode: Literal["auto", "answer", "practice", "feedback"] = "auto"
+    student_answer: str | None = Field(default=None, max_length=6000)
+
+    @field_validator("student_answer")
+    @classmethod
+    def _blank_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+    @model_validator(mode="after")
+    def _check_student_answer_mode(self) -> "StreamRequest":
+        if self.student_answer and self.mode in ("answer", "practice"):
+            raise ValueError("student_answer is only valid with auto or feedback mode")
+        return self
 
 
 class AskResponse(BaseModel):

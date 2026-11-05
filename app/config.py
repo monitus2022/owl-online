@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     bedrock_embed_model: str = "amazon.titan-embed-text-v2:0"
     bedrock_embed_dims: int = 1024
+    bedrock_llm_model: str = "qwen.qwen3-32b-v1:0"
+    bedrock_llm_max_tokens: int = 1024
     log_level: str = "INFO"
     live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 

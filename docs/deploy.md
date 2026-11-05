@@ -12,7 +12,9 @@ embedder. Read the two constraints before picking a host.
    scripts/build_index.py`) and upload `data/chunks.jsonl` plus
    `data/index/chroma/`. The index directory must be writable: Chroma opens its
    SQLite store read-write at startup, so mount it writable (or copy it to a
-   writable path) rather than read-only.
+   writable path) rather than read-only. The planned subject packs live under
+   `/data/subjects/`, and the planned exam database lives under `/data/`; both
+   stay on the same mounted volume and out of the image.
 
 2. A query-time embedder. Retrieval embeds every question. There are two
    providers, and the index must be built with the same one:
@@ -47,11 +49,19 @@ docker run --rm -p 8000:8000 \
 `host.docker.internal` reaches an Ollama daemon running on the host (macOS and
 Windows; on Linux use the host gateway address).
 
+To use the Bedrock Llm instead of OpenRouter, set `OWL_PROVIDER=bedrock` and the
+model, for example `OWL_BEDROCK_LLM_MODEL=qwen.qwen3-32b-v1:0` and
+`OWL_BEDROCK_LLM_MAX_TOKENS=1024`. The model must be available in
+`OWL_AWS_REGION`; check it once with `uv run python scripts/probe_bedrock.py`.
+The instance role needs `bedrock:InvokeModel` and
+`bedrock:InvokeModelWithResponseStream` on the model or inference-profile ARN.
+
 The image is runtime-only: `uv sync --no-default-groups` installs `[project]`
-dependencies, not the `ingest` (PDF parsing) or `agent` (V2) groups, and
-chromadb's unused `kubernetes` and `onnxruntime` are excluded in
-`pyproject.toml`. That keeps the image about 215 MB in the registry (about
-590 MB on disk), which fits the host's 8 GB volume comfortably.
+dependencies, including LangGraph and sse-starlette because the V2 API imports
+them. The `ingest` (PDF parsing) group is excluded, and chromadb's unused
+`kubernetes` and `onnxruntime` are excluded in `pyproject.toml`. The V1 image was
+about 215 MB; the V2 image adds LangGraph and SSE, so re-measure after the next
+build. It remains well within the host's 8 GB volume.
 
 To keep Ollama next to the API instead, run both with Compose:
 
@@ -86,7 +96,9 @@ the same:
 2. Set secrets as platform environment variables, never in the image:
    `OWL_OPENROUTER_API_KEY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
    `OWL_AWS_REGION`, and any `OWL_*` overrides. Prefer an instance role over
-   static keys where the platform supports it.
+   static keys where the platform supports it. Set `OWL_PROVIDER=bedrock` plus
+   `OWL_BEDROCK_LLM_MODEL` and `OWL_BEDROCK_LLM_MAX_TOKENS` to use the Bedrock
+   Converse path.
 3. Attach the data volume at `/data` (or point `OWL_CHUNKS_PATH` /
    `OWL_INDEX_DIR` at the mounted files).
 4. A query-time embedder. Use the vendor path, `OWL_EMBEDDER_PROVIDER=bedrock`
@@ -123,13 +135,14 @@ TLS on 80/443 and proxies to it, and reads its runtime secrets from the env file
 in the next section.
 
 The root volume is 8 GB and `/data` (the corpus plus the index) shares it. The
-image is now about 215 MB to download (about 590 MB on disk), so a pull fits
-comfortably next to the running one, and the rollout prunes the previous image
-after a successful start. It still pulls first, so the old version keeps serving
-while the pull fits; only on failure does it stop the container, prune unused
-images, and retry. That retry is the one window where a failed deploy leaves the
-API down until the next successful rollout. A larger or separate volume for
-`/data` remains the durable fix.
+V1 image was about 215 MB to download (about 590 MB on disk); re-measure the V2
+image after the next build. A pull should still fit comfortably next to the
+running one, and the rollout prunes the previous image after a successful start.
+It still pulls first, so the old version keeps serving while the pull fits; only
+on failure does it stop the container, prune unused images, and retry. That retry
+is the one window where a failed deploy leaves the API down until the next
+successful rollout. A larger or separate volume for `/data` remains the durable
+fix.
 
 ### V1 host
 
@@ -140,8 +153,19 @@ API down until the next successful rollout. A larger or separate volume for
 | Region | `ap-northeast-3` |
 | Elastic IP | `13.208.134.172` |
 | Instance role | `monitus-ec2-ecr-role` (`AmazonSSMManagedInstanceCore`, `AmazonEC2ContainerRegistryReadOnly`, `owl-online-bedrock`) |
-| Bedrock policy | `owl-online-bedrock`: `bedrock:Rerank` on `*`, `bedrock:InvokeModel` on the Titan and rerank model ARNs in `ap-northeast-1` |
+| Bedrock policy | `owl-online-bedrock`: `bedrock:Rerank` on `*`, `bedrock:InvokeModel` on the Titan and rerank model ARNs, and `bedrock:InvokeModel` plus `bedrock:InvokeModelWithResponseStream` on the Llm model ARN (or inference-profile ARN) in `ap-northeast-1` |
 | Data volume | `/data` on the instance root volume |
+
+The Bedrock Llm needs both invoke actions on the exact model or inference-profile
+ARN. For the default on-demand model:
+
+```
+arn:aws:bedrock:ap-northeast-1::foundation-model/qwen.qwen3-32b-v1:0
+```
+
+If the chosen model is served through an inference profile, grant the same
+actions on the profile ARN instead. Converse streaming fails without
+`bedrock:InvokeModelWithResponseStream`.
 
 ## One-time host setup
 

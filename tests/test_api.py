@@ -1,10 +1,13 @@
 """API tests: the /ask endpoint with an injected Runtime, no network."""
 
+import json
+
 from fastapi.testclient import TestClient
 
 from app.api.runtime import Runtime
 from app.logging import get_request_id
 from app.main import create_app
+from app.pipeline.generate import ABSTAIN_MESSAGE
 from app.providers.errors import ProviderError
 from app.schemas import Chunk, ChunkMetadata
 
@@ -29,10 +32,25 @@ class _Llm:
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
         return "Rowan trims the wick [b1-c01-0000]."
 
+    async def stream(self, system: str, prompt: str, *, context=None):
+        for piece in ("Rowan", " trims", " the wick", " [b1-c01-0000]."):
+            yield piece
+
 
 class _BoomLlm:
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
         raise ProviderError("upstream down")
+
+
+class _UncitedLlm(_Llm):
+    async def stream(self, system: str, prompt: str, *, context=None):
+        for piece in ("Rowan", " trims", " the wick."):
+            yield piece
+
+
+class _WeakRetriever:
+    async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
+        return []
 
 
 def _client(runtime: Runtime | None = None) -> TestClient:
@@ -142,3 +160,169 @@ def test_unexpected_error_returns_500_without_a_traceback():
     assert response.status_code == 500
     assert "kaboom" not in response.text
     assert "traceback" not in response.text.lower()
+
+
+def test_runtime_builds_the_graph_once():
+    app = create_app(runtime=Runtime(retriever=_Retriever(), llm=_Llm()))
+    with TestClient(app) as client:
+        first = app.state.runtime.agent
+        assert first is not None
+        client.post("/ask/stream", json={"question": "Who trims the wick?"})
+        assert app.state.runtime.agent is first
+
+
+def _parse_sse(body: str) -> list[tuple[str, dict]]:
+    events: list[tuple[str, dict]] = []
+    name = "message"
+    data = ""
+    for line in body.splitlines():
+        if line.startswith("event: "):
+            name = line[7:].strip()
+        elif line.startswith("data: "):
+            data += line[6:]
+        elif not line.strip() and data:
+            events.append((name, json.loads(data)))
+            name, data = "message", ""
+    if data:
+        events.append((name, json.loads(data)))
+    return events
+
+
+def test_ask_stream_emits_tokens_then_a_grounded_final():
+    with _client() as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who trims the wick?"}
+        ) as response:
+            assert response.status_code == 200
+            assert "text/event-stream" in response.headers["content-type"]
+            body = "".join(response.iter_text())
+
+    events = _parse_sse(body)
+    tokens = [data["text"] for name, data in events if name == "token"]
+    finals = [data for name, data in events if name == "final"]
+    modes = [data for name, data in events if name == "mode"]
+    assert "".join(tokens) == "Rowan trims the wick [b1-c01-0000]."
+    assert finals[0]["citations"] == ["b1-c01-0000"]
+    assert finals[0]["abstained"] is False
+    assert modes[0]["mode"] == "answer"
+
+
+def test_ask_stream_resets_an_uncited_draft():
+    runtime = Runtime(retriever=_Retriever(), llm=_UncitedLlm())
+    with _client(runtime) as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who trims the wick?"}
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    names = [name for name, _ in events]
+    finals = [data for name, data in events if name == "final"]
+    assert "reset" in names
+    assert names.index("reset") < names.index("final")
+    assert finals[0]["abstained"] is True
+    assert finals[0]["answer"] == ABSTAIN_MESSAGE
+
+
+def test_ask_stream_abstains_when_retrieval_is_weak():
+    runtime = Runtime(retriever=_WeakRetriever(), llm=_Llm())
+    with _client(runtime) as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who trims the wick?"}
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    finals = [data for name, data in events if name == "final"]
+    assert finals[0]["abstained"] is True
+    assert finals[0]["citations"] == []
+
+
+def test_ask_stream_rejects_a_blank_question():
+    with _client() as client:
+        response = client.post("/ask/stream", json={"question": "   "})
+    assert response.status_code == 422
+
+
+def test_ask_stream_routes_a_practice_request():
+    with _client() as client:
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "Give me a practice question on the wick"},
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    finals = [data for name, data in events if name == "final"]
+    assert finals[0]["mode"] == "practice"
+
+
+def test_ask_stream_routes_feedback_when_a_student_answer_is_present():
+    with _client() as client:
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={
+                "question": "Give me feedback on this answer",
+                "student_answer": "Rowan trims the wick.",
+            },
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    finals = [data for name, data in events if name == "final"]
+    assert finals[0]["mode"] == "feedback"
+
+
+def test_ask_stream_rejects_the_old_generate_mode():
+    with _client() as client:
+        response = client.post(
+            "/ask/stream", json={"question": "Generate a quiz", "mode": "generate"}
+        )
+    assert response.status_code == 422
+
+
+def test_ask_stream_reports_missing_feedback_answer():
+    with _client() as client:
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "Give me feedback on this answer", "mode": "feedback"},
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    names = [name for name, _ in events]
+    finals = [data for name, data in events if name == "final"]
+    assert "reset" not in names
+    assert finals[0]["needs_input"] is True
+    assert finals[0]["abstained"] is False
+
+
+def test_ask_stream_rejects_student_answer_outside_feedback_mode():
+    with _client() as client:
+        response = client.post(
+            "/ask/stream",
+            json={
+                "question": "Who trims the wick?",
+                "mode": "answer",
+                "student_answer": "Rowan.",
+            },
+        )
+    assert response.status_code == 422
+
+
+class _BoomStreamLlm(_Llm):
+    def stream(self, system: str, prompt: str, *, context=None):
+        async def gen():
+            raise ProviderError("upstream down")
+            yield ""  # pragma: no cover
+
+        return gen()
+
+
+def test_ask_stream_reports_a_provider_error_as_an_event():
+    runtime = Runtime(retriever=_Retriever(), llm=_BoomStreamLlm())
+    with _client(runtime) as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who?"}
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    assert any(name == "error" for name, _ in events)

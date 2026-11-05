@@ -84,33 +84,59 @@
         .querySelector('meta[name="owl-api-base"]')
         .content.replace(/\/$/, "");
 
-      form.addEventListener("submit", async (event) => {
+            form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const question = document.getElementById("question").value;
         result.hidden = false;
         citationsEl.replaceChildren();
         answerEl.textContent = "Thinking...";
+        let draft = "";
         try {
-          const response = await fetch(`${apiBase}/ask`, {
+          const response = await fetch(`${apiBase}/ask/stream`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ question }),
           });
-          const data = await response.json();
-          if (!response.ok) {
-            // Validation errors carry a list detail; keep the UI text a string.
-            answerEl.textContent =
-              typeof data.detail === "string"
-                ? data.detail
-                : "Please enter a question and try again.";
+          if (!response.ok || !response.body) {
+            answerEl.textContent = "Please enter a question and try again.";
             return;
           }
-          // textContent only: model output is never rendered as HTML.
-          answerEl.textContent = data.answer;
-          for (const id of data.citations) {
-            const li = document.createElement("li");
-            li.textContent = id;
-            citationsEl.appendChild(li);
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const frames = buffer.split(/\r?\n\r?\n/);
+            buffer = frames.pop();
+            for (const frame of frames) {
+              let name = "message";
+              let data = "";
+              for (const line of frame.split(/\r?\n/)) {
+                if (line.startsWith("event: ")) name = line.slice(7).trim();
+                else if (line.startsWith("data: ")) data += line.slice(6);
+              }
+              if (!data) continue;
+              const payload = JSON.parse(data);
+              if (name === "token") {
+                draft += payload.text;
+                answerEl.textContent = draft;
+              } else if (name === "reset") {
+                draft = "";
+                answerEl.textContent = "Checking grounding...";
+              } else if (name === "final") {
+                answerEl.textContent = payload.answer;
+                citationsEl.replaceChildren();
+                for (const id of payload.citations) {
+                  const li = document.createElement("li");
+                  li.textContent = id;
+                  citationsEl.appendChild(li);
+                }
+              } else if (name === "error") {
+                answerEl.textContent = payload.detail;
+              }
+            }
           }
         } catch (error) {
           answerEl.textContent = "Could not reach the server.";

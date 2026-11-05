@@ -5,6 +5,9 @@ The API receives wired contracts and never builds a provider per request.
 
 from dataclasses import dataclass
 
+from langgraph.graph.state import CompiledStateGraph
+
+from app.agent import build_graph
 from app.config import Settings
 from app.pipeline.retrieve import compose_retriever
 from app.providers.contracts import Llm, Retriever
@@ -17,6 +20,7 @@ class Runtime:
 
     retriever: Retriever
     llm: Llm
+    agent: CompiledStateGraph | None = None
 
     async def aclose(self) -> None:
         """Release provider clients on shutdown (embedder pool, model client)."""
@@ -39,4 +43,9 @@ async def build_runtime(settings: Settings) -> Runtime:
         pool=settings.rerank_pool if reranker is not None else None,
         min_score=settings.rerank_min_score,
     )
-    return Runtime(retriever=setup.retriever, llm=make_llm(settings.provider))
+    llm = make_llm(settings.provider)
+    return Runtime(
+        retriever=setup.retriever,
+        llm=llm,
+        agent=build_graph(setup.retriever, llm),
+    )

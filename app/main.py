@@ -1,22 +1,26 @@
 """FastAPI entrypoint. Run: uvicorn app.main:app --reload"""
 
+import json
 import logging
 import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from sse_starlette.sse import EventSourceResponse
 
+from app.agent import build_graph
 from app.api.runtime import Runtime, build_runtime
-from app.api.schemas import AskRequest, AskResponse
+from app.api.schemas import AskRequest, AskResponse, StreamRequest
 from app.config import Settings, settings
 from app.logging import configure_logging, set_request_id
-from app.pipeline.generate import ask
+from app.pipeline.generate import DEFAULT_TOP_K, ask
 from app.providers.contracts import Llm, Retriever
 from app.providers.errors import ProviderError
 
@@ -34,7 +38,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Built once, here, never per request.
-        app.state.runtime = runtime or await build_runtime(app_settings)
+        built = runtime or await build_runtime(app_settings)
+        if built.agent is None:
+            built = replace(built, agent=build_graph(built.retriever, built.llm))
+        app.state.runtime = built
         try:
             yield
         finally:
@@ -106,6 +113,84 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             answer=result.answer,
             citations=result.citations,
             abstained=result.abstained,
+        )
+
+    @app.post("/ask/stream")
+    async def ask_stream_endpoint(
+        body: StreamRequest, request: Request
+    ) -> EventSourceResponse:
+        runtime = request.app.state.runtime
+        agent = runtime.agent
+        if agent is None:
+            raise RuntimeError("agent graph was not built")
+        initial = {
+            "question": body.question,
+            "requested_mode": body.mode,
+            "student_answer": body.student_answer,
+            "top_k": DEFAULT_TOP_K,
+        }
+
+        async def events() -> AsyncIterator[dict[str, str]]:
+            final: dict[str, object] = dict(initial)
+            try:
+                async for mode, chunk in agent.astream(
+                    initial, stream_mode=["custom", "updates"]
+                ):
+                    if mode == "custom":
+                        payload = dict(chunk)
+                        event = str(payload.pop("type", "message"))
+                        yield {
+                            "event": event,
+                            "data": json.dumps(payload, ensure_ascii=False),
+                        }
+                    elif mode == "updates":
+                        for node, update in chunk.items():
+                            final.update(update)
+                            if node == "router":
+                                yield {
+                                    "event": "mode",
+                                    "data": json.dumps(
+                                        {"mode": update.get("mode")},
+                                        ensure_ascii=False,
+                                    ),
+                                }
+            except ProviderError:
+                logger.exception("streaming provider failure")
+                yield {
+                    "event": "error",
+                    "data": json.dumps({"detail": "model provider unavailable"}),
+                }
+                return
+            except Exception:
+                logger.exception("streaming failure")
+                yield {
+                    "event": "error",
+                    "data": json.dumps({"detail": "internal error"}),
+                }
+                return
+
+            # Tokens are a draft. The final event is authoritative: an abstained
+            # answer tells the client to replace the draft, and reset does it
+            # explicitly before the final payload.
+            if final.get("abstained"):
+                yield {"event": "reset", "data": json.dumps({})}
+            yield {
+                "event": "final",
+                "data": json.dumps(
+                    {
+                        "answer": final.get("answer", ""),
+                        "citations": final.get("citations", []),
+                        "abstained": final.get("abstained", False),
+                        "needs_input": final.get("needs_input", False),
+                        "mode": final.get("mode", "answer"),
+                    },
+                    ensure_ascii=False,
+                ),
+            }
+
+        return EventSourceResponse(
+            events(),
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
     return app

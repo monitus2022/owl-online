@@ -1,8 +1,10 @@
-"""Bedrock adapters: reranker (amazon.rerank-v1:0) and embedder (Titan).
+"""Bedrock adapters: reranker, embedder (Titan) and Llm (Converse).
 
 Only this module imports the AWS SDK. Rerank results are disk-cached by
 (model, query, top_n, candidate ids) per AGENTS.md. The embedder is the vendor
-path for cloud deploys, where the local Ollama daemon is not available.
+path for cloud deploys, where the local Ollama daemon is not available. The Llm
+uses Converse and ConverseStream so the same adapter serves open-weight and
+Amazon models in-region.
 """
 
 from __future__ import annotations
@@ -11,7 +13,10 @@ import asyncio
 import hashlib
 import json
 import logging
+import threading
 import time
+from collections.abc import AsyncIterator
+from concurrent.futures import TimeoutError as FutureTimeout
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +44,8 @@ _THROTTLE_CODES = {
     "TooManyRequestsException",
     "ServiceQuotaExceededException",
 }
+DEFAULT_LLM_MODEL = "qwen.qwen3-32b-v1:0"
+DEFAULT_LLM_MAX_TOKENS = 1024
 
 DEFAULT_EMBED_MODEL = "amazon.titan-embed-text-v2:0"
 DEFAULT_EMBED_DIMS = 1024
@@ -203,8 +210,10 @@ def _normalize(exc: BotoCoreError | ClientError) -> ProviderError:
         return ProviderTimeout(str(exc))
     if isinstance(exc, ClientError):
         code = exc.response.get("Error", {}).get("Code", "")
-        if code in _THROTTLE_CODES:
+        if code in _THROTTLE_CODES or code == "ModelNotReadyException":
             return ProviderRateLimited(str(exc))
+        if code == "ModelTimeoutException":
+            return ProviderTimeout(str(exc))
     return ProviderError(str(exc))
 
 
@@ -214,3 +223,193 @@ def _append_cache(path: Path | None, key: str, ranking: list[dict[str, Any]]) ->
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({"key": key, "ranking": ranking}) + "\n")
+
+
+class BedrockLlm:
+    """Llm contract over Bedrock's Converse API.
+
+    Converse is model-agnostic, so the same adapter serves open-weight Qwen,
+    Llama, Mistral, and Amazon Nova in-region. Streaming runs the synchronous
+    boto3 event stream in one worker thread and forwards deltas to the event
+    loop through a queue.
+    """
+
+    def __init__(
+        self,
+        *,
+        model: str = DEFAULT_LLM_MODEL,
+        region: str = DEFAULT_REGION,
+        client: Any | None = None,
+        timeout: float = DEFAULT_TIMEOUT,
+        temperature: float | None = None,
+        max_tokens: int = DEFAULT_LLM_MAX_TOKENS,
+    ) -> None:
+        self.name = f"bedrock/{model}"  # manifest pin + logging
+        self._model = model
+        self._temperature = temperature
+        self._max_tokens = max_tokens
+        self._client = client or boto3.client(
+            "bedrock-runtime",
+            region_name=region,
+            config=Config(read_timeout=timeout, retries={"max_attempts": _MAX_RETRIES}),
+        )
+
+    async def generate(
+        self,
+        system: str,
+        prompt: str,
+        *,
+        context: str | None = None,
+    ) -> str:
+        start = time.perf_counter()
+        try:
+            response = await asyncio.to_thread(
+                self._client.converse,
+                **self._request(system, prompt, context),
+            )
+        except (BotoCoreError, ClientError) as exc:
+            raise _normalize(exc) from exc
+        logger.debug(
+            "generate %s in %.0fms",
+            self._model,
+            (time.perf_counter() - start) * 1000,
+        )
+        if response.get("stopReason") == "max_tokens":
+            logger.warning("bedrock %s hit max_tokens=%d", self._model, self._max_tokens)
+        return _response_text(response)
+
+    def stream(
+        self,
+        system: str,
+        prompt: str,
+        *,
+        context: str | None = None,
+    ) -> AsyncIterator[str]:
+        return self._stream(system, prompt, context)
+
+    async def _stream(
+        self, system: str, prompt: str, context: str | None
+    ) -> AsyncIterator[str]:
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=64)
+        done = object()
+        stop = threading.Event()
+        stream_holder: list[Any] = []
+        close_lock = threading.Lock()
+        closed = [False]
+
+        def close_stream(stream: Any | None) -> None:
+            """Close the Bedrock stream once, from either the worker or generator."""
+            if stream is None:
+                return
+            with close_lock:
+                if closed[0]:
+                    return
+                closed[0] = True
+            close = getattr(stream, "close", None)
+            if close is not None:
+                try:
+                    close()
+                except Exception:
+                    pass
+
+        def put(item: Any) -> bool:
+            """Put one item with bounded backpressure; return False when stopped."""
+            if stop.is_set():
+                return False
+            try:
+                future = asyncio.run_coroutine_threadsafe(queue.put(item), loop)
+            except RuntimeError:  # loop already closed during shutdown
+                return False
+            while True:
+                try:
+                    future.result(timeout=0.5)
+                    return True
+                except FutureTimeout:
+                    if stop.is_set():
+                        future.cancel()
+                        return False
+                except Exception:
+                    return False
+
+        def worker() -> None:
+            stream: Any | None = None
+            try:
+                if stop.is_set():
+                    return
+                response = self._client.converse_stream(
+                    **self._request(system, prompt, context)
+                )
+                stream = response["stream"]
+                stream_holder.append(stream)
+                if stop.is_set():
+                    return
+                for event in stream:
+                    if stop.is_set():
+                        break
+                    delta = event.get("contentBlockDelta", {}).get("delta", {})
+                    text = delta.get("text")
+                    if text and not put(text):
+                        break
+            except (BotoCoreError, ClientError) as exc:
+                put(exc)
+            except Exception as exc:  # malformed event or client bug: do not hang
+                put(ProviderError(str(exc)))
+            finally:
+                # Signal completion before closing so a slow close cannot stall
+                # the consumer at queue.get().
+                if not stop.is_set():
+                    put(done)
+                close_stream(stream)
+
+        # A daemon thread keeps an aborted Bedrock stream from delaying process
+        # exit. The generator still sets stop and closes the stream on disconnect.
+        threading.Thread(target=worker, daemon=True, name="bedrock-stream").start()
+        try:
+            while True:
+                item = await queue.get()
+                if item is done:
+                    return
+                if isinstance(item, (BotoCoreError, ClientError)):
+                    raise _normalize(item) from item
+                if isinstance(item, ProviderError):
+                    raise item
+                if isinstance(item, Exception):
+                    raise ProviderError(str(item)) from item
+                yield item
+        finally:
+            # A client disconnect cancels this generator. Stop the worker and try
+            # to close the stream so a blocked read can unwind. close_stream is
+            # guarded so the worker and generator cannot close it concurrently.
+            stop.set()
+            close_stream(stream_holder[0] if stream_holder else None)
+
+    async def aclose(self) -> None:
+        close = getattr(self._client, "close", None)
+        if close is not None:
+            close()
+
+    def _request(
+        self, system: str, prompt: str, context: str | None
+    ) -> dict[str, Any]:
+        user = prompt if context is None else f"{context}\n\n{prompt}"
+        inference: dict[str, Any] = {"maxTokens": self._max_tokens}
+        if self._temperature is not None:
+            inference["temperature"] = self._temperature
+        request: dict[str, Any] = {
+            "modelId": self._model,
+            "messages": [{"role": "user", "content": [{"text": user}]}],
+            "inferenceConfig": inference,
+        }
+        if system.strip():
+            request["system"] = [{"text": system}]
+        return request
+
+
+def _response_text(response: dict[str, Any]) -> str:
+    message = response.get("output", {}).get("message", {})
+    return "".join(
+        block.get("text", "")
+        for block in message.get("content", [])
+        if isinstance(block, dict)
+    )

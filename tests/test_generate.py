@@ -3,7 +3,7 @@
 All excerpt text is invented; the corpus is copyrighted and stays out of git.
 """
 
-from app.pipeline.generate import ABSTAIN_MESSAGE, AskResult, ask
+from app.pipeline.generate import ABSTAIN_MESSAGE, ask
 from app.schemas import Chunk, ChunkMetadata
 
 # RRF reference scores with rrf_k=60: one leg contributes 1/(rrf_k+1) for its
@@ -77,7 +77,10 @@ async def test_duplicate_citations_are_deduped_in_order():
 async def test_weak_retrieval_abstains_without_calling_the_llm():
     llm = _Llm("should not be used")
     result = await ask("q", retriever=_Retriever([_chunk("b1-c01-0000", 0.001)]), llm=llm)
-    assert result == AskResult(ABSTAIN_MESSAGE, [], True)
+    assert result.answer == ABSTAIN_MESSAGE
+    assert result.citations == []
+    assert result.abstained is True
+    assert [chunk.id for chunk in result.chunks] == ["b1-c01-0000"]
     assert llm.calls == []
 
 
@@ -110,3 +113,26 @@ async def test_prompt_contains_excerpt_ids_and_question():
     assert "[b1-c01-0000]" in prompt
     assert "Rowan trims the wick" in prompt
     assert "Who trims the wick?" in prompt
+
+
+class _StreamLlm(_Llm):
+    def stream(self, system: str, prompt: str, *, context=None):
+        async def gen():
+            for piece in ("Rowan", " trims", " the wick", " [b1-c01-0000]."):
+                yield piece
+
+        return gen()
+
+
+async def test_streaming_forwards_tokens_and_still_grounds():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    tokens: list[str] = []
+    result = await ask(
+        "Who trims the wick?",
+        retriever=_Retriever(chunks),
+        llm=_StreamLlm("unused"),
+        on_token=tokens.append,
+    )
+    assert "".join(tokens) == "Rowan trims the wick [b1-c01-0000]."
+    assert result.citations == ["b1-c01-0000"]
+    assert result.abstained is False
