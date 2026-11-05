@@ -146,12 +146,19 @@ class ChatLimiter:
         if not self._active_ip.get(ip):
             self._active_ip.pop(ip, None)
 
-    def cost(self, input_tokens: int, output_tokens: int) -> float:
+    def cost(self, input_tokens: int, output_tokens: int, *, small: bool = False) -> float:
         prices = self._settings
-        return (
-            input_tokens * prices.chat_input_price_per_mtok
-            + output_tokens * prices.chat_output_price_per_mtok
-        ) / 1_000_000
+        input_price = (
+            prices.chat_small_input_price_per_mtok
+            if small
+            else prices.chat_input_price_per_mtok
+        )
+        output_price = (
+            prices.chat_small_output_price_per_mtok
+            if small
+            else prices.chat_output_price_per_mtok
+        )
+        return (input_tokens * input_price + output_tokens * output_price) / 1_000_000
 
     def record(self, input_tokens: int, output_tokens: int) -> None:
         """Account one answered request against the daily budget."""

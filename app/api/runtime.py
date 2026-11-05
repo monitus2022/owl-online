@@ -22,10 +22,15 @@ class Runtime:
     llm: Llm
     agent: CompiledStateGraph | None = None
     index_hash: str = "unknown-index"
+    small_llm: Llm | None = None
 
     async def aclose(self) -> None:
         """Release provider clients on shutdown (embedder pool, model client)."""
-        for component in (self.retriever, self.llm):
+        seen: set[int] = set()
+        for component in (self.retriever, self.llm, self.small_llm):
+            if component is None or id(component) in seen:
+                continue
+            seen.add(id(component))
             close = getattr(component, "aclose", None)
             if close is not None:
                 await close()
@@ -45,11 +50,20 @@ async def build_runtime(settings: Settings) -> Runtime:
         min_score=settings.rerank_min_score,
     )
     llm = make_llm(settings.provider)
+    small_llm = (
+        make_llm(settings.small_provider, model=settings.small_model)
+        if settings.routing == "intent"
+        else None
+    )
     return Runtime(
         retriever=setup.retriever,
         llm=llm,
         index_hash=setup.text_hash,
         agent=build_graph(
-            setup.retriever, llm, max_retries=settings.retry_budget
+            setup.retriever,
+            llm,
+            max_retries=settings.retry_budget,
+            small_llm=small_llm,
         ),
+        small_llm=small_llm,
     )

@@ -21,6 +21,7 @@ def build_graph(
     top_k: int = DEFAULT_TOP_K,
     min_score: float | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    small_llm: Llm | None = None,
 ) -> CompiledStateGraph:
     """Build the stateless per-request graph; no checkpointer in D4."""
     graph = StateGraph(AgentState)
@@ -50,7 +51,8 @@ def build_graph(
             partial(
                 node,
                 retriever=retriever,
-                llm=llm,
+                llm=small_llm or llm,
+                fallback_llm=llm if small_llm is not None else None,
                 top_k=top_k,
                 min_score=min_score,
             ),

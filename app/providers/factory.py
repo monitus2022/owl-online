@@ -11,6 +11,7 @@ from app.providers.contracts import Embedder, Llm, Reranker, Retriever
 from app.providers.fakes import FakeEmbedder, FakeReranker, FakeRetriever
 from app.providers.local import OllamaEmbedder
 from app.providers.openrouter import DEFAULT_MODEL, OpenRouterLlm
+from app.providers.policy import ensure_allowed_model
 
 # All provider names the factory accepts ("local" builds a real embedder).
 PROVIDERS = ("bedrock", "openrouter", "local")
@@ -27,6 +28,7 @@ def make_embedder(provider: str, *, model: str | None = None) -> Embedder:
                 return OllamaEmbedder(base_url=base_url)
             return OllamaEmbedder(model=model, base_url=base_url)
         case "bedrock":
+            ensure_allowed_model(model or settings.bedrock_embed_model)
             return BedrockEmbedder(
                 model=model or settings.bedrock_embed_model,
                 region=settings.aws_region,
@@ -42,6 +44,8 @@ def make_llm(
     provider: str, *, model: str | None = None, temperature: float | None = None
 ) -> Llm:
     """Build an Llm for a provider name"""
+    resolved = model or (DEFAULT_MODEL if provider == "openrouter" else settings.bedrock_llm_model)
+    ensure_allowed_model(resolved)
     match provider:
         case "openrouter":
             return OpenRouterLlm(
@@ -51,7 +55,7 @@ def make_llm(
             )
         case "bedrock":
             return BedrockLlm(
-                model=model or settings.bedrock_llm_model,
+                model=resolved,
                 region=settings.aws_region,
                 temperature=temperature,
                 max_tokens=settings.bedrock_llm_max_tokens,
@@ -64,6 +68,7 @@ def make_reranker(provider: str, *, model: str | None = None) -> Reranker:
     """Build a Reranker for a provider name"""
     match provider:
         case "bedrock":
+            ensure_allowed_model(model or settings.rerank_model)
             return BedrockReranker(
                 model=model or settings.rerank_model,
                 region=settings.aws_region,

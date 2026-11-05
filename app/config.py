@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # pydantic-settings reads .env for OWL_ settings but does not populate the
@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     chat_daily_token_budget: int = Field(default=200_000, ge=1)
     chat_cache_entries: int = Field(default=256, ge=1)
     chat_cache_ttl_s: int = Field(default=3600, ge=1)
+    # Model routing (#82). Off keeps one model on every intent.
+    routing: Literal["off", "intent"] = "off"
+    small_provider: Literal["openrouter", "bedrock"] = "openrouter"
+    small_model: str = "mistralai/mistral-small-3.2-24b-instruct"
     # Signs the anonymous session cookie. Empty means a random per-process
     # secret, which resets sessions on restart; set it in production.
     session_secret: str = ""
@@ -59,6 +63,17 @@ class Settings(BaseSettings):
     trace_file: Path | None = None
     trace_max_bytes: int = 20_000_000
 
+    @model_validator(mode="after")
+    def _check_small_model_pair(self) -> "Settings":
+        if self.routing == "intent":
+            if self.small_provider == "openrouter" and "/" not in self.small_model:
+                raise ValueError("OpenRouter small models use the vendor/model slug")
+            if self.small_provider == "bedrock" and "/" in self.small_model:
+                raise ValueError(
+                    "Bedrock small models use the provider.model-id form, not a slug"
+                )
+        return self
+
     @field_validator("trace_file", mode="before")
     @classmethod
     def _blank_trace_file(cls, value: object) -> object:
@@ -68,6 +83,8 @@ class Settings(BaseSettings):
     # Placeholders for the pinned generator; set OWL_ prices to your contract.
     chat_input_price_per_mtok: float = Field(default=0.10, ge=0)
     chat_output_price_per_mtok: float = Field(default=0.30, ge=0)
+    chat_small_input_price_per_mtok: float = Field(default=0.075, ge=0)
+    chat_small_output_price_per_mtok: float = Field(default=0.20, ge=0)
     log_level: str = "INFO"
     live_tests: bool = False     # True: use real provider calls in tests; False: use fakes
 

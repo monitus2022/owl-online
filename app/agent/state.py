@@ -21,3 +21,4 @@ class AgentState(TypedDict, total=False):
     needs_input: bool
     attempts: int
     retry_reason: str | None
+    llm_model: str

@@ -6,7 +6,11 @@ is not the static exam bank.
 
 from langgraph.config import get_stream_writer
 
-from app.agent.nodes.common import evidence_prompt, retrieve_evidence, stream_text
+from app.agent.nodes.common import (
+    evidence_prompt,
+    retrieve_evidence,
+    stream_with_fallback,
+)
 from app.agent.state import AgentState
 from app.pipeline.generate import ABSTAIN_MESSAGE, ground_answer
 from app.providers.contracts import Llm, Retriever
@@ -28,6 +32,7 @@ async def practice_node(
     llm: Llm,
     top_k: int,
     min_score: float | None = None,
+    fallback_llm: Llm | None = None,
 ) -> dict[str, object]:
     chunks = await retrieve_evidence(
         state["question"], retriever, state.get("top_k", top_k), min_score
@@ -40,11 +45,20 @@ async def practice_node(
             "abstained": True,
         }
     prompt = evidence_prompt(state["question"], chunks)
-    text = await stream_text(llm, SYSTEM, prompt, get_stream_writer())
+    text, model_used, attempts = await stream_with_fallback(
+        llm,
+        fallback_llm,
+        SYSTEM,
+        prompt,
+        get_stream_writer(),
+        intent="practice",
+    )
     result = ground_answer(text, chunks)
     return {
         "chunks": chunks,
         "answer": result.answer,
         "citations": result.citations,
         "abstained": result.abstained,
+        "llm_model": model_used,
+        "attempts": attempts,
     }

@@ -5,6 +5,7 @@ from typing import Any
 
 from app.pipeline.generate import render_evidence, retrieval_floor, sanitize_evidence
 from app.providers.contracts import Llm, Retriever
+from app.providers.errors import ProviderError
 from app.schemas import Chunk
 from app.trace import current_tracer, prompt_fingerprint
 
@@ -57,3 +58,38 @@ async def stream_text(llm: Llm, system: str, prompt: str, emit: Emit) -> str:
             **prompt_fingerprint(system, prompt),
         )
     return "".join(pieces)
+
+
+async def stream_with_fallback(
+    llm: Llm,
+    fallback: Llm | None,
+    system: str,
+    prompt: str,
+    emit: Emit,
+    *,
+    intent: str,
+) -> tuple[str, str, int]:
+    """Stream from the routed model, returning text, the model used and attempts."""
+    tracer = current_tracer()
+    if tracer is not None and fallback is not None:
+        tracer.emit(
+            "route",
+            intent=intent,
+            model=getattr(llm, "name", "?"),
+            fallback=True,
+        )
+    try:
+        text = await stream_text(llm, system, prompt, emit)
+        return text, getattr(llm, "name", "?"), 1
+    except ProviderError:
+        if fallback is None:
+            raise
+        if tracer is not None:
+            tracer.emit(
+                "fallback", intent=intent, model=getattr(fallback, "name", "?")
+            )
+        # Tokens from the failed model are already on the client. Clear the draft
+        # before the fallback stream, exactly as a verification retry does.
+        emit({"type": "reset", "reason": "fallback"})
+        text = await stream_text(fallback, system, prompt, emit)
+        return text, getattr(fallback, "name", "?"), 2

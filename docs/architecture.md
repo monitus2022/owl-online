@@ -260,7 +260,7 @@ SSE events:
 |---|---|---|
 | `mode` | `{"mode": "answer"}` | after the router update |
 | `token` | `{"text": "..."}` | for each streamed token |
-| `reset` | `{"reason": "retry"}` before a retry draft; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
+| `reset` | `{"reason": "retry"}` before a retry draft, `{"reason": "fallback"}` before a routing fallback; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
 | `final` | `answer`, `citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
@@ -273,6 +273,20 @@ complete answer, so an ungrounded stream emits `reset` before the authoritative
 retry when the budget allows; the client drops the rejected draft on the same
 event. Provider failures arrive as an `error` event because HTTP headers are
 already sent.
+
+## Model routing
+
+Routing is a deterministic intent split, off by default. With
+`OWL_ROUTING=intent`, practice and feedback use `OWL_SMALL_MODEL` (default
+Mistral Small 3.2 via OpenRouter); answers stay on the main model. A provider
+error on the small model falls back to the main model once, emitting a `reset`
+first because the draft may already be on the client. The route and any
+fallback are trace spans, and the model is on the usage line. No model call is
+used to decide the route.
+
+A vendor policy check runs before an adapter is built. OpenAI, Anthropic and
+Google models are rejected, including their open-weight releases, because the
+deployment region bans them regardless of host.
 
 ## Tracing
 
@@ -450,7 +464,7 @@ generate) for the per-call detail.
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
-| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, compiled agent graph, index hash |
+| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 
