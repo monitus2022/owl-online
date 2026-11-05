@@ -440,8 +440,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         ),
                     }
                 finally:
-                    end_trace(token)
                     limiter.release(decision.token)
+                    try:
+                        end_trace(token)
+                    except ValueError:
+                        pass
 
             async def release_cached() -> None:
                 limiter.release(decision.token)
@@ -541,8 +544,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 async for event in events():
                     yield event
             finally:
-                end_trace(token)
                 limiter.release(decision.token)
+                try:
+                    end_trace(token)
+                except ValueError:
+                    pass
 
         async def release_lease() -> None:
             limiter.release(decision.token)

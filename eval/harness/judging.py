@@ -7,7 +7,12 @@ import re
 import tomllib
 from pathlib import Path
 
-from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K, ask
+from app.pipeline.generate import (
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_TOP_K,
+    ask,
+    render_evidence,
+)
 from app.providers.contracts import Llm, Retriever
 from eval.harness.generation import JudgeVerdict, exact_match, token_f1
 from eval.harness.gold import GoldItem
@@ -146,7 +151,7 @@ async def judge_sample(
                 )
             )
             continue
-        evidence = "\n\n".join(f"[{chunk.id}] {chunk.text}" for chunk in chunks)
+        evidence = render_evidence(chunks)
         prompt = (
             f"Excerpts:\n{evidence}\n\n"
             f"Question: {item.question}\n\n"

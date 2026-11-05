@@ -55,7 +55,7 @@ _INJECTION = re.compile(
     r"|reveal\s+(the\s+)?(system\s+)?prompt"
     r"|you\s+must\s+(now|instead)\b"
     r"|new\s+instructions?\s*:",
-    re.IGNORECASE,
+    re.IGNORECASE | re.DOTALL,
 )
 _ID_SEPARATOR = re.compile(r"[,\s]+")
 # The model is told to reply with ABSTAIN_MESSAGE verbatim. Real replies drift,
@@ -115,19 +115,37 @@ def retrieval_floor(
     return getattr(retriever, "min_score", DEFAULT_MIN_SCORE)
 
 
-def sanitize_evidence(text: str) -> str:
-    """Drop instruction-shaped lines from untrusted excerpt text."""
-    kept = [line for line in text.splitlines() if not _INJECTION.search(line)]
-    return "\n".join(kept)
+def sanitize_evidence(text: str) -> tuple[str, int]:
+    """Remove instruction-shaped spans from untrusted excerpt text.
+
+    The match is removed in place, so canon text on the same line survives.
+    Returns the cleaned text and the number of spans removed.
+    """
+    removed = 0
+    while True:
+        match = _INJECTION.search(text)
+        if match is None:
+            return text, removed
+        end = text.find("\n", match.end())
+        end = len(text) if end == -1 else end
+        # Drop from the instruction to the end of its line; keep canon text
+        # that precedes it on the same line.
+        text = text[: match.start()] + text[end:]
+        removed += 1
 
 
 def render_evidence(chunks: list[Chunk]) -> str:
     """The excerpt block shared by answer, generate and grade prompts."""
-    return "\n\n".join(
-        f"[{c.id}] (Book {c.metadata.book_num}, {c.metadata.chapter_name}):\n"
-        f"{sanitize_evidence(c.text)}"
-        for c in chunks
-    )
+    blocks: list[str] = []
+    for chunk in chunks:
+        text, removed = sanitize_evidence(chunk.text)
+        if removed:
+            logger.warning("sanitized %d instruction span(s) in %s", removed, chunk.id)
+        blocks.append(
+            f"[{chunk.id}] (Book {chunk.metadata.book_num}, "
+            f"{chunk.metadata.chapter_name}):\n{text.strip()}"
+        )
+    return "\n\n".join(blocks)
 
 
 def build_prompt(question: str, chunks: list[Chunk]) -> str:

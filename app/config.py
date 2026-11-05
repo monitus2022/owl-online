@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # pydantic-settings reads .env for OWL_ settings but does not populate the
@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     # Optional JSONL trace file. Empty means stdout only (the owl.trace logger).
     trace_file: Path | None = None
     trace_max_bytes: int = 20_000_000
+
+    @field_validator("trace_file", mode="before")
+    @classmethod
+    def _blank_trace_file(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
     # Placeholders for the pinned generator; set OWL_ prices to your contract.
     chat_input_price_per_mtok: float = Field(default=0.10, ge=0)
     chat_output_price_per_mtok: float = Field(default=0.30, ge=0)
