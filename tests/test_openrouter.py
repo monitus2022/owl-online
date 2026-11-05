@@ -132,3 +132,14 @@ async def test_live_generate_and_stream(openrouter_live):
     assert answer.strip()
     tokens = [t async for t in llm.stream("Reply with the single word ok.", "say ok")]
     assert "".join(tokens).strip()
+
+def test_sampling_can_cap_output_tokens():
+    from app.providers.openrouter import OpenRouterLlm
+
+    llm = OpenRouterLlm(
+        model="qwen/qwen3-30b-a3b-instruct-2507",
+        client=object(),
+        temperature=0.0,
+        max_tokens=512,
+    )
+    assert llm._sampling()["max_tokens"] == 512

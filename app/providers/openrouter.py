@@ -40,12 +40,14 @@ class OpenRouterLlm:
         client: AsyncOpenAI | None = None,
         timeout: float = DEFAULT_TIMEOUT,
         temperature: float | None = None,
+        max_tokens: int | None = None,
     ) -> None:
         if client is None and not api_key:
             raise ProviderError("OWL_OPENROUTER_API_KEY is not set")
         self.name = f"openrouter/{model}"  # manifest pin + logging
         self._model = model
         self._temperature = temperature
+        self._max_tokens = max_tokens
         self._client = client or AsyncOpenAI(
             base_url=base_url, api_key=api_key, timeout=timeout
         )
@@ -107,11 +109,14 @@ class OpenRouterLlm:
         if close is not None:
             await close()
 
-    def _sampling(self) -> dict[str, float]:
+    def _sampling(self) -> dict[str, float | int]:
         """Optional sampling parameters; omitted entirely when not pinned."""
-        if self._temperature is None:
-            return {}
-        return {"temperature": self._temperature}
+        sampling: dict[str, float | int] = {}
+        if self._temperature is not None:
+            sampling["temperature"] = self._temperature
+        if self._max_tokens is not None:
+            sampling["max_tokens"] = self._max_tokens
+        return sampling
 
     @staticmethod
     def _messages(
