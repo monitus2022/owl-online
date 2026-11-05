@@ -1917,26 +1917,24 @@ wheels = [
 name = "owl-online"
 version = "0.1.0"
 source = { virtual = "." }
-default-groups = ["agent", "dev", "ingest"]
+default-groups = ["dev", "ingest"]
 dependencies = [
     { name = "boto3" },
     { name = "chromadb" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "langgraph" },
     { name = "numpy" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "rank-bm25" },
+    { name = "sse-starlette" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.dev-dependencies]
-agent = [
-    { name = "langgraph" },
-    { name = "sse-starlette" },
-]
 dev = [
     { name = "ipykernel" },
     { name = "mypy" },
@@ -1954,20 +1952,18 @@ requires-dist = [
     { name = "chromadb" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "langgraph" },
     { name = "numpy" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "rank-bm25" },
+    { name = "sse-starlette" },
     { name = "uvicorn", extras = ["standard"] },
 ]
 
 [package.metadata.requires-dev]
-agent = [
-    { name = "langgraph" },
-    { name = "sse-starlette" },
-]
 dev = [
     { name = "ipykernel" },
     { name = "mypy" },

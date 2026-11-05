@@ -4,24 +4,25 @@ O.W.L. Online - a grounded, agentic RAG application. Read this before making cha
 
 ## What this project is
 
-A retrieval-augmented question-answering engine with three modes: revision chat, exam generation, and grading. The project's point is the evaluation discipline and the full-stack agent, not the corpus.
+A retrieval-augmented question-answering engine with two surfaces: a chat that
+answers, sets practice and gives formative feedback, and a static exam bank with
+offline generation and hybrid grading. The project's point is the evaluation
+discipline and the full-stack agent, not the corpus.
 
 ## Commands
 
 Provisional until the code layout exists; update these as the project takes shape.
 
-- Install: `uv sync` (installs the dev, ingest and agent groups)
+- Install: `uv sync` (installs the dev and ingest groups; LangGraph and SSE are base dependencies)
 - Run API: `uvicorn app.main:app --reload`
 - Tests: `pytest`
 - Eval harness tests: `pytest eval/`
 - Eval gate: `uv run python scripts/run_eval.py --check`
 
-Dependencies are split by environment. `[project] dependencies` is what the
-served API needs; `ingest` (PDF parsing) and `agent` (V2 LangGraph, SSE) are
-dependency groups, installed by default for dev. The runtime image installs base
-only (`uv sync --no-default-groups`). chromadb's unused `kubernetes` and
-`onnxruntime` are excluded in `[tool.uv]`, so they are absent in every
-environment, dev included.
+`ingest` (PDF parsing) is a dependency group, installed by default for dev.
+LangGraph and sse-starlette are base dependencies because the served V2 API
+imports them. The runtime image installs base only (`uv sync
+--no-default-groups`).
 
 ## Verification (required)
 
@@ -42,18 +43,38 @@ environment, dev included.
 
 Layout:
 
-- `app/api/` - FastAPI HTTP surface (single-shot `/ask`; streaming is V2)
-- `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate
-- `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker now; Bedrock Llm is V2)
-- `app/agent/` - LangGraph graph, nodes, state (V2)
+- `app/api/` - FastAPI HTTP surface (`/ask`, `/ask/stream`; static exam endpoints are planned)
+- `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam build is planned
+- `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
+- `app/agent/` - LangGraph chat graph, node functions, state (V2)
+- `app/knowledge/` - planned subject taxonomy, material packs, source refs and pack validation
+- `app/storage/` - planned exam store (SQLite models and repository)
+- `app/grading/` - planned hybrid grader: deterministic objective scoring, pinned LLM rubric judge for free text, deterministic score bands
+- `data/subjects/` - planned local subject packs; source text stays out of git
 - `app/schemas.py` - domain data (`Chunk`)
 - `app/config.py` - settings (env-based, `OWL_` prefix)
 - `app/logging.py` - logging setup: one formatter, level from settings, per-request id
-- `docs/architecture.md` - living diagrams (contracts, module deps, `/ask` flow); update when a contract, an adapter, or the top-level flow changes
+- `docs/architecture.md` - living diagrams (contracts, module deps, chat flows, exam-bank boundary); update when a contract, an adapter, or the top-level flow changes
+- `docs/workplan.md` - phase plan, ticket map, grading and memory decisions
 - `docs/runs/` - one committed Markdown record per eval run, plus the template and index
 - `eval/` - harness, gold set, thresholds
 
 Every model call goes through an adapter; the provider is a config value.
+
+Chat has three intents: answer, practice and feedback. Practice and feedback are
+ephemeral and formative. The exam bank is a separate planned surface: papers are
+generated offline, validated, versioned and stored. Objective answers are scored
+deterministically; free-text answers are judged by a pinned LLM against the
+stored rubric and evidence; totals and bands are deterministic. Do not route
+formal exam generation or authoritative grading through the chat graph.
+
+Subject knowledge packs are the source of truth for exam generation and lesson
+mode. Every material has source refs; every generated question or lesson section
+must cite a material and source ref. Do not generate exam or lesson content from
+free model memory or from an unvalidated pack.
+
+Chat endpoints enforce per-session and per-day caps, token caps and an exact
+cache; a spend guard degrades chat before it can exhaust the budget.
 
 ## Model access
 

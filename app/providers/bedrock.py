@@ -12,6 +12,7 @@ import hashlib
 import json
 import logging
 import time
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,8 @@ _THROTTLE_CODES = {
     "TooManyRequestsException",
     "ServiceQuotaExceededException",
 }
+DEFAULT_LLM_MODEL = "qwen.qwen3-32b-v1:0"
+DEFAULT_LLM_MAX_TOKENS = 1024
 
 DEFAULT_EMBED_MODEL = "amazon.titan-embed-text-v2:0"
 DEFAULT_EMBED_DIMS = 1024
@@ -214,3 +217,138 @@ def _append_cache(path: Path | None, key: str, ranking: list[dict[str, Any]]) ->
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({"key": key, "ranking": ranking}) + "\n")
+
+class BedrockLlm:
+    """Llm contract over Bedrock's Converse API.
+
+    Converse is model-agnostic, so the same adapter serves open-weight Qwen,
+    Llama, Mistral, and Amazon Nova in-region. Streaming runs the synchronous
+    boto3 event stream in one worker thread and forwards deltas to the event
+    loop through a queue.
+    """
+
+    def __init__(
+        self,
+        *,
+        model: str = DEFAULT_LLM_MODEL,
+        region: str = DEFAULT_REGION,
+        client: Any | None = None,
+        timeout: float = DEFAULT_TIMEOUT,
+        temperature: float | None = None,
+        max_tokens: int = DEFAULT_LLM_MAX_TOKENS,
+    ) -> None:
+        self.name = f"bedrock/{model}"  # manifest pin + logging
+        self._model = model
+        self._temperature = temperature
+        self._max_tokens = max_tokens
+        self._client = client or boto3.client(
+            "bedrock-runtime",
+            region_name=region,
+            config=Config(read_timeout=timeout, retries={"max_attempts": _MAX_RETRIES}),
+        )
+
+    async def generate(
+        self,
+        system: str,
+        prompt: str,
+        *,
+        context: str | None = None,
+    ) -> str:
+        start = time.perf_counter()
+        try:
+            response = await asyncio.to_thread(
+                self._client.converse,
+                **self._request(system, prompt, context),
+            )
+        except (BotoCoreError, ClientError) as exc:
+            raise _normalize(exc) from exc
+        logger.debug(
+            "generate %s in %.0fms",
+            self._model,
+            (time.perf_counter() - start) * 1000,
+        )
+        if response.get("stopReason") == "max_tokens":
+            logger.warning("bedrock %s hit max_tokens=%d", self._model, self._max_tokens)
+        return _response_text(response)
+
+    def stream(
+        self,
+        system: str,
+        prompt: str,
+        *,
+        context: str | None = None,
+    ) -> AsyncIterator[str]:
+        return self._stream(system, prompt, context)
+
+    async def _stream(
+        self, system: str, prompt: str, context: str | None
+    ) -> AsyncIterator[str]:
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[Any] = asyncio.Queue()
+        done = object()
+
+        def worker() -> None:
+            try:
+                response = self._client.converse_stream(
+                    **self._request(system, prompt, context)
+                )
+                for event in response["stream"]:
+                    delta = event.get("contentBlockDelta", {}).get("delta", {})
+                    text = delta.get("text")
+                    if text:
+                        loop.call_soon_threadsafe(queue.put_nowait, text)
+            except (BotoCoreError, ClientError) as exc:
+                loop.call_soon_threadsafe(queue.put_nowait, exc)
+            except Exception as exc:  # malformed event or client bug: do not hang
+                loop.call_soon_threadsafe(queue.put_nowait, ProviderError(str(exc)))
+            finally:
+                loop.call_soon_threadsafe(queue.put_nowait, done)
+
+        task = asyncio.create_task(asyncio.to_thread(worker))
+        try:
+            while True:
+                item = await queue.get()
+                if item is done:
+                    return
+                if isinstance(item, (BotoCoreError, ClientError)):
+                    raise _normalize(item) from item
+                if isinstance(item, ProviderError):
+                    raise item
+                if isinstance(item, Exception):
+                    raise ProviderError(str(item)) from item
+                yield item
+        finally:
+            # The boto3 thread cannot be interrupted, but the caller should not
+            # wait on it after a client disconnect.
+            if not task.done():
+                task.cancel()
+
+    async def aclose(self) -> None:
+        close = getattr(self._client, "close", None)
+        if close is not None:
+            close()
+
+    def _request(
+        self, system: str, prompt: str, context: str | None
+    ) -> dict[str, Any]:
+        user = prompt if context is None else f"{context}\n\n{prompt}"
+        inference: dict[str, Any] = {"maxTokens": self._max_tokens}
+        if self._temperature is not None:
+            inference["temperature"] = self._temperature
+        request: dict[str, Any] = {
+            "modelId": self._model,
+            "messages": [{"role": "user", "content": [{"text": user}]}],
+            "inferenceConfig": inference,
+        }
+        if system.strip():
+            request["system"] = [{"text": system}]
+        return request
+
+
+def _response_text(response: dict[str, Any]) -> str:
+    message = response.get("output", {}).get("message", {})
+    return "".join(
+        block.get("text", "")
+        for block in message.get("content", [])
+        if isinstance(block, dict)
+    )

@@ -110,3 +110,25 @@ async def test_prompt_contains_excerpt_ids_and_question():
     assert "[b1-c01-0000]" in prompt
     assert "Rowan trims the wick" in prompt
     assert "Who trims the wick?" in prompt
+
+class _StreamLlm(_Llm):
+    def stream(self, system: str, prompt: str, *, context=None):
+        async def gen():
+            for piece in ("Rowan", " trims", " the wick", " [b1-c01-0000]."):
+                yield piece
+
+        return gen()
+
+
+async def test_streaming_forwards_tokens_and_still_grounds():
+    chunks = [_chunk("b1-c01-0000", _TWO_LEG)]
+    tokens: list[str] = []
+    result = await ask(
+        "Who trims the wick?",
+        retriever=_Retriever(chunks),
+        llm=_StreamLlm("unused"),
+        on_token=tokens.append,
+    )
+    assert "".join(tokens) == "Rowan trims the wick [b1-c01-0000]."
+    assert result.citations == ["b1-c01-0000"]
+    assert result.abstained is False

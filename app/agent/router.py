@@ -1,0 +1,64 @@
+"""Deterministic chat-intent router: answer | practice | feedback.
+
+These are chat intents, not product modes. Practice is an ephemeral, grounded
+question or two. Feedback is formative and provisional. The formal exam bank is
+a separate offline pipeline with stored mark schemes and deterministic scoring.
+"""
+
+import re
+
+from app.agent.state import AgentState, Mode, RequestedMode
+
+_FEEDBACK = re.compile(
+    r"\b(grade|grading|mark|marking|assess|assessing|assessment|"
+    r"evaluate|evaluating|evaluation|score|scoring|feedback)\b",
+    re.IGNORECASE,
+)
+_FEEDBACK_TARGET = re.compile(
+    r"\b(answer|response|essay|work|student|script|submission|"
+    r"following|this|it)\b",
+    re.IGNORECASE,
+)
+_FEEDBACK_REQUEST = re.compile(
+    r"\b(give|provide|send|need|want)\b[^.?!]*\bfeedback\b",
+    re.IGNORECASE,
+)
+_PRACTICE_REQUEST = re.compile(
+    r"\b(generate|create|make|write|draft|compose|produce|build|design|"
+    r"give|ask|quiz|test)\b[^.?!]*\b"
+    r"(question|questions|practice|exercise|exercises|drill|drills|"
+    r"quiz|quizzes|exam|exams|test|tests|worksheet|worksheets)\b",
+    re.IGNORECASE,
+)
+_PRACTICE_PHRASE = re.compile(
+    r"\b(quiz|test) (me|my knowledge)\b",
+    re.IGNORECASE,
+)
+
+
+def classify(
+    question: str,
+    *,
+    requested_mode: RequestedMode = "auto",
+    student_answer: str | None = None,
+) -> Mode:
+    if requested_mode != "auto":
+        return requested_mode
+    if student_answer and student_answer.strip():
+        return "feedback"
+    if _FEEDBACK_REQUEST.search(question):
+        return "feedback"
+    if _FEEDBACK.search(question) and _FEEDBACK_TARGET.search(question):
+        return "feedback"
+    if _PRACTICE_REQUEST.search(question) or _PRACTICE_PHRASE.search(question):
+        return "practice"
+    return "answer"
+
+
+def route(state: AgentState) -> dict[str, str]:
+    mode = classify(
+        state["question"],
+        requested_mode=state.get("requested_mode", "auto"),
+        student_answer=state.get("student_answer"),
+    )
+    return {"mode": mode}

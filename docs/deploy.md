@@ -12,7 +12,9 @@ embedder. Read the two constraints before picking a host.
    scripts/build_index.py`) and upload `data/chunks.jsonl` plus
    `data/index/chroma/`. The index directory must be writable: Chroma opens its
    SQLite store read-write at startup, so mount it writable (or copy it to a
-   writable path) rather than read-only.
+   writable path) rather than read-only. The planned subject packs live under
+   `/data/subjects/`, and the planned exam database lives under `/data/`; both
+   stay on the same mounted volume and out of the image.
 
 2. A query-time embedder. Retrieval embeds every question. There are two
    providers, and the index must be built with the same one:
@@ -47,11 +49,17 @@ docker run --rm -p 8000:8000 \
 `host.docker.internal` reaches an Ollama daemon running on the host (macOS and
 Windows; on Linux use the host gateway address).
 
+To use the Bedrock Llm instead of OpenRouter, set `OWL_PROVIDER=bedrock` and the
+model, for example `OWL_BEDROCK_LLM_MODEL=qwen.qwen3-32b-v1:0` and
+`OWL_BEDROCK_LLM_MAX_TOKENS=2048`. The model must be available in
+`OWL_AWS_REGION`; check it once with `uv run python scripts/probe_bedrock.py`.
+
 The image is runtime-only: `uv sync --no-default-groups` installs `[project]`
-dependencies, not the `ingest` (PDF parsing) or `agent` (V2) groups, and
-chromadb's unused `kubernetes` and `onnxruntime` are excluded in
-`pyproject.toml`. That keeps the image about 215 MB in the registry (about
-590 MB on disk), which fits the host's 8 GB volume comfortably.
+dependencies, including LangGraph and sse-starlette because the V2 API imports
+them. The `ingest` (PDF parsing) group is excluded, and chromadb's unused
+`kubernetes` and `onnxruntime` are excluded in `pyproject.toml`. That keeps the
+image about 215 MB in the registry (about 590 MB on disk), which fits the host's
+8 GB volume comfortably.
 
 To keep Ollama next to the API instead, run both with Compose:
 
@@ -86,7 +94,9 @@ the same:
 2. Set secrets as platform environment variables, never in the image:
    `OWL_OPENROUTER_API_KEY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
    `OWL_AWS_REGION`, and any `OWL_*` overrides. Prefer an instance role over
-   static keys where the platform supports it.
+   static keys where the platform supports it. Set `OWL_PROVIDER=bedrock` plus
+   `OWL_BEDROCK_LLM_MODEL` and `OWL_BEDROCK_LLM_MAX_TOKENS` to use the Bedrock
+   Converse path.
 3. Attach the data volume at `/data` (or point `OWL_CHUNKS_PATH` /
    `OWL_INDEX_DIR` at the mounted files).
 4. A query-time embedder. Use the vendor path, `OWL_EMBEDDER_PROVIDER=bedrock`

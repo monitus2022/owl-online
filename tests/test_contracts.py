@@ -85,8 +85,8 @@ async def test_llm_contract_swappable(provider, openrouter_live):
     """Factory-built Llm satisfies the Llm contract for each provider."""
     if provider == "openrouter" and not openrouter_live:
         pytest.skip("live OpenRouter disabled (set OWL_LIVE_TESTS=1 and a key)")
-    # openrouter has no fake: use its pinned default model, not the sentinel.
-    llm = make_llm(provider, model=None if provider == "openrouter" else "test")
+    # openrouter and bedrock use their pinned default models, not the sentinel.
+    llm = make_llm(provider, model=None if provider in ("openrouter", "bedrock") else "test")
     response = await llm.generate("system", "prompt")
     assert isinstance(response, str)
     tokens = [t async for t in llm.stream("system", "prompt")]

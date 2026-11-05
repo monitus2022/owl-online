@@ -6,9 +6,9 @@ a provider name.
 """
 
 from app.config import settings
-from app.providers.bedrock import BedrockEmbedder, BedrockReranker
+from app.providers.bedrock import BedrockEmbedder, BedrockLlm, BedrockReranker
 from app.providers.contracts import Embedder, Llm, Reranker, Retriever
-from app.providers.fakes import FakeEmbedder, FakeLlm, FakeReranker, FakeRetriever
+from app.providers.fakes import FakeEmbedder, FakeReranker, FakeRetriever
 from app.providers.local import OllamaEmbedder
 from app.providers.openrouter import DEFAULT_MODEL, OpenRouterLlm
 
@@ -50,7 +50,12 @@ def make_llm(
                 temperature=temperature,
             )
         case "bedrock":
-            return FakeLlm()  # real Bedrock adapter is V2 (#36)
+            return BedrockLlm(
+                model=model or settings.bedrock_llm_model,
+                region=settings.aws_region,
+                temperature=temperature,
+                max_tokens=settings.bedrock_llm_max_tokens,
+            )
         case _:
             raise ValueError(f"unknown provider: {provider}")
 
