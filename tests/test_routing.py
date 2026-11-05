@@ -80,6 +80,37 @@ async def test_feedback_uses_the_small_model():
     assert strong.calls == 0
 
 
+class _PartialThenFailLlm(_Llm):
+    def stream(self, system: str, prompt: str, *, context=None):
+        self.calls += 1
+
+        async def gen():
+            yield "Partial draft "
+            raise ProviderError("down")
+
+        return gen()
+
+
+async def test_fallback_clears_the_partial_draft():
+    strong = _Llm("strong", "Strong [b1-c01-0000].")
+    small = _PartialThenFailLlm("small", "unused")
+    graph = build_graph(_Retriever(), strong, small_llm=small)
+    events = []
+    async for mode, chunk in graph.astream(
+        _request("Give me a practice question on the wick"),
+        stream_mode=["custom", "updates"],
+    ):
+        if mode == "custom":
+            events.append(chunk)
+    kinds = [event.get("type") for event in events]
+    assert "reset" in kinds
+    assert kinds.index("reset") > 0  # after the partial token
+    assert any(
+        event.get("type") == "token" and "Strong" in event.get("text", "")
+        for event in events
+    )
+
+
 async def test_provider_failure_falls_back_to_the_strong_model():
     strong = _Llm("strong", "Strong [b1-c01-0000].")
     small = _Llm("small", "Small [b1-c01-0000].", fail=True)

@@ -87,4 +87,7 @@ async def stream_with_fallback(
             tracer.emit(
                 "fallback", intent=intent, model=getattr(fallback, "name", "?")
             )
+        # Tokens from the failed model are already on the client. Clear the draft
+        # before the fallback stream, exactly as a verification retry does.
+        emit({"type": "reset", "reason": "fallback"})
         return await stream_text(fallback, system, prompt, emit)

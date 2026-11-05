@@ -279,7 +279,8 @@ already sent.
 Routing is a deterministic intent split, off by default. With
 `OWL_ROUTING=intent`, practice and feedback use `OWL_SMALL_MODEL` (default
 Mistral Small 3.2 via OpenRouter); answers stay on the main model. A provider
-error on the small model falls back to the main model once. The route and any
+error on the small model falls back to the main model once, emitting a `reset`
+first because the draft may already be on the client. The route and any
 fallback are trace spans, and the model is on the usage line. No model call is
 used to decide the route.
 
