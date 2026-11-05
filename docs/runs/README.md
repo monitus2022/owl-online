@@ -43,6 +43,7 @@ so on.
 | 2026-11-05 | #78 (V2 D3) | `20261104T214334Z` | `pool-100` | 0.68 | 0.32 | 12/15 | [Retrieval ablations](2026-11-05-v2-d3-retrieval-ablations.md) |
 | 2026-11-05 | #78 (V2 D3) | `20261104T214458Z` | `pool-30` | 0.74 | 0.32 | 12/15 | [Retrieval ablations](2026-11-05-v2-d3-retrieval-ablations.md) |
 | 2026-11-05 | #80 (V2 D4) | `20261105T093948Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D4 regression check](2026-11-05-v2-d4-agent-foundation.md) |
+| 2026-11-05 | #81 (V2 D5) | `20261105T145942Z` | `pinned` | 0.76 | 0.32 | 12/15 | [V2 D5 verify and retry](2026-11-05-v2-d5-verify.md) |
 
 ## Template
 
