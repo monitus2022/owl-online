@@ -3,7 +3,7 @@
 All excerpt text is invented; the corpus is copyrighted and stays out of git.
 """
 
-from app.pipeline.generate import ABSTAIN_MESSAGE, AskResult, ask
+from app.pipeline.generate import ABSTAIN_MESSAGE, ask
 from app.schemas import Chunk, ChunkMetadata
 
 # RRF reference scores with rrf_k=60: one leg contributes 1/(rrf_k+1) for its
@@ -77,7 +77,10 @@ async def test_duplicate_citations_are_deduped_in_order():
 async def test_weak_retrieval_abstains_without_calling_the_llm():
     llm = _Llm("should not be used")
     result = await ask("q", retriever=_Retriever([_chunk("b1-c01-0000", 0.001)]), llm=llm)
-    assert result == AskResult(ABSTAIN_MESSAGE, [], True)
+    assert result.answer == ABSTAIN_MESSAGE
+    assert result.citations == []
+    assert result.abstained is True
+    assert [chunk.id for chunk in result.chunks] == ["b1-c01-0000"]
     assert llm.calls == []
 
 

@@ -75,7 +75,7 @@ def ground_answer(answer: str, chunks: list[Chunk]) -> AskResult:
     allowed = {c.id for c in chunks}
     citations = [cid for cid in _cited_ids(answer) if cid in allowed]
     if not citations:
-        return AskResult(ABSTAIN_MESSAGE, abstained=True)
+        return AskResult(ABSTAIN_MESSAGE, abstained=True, chunks=chunks)
     return AskResult(
         _drop_unknown_citations(answer, allowed),
         citations,
@@ -110,7 +110,7 @@ async def ask(
             floor,
             retrieve_ms,
         )
-        return AskResult(ABSTAIN_MESSAGE, abstained=True)
+        return AskResult(ABSTAIN_MESSAGE, abstained=True, chunks=chunks)
 
     prompt = build_prompt(question, chunks)
     generate_start = time.perf_counter()

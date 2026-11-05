@@ -295,6 +295,23 @@ class BedrockLlm:
         done = object()
         stop = threading.Event()
         stream_holder: list[Any] = []
+        close_lock = threading.Lock()
+        closed = [False]
+
+        def close_stream(stream: Any | None) -> None:
+            """Close the Bedrock stream once, from either the worker or generator."""
+            if stream is None:
+                return
+            with close_lock:
+                if closed[0]:
+                    return
+                closed[0] = True
+            close = getattr(stream, "close", None)
+            if close is not None:
+                try:
+                    close()
+                except Exception:
+                    pass
 
         def put(item: Any) -> bool:
             """Put one item with bounded backpressure; return False when stopped."""
@@ -339,15 +356,11 @@ class BedrockLlm:
             except Exception as exc:  # malformed event or client bug: do not hang
                 put(ProviderError(str(exc)))
             finally:
-                if stream is not None:
-                    close = getattr(stream, "close", None)
-                    if close is not None:
-                        try:
-                            close()
-                        except Exception:
-                            pass
+                # Signal completion before closing so a slow close cannot stall
+                # the consumer at queue.get().
                 if not stop.is_set():
                     put(done)
+                close_stream(stream)
 
         # A daemon thread keeps an aborted Bedrock stream from delaying process
         # exit. The generator still sets stop and closes the stream on disconnect.
@@ -366,15 +379,10 @@ class BedrockLlm:
                 yield item
         finally:
             # A client disconnect cancels this generator. Stop the worker and try
-            # to close the stream so a blocked read can unwind.
+            # to close the stream so a blocked read can unwind. close_stream is
+            # guarded so the worker and generator cannot close it concurrently.
             stop.set()
-            if stream_holder:
-                close = getattr(stream_holder[0], "close", None)
-                if close is not None:
-                    try:
-                        close()
-                    except Exception:
-                        pass
+            close_stream(stream_holder[0] if stream_holder else None)
 
     async def aclose(self) -> None:
         close = getattr(self._client, "close", None)

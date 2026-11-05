@@ -161,6 +161,7 @@ def test_unexpected_error_returns_500_without_a_traceback():
     assert "kaboom" not in response.text
     assert "traceback" not in response.text.lower()
 
+
 def test_runtime_builds_the_graph_once():
     app = create_app(runtime=Runtime(retriever=_Retriever(), llm=_Llm()))
     with TestClient(app) as client:

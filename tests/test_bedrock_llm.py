@@ -1,5 +1,6 @@
 """Bedrock Llm tests: a fake client stands in for AWS, no network."""
 
+import asyncio
 import threading
 
 import pytest
@@ -14,6 +15,8 @@ class _BlockingStream:
 
     def __init__(self) -> None:
         self.close_called = threading.Event()
+        self.exited = threading.Event()
+        self.close_count = 0
         self._sent = False
 
     def __iter__(self):
@@ -24,9 +27,11 @@ class _BlockingStream:
             self._sent = True
             return {"contentBlockDelta": {"delta": {"text": "H"}}}
         self.close_called.wait(timeout=2)
+        self.exited.set()
         raise StopIteration
 
     def close(self) -> None:
+        self.close_count += 1
         self.close_called.set()
 
 
@@ -135,6 +140,8 @@ async def test_stream_close_stops_worker_and_closes_stream():
     assert await anext(stream) == "H"
     await stream.aclose()
     assert client.stream.close_called.wait(timeout=1)
+    assert await asyncio.to_thread(client.stream.exited.wait, 3)
+    assert client.stream.close_count == 1
 
 
 async def test_connection_error_is_normalized_for_generate():

@@ -376,7 +376,7 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks |
 | `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |

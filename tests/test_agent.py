@@ -59,6 +59,7 @@ async def test_answer_route_grounds_and_cites():
     assert state["mode"] == "answer"
     assert state["abstained"] is False
     assert state["citations"] == ["b1-c01-0000"]
+    assert [chunk.id for chunk in state["chunks"]] == ["b1-c01-0000"]
 
 
 async def test_answer_honors_state_top_k():
@@ -125,8 +126,9 @@ async def test_feedback_retrieves_with_the_student_answer():
     assert "Rowan trims the wick." in retriever.queries[0]
 
 
-async def test_feedback_without_an_answer_abstains_without_retrieval():
-    graph = build_graph(_Retriever(), _Llm("should not run"))
+async def test_feedback_without_an_answer_requests_input():
+    retriever = _Retriever()
+    graph = build_graph(retriever, _Llm("should not run"))
     state = await graph.ainvoke(
         {
             "question": "Give me feedback on this answer",
@@ -138,6 +140,7 @@ async def test_feedback_without_an_answer_abstains_without_retrieval():
     assert state["needs_input"] is True
     assert state["abstained"] is False
     assert state["citations"] == []
+    assert retriever.queries == []
 
 
 async def test_graph_streams_custom_token_events():
