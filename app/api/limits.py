@@ -78,23 +78,30 @@ class ChatLimiter:
         day = self._today()
         self._roll_day(day)
         self._maybe_prune(day)
-        if len(self._windows) >= 20_000 and session not in self._windows:
-            return Decision("rate_limited", "capacity", 60)
-        if len(self._ip_windows) >= 20_000 and ip not in self._ip_windows:
-            return Decision("rate_limited", "capacity", 60)
-        window = self._windows.setdefault(session, _Window())
-        ip_window = self._ip_windows.setdefault(ip, _Window())
-        self._roll_window(window, ip_window, now, day)
+        window = self._windows.get(session)
+        ip_window = self._ip_windows.get(ip)
+        if window is not None:
+            self._roll(window, now, day)
+        if ip_window is not None:
+            self._roll(ip_window, now, day)
 
-        session_retry = max(1, math.ceil(60 - (now - window.minute_start)))
-        ip_retry = max(1, math.ceil(60 - (now - ip_window.minute_start)))
-        if window.minute_count >= self._settings.chat_per_minute:
+        session_minute = window.minute_count if window else 0
+        ip_minute = ip_window.minute_count if ip_window else 0
+        session_day = window.day_count if window else 0
+        ip_day = ip_window.day_count if ip_window else 0
+        session_retry = max(
+            1, math.ceil(60 - (now - (window.minute_start if window else now)))
+        )
+        ip_retry = max(
+            1, math.ceil(60 - (now - (ip_window.minute_start if ip_window else now)))
+        )
+        if session_minute >= self._settings.chat_per_minute:
             return Decision("rate_limited", "minute", session_retry)
-        if ip_window.minute_count >= self._settings.chat_per_minute:
+        if ip_minute >= self._settings.chat_per_minute:
             return Decision("rate_limited", "ip_minute", ip_retry)
-        if window.day_count >= self._settings.chat_per_day:
+        if session_day >= self._settings.chat_per_day:
             return Decision("rate_limited", "day", self._to_midnight())
-        if ip_window.day_count >= self._settings.chat_ip_per_day:
+        if ip_day >= self._settings.chat_ip_per_day:
             return Decision("rate_limited", "ip_day", self._to_midnight())
         if len(self._active.get(session, ())) >= self._settings.chat_concurrent:
             return Decision("rate_limited", "concurrent", 1)
@@ -102,6 +109,17 @@ class ChatLimiter:
             return Decision("rate_limited", "ip_concurrent", 1)
         if not cache_hit and self._tokens >= self._settings.chat_daily_token_budget:
             return Decision("degraded", "budget", self._to_midnight())
+
+        # Only create state for an admitted request; a rejection must not grow
+        # the maps, or cheap rejected identities could exhaust capacity.
+        if len(self._windows) >= 20_000 and window is None:
+            return Decision("rate_limited", "capacity", self._to_midnight())
+        if len(self._ip_windows) >= 20_000 and ip_window is None:
+            return Decision("rate_limited", "capacity", self._to_midnight())
+        if window is None:
+            window = self._windows[session] = _Window(minute_start=now, day=day)
+        if ip_window is None:
+            ip_window = self._ip_windows[ip] = _Window(minute_start=now, day=day)
 
         token = uuid.uuid4().hex
         window.minute_count += 1
@@ -168,21 +186,13 @@ class ChatLimiter:
         self._tokens = 0
         self._alerts.clear()
 
-    def _roll_window(
-        self, window: _Window, ip_window: _Window, now: float, day: str
-    ) -> None:
+    def _roll(self, window: _Window, now: float, day: str) -> None:
         if window.day != day:
             window.day = day
             window.day_count = 0
-        if ip_window.day != day:
-            ip_window.day = day
-            ip_window.day_count = 0
         if now - window.minute_start >= 60:
             window.minute_start = now
             window.minute_count = 0
-        if now - ip_window.minute_start >= 60:
-            ip_window.minute_start = now
-            ip_window.minute_count = 0
 
     def _maybe_prune(self, day: str) -> None:
         """Drop yesterday's windows and empty sessions so headers cannot grow state."""
@@ -198,10 +208,10 @@ class ChatLimiter:
         self._windows = {
             key: window
             for key, window in self._windows.items()
-            if window.day == day or window.minute_count or window.day_count
+            if window.day == day and (window.minute_count or window.day_count)
         }
         self._ip_windows = {
             key: window
             for key, window in self._ip_windows.items()
-            if window.day == day or window.minute_count or window.day_count
+            if window.day == day and (window.minute_count or window.day_count)
         }

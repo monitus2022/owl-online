@@ -401,8 +401,9 @@ Corpus-only answers pass through an in-process exact cache keyed by prompt
 version, index text hash, retrieval settings, embedder and reranker config,
 model and normalised question. Practice and feedback never
 read or write it: feedback is personalised by the student answer and practice is
-meant to vary. Usage is logged for each request that reaches generation (a 429, 502 or 504 does
-not produce a line) with estimated input/output tokens,
+meant to vary. Usage is logged for each processed request, cache hits included; a
+429, 502, 503 or 504 does not produce a line. The line carries estimated
+input/output tokens,
 model, intent, cache hit, cost and latency; a client that disconnects before the
 stream ends may not produce a line. Prices are configuration, not constants.
 
@@ -429,7 +430,7 @@ generate) for the per-call detail.
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
-| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm and compiled agent graph |
+| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, compiled agent graph, index hash |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 

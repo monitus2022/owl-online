@@ -50,6 +50,17 @@ docker run --rm -p 8000:8000 \
 `host.docker.internal` reaches an Ollama daemon running on the host (macOS and
 Windows; on Linux use the host gateway address).
 
+Behind nginx, overwrite both headers so a client cannot supply them, and set the
+scheme so the session cookie can use `SameSite=None`:
+
+```
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-Proto $scheme;
+```
+
+`OWL_TRUSTED_PROXIES` defaults to loopback plus the Docker bridge
+(`172.17.0.0/16`); widen it only for a proxy that is not on that bridge.
+
 To use the Bedrock Llm instead of OpenRouter, set `OWL_PROVIDER=bedrock` and the
 model, for example `OWL_BEDROCK_LLM_MODEL=qwen.qwen3-32b-v1:0` and
 `OWL_BEDROCK_LLM_MAX_TOKENS=1024`. The model must be available in
@@ -240,6 +251,13 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_INDEX_DIR=/data/index/titan
    OWL_RERANK_PROVIDER=bedrock
    OWL_RERANK_CACHE_PATH=/data/rerank_cache.jsonl
+   OWL_SESSION_SECRET=<long-random-value>
+   OWL_TRUSTED_PROXIES=127.0.0.1/32,::1/128,172.17.0.0/16
+   OWL_CHAT_PER_MINUTE=10
+   OWL_CHAT_PER_DAY=100
+   OWL_CHAT_IP_PER_DAY=100
+   OWL_CHAT_CONCURRENT=2
+   OWL_CHAT_DAILY_TOKEN_BUDGET=200000
    OWL_AWS_REGION=ap-northeast-1
    OWL_CORS_ORIGINS=https://your-chat-page.pages.dev
    ```

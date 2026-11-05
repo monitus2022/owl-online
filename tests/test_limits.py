@@ -4,7 +4,7 @@
 from datetime import UTC, datetime
 
 from app.api.cache import AnswerCache, cache_key, normalize_question
-from app.api.limits import ChatLimiter
+from app.api.limits import ChatLimiter, _Window
 from app.config import Settings
 from app.pipeline.generate import AskResult
 from app.schemas import Chunk, ChunkMetadata
@@ -155,3 +155,50 @@ def test_client_ip_trusts_headers_only_from_a_trusted_peer():
         "headers": [(b"cf-connecting-ip", b"203.0.113.9")],
     }
     assert _client_ip(Request(direct), loopback) == "198.51.100.4"
+
+
+def test_rejected_session_does_not_grow_state():
+    limiter = _limiter(chat_per_minute=1)
+    assert limiter.admit("s1", "ip").allowed
+    assert limiter.admit("s2", "ip").reason == "ip_minute"
+    assert len(limiter._windows) == 1
+    assert len(limiter._ip_windows) == 1
+
+
+def test_capacity_refuses_without_evicting_live_windows():
+    limiter = _limiter(chat_concurrent=100)
+    day = limiter._today()
+    limiter._windows = {
+        f"s{i}": _Window(minute_start=0.0, minute_count=1, day=day, day_count=1)
+        for i in range(20_000)
+    }
+    decision = limiter.admit("new-session", "new-ip")
+    assert decision.reason == "capacity"
+    assert len(limiter._windows) == 20_000
+
+
+def test_default_proxies_trust_the_bridge_not_every_private_address():
+    from ipaddress import ip_network
+
+    from starlette.requests import Request
+
+    from app.main import _client_ip
+
+    default = Settings.model_fields["trusted_proxies"].default
+    trusted = [ip_network(item) for item in default.split(",")]
+    bridge = Request(
+        {
+            "type": "http",
+            "client": ("172.17.0.1", 1),
+            "headers": [(b"cf-connecting-ip", b"203.0.113.9")],
+        }
+    )
+    assert _client_ip(bridge, trusted) == "203.0.113.9"
+    other = Request(
+        {
+            "type": "http",
+            "client": ("172.20.0.5", 1),
+            "headers": [(b"cf-connecting-ip", b"203.0.113.9")],
+        }
+    )
+    assert _client_ip(other, trusted) == "172.20.0.5"
