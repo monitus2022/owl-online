@@ -187,6 +187,15 @@ flowchart TD
   providers --> sdk[[openai, boto3, httpx, chromadb]]
 ```
 
+## API surface
+
+The served contract is documented in `docs/api.md`: the current `/health`,
+`/ask` and `/ask/stream` routes, the SSE event schema, the error shapes, and the
+planned `/v1` surface for chat, persona, subjects, exams and grading. The split
+is by purpose, not by subject: a subject is request data, chat intents stay
+internal, and the exam bank and grading are separate resources. The versioned
+aliases land before the frontend moves to its own repository.
+
 ## Request flow: POST /ask
 
 ```mermaid
