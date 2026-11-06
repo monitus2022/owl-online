@@ -54,7 +54,7 @@ First relevant rank: p50 1, p90 2, max 6.
 ## Reproduce
 
 ```
-uv run python scripts/measure_multibook_diagnostic.py
+uv run python scripts/measure_multibook_diagnostic.py --run-id 20261106T224550Z
 ```
 
 ## Raw summary

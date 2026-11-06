@@ -16,6 +16,8 @@
 | Judge | `deepseek/deepseek-v4.1-flash-1017` |
 | Reranker | `amazon.rerank-v1:0`, pool 50 |
 | Embedder | `local` / `qwen3-embedding:0.6b`, 1024 dims |
+| Chunking | size 500, overlap 75, min size 200 |
+| Retrieval | hybrid (dense + BM25, RRF), `rrf_k = 60`, per-book filter |
 | Final top-k | 7 |
 | Selection floor | 0.0 (the retriever floor) |
 | Grid | k {1, 3, 5} x {top1_floor, batched_top3, per_book}, plus k=15 per-book |
@@ -37,31 +39,37 @@
 
 ## Reading
 
-- k1-batch is the cheapest and fastest, but coverage 0.76 and completeness 0.72
-  are below the pre-registered 0.80/0.70 coverage and completeness bars.
+- k1-batch is the cheapest and uses the fewest calls, but coverage 0.76 is below
+  the pre-registered 0.80 bar; completeness 0.72 clears the 0.70 bar. k1-top1
+  has the lowest p50 and p95.
 - k3-book has the best coverage and completeness (0.83/0.79) and ties the best
   faithfulness (0.70). Its p95 is 32.1s, slightly over the 30s bar on this
   fixture.
 - k5-book has the best citation validity (0.87) and a p95 of 16.3s, but
   faithfulness is 0.56. The difference from k3-book is 1-2 judged items.
 - The shipped k15-book is not the best on this fixture: coverage 0.78, citation
-  0.84, faithfulness 0.56, and the highest spend ($0.0179).
+  0.84, faithfulness 0.56, and the highest spend ($0.0179). k3-book spends about
+  39% of k15-book ($0.0070 against $0.0179), not half.
 - The batched strategy cuts calls from 8 to 2 but is not reliably faster: k3-batch
-  p95 is 118.8s. It loses coverage and faithfulness against k3-book.
+  p95 is 118.8s. It loses coverage and faithfulness against k3-book. It always
+  uses the top three candidates per book, so k3-batch and k5-batch share the
+  same extraction input; their difference is model noise, not a k effect.
 - Faithfulness is low and noisy across every config (0.40 to 0.70). The develop
   fixture does not support a confident choice on that metric. The pre-registered
   0.88 point estimate is not reached by any config.
 - The top-1 strategies do not beat the per-book strategies on coverage at the
   same k. A positive score floor is not supported by the diagnostic: the
   first-relevant p10 is 0.0015 and some relevant books score 0.0001.
+- The generator and judge calls are cached by (model, input); the recorded run
+  is one stochastic sample before the cache was added, so a rerun may differ.
 - The final holdout run uses k3-book: the best coverage/completeness config,
-  half the spend of k15-book, with the p95 risk noted. The flag stays off unless
-  the holdout clears the pre-registered bars.
+  about 39% of k15-book's spend, with the p95 risk noted. The flag stays off
+  unless the holdout clears the pre-registered bars.
 
 ## Reproduce
 
 ```
-uv run python scripts/measure_multibook_ablation.py
+uv run python scripts/measure_multibook_ablation.py --run-id 20261106T224853Z
 ```
 
 ## Raw summary

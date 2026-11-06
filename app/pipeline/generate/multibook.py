@@ -248,10 +248,13 @@ def _parse_batched_extract(
         grouped.setdefault(book_num, []).append(line)
     extracts: list[BookExtract] = []
     for book_num, lines in sorted(grouped.items()):
-        cited_ids = {cid for line in lines for cid in _CITATION.findall(line)}
+        kept_lines = tuple(lines[:3])
+        cited_ids = {
+            cid for line in kept_lines for cid in _CITATION.findall(line)
+        }
         cited_chunks = tuple(chunk for chunk in chunks if chunk.id in cited_ids)
         if cited_chunks:
-            extracts.append(BookExtract(book_num, cited_chunks, tuple(lines[:3])))
+            extracts.append(BookExtract(book_num, cited_chunks, kept_lines))
     return extracts
 
 

@@ -264,6 +264,11 @@ async def ask(
     `persona_suffix` adds a reviewed tone instruction after the grounding rules.
     It never replaces them: the suffix is appended, so citations and abstention
     still apply.
+
+    `multi_book_per_book_k`, `multi_book_selection` and
+    `multi_book_selection_floor` tune the multi-book extraction path. Their
+    defaults are the shipped per-book path; the experimental strategies are for
+    measurement only.
     """
     tracer = current_tracer()
     floor = retrieval_floor(retriever, min_score)

@@ -12,6 +12,7 @@ from app.pipeline.generate.multibook import (
     BookExtract,
     _cap_evidence,
     _line_supported,
+    _parse_batched_extract,
     ask_multi_book,
     coverage_statement,
 )
@@ -191,6 +192,31 @@ async def test_batched_top3_uses_one_extraction_call():
     assert llm.calls == 2
 
 
+def test_batched_parser_caps_lines_before_collecting_chunks():
+    chunks = [
+        Chunk(
+            id=f"b1-c01-{index:04d}",
+            text=f"Quote number {index} is here.",
+            metadata=ChunkMetadata(
+                book_num=1,
+                chapter_num=1,
+                book_name="Book 1",
+                chapter_name="Chapter 1",
+            ),
+            score=1.0,
+        )
+        for index in range(5)
+    ]
+    response = "\n".join(
+        f"- Book 1: Quote number {index} is here. [b1-c01-{index:04d}]"
+        for index in range(5)
+    )
+    extracts = _parse_batched_extract(response, chunks)
+    assert len(extracts) == 1
+    assert len(extracts[0].lines) == 3
+    assert len(extracts[0].chunks) == 3
+
+
 async def test_unknown_selection_is_rejected():
     with pytest.raises(ValueError, match="unknown multi-book selection"):
         await ask_multi_book(
@@ -199,6 +225,33 @@ async def test_unknown_selection_is_rejected():
             llm=_Llm(),
             selection="nope",
         )
+
+
+async def test_ask_forwards_multibook_parameters(monkeypatch):
+    from app.pipeline.generate import multibook as multibook_module
+
+    captured: dict[str, object] = {}
+
+    async def fake_ask_multi_book(question, **kwargs):
+        captured.update(kwargs)
+        return generate_module.AskResult("ok [b1-c01-0000]", ["b1-c01-0000"])
+
+    monkeypatch.setattr(
+        multibook_module, "ask_multi_book", fake_ask_multi_book
+    )
+    result = await generate_module.ask(
+        "Who teaches in each book?",
+        retriever=_Retriever(),
+        llm=_Llm(),
+        multi_book=True,
+        multi_book_per_book_k=3,
+        multi_book_selection="top1_floor",
+        multi_book_selection_floor=0.5,
+    )
+    assert result.citations == ["b1-c01-0000"]
+    assert captured["per_book_k"] == 3
+    assert captured["selection"] == "top1_floor"
+    assert captured["selection_floor"] == 0.5
 
 
 def test_coverage_statement_all_partial_and_none():

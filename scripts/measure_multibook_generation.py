@@ -35,6 +35,7 @@ from app.pipeline.generate.multibook import (  # noqa: E402
     DEFAULT_SELECTION,
     DEFAULT_SELECTION_FLOOR,
     PER_BOOK_K,
+    SELECTIONS,
 )
 from app.pipeline.index.builder import load_chunks  # noqa: E402
 from app.pipeline.retrieve import compose_retriever  # noqa: E402
@@ -517,7 +518,7 @@ def main() -> int:
     parser.add_argument("--per-book-k", type=int, default=PER_BOOK_K)
     parser.add_argument(
         "--selection",
-        choices=("per_book", "top1_floor", "batched_top3"),
+        choices=sorted(SELECTIONS),
         default=DEFAULT_SELECTION,
     )
     parser.add_argument(

@@ -28,9 +28,9 @@ page describes what comes next and why.
   #113 is complete: ingest trims the next book's front matter, the corpus is
   re-ingested, the gold ids resolve and the gate baseline is re-pinned to
   `20261106T214850Z`. The final k=3 holdout passes coverage, completeness,
-  citation micro-average and latency, but faithfulness and the item-level
-  citation Wilson lower bound fail, so `OWL_MULTI_BOOK` stays off and the work
-  stops.
+  citation micro-average and latency, but faithfulness, the item-level citation
+  Wilson lower bound and the 3k token bar on the conservative total fail, so
+  `OWL_MULTI_BOOK` stays off and the work stops.
 - #97's thin slice is implemented behind `OWL_PERSONA`: persona card, DADA
   scope, scripted meta and personal replies, and the lore schema. The dev pack
   now has the five founders, the 1998/2008/2026 timeline and the Auror pathway.
@@ -129,8 +129,9 @@ budget.
 The final k=3 run (`20261106T233126Z`) reached coverage 0.88, completeness 0.88,
 citation validity 0.93 on the 14 synthesis items, faithfulness 0.79, p95 22.9s
 and $0.0095. It passes coverage, completeness, the citation micro-average and
-latency. Faithfulness (Wilson lower 0.52) and the item-level citation Wilson
-lower bound (0.60) fail, so the flag stays off.
+latency. Faithfulness (Wilson lower 0.52), the item-level citation Wilson lower
+bound (0.60) and the 3k token bar (4.7k total / 3.8k input per multi-book item)
+fail, so the flag stays off.
 
 The bounded cycle, in order:
 
@@ -150,13 +151,14 @@ The bounded cycle, in order:
    0.80, citation validity at least 18/20 with a Wilson lower bound of 0.80,
    faithfulness at least 0.88 with a lower bound of 0.70, at most 3k tokens per
    item and p95 under 30s. Boundary results do not round. Complete: the fixture
-   was frozen before tuning.
+   was frozen before tuning. The citation bar is unsatisfiable at 95%: 18/20 is
+   about 0.70 and 20/20 about 0.84, so the faithfulness bar decides.
 5. One final run. If it passes, enable behind the flag with a canary. If not,
    keep the flag off, commit the negative record, and continue with #97 and #16.
-   Complete: run `20261106T233126Z` passes coverage, completeness, citation
-   micro-average and latency, but faithfulness is 0.79 (Wilson lower 0.52) and
-   the item-level citation Wilson lower bound is 0.60. The flag stays off and
-   the work stops.
+   Complete: run `20261106T233126Z` passes coverage, completeness, the citation
+   micro-average and latency, but faithfulness is 0.79 (Wilson lower 0.52), the
+   item-level citation Wilson lower bound is 0.60, and tokens per multi-book
+   item are 4.7k total / 3.8k input. The flag stays off and the work stops.
 
 Do not tune prompts on the held-out set, and do not add a second cycle.
 

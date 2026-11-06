@@ -38,6 +38,7 @@ from app.pipeline.generate.multibook import (  # noqa: E402
 from app.pipeline.index.builder import load_chunks  # noqa: E402
 from app.pipeline.retrieve import compose_retriever  # noqa: E402
 from app.providers.factory import make_embedder, make_llm, make_reranker  # noqa: E402
+from app.providers.openrouter import DEFAULT_MODEL  # noqa: E402
 from eval.harness import CachedLlm, load_aggregation, missing_entities  # noqa: E402
 from eval.harness.judging import JUDGE_MODEL  # noqa: E402
 from eval.results import load_manifest  # noqa: E402
@@ -215,7 +216,15 @@ async def run(args) -> int:
         min_score=settings.rerank_min_score,
         subquery_quota=settings.subquery_quota,
     )
-    llm = mbgen._CountingLlm(make_llm("openrouter", temperature=0.0))
+    # Cache generator and judge calls by (model, input); the local cache is
+    # gitignored. The call count is the path's call count, not the billed count.
+    generator = CachedLlm(
+        make_llm("openrouter", temperature=0.0),
+        DEFAULT_MODEL,
+        args.cache,
+        variant="temperature=0.0",
+    )
+    llm = mbgen._CountingLlm(generator)
     judge = CachedLlm(
         make_llm("openrouter", model=JUDGE_MODEL, temperature=0.0),
         JUDGE_MODEL,

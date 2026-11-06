@@ -23,9 +23,14 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from app.config import settings  # noqa: E402
+from app.pipeline.index.builder import load_chunks  # noqa: E402
 from app.pipeline.retrieve import compose_retriever  # noqa: E402
 from app.providers.factory import make_embedder, make_reranker  # noqa: E402
-from eval.harness import entity_matches, load_aggregation  # noqa: E402
+from eval.harness import (  # noqa: E402
+    entity_matches,
+    load_aggregation,
+    missing_entities,
+)
 from eval.results import load_manifest  # noqa: E402
 
 KS = (1, 3, 5, 7, 15)
@@ -53,10 +58,23 @@ def _score_line(label: str, values: list[float]) -> str:
 
 
 async def run(args) -> int:
+    if args.per_book_k < max(KS):
+        print(
+            f"--per-book-k must be at least {max(KS)} for the fixed k table",
+            file=sys.stderr,
+        )
+        return 1
     items = load_aggregation(args.fixture)
     multi = [item for item in items if item.kind == "multi_book"]
     if not multi:
         print("fixture has no multi_book items", file=sys.stderr)
+        return 1
+    corpus = load_chunks(args.chunks)
+    missing = missing_entities(items, corpus)
+    if missing:
+        print("fixture entities missing from the corpus:", file=sys.stderr)
+        for line in missing:
+            print(f"  {line}", file=sys.stderr)
         return 1
 
     reranker = (

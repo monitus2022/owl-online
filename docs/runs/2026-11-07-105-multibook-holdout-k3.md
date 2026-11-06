@@ -64,63 +64,70 @@ must appear in that book's answer text.
 | Answer-text coverage | 0.82 | n/a | n/a |
 | Answer-text completeness | 0.82 | n/a | n/a |
 | Citation validity, all 15 | 0.91 | n/a | n/a |
-| Citation validity, synthesis 14 | 0.93 | >= 0.90 | pass |
-| Citation items passing, synthesis | 12/14 (Wilson lower 0.60) | 18/20, Wilson lower 0.80 | fail |
+| Citation validity, synthesis 14 | 0.93 (66/71) | >= 0.90 | pass |
+| Citation items passing, synthesis | 12/14 (Wilson lower 0.60) | 18/20, Wilson lower 0.80 | fail, bar unsatisfiable |
 | Faithfulness, all 15 | 0.73 (11/15) | n/a | n/a |
 | Faithfulness, synthesis 14 | 0.79 (11/14), Wilson lower 0.52 | >= 0.88, lower 0.70 | fail |
 | Abstention | 0.00 | n/a | n/a |
 | Near-miss entity hit | 0.60 | n/a | n/a |
-| Near-miss book share | 0.83 | n/a | n/a |
+| Near-miss citation validity | 0.83 | n/a | n/a |
 | Latency p50 | 16039ms | n/a | n/a |
 | Latency p95 (nearest rank) | 22926ms | < 30000ms | pass |
 | Latency max | 22926ms | < 30000ms | pass |
 | Model calls | 113 | n/a | n/a |
 | Input tokens (est.) | 57159 | n/a | n/a |
 | Output tokens (est.) | 12731 | n/a | n/a |
-| Tokens per item, total (est.) | 3495 | <= 3000 | fail |
-| Tokens per item, input only (est.) | 2858 | <= 3000 | pass |
+| Tokens per multi-book item (est.) | 4659 total / 3811 input | <= 3000 | fail |
+| Tokens per holdout item, including near-miss (est.) | 3734 total / 3071 input | <= 3000 | fail |
 | Spend (est.) | $0.0095 | n/a | n/a |
 
-The token bar is ambiguous between input-only and input+output. Both are
-reported; the conservative total fails and the input-only reading passes.
+The pre-registered citation bar, 18/20 with a Wilson lower bound of 0.80, is
+unsatisfiable at 95%: 18/20 is about 0.70 and 20/20 about 0.84. The citation
+result is reported but is not independent evidence; the faithfulness failure
+decides. The token numerator covers the 15 multi-book items; the 20-item row
+adds the near-miss items. Both readings fail the 3k bar.
 
 ## Reading
 
 - Coverage and completeness pass comfortably: 0.88/0.88 against 0.80/0.70. The
-  k=3 configuration fixed the coverage loss seen in the develop ablation and
-  nearly doubled the shipped path's coverage at one fifth of the spend.
-- Citation validity after synthesis is 0.93 (62/67), above the 0.90 exit bar.
+  k=3 configuration raised coverage from 0.84 to 0.88 and cut spend from $0.0246
+  to $0.0095, about 39% of the k=15 run.
+- Citation validity after synthesis is 0.93 (66/71), above the 0.90 exit bar.
   At the item level, 12 of 14 synthesis items have no invalid citation, a Wilson
-  lower bound of 0.60. The pre-registered 18/20 with a 0.80 lower bound fails;
-  the 20-item denominator is ambiguous because only 14 items ran synthesis.
+  lower bound of 0.60. The pre-registered 18/20 with a 0.80 lower bound is
+  unsatisfiable at 95%, so it is not independent evidence.
 - Faithfulness fails clearly: 11/14 (0.79) against 0.88, Wilson lower 0.52
   against 0.70. The three unfaithful synthesis items are hold11, hold13 and
   hold14. This is the same failure mode as the k=15 run, so reducing k did not
   fix extractor precision.
-- Latency passes: p95 22.9s against 30s. Spend is $0.0095, about 38% of the
-  k=15 held-out run's $0.0246.
-- Tokens per item are 3.5k on the conservative total and 2.9k on input only. The
-  total fails the 3k bar; the input-only reading passes. Either way the decision
-  is already driven by faithfulness.
+- Latency passes: p95 22.9s against 30s. Tokens are 4.7k total / 3.8k input per
+  multi-book item, or 3.7k / 3.1k including the near-miss items; both readings
+  fail the 3k bar.
 - Near-miss routing stays single-hop. The near-miss entity hit fell from 0.80 to
   0.60 because hnear02 abstained and hnear03 missed, but near-miss behavior is
-  not a gating bar.
+  not a gating bar. The printed `book_share` is near-miss citation validity
+  (valid citations divided by total near-miss citations), not book coverage.
+- Spend is estimated from character volume at the placeholder
+  `OWL_CHAT_*_PRICE_PER_MTOK` settings. It excludes judge, reranker and embedder
+  cost, so it is an order-of-magnitude figure, not a bill.
 - The eval gate still covers the single-pass path; it is unchanged by this run.
 
 ## Decision
 
-The pre-registered rule fails on faithfulness and on the item-level citation
-Wilson lower bound. The multi-book flag stays off. The bounded spike is
+The pre-registered rule fails on faithfulness, the item-level citation Wilson
+lower bound (which is unsatisfiable as written) and the 3k token bar on the
+conservative total. The multi-book flag stays off. The bounded spike is
 complete and there is no second cycle. The k=3 result is recorded as a negative
-outcome: coverage and cost improved, but extractor precision and faithfulness
-did not reach the bar.
+outcome: coverage and cost improved, but extractor precision, faithfulness and
+token volume did not reach the bar.
 
 ## Reproduce
 
 ```
 uv run python scripts/measure_multibook_generation.py \
   --fixture eval/fixtures/aggregation_holdout.jsonl \
-  --per-book-k 3 --selection per_book
+  --per-book-k 3 --selection per_book \
+  --run-id 20261106T233126Z
 ```
 
 ## Raw summary
