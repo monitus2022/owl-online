@@ -62,7 +62,7 @@ Status: delivered, except the deploy and CI hardening tracked in #16, #74 and #7
 | #79 | Retrieval lexical, abstention, deadline, fabrication checks: tokenizer measured (stemming rejected), floor pinned at 0, /ask deadline, novel-entity signal |
 | #82 | Agent observability: request spans, injection guard, close-out docs; intent routing measured and rejected, flag off |
 | #88 | Cost controls: per-session and per-IP caps, token budget, exact cache, usage accounting, graceful degradation |
-| #77 | Eval gate and deploy hardening; remaining work is #16, #74 and #75 |
+| #77 | Closed as superseded; the remaining work is #16, #74 and #75 |
 
 Exit criteria:
 

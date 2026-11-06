@@ -157,7 +157,7 @@ finite number. The TOML `baseline` key is the default; pass `--baseline` only to
 compare against a different file. It also refuses to diff two runs whose recorded
 manifest values differ (models, chunking, retrieval settings, judged sample, gold
 set hash or rerank floor), because those deltas would not be comparable. The CI
-workflow that runs this on pull requests is still open in #77.
+workflow that runs this on pull requests is still open in #16.
 
 Bands are absolute. For rate metrics the effective band is `max(base, 1 / n)` for
 that slice, so one item is normally allowed: 0.05 on overall retrieval with n=50,
@@ -195,7 +195,7 @@ the answerable slices, so the default of 15 covers simple, named and multi-part.
 A clean checkout cannot run the full eval: the corpus and Chroma index are host
 data and stay out of git. The CI workflow will either run on a self-hosted runner
 with `/data` mounted or restore a private index artifact; that decision is part of
-#77 before `eval.yml` is written. Use `--latest <csv>` in CI so the gate scores
+#16 before `eval.yml` is written. Use `--latest <csv>` in CI so the gate scores
 the artifact the job produced instead of whatever file sorts last. Until the CI
 cache is pinned, a cold run can still move a stochastic metric inside its
 one-item band; the bands are sized for that, and the re-pin procedure is a new
