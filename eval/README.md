@@ -188,8 +188,29 @@ drops further, a gated metric is missing on either side, or a value is not a
 finite number. The TOML `baseline` key is the default; pass `--baseline` only to
 compare against a different file. It also refuses to diff two runs whose recorded
 manifest values differ (models, chunking, retrieval settings, judged sample, gold
-set hash or rerank floor), because those deltas would not be comparable. The CI
-workflow that runs this on pull requests is still open in #16.
+set hash or rerank floor), because those deltas would not be comparable.
+
+## CI gate
+
+`.github/workflows/eval.yml` runs on every pull request and on `main`:
+
+- `uv run ruff check .`
+- `uv run pytest`, which includes the unit suite and the eval harness
+- `uv run pytest eval/test_check.py eval/test_manifest.py`, the gate logic and
+  the manifest drift test
+
+The live eval cannot run on a GitHub-hosted runner because the corpus and index
+are not in git: the source text is copyrighted. The live gate stays a host or
+local step before merge:
+
+```
+uv run python scripts/run_eval.py --check
+```
+
+Add `eval / lint-and-tests` as a required status check in the repository ruleset
+or branch protection for `main`. Until the live gate is enforced by a host-side
+runner, the merge rule is: a green CI check plus a recorded `gate: PASS` from the
+host run.
 
 Bands are absolute. For rate metrics the effective band is `max(base, 1 / n)` for
 that slice, so one item is normally allowed: 0.05 on overall retrieval with n=50,
