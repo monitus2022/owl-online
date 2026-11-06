@@ -34,6 +34,7 @@ async def compose_retriever(
     reranker: Reranker | None = None,
     pool: int | None = None,
     min_score: float = 0.0,
+    subquery_quota: int = 0,
     progress: Callable[[int, int], None] | None = None,
 ) -> RetrievalSetup:
     """Load chunks, (re)build the vector index, attach BM25 and rerank, wire the retriever."""
@@ -49,6 +50,7 @@ async def compose_retriever(
         reranker=reranker,
         pool=pool,
         rerank_min_score=min_score,
+        subquery_quota=subquery_quota,
         # Retrieve a wide pool for the reranker to reorder down to top_k.
         candidates=pool if pool is not None else QUERY_CANDIDATES,
     )

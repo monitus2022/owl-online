@@ -82,6 +82,7 @@ class HybridRetriever:
         reranker: Reranker | None = None,
         pool: int | None = None,
         rerank_min_score: float = 0.0,
+        subquery_quota: int = 0,
     ) -> None:
         self._embedder = embedder
         self._collection = collection
@@ -93,6 +94,7 @@ class HybridRetriever:
         self._reranker = reranker
         self._pool = pool if pool is not None else candidates
         self._rerank_min_score = rerank_min_score
+        self._subquery_quota = subquery_quota
 
     @property
     def _two_leg_floor(self) -> float:
@@ -163,7 +165,22 @@ class HybridRetriever:
             filtered = False
         dense_ids = _unique(cid for ids in dense_lists for cid in ids)
         sparse_ids = _unique(cid for ids in sparse_lists for cid in ids)
-        fused = self._fuse_many(dense_lists + sparse_lists)
+        if self._subquery_quota > 0 and decomposed:
+            # Fuse each sub-query separately and keep its top candidates, so one
+            # part of a two-part question cannot crowd out the other.
+            fused: list[tuple[str, float]] = []
+            seen: set[str] = set()
+            for part_dense, part_sparse in zip(
+                dense_lists, sparse_lists, strict=True
+            ):
+                for cid, score in self._fuse_many([part_dense, part_sparse])[
+                    : self._subquery_quota
+                ]:
+                    if cid not in seen:
+                        seen.add(cid)
+                        fused.append((cid, score))
+        else:
+            fused = self._fuse_many(dense_lists + sparse_lists)
         ranked = [
             self._chunks_by_id[cid].model_copy(update={"score": score})
             for cid, score in fused
@@ -178,7 +195,12 @@ class HybridRetriever:
             result = []
         else:
             start = time.perf_counter()
-            result = await self._reranker.rerank(query, ranked[: self._pool], top_k)
+            pool = ranked[: self._pool]
+            # The reranker rejects numberOfResults larger than the source count,
+            # which the sub-query quota can produce.
+            result = await self._reranker.rerank(
+                query, pool, min(top_k, len(pool))
+            )
             logger.debug(
                 "rerank: pool=%d -> %d in %.0fms",
                 min(len(ranked), self._pool),

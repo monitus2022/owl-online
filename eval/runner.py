@@ -64,6 +64,7 @@ async def run(
         reranker=reranker,
         pool=settings.rerank_pool if reranker is not None else None,
         min_score=settings.rerank_min_score,
+        subquery_quota=settings.subquery_quota,
     )
     # The eval needs real hosted models; the judge is pinned to OpenRouter.
     temperature = 0.0

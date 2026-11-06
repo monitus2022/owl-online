@@ -68,6 +68,11 @@ def test_manifest_pins_the_small_model():
     assert MANIFEST["routing"]["model"] == default
 
 
+def test_manifest_pins_the_subquery_quota():
+    default = Settings.model_fields["subquery_quota"].default
+    assert MANIFEST["retrieval"]["subquery_quota"] == default
+
+
 def test_manifest_pins_the_tokenizer():
     assert MANIFEST["retrieval"]["tokenizer"] == TOKENIZER
 

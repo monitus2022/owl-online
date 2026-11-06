@@ -42,6 +42,8 @@ rrf_k = 60
 # Candidates per leg. With a reranker attached (the pinned run) this equals
 # [reranker].pool; the no-rerank default is 20.
 candidates = 50
+# Per-sub-query candidate quota for decomposed questions. Measured in #96.
+subquery_quota = 0
 # Sparse leg only: lowercase, punctuation-split. #79 measured Snowball
 # stemming and stopword removal: both lowered Hit@5, so neither ships.
 tokenizer = "regex-words"
