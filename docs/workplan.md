@@ -25,7 +25,9 @@ page describes what comes next and why.
   bars. Chat is still one-pass.
 - The #105 follow-up is a time-boxed spike: retrieval-only diagnostic, ingest
   trailing-pages fix (#113), one ablation, a frozen holdout-2 and one final run.
-  If it fails, the flag stays off and the work stops.
+  If it fails, the flag stays off and the work stops. #113 is complete: ingest
+  trims the next book's front matter, the corpus is re-ingested, the gold ids
+  resolve and the gate baseline is re-pinned to `20261106T214850Z`.
 - #97's thin slice is implemented behind `OWL_PERSONA`: persona card, DADA
   scope, scripted meta and personal replies, and the lore schema. The dev pack
   now has the five founders, the 1998/2008/2026 timeline and the Auror pathway.
@@ -106,7 +108,7 @@ then the work stops whether or not it passes.
 |---|---|
 | #106 | Held-out multi-book set, written before tuning (complete) |
 | #105 | Per-book extraction, merge, one synthesis, coverage statement, flag wiring |
-| #113 | Ingest: drop trailing next-book front matter from the previous chapter |
+| #113 | Ingest: drop trailing next-book front matter from the previous chapter (complete) |
 | #118 | Lore-grounded answers: `[lore:<id>]` citations and validation |
 
 Held-out generation (`20261106T110000Z`, per-book k=15, final top-k 7): book
@@ -115,16 +117,18 @@ validity 0.87 on the 14 synthesis items, faithfulness 0.79 on those items,
 p50 9.6s, p95 14.3s, about $0.025 per 15 items. Coverage and completeness pass;
 citation validity (0.87) and faithfulness (0.79 against a 0.93 baseline) do not.
 The remaining defect is extractor precision: a chunk that shares a keyword with
-the question can be quoted as evidence, and front-matter chunks can be retrieved.
-The 8-call fan-out also costs about 12x a single-pass answer, which caps the path
-at roughly 14 questions per day at the default token budget.
+the question can be quoted as evidence, and front-matter chunks could be
+retrieved before #113. The 8-call fan-out also costs about 12x a single-pass
+answer, which caps the path at roughly 14 questions per day at the default token
+budget.
 
 The bounded cycle, in order:
 
 1. Retrieval-only diagnostic on the current index: per-book hit@1/3/5/7/15 and
    the score distribution, no generation tokens.
 2. Fix #113, re-index, audit the one gold id in a last chapter (`s07` to
-   `b2-c18-0025`), re-run and re-pin the gate baseline.
+   `b2-c18-0025`), re-run and re-pin the gate baseline. Complete: run
+   `20261106T214850Z`, gate PASS.
 3. Ablate per-book k in {1, 3, 5} crossed with selection in {top-1 plus floor,
    batched top-3 call, per-book call}, plus k=15 per-book as a control. Develop
    fixture only.
@@ -486,7 +490,6 @@ persists exam attempts and chat history.
 | Ticket | Scope | Milestone |
 |---|---|---|
 | #105 | Bounded multi-book spike: diagnostic, ablation, holdout-2 | V2 - Deepening |
-| #113 | Ingest trailing-pages fix, re-index and re-baseline | V2 - Deepening |
 | #74 | Move `/data` to a dedicated EBS volume | V2 - Deepening |
 | #75 | Replace static AWS keys with GitHub OIDC | V2 - Deepening |
 

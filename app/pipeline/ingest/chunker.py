@@ -1,7 +1,10 @@
+import logging
 import re
 from dataclasses import dataclass
 
 from app.schemas import Chunk, ChunkMetadata
+
+logger = logging.getLogger(__name__)
 
 # --- Numbers matching mapping ---
 
@@ -85,16 +88,65 @@ class ParsedChapter:
     book_name: str
     chapter_name: str
     page_start: int
-    page_end: int  # Use next chapter's page start as reference
+    page_end: int  # Exclusive; trimmed to exclude trailing front/back matter
     text: str
+
+
+# Every book ends with a copyright page; the next book's dedication and contents
+# follow it. The scan is bounded and, at a book boundary, a contents page must
+# follow the marker, so a story mention cannot trim a chapter.
+_MATTER_MARKER = re.compile(r"Text copyright © \d{4}")
+_MATTER_SCAN = 16
+
+
+def _has_contents(pages: list[str], start: int, end: int) -> bool:
+    """True when a contents page sits between `start` and `end`."""
+    return any(
+        pages[page].strip().upper().startswith("CONTENTS")
+        for page in range(start, end)
+    )
+
+
+def _matter_start(
+    pages: list[str],
+    end: int,
+    *,
+    floor: int,
+    require_contents: bool = False,
+    require_last: bool = False,
+) -> int:
+    """First page of a trailing front/back-matter block, or `end` if none.
+
+    The corpus puts a copyright page after each book's last chapter, and the
+    next book's dedication and contents follow it. At a book boundary the marker
+    must be followed by a CONTENTS page; the final chapter trims a copyright
+    page only when it is the last page. Both guards keep a story mention from
+    trimming a chapter.
+    """
+    for page in range(end - 1, max(floor, end - _MATTER_SCAN) - 1, -1):
+        if not _MATTER_MARKER.search(pages[page]):
+            continue
+        if require_contents and not _has_contents(pages, page + 1, end):
+            continue
+        if require_last and page != end - 1:
+            continue
+        return page
+    if require_contents:
+        logger.warning(
+            "no copyright marker with a contents page before page %d; "
+            "keeping trailing pages",
+            end,
+        )
+    return end
 
 
 def parse_chapters(pages: list[str]) -> list[ParsedChapter]:
     """Loop pages, chapter number starts a chapter, a CHAPTER ONE reset starts a book
 
-    Text before the first heading (front matter) is dropped. Pages after a book's
-    last chapter (title pages of the next book) attach to the previous chapter —
-    ~1 page per book of noise, accepted for V1.
+    Text before the first heading (front matter) is dropped. Text after a book's
+    last chapter (the book's trailing copyright page and the next book's
+    dedication and contents) is trimmed before chunking, so front matter cannot
+    be labelled with the previous book.
     """
     hits: list[tuple[int, int, str]] = []  # (page, chapter_num, chapter_name)
     for i, text in enumerate(pages):
@@ -120,7 +172,7 @@ def parse_chapters(pages: list[str]) -> list[ParsedChapter]:
     bounds = hits + [(len(pages), 0, "")]
     # strict=False is intentional: bounds has exactly one sentinel more than the
     # pairs we want — each hit zipped with its successor.
-    for (start, num, name), (end, _, _) in zip(bounds, bounds[1:], strict=False):
+    for (start, num, name), (end, next_num, _) in zip(bounds, bounds[1:], strict=False):
         if num == 1 and chapter_count > 0:
             book_num += 1
             prev_num = 0
@@ -135,6 +187,18 @@ def parse_chapters(pages: list[str]) -> list[ParsedChapter]:
                 f"{prev_num} -> {num} at page {start}"
             )
         prev_num = num
+        # The next hit starts a new book, or this is the final chapter: trim any
+        # trailing front/back matter before slicing the text.
+        if next_num == 1:
+            page_end = _matter_start(
+                pages, end, floor=start, require_contents=True
+            )
+        elif end == len(pages):
+            page_end = _matter_start(
+                pages, end, floor=start, require_last=True
+            )
+        else:
+            page_end = end
         chapters.append(
             ParsedChapter(
                 book_num=book_num,
@@ -142,8 +206,8 @@ def parse_chapters(pages: list[str]) -> list[ParsedChapter]:
                 book_name=BOOK_NAMES[book_num],
                 chapter_name=name,
                 page_start=start,
-                page_end=end,
-                text="\n".join(pages[start:end]),
+                page_end=page_end,
+                text="\n".join(pages[start:page_end]),
             )
         )
     return chapters
