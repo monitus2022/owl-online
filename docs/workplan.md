@@ -125,7 +125,7 @@ The bounded cycle, in order:
    faithfulness at least 0.88 with a lower bound of 0.70, at most 3k tokens per
    item and p95 under 30s. Boundary results do not round.
 5. One final run. If it passes, enable behind the flag with a canary. If not,
-   keep the flag off, commit the negative record, and move to #97 and #16.
+   keep the flag off, commit the negative record, and continue with #97 and #16.
 
 Do not tune prompts on the held-out set, and do not add a second cycle.
 
@@ -470,7 +470,7 @@ persists exam attempts and chat history.
 | Ticket | Scope | Milestone |
 |---|---|---|
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
-| #97 | Virtual professor voice and meta intent | V2 - Deepening |
+| #97 | Thin meta-only professor path (full voice after #105) | V2 - Deepening |
 
 ### Next
 

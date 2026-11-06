@@ -55,4 +55,4 @@ jobs:
         run: uv run pytest tests
 
       - name: Eval harness and gate logic
-        run: uv run pytest eval/ -q
+        run: uv run pytest eval/

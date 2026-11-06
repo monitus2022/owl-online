@@ -2,7 +2,7 @@
 
 A deliberately small eval for V1 (ticket #51): retrieval scored on chunk ids,
 and a judged sample of generated answers. The full harness as a CI gate is V2
-(#9-#12).
+(#16).
 
 ## Layout
 
