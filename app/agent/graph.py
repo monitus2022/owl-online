@@ -21,6 +21,7 @@ def build_graph(
     top_k: int = DEFAULT_TOP_K,
     min_score: float | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    multi_book: bool = False,
     small_llm: Llm | None = None,
 ) -> CompiledStateGraph:
     """Build the stateless per-request graph; no checkpointer in D4."""
@@ -38,6 +39,7 @@ def build_graph(
             top_k=top_k,
             min_score=min_score,
             max_retries=max_retries,
+            multi_book=multi_book,
         ),
     )
     graph.add_edge("answer", END)

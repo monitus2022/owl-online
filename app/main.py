@@ -238,7 +238,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         student: str = "",
     ) -> None:
         limiter: ChatLimiter = app.state.limiter
-        attempts = max(1, result.attempts)
+        attempts = max(1, result.model_calls or result.attempts)
         per_draft = len(SYSTEM_PROMPT) + len(question) + len(student) + sum(
             len(chunk.text) for chunk in result.chunks
         )
@@ -325,6 +325,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         retriever=retriever,
                         llm=llm,
                         max_retries=app_settings.retry_budget,
+                        multi_book=app_settings.multi_book,
                         on_stage=mark,
                     )
             except TimeoutError:

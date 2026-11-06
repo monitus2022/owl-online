@@ -15,6 +15,7 @@ async def answer_node(
     top_k: int,
     min_score: float | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    multi_book: bool = False,
 ) -> dict[str, object]:
     writer = get_stream_writer()
 
@@ -33,6 +34,7 @@ async def answer_node(
         on_token=emit,
         on_reset=reset,
         max_retries=max_retries,
+        multi_book=multi_book,
     )
     return {
         "chunks": result.chunks,

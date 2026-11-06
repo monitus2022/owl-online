@@ -99,7 +99,7 @@ Exit criteria:
 - latency and spend fit the chat budget;
 - the gate passes and a run record is committed.
 
-Caps: seven map calls, fan-out 4, up to 15 candidates per book, one extraction per book, one synthesis.
+Caps: seven map calls, fan-out 4, up to 15 candidates per book, one extraction per book, one synthesis, final top-k 7.
 
 ## Cost and abuse controls
 

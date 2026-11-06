@@ -272,9 +272,11 @@ sequenceDiagram
   A->>A: validate citations, append coverage statement
 ```
 
-Caps: seven retrieval calls, seven extraction calls, fan-out four, up to 15 candidates per book, one synthesis.
-If no book yields a cited extract, the path abstains. The coverage statement is
-deterministic and names the books with and without evidence.
+Caps: seven retrieval calls, seven extraction calls, fan-out four, up to 15
+candidates per book, one synthesis, final top-k 7. If no book yields a cited
+extract, the path abstains. The coverage statement is deterministic and names
+the books with and without evidence. This path does not use the single-pass
+retry: a synthesis with no supported citation abstains instead of retrying.
 
 ## Request flow: POST /ask/stream
 

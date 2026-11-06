@@ -2,6 +2,8 @@
 
 import re
 
+import pytest
+
 from app.pipeline.generate import generate as generate_module
 from app.pipeline.generate.multibook import (
     MULTI_BOOK_EXTRACT_SYSTEM,
@@ -9,6 +11,7 @@ from app.pipeline.generate.multibook import (
     ask_multi_book,
     coverage_statement,
 )
+from app.providers.errors import ProviderError
 from app.schemas import Chunk, ChunkMetadata
 
 _CITATION = re.compile(r"\[(b\d+-c\d+-\d+)\]")
@@ -54,8 +57,12 @@ class _Llm:
             match = re.search(r"\[(b\d+-c\d+-\d+)\] (.+)", prompt)
             return f"- {match.group(2).strip()} [{match.group(1)}]"
         if system == MULTI_BOOK_SYSTEM:
-            ids = _CITATION.findall(prompt)
-            return f"Combined answer [{ids[0]}][{ids[-1]}]."
+            quotes = [
+                line[2:].strip()
+                for line in prompt.splitlines()
+                if line.startswith("- ")
+            ]
+            return "\n".join([quotes[0], quotes[-1]])
         raise AssertionError(f"unexpected system prompt: {system}")
 
     def stream(self, system: str, prompt: str, *, context=None):
@@ -127,21 +134,19 @@ def test_coverage_statement_all_partial_and_none():
     )
 
 
-async def test_ask_routes_to_the_multi_book_path_when_enabled(monkeypatch):
-    monkeypatch.setattr(generate_module.settings, "multi_book", True)
+async def test_ask_routes_to_the_multi_book_path_when_enabled():
     result = await generate_module.ask(
         "Who teaches in each book?",
         retriever=_Retriever(),
         llm=_Llm(),
+        multi_book=True,
     )
     assert not result.abstained
     assert "Coverage:" in result.answer
     assert result.citations
 
 
-async def test_ask_keeps_single_pass_when_the_flag_is_off(monkeypatch):
-    monkeypatch.setattr(generate_module.settings, "multi_book", False)
-
+async def test_ask_keeps_single_pass_when_the_flag_is_off():
     class _SingleLlm(_Llm):
         async def generate(self, system: str, prompt: str, *, context=None) -> str:
             return "Single-pass answer [b1-c01-0000]."
@@ -150,6 +155,7 @@ async def test_ask_keeps_single_pass_when_the_flag_is_off(monkeypatch):
         "Who teaches in each book?",
         retriever=_Retriever(),
         llm=_SingleLlm(),
+        multi_book=False,
     )
     assert "Coverage:" not in result.answer
     assert result.citations == ["b1-c01-0000"]
@@ -170,3 +176,43 @@ async def test_paraphrased_extract_is_discarded():
     )
     assert result.abstained
     assert result.abstain_reason == "no_evidence"
+
+
+async def test_multi_book_answer_drops_an_invented_citation():
+    class _MixedLlm(_Llm):
+        async def generate(self, system: str, prompt: str, *, context=None) -> str:
+            if system == MULTI_BOOK_SYSTEM:
+                return "Book 1 says something relevant. [b1-c01-0000][b9-c99-9999]"
+            return await super().generate(system, prompt)
+
+    result = await ask_multi_book(
+        "Who appears in each book?",
+        retriever=_Retriever(),
+        llm=_MixedLlm(),
+    )
+    assert result.citations == ["b1-c01-0000"]
+    assert "b9-c99-9999" not in result.answer
+
+
+async def test_multi_book_answer_propagates_provider_errors():
+    class _ProviderRetriever(_Retriever):
+        async def retrieve_book(self, query: str, book_num: int, top_k: int):
+            raise ProviderError("provider down")
+
+    with pytest.raises(ProviderError, match="provider down"):
+        await ask_multi_book(
+            "Who appears in each book?",
+            retriever=_ProviderRetriever(),
+            llm=_Llm(),
+        )
+
+
+async def test_multi_book_answer_respects_top_k():
+    result = await ask_multi_book(
+        "Who appears in each book?",
+        retriever=_Retriever(),
+        llm=_Llm(),
+        top_k=2,
+    )
+    assert len(result.chunks) <= 2
+    assert len(result.citations) <= 2

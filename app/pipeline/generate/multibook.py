@@ -22,7 +22,6 @@ from app.pipeline.generate.generate import (
 )
 from app.pipeline.retrieve.multibook import BookRetriever, retrieve_multi_book
 from app.providers.contracts import Llm
-from app.providers.errors import ProviderError
 from app.schemas import Chunk
 from app.trace import current_tracer, prompt_fingerprint
 
@@ -74,14 +73,20 @@ def _book_phrase(books: list[int]) -> str:
     return f"books {_book_list(books)}"
 
 
-def coverage_statement(covered: set[int]) -> str:
-    """A deterministic statement of which books had evidence."""
-    all_books = set(range(1, MAX_BOOKS + 1))
-    missing = sorted(all_books - covered)
+def coverage_statement(
+    covered: set[int], searched: set[int] | None = None
+) -> str:
+    """A deterministic statement of which searched books had evidence."""
+    selected = set(searched) if searched is not None else set(range(1, MAX_BOOKS + 1))
+    missing = sorted(selected - covered)
     if not missing:
-        return "Coverage: all seven books had evidence."
+        if selected == set(range(1, MAX_BOOKS + 1)):
+            return "Coverage: all seven books had evidence."
+        return f"Coverage: all {len(selected)} selected books had evidence."
     if not covered:
-        return "Coverage: none of the seven books had evidence."
+        if selected == set(range(1, MAX_BOOKS + 1)):
+            return "Coverage: none of the seven books had evidence."
+        return f"Coverage: none of the {len(selected)} selected books had evidence."
     return (
         f"Coverage: {_book_phrase(sorted(covered))} had evidence; "
         f"{_book_phrase(missing)} had none."
@@ -119,7 +124,7 @@ def _parse_extract(text: str, chunks: list[Chunk]) -> tuple[str, ...]:
         if line.startswith(("-", "*")):
             line = line[1:].strip()
         cited = _CITATION.findall(line)
-        if not cited or not any(cid in by_id for cid in cited):
+        if not cited or any(cid not in by_id for cid in cited):
             continue
         quote = _normalise(_CITATION.sub("", line))
         if len(quote) < 15:
@@ -145,14 +150,19 @@ async def _extract_book(
     lines = _parse_extract(response, clean)
     if not lines:
         return None
-    return BookExtract(clean[0].metadata.book_num, tuple(clean), lines)
+    cited_ids = {cid for line in lines for cid in _CITATION.findall(line)}
+    cited_chunks = tuple(chunk for chunk in clean if chunk.id in cited_ids)
+    if not cited_chunks:
+        return None
+    return BookExtract(clean[0].metadata.book_num, cited_chunks, lines)
 
 
 def _synthesis_prompt(question: str, extracts: list[BookExtract]) -> str:
     blocks: list[str] = []
     for extract in extracts:
         blocks.append(
-            f"Book {extract.book_num}:\n" + "\n".join(extract.lines)
+            f"Book {extract.book_num}:\n"
+            + "\n".join(f"- {line}" for line in extract.lines)
         )
     return (
         f"Question: {question}\n\n"
@@ -177,12 +187,54 @@ async def _one_draft(
     return "".join(pieces)
 
 
+def _dedupe_extracts(extracts: list[BookExtract]) -> list[BookExtract]:
+    seen: set[str] = set()
+    merged: list[BookExtract] = []
+    for extract in extracts:
+        lines: list[str] = []
+        for line in extract.lines:
+            key = _normalise(_CITATION.sub("", line))
+            if key in seen:
+                continue
+            seen.add(key)
+            lines.append(line)
+        if lines:
+            merged.append(BookExtract(extract.book_num, extract.chunks, tuple(lines)))
+    return merged
+
+
+def _quote_supported(line: str, chunks: list[Chunk]) -> bool:
+    text = re.sub(r"^Book \d+:\s*", "", line)
+    text = _CITATION.sub("", text).strip().strip('"“”')
+    segments = [
+        _normalise(segment)
+        for segment in re.split(r"\.\.\.|…", text)
+        if len(_normalise(segment)) >= 15
+    ]
+    if not segments:
+        return False
+    haystack = " ".join(_normalise(chunk.text) for chunk in chunks)
+    return any(segment in haystack for segment in segments)
+
+
+def _filter_supported_lines(draft: str, chunks: list[Chunk]) -> str:
+    kept: list[str] = []
+    for raw in draft.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if _CITATION.search(line) and _quote_supported(line, chunks):
+            kept.append(line)
+    return "\n".join(kept)
+
+
 async def ask_multi_book(
     question: str,
     *,
     retriever: BookRetriever,
     llm: Llm,
     top_k: int = 7,
+    books: list[int] | None = None,
     on_token: Callable[[str], None] | None = None,
     on_stage: Callable[[str], None] | None = None,
 ) -> AskResult:
@@ -192,8 +244,13 @@ async def ask_multi_book(
         on_stage("retrieve")
     retrieve_span = tracer.start("retrieve_multi_book") if tracer else None
     start = time.perf_counter()
+    searched = set(books) if books else set(range(1, MAX_BOOKS + 1))
     chunks = await retrieve_multi_book(
-        retriever, question, per_book_k=15, fanout=FANOUT
+        retriever,
+        question,
+        per_book_k=15,
+        fanout=FANOUT,
+        books=sorted(searched),
     )
     if tracer is not None and retrieve_span is not None:
         tracer.finish(
@@ -223,18 +280,13 @@ async def ask_multi_book(
 
     async def one(book_num: int, book_chunks: list[Chunk]):
         async with semaphore:
-            try:
-                return await _extract_book(question, book_chunks, llm)
-            except ProviderError:
-                raise
-            except Exception as error:  # one book must not abort the whole answer
-                logger.warning("extract failed for book %d: %s", book_num, error)
-                return None
+            return await _extract_book(question, book_chunks, llm)
 
     extracted = await asyncio.gather(
         *(one(book_num, book_chunks) for book_num, book_chunks in by_book.items())
     )
-    extracts = [item for item in extracted if item is not None]
+    extracts = _dedupe_extracts([item for item in extracted if item is not None])
+    extracts = extracts[:top_k]
     if tracer is not None and extract_span is not None:
         tracer.finish(
             extract_span,
@@ -266,6 +318,7 @@ async def ask_multi_book(
             books=sorted(covered),
             **prompt_fingerprint(MULTI_BOOK_SYSTEM, prompt),
         )
+    draft = _filter_supported_lines(draft, evidence_chunks)
     result = ground_answer(draft, evidence_chunks)
     if _is_refusal(draft, cited=bool(result.citations)):
         if tracer is not None:
@@ -287,8 +340,8 @@ async def ask_multi_book(
             attempts=1,
             abstain_reason="uncited",
         )
-    coverage = coverage_statement(covered)
-    answer = f"{draft.strip()}\n\n{coverage}"
+    coverage = coverage_statement(covered, searched)
+    answer = f"{result.answer}\n\n{coverage}"
     if tracer is not None:
         tracer.emit(
             "coverage",
@@ -312,4 +365,5 @@ async def ask_multi_book(
         citations=result.citations,
         chunks=evidence_chunks,
         attempts=1,
+        model_calls=len(extracts) + 1,
     )
