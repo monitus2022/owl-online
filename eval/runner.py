@@ -135,6 +135,7 @@ async def run(
         rerank_min_score=settings.rerank_min_score,
         generator_temperature=temperature,
         judge_temperature=temperature,
+        subquery_quota=settings.subquery_quota,
     )
     rows = [
         *retrieval_rows(run_id, config, values, retrieval, retrieval_by_slice),

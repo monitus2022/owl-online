@@ -25,7 +25,12 @@ def _manifest() -> dict:
             "local": {"model": "ollama", "dimensions": 1024},
         },
         "chunking": {"size": 500, "overlap": 75, "min_size": 200},
-        "retrieval": {"top_k": 5, "rrf_k": 60, "candidates": 50},
+        "retrieval": {
+            "top_k": 5,
+            "rrf_k": 60,
+            "candidates": 50,
+            "subquery_quota": 0,
+        },
     }
 
 
@@ -41,6 +46,7 @@ def test_manifest_row_records_the_run_choices():
     assert cloud["top_k"] == "5"
     assert cloud["rrf_k"] == "60"
     assert cloud["candidates"] == "50"
+    assert cloud["subquery_quota"] == "0"
 
     local = manifest_row(_manifest(), embedder_provider="local", rerank_enabled=False)
     assert local["embedder_model"] == "ollama"
@@ -67,6 +73,7 @@ def test_manifest_row_records_run_time_overrides():
         rerank_min_score=0.25,
         generator_temperature=0.0,
         judge_temperature=0.0,
+        subquery_quota=2,
     )
     assert row["top_k"] == "3"
     assert row["reranker_pool"] == "30"
@@ -80,6 +87,7 @@ def test_manifest_row_records_run_time_overrides():
     assert row["rerank_min_score"] == "0.25"
     assert row["generator_temperature"] == "0.0"
     assert row["judge_temperature"] == "0.0"
+    assert row["subquery_quota"] == "2"
 
 
 def test_load_manifest_pins_the_real_file():
@@ -189,4 +197,4 @@ def test_result_fields_are_stable():
 
     assert RESULT_FIELDS[:5] == ["run_id", "config", "slice", "metric", "value"]
     assert RESULT_FIELDS[5:] == MANIFEST_FIELDS
-    assert len(MANIFEST_FIELDS) == 19
+    assert len(MANIFEST_FIELDS) == 20

@@ -44,6 +44,7 @@ MANIFEST_FIELDS = [
     "rerank_min_score",
     "generator_temperature",
     "judge_temperature",
+    "subquery_quota",
 ]
 
 RESULT_FIELDS = ["run_id", "config", "slice", "metric", "value", *MANIFEST_FIELDS]
@@ -71,14 +72,16 @@ def manifest_row(
     rerank_min_score: float | None = None,
     generator_temperature: float | None = None,
     judge_temperature: float | None = None,
+    subquery_quota: int | None = None,
 ) -> dict[str, str]:
     """Flatten the manifest plus the run-time choices into CSV columns.
 
-    `top_k`, `reranker_pool`, `candidates` and `judged_sample` can be passed
-    when the run used a value other than the manifest default (for example
-    `--k` or `--sample`). The model overrides record the effective settings
-    when an `OWL_*` variable changes the manifest slug. With rerank off the
-    per-leg candidate count is the retriever's own default, not the pool.
+    `top_k`, `reranker_pool`, `candidates`, `judged_sample` and
+    `subquery_quota` can be passed when the run used a value other than the
+    manifest default (for example `--k`, `--sample` or an `OWL_*` override).
+    The model overrides record the effective settings when an `OWL_*` variable
+    changes the manifest slug. With rerank off the per-leg candidate count is
+    the retriever's own default, not the pool.
     """
     embedder_key = "cloud" if embedder_provider == "bedrock" else "local"
     embedder = manifest["embedder"][embedder_key]
@@ -122,6 +125,11 @@ def manifest_row(
         ),
         "judge_temperature": (
             str(judge_temperature) if judge_temperature is not None else ""
+        ),
+        "subquery_quota": str(
+            subquery_quota
+            if subquery_quota is not None
+            else retrieval["subquery_quota"]
         ),
     }
 

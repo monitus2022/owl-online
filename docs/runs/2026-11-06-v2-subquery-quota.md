@@ -81,10 +81,11 @@ fields. The run is an experiment, not the default configuration.
 - The change also fixes a real reranker edge: with a quota the pool can be
   smaller than `top_k`, and Bedrock rejects `numberOfResults` above the source
   count. `HybridRetriever` now caps the request at the pool size.
-- Quota 2 remains a candidate behind `OWL_SUBQUERY_QUOTA`, default 0. The setting
-  is not yet a CSV manifest field, so the gate cannot distinguish the two
-  configurations; enabling it by default needs that field and a deliberate
-  baseline repin.
+- Quota 2 remains a candidate behind `OWL_SUBQUERY_QUOTA`, default 0. At the time
+  of this run the setting was not a CSV manifest field, so the gate could not
+  distinguish the two configurations. That gap is closed in
+  `2026-11-06-v2-subquery-quota-r2.md`, which records the field and the valid
+  re-run.
 
 ## Reproduce
 
@@ -92,6 +93,9 @@ fields. The run is an experiment, not the default configuration.
 OWL_SUBQUERY_QUOTA=2 uv run python scripts/run_eval.py
 uv run python scripts/run_eval.py --check --latest eval/results/20261105T204517Z.csv
 ```
+
+The check above now fails by design after the quota-aware baseline re-pin; the
+valid re-run is `2026-11-06-v2-subquery-quota-r2.md`.
 
 ## Raw summary
 
