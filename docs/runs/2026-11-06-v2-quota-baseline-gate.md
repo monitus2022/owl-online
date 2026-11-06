@@ -75,13 +75,15 @@ gate: PASS
   proves the gate still passes with the new column.
 - The previous baseline was 12/14 on both faithfulness and judge correctness.
   This default path is 13/14, so the old baseline was pessimistic by one item.
-- Multi-part pool recall is 0.91. The quota-2 run's 0.56 was measured through the
-  shadowed trace and is not comparable.
+- Multi-part pool recall is 0.91. The earlier quota-2 run's dense/sparse columns
+  (0.74 / 0.59) were shadowed; its 0.56 pool recall is valid and is reproduced
+  in `2026-11-06-v2-subquery-quota-r2.md`.
 
 ## Reproduce
 
 ```text
-uv run python scripts/run_eval.py --write-baseline
+uv run python scripts/run_eval.py
+uv run python scripts/run_eval.py --check --latest eval/results/20261106T060813Z.csv
 ```
 
 ## Raw summary

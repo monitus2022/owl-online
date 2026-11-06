@@ -82,6 +82,7 @@ the final `next: write a run record` reminder.
 | Embedder | `<provider>` / `<model>`, <n> dims |
 | Chunking | size <n>, overlap <n>, min size <n> |
 | Retrieval | hybrid (dense + BM25, RRF), `k = <n>`, `rrf_k = <n>`, candidates <n> |
+| Sub-query quota | <n> per retrieval leg, or 0 for global fusion |
 | Gold set | <n> items: <n> answerable, <n> unanswerable |
 | Judged sample | <n>, round-robin across the answerable slices |
 

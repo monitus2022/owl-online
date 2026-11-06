@@ -1,17 +1,21 @@
-"""Runner wiring: the manifest retry budget must reach the eval harness."""
+"""Runner wiring: manifest settings must reach retrieval and the result rows."""
 
 from types import SimpleNamespace
 
 import eval.runner as runner
 
 
-async def test_run_passes_the_manifest_retry_budget(monkeypatch, tmp_path):
+async def test_run_passes_the_manifest_settings(monkeypatch, tmp_path):
     seen: dict[str, int] = {}
     manifest = {"generation": {"retry_budget": 0}}
 
     async def fake_compose(*args, **kwargs):
-        seen["subquery_quota"] = kwargs["subquery_quota"]
+        seen["compose_quota"] = kwargs["subquery_quota"]
         return SimpleNamespace(retriever=object(), dims=1024, text_hash="hash")
+
+    def fake_manifest_row(*args, **kwargs):
+        seen["manifest_quota"] = kwargs["subquery_quota"]
+        return {}
 
     async def fake_retrieval(*args, **kwargs):
         return SimpleNamespace(n=0), {}
@@ -35,7 +39,7 @@ async def test_run_passes_the_manifest_retry_budget(monkeypatch, tmp_path):
     monkeypatch.setattr(runner, "load_gold", lambda path: [])
     monkeypatch.setattr(runner, "load_chunks", lambda path: [])
     monkeypatch.setattr(runner, "load_manifest", lambda: manifest)
-    monkeypatch.setattr(runner, "manifest_row", lambda *a, **k: {})
+    monkeypatch.setattr(runner, "manifest_row", fake_manifest_row)
     monkeypatch.setattr(runner, "timestamp_run_id", lambda: "20260101T000000Z")
     monkeypatch.setattr(runner, "write_results", lambda path, rows: None)
     monkeypatch.setattr(runner, "retrieval_metrics_all", fake_retrieval)
@@ -65,7 +69,8 @@ async def test_run_passes_the_manifest_retry_budget(monkeypatch, tmp_path):
     )
 
     assert seen == {
-        "subquery_quota": runner.settings.subquery_quota,
+        "compose_quota": runner.settings.subquery_quota,
+        "manifest_quota": runner.settings.subquery_quota,
         "abstention": 0,
         "judge": 0,
     }
