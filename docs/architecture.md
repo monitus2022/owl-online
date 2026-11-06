@@ -142,7 +142,11 @@ API, default `qwen.qwen3-32b-v1:0`). OpenRouter remains the pinned eval and V1
 path; `OWL_PROVIDER` selects the Llm at composition time. Ollama serves
 embeddings for local dev. When a reranker is attached, `HybridRetriever`
 retrieves a wide pool and reranks it down to `top_k`, and the abstention floor
-becomes the rerank relevance floor.
+becomes the rerank relevance floor. With `OWL_SUBQUERY_QUOTA > 0`, a decomposed
+question fuses each retrieval leg separately and keeps only its top quota before
+merging by score; the default 0 fuses all legs globally. The reranker request is
+capped at the pool size because Bedrock rejects `numberOfResults` above the
+source count.
 
 ## Module dependencies
 
@@ -192,9 +196,14 @@ sequenceDiagram
   A->>RET: retrieve(question, top_k)
   RET->>RET: parse book/chapter reference
   RET->>RET: split into up to three sub-queries + original
-  RET->>RET: dense (optional where) + BM25 legs, fuse with RRF
+  RET->>RET: dense (optional where) + BM25 legs
+  alt decomposed and OWL_SUBQUERY_QUOTA > 0
+    RET->>RET: fuse each sub-query's dense+sparse pair, keep top quota, merge by score
+  else
+    RET->>RET: fuse all legs with RRF
+  end
   alt reranker attached and the lexical gate passes
-    RET->>RR: rerank(merged pool, top_k)
+    RET->>RR: rerank(merged pool, min(top_k, pool size))
     RR-->>RET: top_k by relevance
   end
   RET-->>A: list[Chunk] (relevance or RRF scores, or empty)

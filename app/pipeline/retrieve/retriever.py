@@ -166,8 +166,9 @@ class HybridRetriever:
         dense_ids = _unique(cid for ids in dense_lists for cid in ids)
         sparse_ids = _unique(cid for ids in sparse_lists for cid in ids)
         if self._subquery_quota > 0 and decomposed:
-            # Fuse each sub-query separately and keep its top candidates, so one
-            # part of a two-part question cannot crowd out the other.
+            # Fuse each retrieval leg (sub-queries plus the original question)
+            # and keep its top candidates, so one part of a two-part question
+            # cannot crowd out the other.
             fused: list[tuple[str, float]] = []
             seen: set[str] = set()
             for part_dense, part_sparse in zip(
@@ -179,6 +180,9 @@ class HybridRetriever:
                     if cid not in seen:
                         seen.add(cid)
                         fused.append((cid, score))
+            # The legs are concatenated sub-query-major; restore score order so
+            # the no-reranker path and the trace see the best hit first.
+            fused.sort(key=lambda item: item[1], reverse=True)
         else:
             fused = self._fuse_many(dense_lists + sparse_lists)
         ranked = [

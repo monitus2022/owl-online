@@ -193,6 +193,104 @@ async def test_rrf_prefers_multi_leg_hits():
     assert abs(hits[0].score - expected) < 1e-9
 
 
+class _RoutedEmbedder:
+    """One-hot vectors that let the stub collection tell the legs apart."""
+
+    def __init__(self, routes: dict[str, int]) -> None:
+        self._routes = routes
+
+    async def embed(self, texts):
+        return [[float(self._routes.get(text, 0))] for text in texts]
+
+
+class _RoutedCollection:
+    """Dense stub that returns a different id list for each routed query."""
+
+    def __init__(self, by_route: dict[int, list[str]], count: int) -> None:
+        self._by_route = by_route
+        self._count = count
+
+    def count(self) -> int:
+        return self._count
+
+    def query(self, *, query_embeddings, n_results, where=None):
+        route = int(query_embeddings[0][0])
+        return {"ids": [self._by_route.get(route, [])[:n_results]]}
+
+
+class _RoutedBM25:
+    """Sparse stub keyed by a token that appears in only one sub-query."""
+
+    def __init__(self, by_token: dict[str, list[float]]) -> None:
+        self._by_token = by_token
+
+    def get_scores(self, tokens):
+        present = set(tokens)
+        if "potions" in present:
+            return self._by_token["potions"]
+        return [0.0] * len(_CHUNKS)
+
+
+_QUOTA_QUERY = "What is quidditch and what is potions?"
+_QUOTA_ROUTES = {
+    "What is quidditch?": 1,
+    "what is potions?": 2,
+    _QUOTA_QUERY: 3,
+}
+_QUOTA_DENSE = {
+    1: ["b1-c01-0000", "b1-c03-0000", "b1-c04-0000"],
+    2: ["b1-c05-0000"],
+    3: ["b1-c02-0000"],
+}
+_QUOTA_SPARSE = {
+    "potions": [0.0, 0.0, 0.0, 0.0, 5.0, 0.0, 0.0],
+}
+
+
+def _quota_retriever(*, quota: int, reranker=None, pool: int | None = None) -> HybridRetriever:
+    return HybridRetriever(
+        embedder=_RoutedEmbedder(_QUOTA_ROUTES),
+        collection=_RoutedCollection(_QUOTA_DENSE, count=len(_CHUNKS)),
+        bm25=_RoutedBM25(_QUOTA_SPARSE),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+        reranker=reranker,
+        pool=pool,
+        subquery_quota=quota,
+    )
+
+
+async def test_quota_keeps_a_candidate_from_each_leg():
+    """Quota 1 keeps one fused hit per leg, dropping deeper dominant-leg hits."""
+    retriever = _quota_retriever(quota=1)
+    hits = await retriever.retrieve(_QUOTA_QUERY, top_k=4)
+    assert [c.id for c in hits] == ["b1-c05-0000", "b1-c01-0000", "b1-c02-0000"]
+    assert "b1-c03-0000" not in [c.id for c in hits]
+    scores = [c.score for c in hits]
+    assert scores == sorted(scores, reverse=True)
+
+
+async def test_quota_zero_keeps_global_fusion():
+    """Quota 0 still returns deeper hits from the dominant leg."""
+    retriever = _quota_retriever(quota=0)
+    hits = await retriever.retrieve(_QUOTA_QUERY, top_k=4)
+    assert "b1-c03-0000" in [c.id for c in hits]
+
+
+async def test_quota_trace_keeps_the_union_of_all_legs():
+    """The trace must not be shadowed by the per-leg loop."""
+    retriever = _quota_retriever(quota=1)
+    trace = await retriever.diagnose(_QUOTA_QUERY, top_k=3)
+    assert set(trace.dense_ids) == {
+        "b1-c01-0000",
+        "b1-c02-0000",
+        "b1-c03-0000",
+        "b1-c04-0000",
+        "b1-c05-0000",
+    }
+    assert trace.sparse_ids == ("b1-c05-0000",)
+
+
 class _FilterCollection:
     """Dense stub that honours a Chroma where clause and records it."""
 
@@ -348,6 +446,40 @@ async def test_pool_of_fifty_reaches_the_reranker():
     )
     await retriever.retrieve("q", top_k=5)
     assert len(reranker.calls[0][1]) == 50
+
+
+async def test_reranker_request_is_capped_at_the_pool_size():
+    """Bedrock rejects numberOfResults above the source count; cap it here."""
+    reranker = _StubReranker()
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000"]),
+        bm25=_StubBM25([5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+        reranker=reranker,
+        pool=1,
+        candidates=2,
+    )
+    hits = await retriever.retrieve("anything", top_k=5)
+    assert reranker.calls[0][2] == 1
+    assert [c.id for c in hits] == ["b1-c01-0000"]
+
+
+async def test_reranker_is_not_called_for_an_empty_pool():
+    reranker = _StubReranker()
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection([]),
+        bm25=_StubBM25([0.0] * len(_CHUNKS)),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+        reranker=reranker,
+        pool=1,
+        candidates=1,
+    )
+    assert await retriever.retrieve("anything", top_k=5) == []
+    assert reranker.calls == []
 
 
 async def test_retrieve_does_not_block_the_event_loop():
