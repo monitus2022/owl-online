@@ -42,5 +42,7 @@ async def answer_node(
         "citations": result.citations,
         "abstained": result.abstained,
         "attempts": result.attempts,
+        "model_calls": result.model_calls,
+        "abstain_reason": result.abstain_reason,
         "retry_reason": result.retry_reason,
     }

@@ -9,6 +9,11 @@ from pathlib import Path
 
 from app.config import Settings
 from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K
+from app.pipeline.generate.multibook import (
+    DEFAULT_FINAL_TOP_K,
+    FANOUT,
+    PER_BOOK_K,
+)
 from app.pipeline.index.builder import TOKENIZER
 from app.pipeline.ingest.chunker import _CHUNK_SIZE, _MIN_CHUNK_SIZE, _OVERLAP
 from app.pipeline.retrieve.retriever import DEFAULT_RRF_K
@@ -80,3 +85,12 @@ def test_manifest_pins_the_tokenizer():
 
 def test_manifest_pins_the_rerank_floor():
     assert MANIFEST["reranker"]["min_score"] == RERANK_MIN_SCORE_DEFAULT
+
+
+def test_manifest_pins_the_multi_book_path():
+    default = Settings.model_fields["multi_book"].default
+    assert default is False
+    assert MANIFEST["multi_book"]["enabled"] == default
+    assert MANIFEST["multi_book"]["per_book_k"] == PER_BOOK_K
+    assert MANIFEST["multi_book"]["final_top_k"] == DEFAULT_FINAL_TOP_K
+    assert MANIFEST["multi_book"]["fanout"] == FANOUT

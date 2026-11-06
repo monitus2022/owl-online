@@ -20,5 +20,7 @@ class AgentState(TypedDict, total=False):
     abstained: bool
     needs_input: bool
     attempts: int
+    model_calls: int
+    abstain_reason: str | None
     retry_reason: str | None
     llm_model: str

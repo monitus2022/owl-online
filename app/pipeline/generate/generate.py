@@ -93,9 +93,11 @@ class AskResult:
     """A grounded answer plus the chunk ids it rests on.
 
     `attempts` counts drafts generated; it is 0 when retrieval abstained before
-    any draft. `abstain_reason` separates a weak retrieval (`no_evidence`) from a
-    draft that cited nothing (`uncited`) or refused (`refused`), so callers do
-    not have to infer it from the text.
+    any draft. `model_calls` counts every model call the answer cost, which is
+    more than `attempts` when a path fans out (the multi-book path makes one
+    call per book plus one synthesis). `abstain_reason` separates a weak
+    retrieval (`no_evidence`) from a draft that cited nothing (`uncited`) or
+    refused (`refused`), so callers do not have to infer it from the text.
     """
 
     answer: str

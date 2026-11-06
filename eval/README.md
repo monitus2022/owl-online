@@ -143,8 +143,21 @@ fixed on this set.
 
 The script checks every expected entity against narrative chunks and ignores
 front-matter `CONTENTS` and copyright pages. It is a substring check, not a
-semantic proof. The run is retrieval only; synthesis faithfulness is measured
-with #105.
+semantic proof.
+
+`scripts/measure_multibook_generation.py` runs the flag-on answer path on the
+same fixture: routing, per-book extraction, quote binding, synthesis and the
+coverage statement. It records cited-evidence coverage, strict answer-text
+coverage, citation validity, judge faithfulness, latency and token spend. The
+coverage statement is deterministic bookkeeping, so the faithfulness judge sees
+the answer body only.
+
+Held-out generation at per-book k=15 and final top-k 7
+(`20261106T093000Z`): book coverage 0.93, entity completeness 0.93, answer-text
+coverage 0.86, citation validity 0.89, faithfulness 0.73, p50 10.8s, p95 16.5s,
+about $0.025 per 15 items. Citation validity and faithfulness miss their bars,
+so `OWL_MULTI_BOOK` stays off. See
+`docs/runs/2026-11-06-105-multibook-generation.md`.
 
 ## Run
 

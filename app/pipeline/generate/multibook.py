@@ -17,6 +17,7 @@ from app.pipeline.generate.generate import (
     ABSTAIN_MESSAGE,
     AskResult,
     _is_refusal,
+    _one_draft,
     ground_answer,
     sanitize_evidence,
 )
@@ -29,6 +30,11 @@ logger = logging.getLogger(__name__)
 
 MAX_BOOKS = 7
 FANOUT = 4
+# Candidates retrieved per book before extraction. k=1 missed the answer chunk
+# for some books; 15 covers a chapter's worth without unbounded prompt growth.
+PER_BOOK_K = 15
+# Final evidence cap: at most one chunk per book under the default seven.
+DEFAULT_FINAL_TOP_K = 7
 _CITATION = re.compile(r"\[(b\d+-c\d+-\d+)\]")
 
 MULTI_BOOK_EXTRACT_SYSTEM = (
@@ -107,8 +113,14 @@ def _extract_prompt(question: str, chunks: list[Chunk]) -> str:
     )
 
 
+_TYPOGRAPHIC = str.maketrans({"“": '"', "”": '"', "‘": "'", "’": "'"})
+_SEGMENT_SPLIT = re.compile(r"\.\.\.|…")
+
+
 def _normalise(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip().strip('"“”').casefold()
+    """Casefold, collapse whitespace and unify curly quotes for comparison."""
+    text = text.translate(_TYPOGRAPHIC)
+    return re.sub(r"\s+", " ", text).strip().strip('"').casefold()
 
 
 def _parse_extract(text: str, chunks: list[Chunk]) -> tuple[str, ...]:
@@ -172,25 +184,16 @@ def _synthesis_prompt(question: str, extracts: list[BookExtract]) -> str:
     )
 
 
-async def _one_draft(
-    system: str,
-    prompt: str,
-    llm: Llm,
-    on_token: Callable[[str], None] | None,
-) -> str:
-    if on_token is None:
-        return await llm.generate(system, prompt)
-    pieces: list[str] = []
-    async for token in llm.stream(system, prompt):
-        pieces.append(token)
-        on_token(token)
-    return "".join(pieces)
-
-
 def _dedupe_extracts(extracts: list[BookExtract]) -> list[BookExtract]:
-    seen: set[str] = set()
+    """Drop repeated lines inside one book, keeping every book's evidence.
+
+    Cross-book repeats are kept on purpose: the coverage claim is per book, so
+    the same sentence found in two books is evidence for both. Conflicting lines
+    are not resolved here; both reach synthesis labelled by book.
+    """
     merged: list[BookExtract] = []
     for extract in extracts:
+        seen: set[str] = set()
         lines: list[str] = []
         for line in extract.lines:
             key = _normalise(_CITATION.sub("", line))
@@ -203,28 +206,80 @@ def _dedupe_extracts(extracts: list[BookExtract]) -> list[BookExtract]:
     return merged
 
 
-def _quote_supported(line: str, chunks: list[Chunk]) -> bool:
-    text = re.sub(r"^Book \d+:\s*", "", line)
-    text = _CITATION.sub("", text).strip().strip('"“”')
+def _cap_evidence(extracts: list[BookExtract], top_k: int) -> list[BookExtract]:
+    """Keep at most `top_k` cited chunks, one round per book before any repeats.
+
+    Round-robin selection means seven books keep one chunk each under the
+    default cap of seven, so a book is not dropped because another book scored
+    higher. Extract lines that cite a dropped chunk are removed with it.
+    """
+    limit = max(1, top_k)
+    pools = [list(extract.chunks) for extract in extracts]
+    kept: list[str] = []
+    while len(kept) < limit and any(pools):
+        for pool in pools:
+            if not pool:
+                continue
+            chunk = pool.pop(0)
+            if chunk.id not in kept:
+                kept.append(chunk.id)
+            if len(kept) >= limit:
+                break
+    keep = set(kept)
+    capped: list[BookExtract] = []
+    for extract in extracts:
+        chunks = tuple(chunk for chunk in extract.chunks if chunk.id in keep)
+        if not chunks:
+            continue
+        lines = tuple(
+            line for line in extract.lines if set(_CITATION.findall(line)) <= keep
+        )
+        if not lines:
+            continue
+        capped.append(BookExtract(extract.book_num, chunks, lines))
+    return capped
+
+
+def _line_supported(line: str, by_id: dict[str, Chunk]) -> bool:
+    """A synthesis line passes only if its quote sits in the chunk it cites.
+
+    Every citation must name an extracted chunk, the `Book N` label must match
+    that chunk's book, and every segment of the quote (split on ellipses) must
+    be found verbatim. A paraphrase, a cross-book quote or an invented clause
+    fails.
+    """
+    cited = _CITATION.findall(line)
+    known = [cid for cid in cited if cid in by_id]
+    if not known:
+        return False
+    chunks = [by_id[cid] for cid in known]
+    label = re.match(r"^[-*]?\s*Book (\d+):", line)
+    if label is not None and any(
+        chunk.metadata.book_num != int(label.group(1)) for chunk in chunks
+    ):
+        return False
+    quote = re.sub(r"^[-*]\s*", "", line)
+    quote = re.sub(r"^Book \d+:\s*", "", quote)
+    quote = _CITATION.sub("", quote)
     segments = [
-        _normalise(segment)
-        for segment in re.split(r"\.\.\.|…", text)
-        if len(_normalise(segment)) >= 15
+        segment
+        for segment in (_normalise(part) for part in _SEGMENT_SPLIT.split(quote))
+        if len(segment) >= 15
     ]
     if not segments:
         return False
     haystack = " ".join(_normalise(chunk.text) for chunk in chunks)
-    return any(segment in haystack for segment in segments)
+    return all(segment in haystack for segment in segments)
 
 
 def _filter_supported_lines(draft: str, chunks: list[Chunk]) -> str:
-    kept: list[str] = []
-    for raw in draft.splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        if _CITATION.search(line) and _quote_supported(line, chunks):
-            kept.append(line)
+    """Keep only synthesis lines whose quote is grounded in their cited chunk."""
+    by_id = {chunk.id: chunk for chunk in chunks}
+    kept = [
+        line.strip()
+        for line in draft.splitlines()
+        if line.strip() and _line_supported(line.strip(), by_id)
+    ]
     return "\n".join(kept)
 
 
@@ -233,7 +288,7 @@ async def ask_multi_book(
     *,
     retriever: BookRetriever,
     llm: Llm,
-    top_k: int = 7,
+    top_k: int = DEFAULT_FINAL_TOP_K,
     books: list[int] | None = None,
     on_token: Callable[[str], None] | None = None,
     on_stage: Callable[[str], None] | None = None,
@@ -248,7 +303,7 @@ async def ask_multi_book(
     chunks = await retrieve_multi_book(
         retriever,
         question,
-        per_book_k=15,
+        per_book_k=PER_BOOK_K,
         fanout=FANOUT,
         books=sorted(searched),
     )
@@ -286,7 +341,8 @@ async def ask_multi_book(
         *(one(book_num, book_chunks) for book_num, book_chunks in by_book.items())
     )
     extracts = _dedupe_extracts([item for item in extracted if item is not None])
-    extracts = extracts[:top_k]
+    extracts = _cap_evidence(extracts, top_k)
+    calls = len(by_book)
     if tracer is not None and extract_span is not None:
         tracer.finish(
             extract_span,
@@ -302,25 +358,36 @@ async def ask_multi_book(
             chunks=chunks,
             attempts=0,
             abstain_reason="no_evidence",
+            model_calls=calls,
         )
 
-    covered = {extract.book_num for extract in extracts}
     evidence_chunks = [chunk for extract in extracts for chunk in extract.chunks]
+    extracted_books = {extract.book_num for extract in extracts}
     prompt = _synthesis_prompt(question, extracts)
     if on_stage is not None:
         on_stage("generate")
     generate_span = tracer.start("synthesize") if tracer else None
-    draft = await _one_draft(MULTI_BOOK_SYSTEM, prompt, llm, on_token)
+    raw = await _one_draft(MULTI_BOOK_SYSTEM, prompt, llm, on_token)
     if tracer is not None and generate_span is not None:
         tracer.finish(
             generate_span,
             model=getattr(llm, "name", "?"),
-            books=sorted(covered),
+            books=sorted(extracted_books),
             **prompt_fingerprint(MULTI_BOOK_SYSTEM, prompt),
         )
-    draft = _filter_supported_lines(draft, evidence_chunks)
+    refused = _is_refusal(raw, cited=bool(_CITATION.search(raw)))
+    draft = _filter_supported_lines(raw, evidence_chunks)
     result = ground_answer(draft, evidence_chunks)
-    if _is_refusal(draft, cited=bool(result.citations)):
+    # Coverage follows the lines that survived binding, not the raw extracts:
+    # a book whose only line was dropped is not claimed as covered.
+    by_id = {chunk.id: chunk for chunk in evidence_chunks}
+    covered = {
+        by_id[cid].metadata.book_num
+        for line in draft.splitlines()
+        for cid in _CITATION.findall(line)
+        if cid in by_id
+    }
+    if refused:
         if tracer is not None:
             tracer.emit("final", abstained=True, abstain_reason="refused")
         return AskResult(
@@ -329,6 +396,7 @@ async def ask_multi_book(
             chunks=evidence_chunks,
             attempts=1,
             abstain_reason="refused",
+            model_calls=calls + 1,
         )
     if result.abstained or not result.citations:
         if tracer is not None:
@@ -339,6 +407,7 @@ async def ask_multi_book(
             chunks=evidence_chunks,
             attempts=1,
             abstain_reason="uncited",
+            model_calls=calls + 1,
         )
     coverage = coverage_statement(covered, searched)
     answer = f"{result.answer}\n\n{coverage}"
@@ -346,7 +415,7 @@ async def ask_multi_book(
         tracer.emit(
             "coverage",
             covered=sorted(covered),
-            missing=sorted(set(range(1, MAX_BOOKS + 1)) - covered),
+            missing=sorted(searched - covered),
         )
         tracer.emit(
             "final",
@@ -365,5 +434,5 @@ async def ask_multi_book(
         citations=result.citations,
         chunks=evidence_chunks,
         attempts=1,
-        model_calls=len(extracts) + 1,
+        model_calls=calls + 1,
     )
