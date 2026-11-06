@@ -61,7 +61,7 @@ docs/runs/<date>-<ticket>-<slug>.md   (committed run record)
 
 ## Current baseline
 
-Pinned run `20261106T060737Z`, quota 0:
+Pinned run `20261106T060737Z`, quota 0; canonical record: `docs/runs/2026-11-06-v2-quota-baseline.md`:
 
 | Metric | Value |
 |---|---:|
@@ -74,9 +74,9 @@ Pinned run `20261106T060737Z`, quota 0:
 
 The aggregation fixture adds cross-book coverage: 0.46 book coverage, 0.45 entity
 completeness and 0.00 full coverage. The routed per-book prototype reaches 0.79
-coverage and 0.76 completeness at equal k=7, but it is not wired into chat. The
-router separates 10/10 multi-book items from 0/5 near-misses on the fixture,
-in-sample.
+coverage and 0.76 completeness at equal k=7, but citation validity is 0.56 and
+it is not wired into chat. The router separates 10/10 multi-book items from 0/5
+near-misses on the fixture, in-sample.
 
 ## Gold set
 

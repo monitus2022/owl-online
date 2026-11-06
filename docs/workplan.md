@@ -10,14 +10,17 @@ page describes what comes next and why.
 
 - V1 is shipped.
 - The V2 chat foundation is delivered: LangGraph intents, verification and retry,
-  guardrails, cost controls, tracing and the eval gate.
+  guardrails, cost controls, tracing and the local eval gate. The PR CI gate is
+  still #16.
 - The retrieval foundation #96 is closed: aggregation fixture, deterministic
-  router and bounded per-book retrieval. Routed per-book retrieval reaches 0.79
-  coverage and 0.76 completeness at equal k=7, but it is not wired into chat.
+  router, bounded per-book retrieval and the quota-2 measurement (multi-part
+  Hit@5 0.667 to 0.778, judge 14/14, left opt-in). Routed per-book retrieval
+  reaches 0.79 coverage and 0.76 completeness at equal k=7, but citation
+  validity is 0.56 and it is not wired into chat.
 - Current work is #106, the held-out multi-book set, followed by #105, the
   multi-book answer path. Chat is still one-pass until #105 lands.
 - #97 persona follows #105. #107 selection experiments are deferred.
-- V2.5 subject packs and the exam bank follow the answer path.
+- V2.5 subject packs and the exam bank follow the answer path and #97.
 
 ## Product shape
 
@@ -436,26 +439,29 @@ persists exam attempts and chat history.
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
 | #74 | Move `/data` to a dedicated EBS volume | V2 - Deepening |
 | #75 | Replace static AWS keys with GitHub OIDC | V2 - Deepening |
-| #87 | Subject knowledge packs: taxonomy, materials, source links | V3 - Product |
 
 ### Later
 
 | Ticket | Scope | Milestone |
 |---|---|---|
+| #87 | Subject knowledge packs: taxonomy, materials, source links | V3 - Product |
 | #38, #39 | Exam data model, offline generation and validation | V3 - Product |
 | #41, #42 | Hybrid grading and exam endpoints | V3 - Product |
 | #40 | Exam and grading evaluation | V3 - Product |
 | #43 | Lesson mode | V3 - Product |
 | #30 | Conversation memory and follow-up rewrite | V3 - Product |
 | #35, #44 | Google auth, progress tracking and weak topics | V3 - Product |
+| #19 | Cost and latency p50/p95 instrumentation | V3 - Product |
+| #27 | Answer sufficiency check beyond the bounded retry | V3 - Product |
+| #34 | Semantic cache | V3 - Product |
+| #33 | Dashboards | V3 - Product |
 
 ### Icebox
 
 | Ticket | Scope | Milestone |
 |---|---|---|
 | #107 | Quota 3, per-sub-query rerank, top-k 8 | Future / Backlog |
-| #34 | Semantic cache | Future / Backlog |
-| #33 | Dashboards | Future / Backlog |
+| #8 | Embedding cache (rerank cache is already delivered) | Future / Backlog |
 | #14 | Closed-book control | Future / Backlog |
 | #24 | Perturbation probes | Future / Backlog |
 
@@ -463,10 +469,10 @@ persists exam attempts and chat history.
 
 | Area | Tickets |
 |---|---|
-| Chat foundation | #80, #81, #82, #88, #79, #72, #23, #73, #63, #29, #31, #32, #22 |
-| Verification and cache | #27, #28, #8, #19 |
+| Chat foundation | #80, #81, #82, #88, #79, #23, #73, #63, #29, #31, #32, #22 |
+| Verification | #28 |
 | Eval harness | #9, #10, #12 |
-| Retrieval foundation | #96, #70, #71, #78 |
+| Retrieval foundation | #96, #70, #71, #72, #78 |
 
 ## Backlog policy
 
