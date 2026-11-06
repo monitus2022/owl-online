@@ -117,4 +117,59 @@ async def test_prompt_includes_setting_notes_and_the_lore_citation_rule():
     )
     assert "Setting notes:" in llm.prompts[0]
     assert "[lore:school-001]" in llm.prompts[0]
-    assert "Setting notes are cited as [lore:<id>]." in llm.systems[0]
+    assert "grounded only in the setting notes" in llm.systems[0]
+    assert "Cite every setting fact with [lore:<id>]" in llm.systems[0]
+    assert "grounded only in the excerpts" not in llm.systems[0]
+
+
+async def test_grouped_lore_citations_are_parsed():
+    llm = _Llm(
+        "Ashcombe was founded in 2008 "
+        "[lore:school-001, lore:timeline-2008]."
+    )
+    result = await ask(
+        "When was Ashcombe founded?",
+        retriever=_WeakRetriever(),
+        llm=llm,
+        lore=STORE,
+    )
+    assert not result.abstained
+    assert result.lore_citations == ["school-001", "timeline-2008"]
+
+
+async def test_a_book_question_does_not_pull_lore_into_the_prompt():
+    llm = _Llm("Rowan trims the wick [b1-c01-0000].")
+    result = await ask(
+        "Who is the new Defence Against the Dark Arts teacher?",
+        retriever=_Retriever(),
+        llm=llm,
+        lore=STORE,
+    )
+    assert not result.abstained
+    assert result.lore_citations == []
+    assert "Setting notes:" not in llm.prompts[0]
+    assert "grounded only in the excerpts" in llm.systems[0]
+
+
+async def test_a_book_id_cannot_pass_as_lore_and_vice_versa():
+    llm = _Llm("A claim [lore:b1-c01-0000] and another [b1-c01-0000].")
+    result = await ask(
+        "Who trims the wick?",
+        retriever=_Retriever(),
+        llm=llm,
+        lore=STORE,
+    )
+    assert result.citations == ["b1-c01-0000"]
+    assert result.lore_citations == []
+    assert "[lore:b1-c01-0000]" not in result.answer
+
+
+async def test_a_draft_with_no_citation_in_either_space_abstains():
+    result = await ask(
+        "When was Ashcombe founded?",
+        retriever=_WeakRetriever(),
+        llm=_Llm("A confident claim with no citation."),
+        lore=STORE,
+    )
+    assert result.abstained
+    assert result.abstain_reason == "uncited"

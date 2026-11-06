@@ -111,6 +111,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     multi_book=app_settings.multi_book,
                     persona=PERSONA if app_settings.persona else None,
                     lore=built.lore,
+                    lore_subject=app_settings.lore_subject,
                     small_llm=built.small_llm,
                 ),
             )
@@ -268,6 +269,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             + persona_chars
             + len(question)
             + len(student)
+            + result.lore_chars
             + sum(len(chunk.text) for chunk in result.chunks)
         )
         input_tokens = (
@@ -361,6 +363,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                             PERSONA.answer_suffix() if app_settings.persona else None
                         ),
                         lore=runtime.lore,
+                        subject=app_settings.lore_subject,
                         on_stage=mark,
                     )
                     if app_settings.persona and result.abstained:

@@ -27,6 +27,7 @@ def build_graph(
     multi_book: bool = False,
     persona: Persona | None = None,
     lore: LoreStore | None = None,
+    lore_subject: str = "dada",
     small_llm: Llm | None = None,
 ) -> CompiledStateGraph:
     """Build the stateless per-request graph; no checkpointer in D4."""
@@ -47,6 +48,7 @@ def build_graph(
             multi_book=multi_book,
             persona=persona,
             lore=lore,
+            lore_subject=lore_subject,
         ),
     )
     graph.add_edge("answer", END)

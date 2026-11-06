@@ -84,9 +84,9 @@ class Settings(BaseSettings):
                 )
         return self
 
-    @field_validator("trace_file", mode="before")
+    @field_validator("trace_file", "lore_path", mode="before")
     @classmethod
-    def _blank_trace_file(cls, value: object) -> object:
+    def _blank_path(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
             return None
         return value
@@ -106,7 +106,10 @@ class Settings(BaseSettings):
     index_dir: Path = Path("data/index/chroma")
     # Authored setting facts. A directory of Markdown front-matter files, or a
     # JSONL file. Missing means the answer path stays book-only.
-    lore_path: Path = Path("data/lore")
+    lore_path: Path | None = Path("data/lore")
+    # Canonical subject key for lore selection. The persona card's display name
+    # is "Defense Against the Dark Arts"; the pack key is "dada".
+    lore_subject: str = "dada"
     cors_origins: str = "http://localhost:5500,http://127.0.0.1:5500"
     cors_origin_regex: str = r"https://.*\.pages\.dev"
 

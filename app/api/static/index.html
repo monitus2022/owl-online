@@ -140,7 +140,7 @@
               } else if (name === "final") {
                 answerEl.textContent = payload.answer;
                 citationsEl.replaceChildren();
-                for (const id of payload.citations) {
+                for (const id of [...payload.citations, ...payload.lore_citations]) {
                   const li = document.createElement("li");
                   li.textContent = id;
                   citationsEl.appendChild(li);

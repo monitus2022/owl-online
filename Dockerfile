@@ -25,7 +25,8 @@ COPY config ./config
 
 ENV PATH="/app/.venv/bin:$PATH" \
     OWL_CHUNKS_PATH=/data/chunks.jsonl \
-    OWL_INDEX_DIR=/data/index/chroma
+    OWL_INDEX_DIR=/data/index/chroma \
+    OWL_LORE_PATH=/data/lore
 
 RUN python -c "import app.main, app.agent.graph, app.api.runtime, app.pipeline.retrieve, app.pipeline.generate"
 

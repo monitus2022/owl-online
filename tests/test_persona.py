@@ -102,7 +102,7 @@ def test_lore_fixture_loads_and_selects_the_professor():
     assert store.get("school-001") is not None
     assert store.get("crane-001") is not None
     assert store.select("who is Professor Crane", subject="dada")[0].id == "crane-001"
-    assert store.select("the five Auror subjects", subject="dada")[0].id == "auror-001"
+    assert store.select("What is the Auror pathway?", subject="dada")[0].id == "auror-001"
     founders = {"crane-001", "vale-001", "hale-001", "raman-001", "ashby-001"}
     assert founders <= store.ids()
     assert {"timeline-1998", "timeline-2008", "timeline-2026"} <= store.ids()

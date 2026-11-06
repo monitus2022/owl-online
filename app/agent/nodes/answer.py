@@ -22,6 +22,7 @@ async def answer_node(
     multi_book: bool = False,
     persona: Persona | None = None,
     lore: LoreStore | None = None,
+    lore_subject: str = "dada",
 ) -> dict[str, object]:
     writer = get_stream_writer()
 
@@ -43,6 +44,7 @@ async def answer_node(
         multi_book=multi_book,
         persona_suffix=persona.answer_suffix() if persona is not None else None,
         lore=lore,
+        subject=lore_subject,
     )
     if result.abstained and persona is not None:
         # Keep the abstention contract; only the user-facing line changes.
