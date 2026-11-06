@@ -334,6 +334,8 @@ async def run(args) -> int:
     valid = sum(s.valid_citations for s in multi)
     faithful_all = faithful_rate(multi)
     faithful_synth = faithful_rate(synthesis)
+    judged_all = len([s for s in multi if not s.abstained])
+    judged_synth = len([s for s in synthesis if not s.abstained])
     abstained = mean([1.0 if s.abstained else 0.0 for s in multi])
     latencies = sorted(s.latency_ms for s in multi)
     p50 = median(latencies) if latencies else 0.0
@@ -381,11 +383,11 @@ async def run(args) -> int:
     )
     print(
         f"  citation_validity={valid / citations if citations else 0.0:.2f} "
-        f"faithfulness={faithful_all:.2f} (n={len(multi)}) "
+        f"faithfulness={faithful_all:.2f} (n={judged_all}) "
         f"abstention={abstained:.2f}"
     )
     print(
-        f"  synthesis-only n={len(synthesis)} "
+        f"  synthesis-only n={len(synthesis)} judged={judged_synth} "
         f"citation_validity={citation_rate(synthesis):.2f} "
         f"faithfulness={faithful_synth:.2f}"
     )

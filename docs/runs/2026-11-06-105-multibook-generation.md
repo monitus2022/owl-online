@@ -157,10 +157,11 @@ single-pass baseline.
 - Latency p95 is 14.3s and the slowest item is also 14.3s, under the 30s
   `/ask` deadline. The earlier recorded p95 of 16.5s used the wrong index and
   hid a 30.4s item; that run is superseded.
-- Two earlier runs of the measurement script (`20261106T090000Z`,
-  `20261106T093000Z`) are discarded: the script scored entities anywhere in the
-  answer instead of per book, the coverage statement could claim a dropped book,
-  and p95 used the wrong index. All three are fixed before this run.
+- Three earlier runs of the measurement script (`20261106T090000Z`,
+  `20261106T091500Z`, `20261106T093000Z`) are discarded: the script scored
+  entities anywhere in the answer instead of per book, the coverage statement
+  could claim a dropped book, and p95 used the wrong index. All three are fixed
+  before this run.
 
 ## Decision
 
