@@ -56,6 +56,7 @@ so on.
 | 2026-11-06 | #96 | `20261106T060737Z` | `pinned` | 0.76 | 0.30 | 13/14 | [Quota-aware baseline](2026-11-06-v2-quota-baseline.md) |
 | 2026-11-06 | #96 | `20261106T060813Z` | `pinned` | 0.76 | 0.30 | 13/14 | [Quota-aware baseline gate](2026-11-06-v2-quota-baseline-gate.md) |
 | 2026-11-06 | #96 | `20261106T060914Z` | `pinned` (quota 2) | 0.78 | 0.29 | 14/14 | [Sub-query quota r2](2026-11-06-v2-subquery-quota-r2.md) |
+| 2026-11-06 | #96 | `20261106T100459Z` | `aggregation` | n/a | n/a | n/a | [Aggregation fixture baseline](2026-11-06-v2-aggregation-baseline.md) |
 
 ## Template
 

@@ -9,6 +9,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | Path | Contents |
 |---|---|
 | `eval/harness/gold.py` | `GoldItem`, `load_gold` |
+| `eval/harness/aggregation.py` | multi-book fixture loader, coverage and citation metrics |
 | `eval/harness/retrieval.py` | Hit@k, Recall@k, MRR |
 | `eval/harness/abstention.py` | refusal counts and rate |
 | `eval/harness/generation.py` | EM, F1, judge buckets, aggregates |
@@ -17,6 +18,8 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/results.py` | result CSV, baseline copy and diff |
 | `eval/thresholds.toml` | baseline, gate bands and slice kinds |
 | `eval/test_harness.py` | harness tests, no network |
+| `eval/test_aggregation.py` | aggregation fixture and metric tests, no network |
+| `eval/fixtures/aggregation.jsonl` | 10 multi-book questions and 5 near-misses |
 | `eval/test_results.py` | result CSV tests, no network |
 | `eval/runner.py` | one run: compose, score, write the CSV |
 | `eval/report.py` | result rows and printed summary |
@@ -24,6 +27,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/test_check.py` | gate tests, no network |
 | `eval/test_report.py` | row and rendering tests, no network |
 | `scripts/run_eval.py` | CLI params and dispatch |
+| `scripts/measure_aggregation.py` | aggregation fixture measurement |
 
 `eval/harness/__init__.py` re-exports the public names, so callers keep
 importing from `eval.harness`.
@@ -69,6 +73,29 @@ corpus text is stored; ids and short answers only.
 
 Unanswerable items carry a `reason` instead of evidence ids. Answerable items
 carry locatable evidence ids, checked against the corpus before they were added.
+
+## Aggregation fixture
+
+`fixtures/aggregation.jsonl`: 10 true multi-book questions and 5 near-misses that
+sound plural but are single-hop. A multi-book item lists the expected entities
+for each book, not one reference answer. A near-miss lists one book, so a plural
+count alone cannot pass as multi-book.
+
+`scripts/measure_aggregation.py` scores retrieval on:
+
+| Metric | Meaning |
+|---|---|
+| Book coverage | fraction of expected books with a retrieved chunk containing an expected entity |
+| Full coverage | fraction of multi-book items with every expected book covered |
+| Entity completeness | fraction of expected entities found in the retrieved set |
+| Citation validity | fraction of retrieved chunks from an expected book that also contain an expected entity for that book |
+| Near-miss entity hit | fraction of near-miss items with at least one expected entity |
+| Near-miss entity completeness | fraction of near-miss expected entities found |
+| Near-miss book precision | fraction of near-miss chunks that are relevant to the single expected book |
+
+The script verifies every expected entity against the corpus before measuring, so
+the fixture cannot drift into invented facts. It is retrieval only; synthesis
+faithfulness is measured with the multi-book path.
 
 ## Run
 
