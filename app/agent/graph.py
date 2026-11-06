@@ -12,6 +12,7 @@ from app.agent.nodes.practice import practice_node
 from app.agent.persona import PERSONA, Persona
 from app.agent.router import route
 from app.agent.state import AgentState
+from app.knowledge import LoreStore
 from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K
 from app.providers.contracts import Llm, Retriever
 
@@ -25,6 +26,7 @@ def build_graph(
     max_retries: int = DEFAULT_MAX_RETRIES,
     multi_book: bool = False,
     persona: Persona | None = None,
+    lore: LoreStore | None = None,
     small_llm: Llm | None = None,
 ) -> CompiledStateGraph:
     """Build the stateless per-request graph; no checkpointer in D4."""
@@ -44,6 +46,7 @@ def build_graph(
             max_retries=max_retries,
             multi_book=multi_book,
             persona=persona,
+            lore=lore,
         ),
     )
     graph.add_edge("answer", END)

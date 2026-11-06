@@ -29,7 +29,9 @@ page describes what comes next and why.
 - #97's thin slice is implemented behind `OWL_PERSONA`: persona card, DADA
   scope, scripted meta and personal replies, and the lore schema. The dev pack
   now has the five founders, the 1998/2008/2026 timeline and the Auror pathway.
-  The real pack is being collected. The full persona voice still follows #105.
+  Lore-grounded answers (#118) are wired: setting notes carry `[lore:<id>]`
+  citations, validated against the pack. The real pack and the lore eval follow.
+  The full persona voice still follows #105.
 - #16's deterministic CI gate is merged; the required-check setting is the last
   step. #74 and #75 follow. #107 is deferred.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
@@ -103,6 +105,7 @@ then the work stops whether or not it passes.
 | #106 | Held-out multi-book set, written before tuning (complete) |
 | #105 | Per-book extraction, merge, one synthesis, coverage statement, flag wiring |
 | #113 | Ingest: drop trailing next-book front matter from the previous chapter |
+| #118 | Lore-grounded answers: `[lore:<id>]` citations and validation |
 
 Held-out generation (`20261106T110000Z`, per-book k=15, final top-k 7): book
 coverage 0.84, entity completeness 0.84, answer-text coverage 0.81, citation

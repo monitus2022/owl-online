@@ -177,6 +177,7 @@ flowchart TD
   api --> pipeline
   api --> providers
   agent --> pipeline
+  pipeline --> knowledge
   agent --> providers
   agent --> schemas
   knowledge --> pipeline
@@ -588,8 +589,8 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, lore_citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

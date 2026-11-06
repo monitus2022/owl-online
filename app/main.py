@@ -110,6 +110,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     max_retries=app_settings.retry_budget,
                     multi_book=app_settings.multi_book,
                     persona=PERSONA if app_settings.persona else None,
+                    lore=built.lore,
                     small_llm=built.small_llm,
                 ),
             )
@@ -216,6 +217,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 str(app_settings.retry_budget),
                 str(app_settings.multi_book),
                 persona_scope,
+                runtime.lore.version() if runtime.lore is not None else "none",
                 model,
             ]
         )
@@ -344,6 +346,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     answer=cached.answer,
                     citations=cached.citations,
                     abstained=cached.abstained,
+                    lore_citations=cached.lore_citations,
                 )
             start = time.perf_counter()
             try:
@@ -357,6 +360,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         persona_suffix=(
                             PERSONA.answer_suffix() if app_settings.persona else None
                         ),
+                        lore=runtime.lore,
                         on_stage=mark,
                     )
                     if app_settings.persona and result.abstained:
@@ -395,6 +399,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 answer=result.answer,
                 citations=result.citations,
                 abstained=result.abstained,
+                lore_citations=result.lore_citations,
             )
         finally:
             limiter.release(decision.token)
@@ -478,6 +483,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                             {
                                 "answer": cached.answer,
                                 "citations": cached.citations,
+                                "lore_citations": cached.lore_citations,
                                 "abstained": cached.abstained,
                                 "needs_input": False,
                                 "attempts": cached.attempts,
@@ -550,6 +556,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             result = AskResult(
                 answer=str(final.get("answer", "")),
                 citations=list(final.get("citations", [])),
+                lore_citations=list(final.get("lore_citations", [])),
                 abstained=bool(final.get("abstained", False)),
                 chunks=list(final.get("chunks", [])),
                 attempts=int(final.get("attempts", 1)),
@@ -577,6 +584,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     {
                         "answer": final.get("answer", ""),
                         "citations": final.get("citations", []),
+                        "lore_citations": final.get("lore_citations", []),
                         "abstained": final.get("abstained", False),
                         "needs_input": final.get("needs_input", False),
                         "attempts": final.get("attempts", 1),

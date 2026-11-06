@@ -20,6 +20,7 @@ place, and the answer path stays book-only.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import tomllib
@@ -95,6 +96,14 @@ class LoreStore:
 
     def ids(self) -> set[str]:
         return set(self.by_id)
+
+    def version(self) -> str:
+        """A short hash of the pack, for the answer cache scope."""
+        payload = json.dumps(
+            [(entry.id, entry.body, entry.source) for entry in self.entries],
+            sort_keys=True,
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
     def select(
         self, question: str, *, subject: str | None = None, limit: int = 3

@@ -104,6 +104,9 @@ class Settings(BaseSettings):
     # Pipeline inputs and the browser origins allowed by CORS.
     chunks_path: Path = Path("data/chunks.jsonl")
     index_dir: Path = Path("data/index/chroma")
+    # Authored setting facts. A directory of Markdown front-matter files, or a
+    # JSONL file. Missing means the answer path stays book-only.
+    lore_path: Path = Path("data/lore")
     cors_origins: str = "http://localhost:5500,http://127.0.0.1:5500"
     cors_origin_regex: str = r"https://.*\.pages\.dev"
 
