@@ -52,10 +52,11 @@ sample abstained.
 
 ## Reading
 
-- The ingest fix removed 31 front-matter chunks across the seven book boundaries
-  and the final copyright page. No chunk now contains a `CONTENTS` or
-  `Text copyright` page, and `b1-c17-0079` is gone. The book 1 last chapter
-  dropped from 80 to 77 chunks; the other last chapters dropped by 3 to 8.
+- The ingest fix removed 31 front-matter chunks across the six book boundaries
+  and the final book's trailing copyright page. No chunk now contains a
+  `CONTENTS` or `Text copyright` page, and `b1-c17-0079` is gone. The book 1
+  last chapter dropped from 80 to 77 chunks; the other last chapters dropped by
+  3 to 8.
 - All 61 gold questions resolve against the new chunk ids. The only expected id
   in a last chapter is `s07` to `b2-c18-0025`, and its text is still the
   Gryffindor sword passage.

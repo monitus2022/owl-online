@@ -62,15 +62,15 @@ docs/runs/<date>-<ticket>-<slug>.md   (committed run record)
 
 ## Current baseline
 
-Pinned run `20261106T060737Z`, quota 0; canonical record: `docs/runs/2026-11-06-v2-quota-baseline.md`:
+Pinned run `20261106T214850Z`, quota 0; canonical record: `docs/runs/2026-11-07-113-ingest-rebaseline.md`:
 
 | Metric | Value |
 |---|---:|
 | Hit@5 overall | 0.76 |
 | Hit@5 multi-part | 0.67 |
 | Hit@5 named reference | 1.00 |
-| Judge correct | 13/14 |
-| Faithful | 13/14 |
+| Judge correct | 13/15 |
+| Faithful | 13/15 |
 | Abstention on unanswerable | 10/10 |
 
 The aggregation fixture adds cross-book coverage: 0.46 book coverage, 0.45 entity
@@ -266,11 +266,11 @@ for that, and the re-pin procedure is a new baseline run plus a new record.
 | `eval/results/<timestamp>.csv` | no | one run, gitignored |
 | `eval/results/baseline.csv` | yes | the pinned comparison point |
 
-The pinned V2 baseline is the D3 run `20261104T154503Z`, recorded as
-`docs/runs/2026-11-04-v2-d3-retrieval.md`. Earlier D1 runs are kept as separate
-records because their metric definitions and sampling changed. Rerun
-`--write-baseline` only after a deliberate configuration change, and add a new
-record instead of editing the old one.
+The pinned V2 baseline is run `20261106T214850Z`, recorded as
+`docs/runs/2026-11-07-113-ingest-rebaseline.md`. Earlier baselines are kept as
+separate records because their metric definitions, sampling or corpus changed.
+Rerun `--write-baseline` only after a deliberate configuration change, and add a
+new record instead of editing the old one.
 
 ## Run record
 

@@ -59,6 +59,22 @@ def test_next_book_front_matter_is_not_labelled_with_the_previous_book():
     chunks = make_chunks(last)
     assert all("CONTENTS" not in chunk.text for chunk in chunks)
     assert all("Text copyright" not in chunk.text for chunk in chunks)
+    assert all(
+        chunk.metadata.book_num == 1 and chunk.metadata.chapter_num == 2
+        for chunk in chunks
+    )
+
+
+def test_a_copyright_marker_without_a_contents_page_does_not_trim():
+    pages = [
+        _page(1, "ONE", "A START"),
+        "CHAPTER TWO\nAN END\n\nText copyright © 1998 by the author.\n\n"
+        + "story text " * 40,
+        "no contents page",
+        _page(3, "ONE", "A NEW START"),
+    ]
+    chapters = parse_chapters(pages)
+    assert "Text copyright" in chapters[1].text
 
 
 def test_trailing_back_matter_is_trimmed_from_the_last_chapter():
@@ -72,6 +88,16 @@ def test_trailing_back_matter_is_trimmed_from_the_last_chapter():
     assert (last.book_num, last.chapter_num) == (1, 2)
     assert "Text copyright" not in last.text
     assert "Paragraph 2 text." in last.text
+
+
+def test_a_marker_before_the_final_page_does_not_trim():
+    pages = [
+        _page(1, "ONE", "A START"),
+        "CHAPTER TWO\nAN END\n\nText copyright © 1998 by the author.",
+        "afterword",
+    ]
+    chapters = parse_chapters(pages)
+    assert "Text copyright" in chapters[-1].text
 
 
 def test_a_book_boundary_without_a_copyright_marker_keeps_the_pages():

@@ -150,15 +150,15 @@ First measured run (V1 mini-eval #51, reranker #6; details in `eval/README.md`):
 | Judge correct / partial / wrong | 9 / 0 / 0 of 10 | 7 / 1 / 2 of 10 |
 | Grounded | 9 / 10 | 8 / 10 |
 
-Current pinned baseline (`20261106T060737Z`, quota 0; canonical record: `docs/runs/2026-11-06-v2-quota-baseline.md`):
+Current pinned baseline (`20261106T214850Z`, quota 0; canonical record: `docs/runs/2026-11-07-113-ingest-rebaseline.md`):
 
 | Metric | Value |
 |---|---:|
 | Hit@5 overall | 0.76 |
 | Hit@5 multi-part | 0.67 |
 | Hit@5 named reference | 1.00 |
-| Judge correct | 13/14 |
-| Faithful | 13/14 |
+| Judge correct | 13/15 |
+| Faithful | 13/15 |
 | Abstention on unanswerable | 10/10 |
 
 The aggregation fixture adds cross-book coverage: book coverage 0.46, entity completeness 0.45, full coverage 0.00. The routed per-book prototype reaches 0.79 coverage and 0.76 completeness at equal k=7, but citation validity is 0.56 and it is not wired into chat yet. The router separates all 10 multi-book items from the 5 near-misses on the fixture, in-sample.

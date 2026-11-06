@@ -117,9 +117,10 @@ validity 0.87 on the 14 synthesis items, faithfulness 0.79 on those items,
 p50 9.6s, p95 14.3s, about $0.025 per 15 items. Coverage and completeness pass;
 citation validity (0.87) and faithfulness (0.79 against a 0.93 baseline) do not.
 The remaining defect is extractor precision: a chunk that shares a keyword with
-the question can be quoted as evidence, and front-matter chunks can be retrieved.
-The 8-call fan-out also costs about 12x a single-pass answer, which caps the path
-at roughly 14 questions per day at the default token budget.
+the question can be quoted as evidence, and front-matter chunks could be
+retrieved before #113. The 8-call fan-out also costs about 12x a single-pass
+answer, which caps the path at roughly 14 questions per day at the default token
+budget.
 
 The bounded cycle, in order:
 
