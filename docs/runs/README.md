@@ -52,6 +52,7 @@ so on.
 | 2026-11-06 | #82 (V2 D7) | `20261105T171800Z` | `pinned` | 0.76 | 0.30 | 13/14 | [V2 D7 tracing and injection](2026-11-06-v2-d7-observability.md) |
 | 2026-11-06 | #82 routing | `comparison` | `routing` | n/a | n/a | n/a | [Model routing comparison](2026-11-06-v2-routing-comparison.md) |
 | 2026-11-06 | #96 | `20261105T204517Z` | `pinned` (quota 2) | 0.78 | 0.29 | 14/14 | [Sub-query quota experiment](2026-11-06-v2-subquery-quota.md) |
+| 2026-11-06 | #96 | `20261106T060233Z` | `pinned` | 0.76 | 0.30 | 13/14 | [Quota follow-up gate](2026-11-06-v2-quota-followup.md) |
 
 ## Template
 

@@ -198,12 +198,12 @@ sequenceDiagram
   RET->>RET: split into up to three sub-queries + original
   RET->>RET: dense (optional where) + BM25 legs
   alt decomposed and OWL_SUBQUERY_QUOTA > 0
-    RET->>RET: fuse each leg, keep top quota, merge by score
+    RET->>RET: fuse each sub-query's dense+sparse pair, keep top quota, merge by score
   else
     RET->>RET: fuse all legs with RRF
   end
   alt reranker attached and the lexical gate passes
-    RET->>RR: rerank(merged pool, top_k)
+    RET->>RR: rerank(merged pool, min(top_k, pool size))
     RR-->>RET: top_k by relevance
   end
   RET-->>A: list[Chunk] (relevance or RRF scores, or empty)

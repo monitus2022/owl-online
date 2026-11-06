@@ -52,6 +52,9 @@ fixed; re-run before using diagnostics.
 | multi_part | 5 | 4 | 1 | 0.00 | 0.30 | 4/4 | 4 |
 | named_reference | 5 | 5 | 0 | 0.00 | 0.28 | 5/5 | 5 |
 
+Judge buckets: 14 correct, 0 partial, 0 wrong. Grounded 14/14. 1 answer in the
+sample abstained.
+
 Novel entities: 0/14.
 
 ## Gate

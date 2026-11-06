@@ -459,7 +459,7 @@ async def test_reranker_request_is_capped_at_the_pool_size():
         chunks_by_id={c.id: c for c in _CHUNKS},
         reranker=reranker,
         pool=1,
-        candidates=1,
+        candidates=2,
     )
     hits = await retriever.retrieve("anything", top_k=5)
     assert reranker.calls[0][2] == 1
