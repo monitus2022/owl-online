@@ -156,7 +156,7 @@ half of that path: one filtered pass per book, capped at seven calls with a
 fan-out of four, then merge, dedupe and score order. The path is measured with
 `scripts/measure_aggregation.py --strategy routed`, but it is not wired into
 `ask()` yet, so chat behavior is unchanged. Extraction, synthesis and the
-coverage statement remain for the path PR.
+coverage statement remain for #105.
 
 ## Module dependencies
 
