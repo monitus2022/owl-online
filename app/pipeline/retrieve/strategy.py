@@ -15,14 +15,29 @@ StrategyName = Literal["single_hop", "multi_book"]
 # Ordered so the first matching cue becomes the reason. Each cue is a phrase
 # that asks for coverage across books, not merely a plural count.
 _COVERAGE_CUES: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("each", re.compile(r"\beach (?:book|of the|of)\b", re.I)),
-    ("every", re.compile(r"\bevery (?:single )?(?:book|one of the)\b", re.I)),
-    ("all_seven", re.compile(r"\ball seven\b", re.I)),
-    ("across", re.compile(r"\bacross (?:all|the books|books|the series)\b", re.I)),
-    ("which_books", re.compile(r"\bwhich books?\b", re.I)),
-    ("in_which_books", re.compile(r"\bin which books?\b", re.I)),
-    ("list_all", re.compile(r"\blist all\b", re.I)),
-    ("for_each", re.compile(r"\bfor each\b", re.I)),
+    ("each", re.compile(r"\beach (?:book|of the (?:seven )?books)\b", re.I)),
+    (
+        "every",
+        re.compile(
+            r"\bevery (?:single )?(?:book|one of the (?:seven )?books)\b",
+            re.I,
+        ),
+    ),
+    ("all_seven", re.compile(r"\ball seven (?:books|of the books)\b", re.I)),
+    (
+        "across",
+        re.compile(
+            r"\bacross (?:all (?:seven )?books|the books|books|the series)\b",
+            re.I,
+        ),
+    ),
+    ("in_which_books", re.compile(r"\bin which books\b", re.I)),
+    ("which_books", re.compile(r"\bwhich books\b", re.I)),
+    ("list_all", re.compile(r"\blist all (?:the )?(?:seven )?books\b", re.I)),
+    (
+        "for_each",
+        re.compile(r"\bfor each (?:book|of the (?:seven )?books)\b", re.I),
+    ),
     ("per_book", re.compile(r"\bper book\b", re.I)),
 )
 _PLURAL_COUNT = re.compile(r"\b(two|three|four|five|six|seven)\b", re.I)

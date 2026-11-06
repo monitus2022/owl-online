@@ -50,6 +50,7 @@ async def feedback_node(
         retriever,
         state.get("top_k", top_k),
         min_score,
+        strategy_question=state["question"],
     )
     if not chunks:
         return {

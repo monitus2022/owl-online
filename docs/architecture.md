@@ -152,7 +152,8 @@ source count.
 `multi_book` from deterministic coverage cues and explicit book numbers. The
 label, reason and cues are emitted in the trace and carried on
 `RetrievalTrace`. The per-book path is not wired yet, so the label does not
-change retrieval today; it is the measurement seam for that path.
+change retrieval today; it is the measurement seam for that path. That path will
+cap map calls at seven, one per book, with a bounded fan-out.
 
 ## Module dependencies
 

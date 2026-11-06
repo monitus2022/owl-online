@@ -4,7 +4,7 @@
 - Run id: `20261106T102144Z`
 - Ticket: #96
 - Config: `aggregation`, pre-retrieval router, quota 0
-- Artifacts: `app/pipeline/retrieve/strategy.py`, `eval/fixtures/aggregation.jsonl`
+- Artifacts: no result CSV (retrieval-only script); `eval/fixtures/aggregation.jsonl`, `scripts/measure_aggregation.py`
 
 ## Configuration
 
@@ -30,11 +30,16 @@
 | False positives | 0 |
 | False negatives | 0 |
 
-The router labels a question `multi_book` when it sees a coverage phrase
-(`each book`, `every book`, `all seven`, `across the books`, `which books`,
-`in which books`, `list all`, `for each`, `per book`) or at least two explicit
-book numbers. A plural count without a coverage phrase stays `single_hop`, which
-is the near-miss case.
+The router labels a question `multi_book` when it sees a book-scoped coverage
+phrase (`each book`, `each of the seven books`, `every book`,
+`every one of the books`, `all seven books`, `across the books`,
+`which books`, `in which books`, `list all seven books`, `for each book`,
+`per book`) or at least two explicit book numbers. A plural count without a
+coverage phrase stays `single_hop`, which is the near-miss case.
+
+Known limits: singular `which book`, `for each other`, `each of the three tasks`,
+`all seven Weasley children`, and `list all the spells in book 3` stay
+single-hop. These are regression tests, not general-language guarantees.
 
 The strategy and reason are emitted in the request trace as
 `retrieval_strategy`, and `RetrievalTrace` carries `strategy`, `strategy_reason`
@@ -42,9 +47,18 @@ and `strategy_cues`.
 
 ## Retrieval
 
-The aggregation metrics are unchanged from the baseline: book coverage 0.46,
-entity completeness 0.45, citation validity 0.77. The router does not change
-retrieval by itself; the per-book path is the next step.
+| Metric | Value |
+|---|---:|
+| Book coverage | 0.46 |
+| Full coverage | 0.00 |
+| Entity completeness | 0.45 |
+| Citation validity | 0.77 |
+| Near-miss entity hit | 1.00 |
+| Near-miss entity completeness | 0.87 |
+| Near-miss book precision | 0.48 |
+
+The aggregation metrics are unchanged from the baseline. The router does not
+change retrieval by itself; the per-book path is the next step.
 
 ## Reading
 

@@ -23,9 +23,10 @@ async def retrieve_evidence(
     retriever: Retriever,
     top_k: int,
     min_score: float | None = None,
+    strategy_question: str | None = None,
 ) -> list[Chunk]:
     tracer = current_tracer()
-    decision = classify_retrieval_strategy(question)
+    decision = classify_retrieval_strategy(strategy_question or question)
     if tracer is not None:
         tracer.emit(
             "retrieval_strategy",
