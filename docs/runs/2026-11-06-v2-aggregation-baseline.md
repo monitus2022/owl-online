@@ -18,7 +18,7 @@
 | Retrieval | hybrid, `k = 5`, `rrf_k = 60`, candidates 50 |
 | Sub-query quota | 0, global fusion |
 | Fixture | 15 items: 10 multi-book, 5 near-miss |
-| Expected entities | 79 across the 10 multi-book items |
+| Expected entities | 79 across all 15 items (66 multi-book, 13 near-miss) |
 
 ## Retrieval
 
@@ -70,6 +70,8 @@
   0.48. The near-misses are retrievable, but the retrieved set spreads beyond
   the single expected book. A plural count alone must not route them to the
   multi-book path.
+- near05 uses `Hungarian Horntail`, `merpeople` and `maze`, not the generic
+  `dragon`, so a dragon-blood chunk cannot satisfy the task.
 - Every expected entity was checked against the corpus with word-boundary,
   plural-friendly matching before the run. The fixture does not use free model
   memory.
