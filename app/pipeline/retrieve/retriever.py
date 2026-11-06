@@ -179,6 +179,9 @@ class HybridRetriever:
                     if cid not in seen:
                         seen.add(cid)
                         fused.append((cid, score))
+            # The legs are concatenated sub-query-major; restore score order so
+            # the no-reranker path and the trace see the best hit first.
+            fused.sort(key=lambda item: item[1], reverse=True)
         else:
             fused = self._fuse_many(dense_lists + sparse_lists)
         ranked = [
