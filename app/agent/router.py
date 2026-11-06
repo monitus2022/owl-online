@@ -91,7 +91,7 @@ _META_CUES: dict[str, re.Pattern[str]] = {
     ),
     # Last: "Hello, who are you?" should answer the identity, not the greeting.
     "greeting": re.compile(
-        r"^\s*(hi|hello|hey|good (?:morning|afternoon|evening))\b",
+        r"^\s*(hi|hello|hey|good (?:morning|afternoon|evening))\s*[!.,]?\s*$",
         re.IGNORECASE,
     ),
 }

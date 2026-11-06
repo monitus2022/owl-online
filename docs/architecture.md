@@ -203,7 +203,7 @@ sequenceDiagram
   API->>API: cache.get (hit -> return)
   API->>API: session cookie, limiter.admit (429 / 503)
   API->>R: get_retriever / get_llm
-  API->>A: ask(question, retriever, llm)
+  API->>A: ask(question, retriever, llm, persona_suffix)
   A->>RET: retrieve(question, top_k)
   RET->>RET: classify single-hop vs multi-book from coverage cues
   RET->>RET: parse book/chapter reference
@@ -399,7 +399,7 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 | `answer` | a question about the books | grounded explanation with citations | no | no |
 | `practice` | "give me a practice question on ..." | one or two grounded questions, streamed | no | no |
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
-| `meta` | persona on; identity, subject scope, exam format, school, professor, Auror pathway | reviewed text from the persona card, no model call | no | no |
+| `meta` | persona on; identity, subject scope, exam format, syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
 
 ## Persona layer
@@ -420,6 +420,9 @@ The suffix applies to the single-pass answer path. `OWL_MULTI_BOOK` and
 `OWL_PERSONA` together are unsupported until the multi-book path lands; the
 multi-book branch ignores the suffix, and `create_app` logs a warning when both
 flags are on.
+
+The non-stream `/ask` endpoint is the grounded answer API. Meta and personal are
+chat intents on `/ask/stream`; `/ask` does not route them.
 
 `app/knowledge/lore.py` holds authored setting facts with a canonicity tier
 (`book`, `product`, `secondary`). It is raw JSONL selected by subject and

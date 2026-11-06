@@ -28,6 +28,7 @@ def test_answer_suffix_keeps_the_grounding_rules():
     assert "Never invent" in suffix
     assert "exactly as it appears" in suffix
     assert "Ashcombe" not in suffix
+    assert "lore" not in suffix.casefold()
 
 
 def test_meta_and_personal_text_has_no_time_pressure():
@@ -159,3 +160,61 @@ def test_lore_rejects_an_empty_body(tmp_path):
     )
     with pytest.raises(ValueError, match="empty body"):
         load_lore(path)
+
+
+def _minimal_card(meta_identity: str = "I am X.", boundaries: dict | None = None) -> str:
+    lines = [
+        "[identity]",
+        'name = "X"',
+        'address = "Professor X"',
+        'role = "teacher"',
+        'school = "school"',
+        'subject = "DADA"',
+        "[register]",
+        'tone = "formal"',
+        'pacing = "no pace"',
+        'stance = "serious"',
+        "[boundaries]",
+    ]
+    for key, value in (boundaries or {
+        "facts": "none",
+        "advice": "none",
+        "canon": "none",
+        "exam": "none",
+    }).items():
+        lines.append(f'{key} = "{value}"')
+    topics = (
+        "identity",
+        "scope",
+        "exam",
+        "syllabus",
+        "grading",
+        "school",
+        "professor",
+        "auror",
+        "boundaries",
+        "greeting",
+    )
+    lines.append("[meta]")
+    for topic in topics:
+        value = meta_identity if topic == "identity" else f"{topic}."
+        lines.append(f'{topic} = "{value}"')
+    lines.extend(["[personal]", 'response = "Hello."'])
+    return "\n".join(lines)
+
+
+def test_persona_card_missing_boundary_fails(tmp_path):
+    path = tmp_path / "persona.toml"
+    path.write_text(
+        _minimal_card(boundaries={"facts": "none", "canon": "none", "exam": "none"}),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="missing boundaries"):
+        load_persona(path)
+
+
+def test_persona_card_empty_meta_value_fails(tmp_path):
+    path = tmp_path / "persona.toml"
+    path.write_text(_minimal_card(meta_identity=""), encoding="utf-8")
+    with pytest.raises(ValueError, match="empty meta.identity"):
+        load_persona(path)

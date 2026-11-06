@@ -118,8 +118,16 @@ def test_meta_topics_cover_greeting_syllabus_and_grading():
     from app.agent.router import classify
 
     assert classify("Hello", persona=True) == "meta"
+    assert classify("Good morning.", persona=True) == "meta"
     assert classify("What is the syllabus?", persona=True) == "meta"
     assert classify("How is the exam graded?", persona=True) == "meta"
+
+
+def test_a_greeting_prefix_does_not_steal_a_question():
+    from app.agent.router import classify
+
+    assert classify("Hello, what is a Horcrux?", persona=True) == "answer"
+    assert classify("Hi, I'm worried", persona=True) == "personal"
 
 
 async def test_an_uncited_draft_still_abstains_with_the_persona_suffix():

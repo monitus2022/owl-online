@@ -257,7 +257,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         scripted = result.model_calls == 0 and result.attempts == 0
         attempts = 0 if scripted else max(1, result.model_calls or result.attempts)
         persona_chars = (
-            len(PERSONA.answer_suffix()) if app_settings.persona else 0
+            len(PERSONA.answer_suffix())
+            if app_settings.persona and intent == "answer" and not app_settings.multi_book
+            else 0
         )
         per_draft = (
             len(SYSTEM_PROMPT)

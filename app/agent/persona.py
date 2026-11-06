@@ -92,6 +92,8 @@ def load_persona(path: Path = PERSONA_PATH) -> Persona:
         )
 
     def text(section: dict[str, object], key: str, where: str) -> str:
+        if key not in section:
+            raise ValueError(f"persona card is missing {where}.{key}")
         value = str(section[key]).strip()
         if not value:
             raise ValueError(f"persona card has an empty {where}.{key}")
