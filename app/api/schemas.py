@@ -41,8 +41,9 @@ class StreamRequest(AskRequest):
 
 
 class AskResponse(BaseModel):
-    """A grounded answer with the chunk ids it cites."""
+    """A grounded answer with the book chunk ids and lore ids it cites."""
 
     answer: str
     citations: list[str]
     abstained: bool
+    lore_citations: list[str] = Field(default_factory=list)

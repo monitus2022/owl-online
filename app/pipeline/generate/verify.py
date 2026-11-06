@@ -34,11 +34,13 @@ def verify_draft(draft: str, result: AskResult) -> Verification:
     re-cite.
     """
     if result.abstain_reason == "no_evidence" or (
-        result.abstain_reason is None and not result.chunks
+        result.abstain_reason is None
+        and not result.chunks
+        and not result.lore_citations
     ):
         return Verification(True)
     if not draft.strip():
         return Verification(False, "empty")
-    if result.abstained or not result.citations:
+    if result.abstained or (not result.citations and not result.lore_citations):
         return Verification(False, "uncited")
     return Verification(True)

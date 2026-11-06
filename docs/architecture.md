@@ -13,7 +13,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal nodes |
-| Knowledge | `app/knowledge/` | lore pack schema and loader; planned subject taxonomy, material packs, source refs and pack validation |
+| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; planned subject taxonomy, material packs, source refs and pack validation |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -177,9 +177,11 @@ flowchart TD
   api --> pipeline
   api --> providers
   agent --> pipeline
+  pipeline --> knowledge
+  agent --> knowledge
+  api --> knowledge
   agent --> providers
   agent --> schemas
-  knowledge --> pipeline
   knowledge --> schemas
   pipeline --> providers
   pipeline --> schemas[app/schemas.py]
@@ -206,13 +208,14 @@ sequenceDiagram
   participant A as ask()
   participant RET as HybridRetriever
   participant RR as Reranker
+  participant L as LoreStore
   participant LLM as OpenRouterLlm
 
   C->>API: POST /ask {question}
   API->>API: cache.get (hit -> return)
   API->>API: session cookie, limiter.admit (429 / 503)
   API->>R: get_retriever / get_llm
-  API->>A: ask(question, retriever, llm, persona_suffix)
+  API->>A: ask(question, retriever, llm, persona_suffix, lore)
   A->>RET: retrieve(question, top_k)
   RET->>RET: classify single-hop vs multi-book from coverage cues
   RET->>RET: parse book/chapter reference
@@ -228,23 +231,25 @@ sequenceDiagram
     RR-->>RET: top_k by relevance
   end
   RET-->>A: list[Chunk] (relevance or RRF scores, or empty)
-  alt empty or top score below min_score
+  A->>L: select(question, subject, top 3)
+  L-->>A: list[LoreEntry] (or empty)
+  alt no book evidence and no lore entries
     A-->>API: AskResult(abstain)
   else evidence available
-    A->>LLM: generate(system, prompt)
-    LLM-->>A: answer citing [chunk-id]
+    A->>LLM: generate(system, prompt with excerpts and setting notes)
+    LLM-->>A: answer citing [chunk-id] or [lore:id]
     alt draft is empty or uncited and retries remain
       A->>A: verify_draft -> retry
-      A->>LLM: generate(retry prompt, same excerpts)
-      LLM-->>A: answer citing [chunk-id]
+      A->>LLM: generate(retry prompt, same excerpts or setting notes)
+      LLM-->>A: answer citing [chunk-id] or [lore:id]
     end
     alt verification passed
-      A-->>API: AskResult(answer, citations, attempts)
+      A-->>API: AskResult(answer, citations, lore_citations, attempts)
     else refusal or still uncited
       A-->>API: AskResult(abstain, abstain_reason, attempts)
     end
   end
-  API-->>C: AskResponse {answer, citations, abstained}
+  API-->>C: AskResponse {answer, citations, lore_citations, abstained}
 ```
 
 One deadline covers the whole request: `OWL_ASK_TIMEOUT_S` (default 30 s) wraps
@@ -255,7 +260,7 @@ worker: a provider call already running in a thread is not cancellable, so a
 timed-out request can keep its thread busy until the client's own timeout.
 
 `verify_draft` is deterministic: an empty draft or one that cites no retrieved
-chunk fails. A grounded draft passes; a deliberate refusal is final and is never
+chunk and no lore entry fails. A grounded draft passes; a deliberate refusal is final and is never
 retried, so abstention keeps its meaning. A paraphrase refusal is final when it
 cites nothing, trails into a further refusal, or has nothing but the refusal
 clause; a cited partial answer that moves on to a new or contrastive clause is
@@ -327,14 +332,14 @@ sequenceDiagram
   alt draft is empty or uncited and retries remain
     G-->>API: custom {type: reset}
     API-->>C: event: reset
-    G->>LLM: stream(retry prompt, same excerpts)
+    G->>LLM: stream(retry prompt, same excerpts or setting notes)
     LLM-->>G: token
     G-->>API: custom {type: token}
     API-->>C: event: token
   end
   G-->>API: final state
   API-->>C: event: reset when abstained
-  API-->>C: event: final {answer, citations, abstained, needs_input, attempts, mode}
+  API-->>C: event: final {answer, citations, lore_citations, abstained, needs_input, attempts, mode}
 ```
 
 SSE events:
@@ -344,7 +349,7 @@ SSE events:
 | `mode` | `{"mode": "answer"}` | after the router update |
 | `token` | `{"text": "..."}` | for each streamed token |
 | `reset` | `{"reason": "retry"}` before a retry draft, `{"reason": "fallback"}` before a routing fallback; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
-| `final` | `answer`, `citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
@@ -445,7 +450,10 @@ chat intents on `/ask/stream`; `/ask` does not route them.
 entry per file, selected by subject and keyword, not embedded, so a setting edit
 is a text edit plus a reload. A single JSONL file is also accepted. The thin
 slice uses `eval/fixtures/lore/` (one Markdown entry per file, TOML front matter); the real pack stays out of git.
-Lore-grounded answers and `[lore:<id>]` citations are the next ticket.
+Lore-grounded answers and `[lore:<id>]` citations are wired (#118): the answer
+path selects up to three setting notes, validates the two citation spaces
+separately, and abstains only when neither has a citation. The real pack and the
+lore eval follow.
 
 The exam bank is a separate, offline surface. It is not a chat intent and it does
 not run inside `/ask` or `/ask/stream`. Generation and lesson mode read from
@@ -588,8 +596,8 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, lore_chars, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, lore_citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

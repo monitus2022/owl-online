@@ -11,6 +11,7 @@ from langgraph.graph.state import CompiledStateGraph
 from app.agent import build_graph
 from app.agent.persona import PERSONA
 from app.config import Settings
+from app.knowledge import LoreStore, load_lore
 from app.pipeline.retrieve import compose_retriever
 from app.providers.contracts import Llm, Retriever
 from app.providers.factory import make_embedder, make_llm, make_reranker
@@ -27,6 +28,7 @@ class Runtime:
     agent: CompiledStateGraph | None = None
     index_hash: str = "unknown-index"
     small_llm: Llm | None = None
+    lore: LoreStore | None = None
 
     async def aclose(self) -> None:
         """Release provider clients on shutdown (embedder pool, model client)."""
@@ -59,6 +61,18 @@ async def build_runtime(settings: Settings) -> Runtime:
             "OWL_MULTI_BOOK and OWL_PERSONA are both on; the multi-book path "
             "ignores the persona suffix"
         )
+    lore: LoreStore | None = None
+    if settings.lore_path is not None and settings.lore_path.exists():
+        lore = load_lore(settings.lore_path)
+        logger.info(
+            "lore pack loaded: %d entries from %s",
+            len(lore.entries),
+            settings.lore_path,
+        )
+    else:
+        logger.info(
+            "lore pack absent at %s; answers stay book-only", settings.lore_path
+        )
     llm = make_llm(settings.provider)
     small_llm = (
         make_llm(settings.small_provider, model=settings.small_model)
@@ -69,12 +83,15 @@ async def build_runtime(settings: Settings) -> Runtime:
         retriever=setup.retriever,
         llm=llm,
         index_hash=setup.text_hash,
+        lore=lore,
         agent=build_graph(
             setup.retriever,
             llm,
             max_retries=settings.retry_budget,
             multi_book=settings.multi_book,
             persona=PERSONA if settings.persona else None,
+            lore=lore,
+            lore_subject=settings.lore_subject,
             small_llm=small_llm,
         ),
         small_llm=small_llm,

@@ -12,24 +12,36 @@ Each entry carries a canonicity tier:
 - `product`: authored product canon, reviewed by a human;
 - `secondary`: a secondary reference used only for authoring.
 
-The next ticket wires lore into the answer path. When it lands, answers will
-cite book chunks as `[b1-c01-0000]` and lore entries as `[lore:school-001]`; the
-two id spaces never overlap. Until then the schema, loader and fixture are in
-place, and the answer path stays book-only.
+Answers cite book chunks as `[b1-c01-0000]` and lore entries as
+`[lore:school-001]`; the two id spaces never overlap. Selection requires a
+setting cue, so a book question about Defence Against the Dark Arts does not pull
+the school's notes into its prompt.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-# Reserved for the next ticket, when lore citations join the answer path.
-LORE_CITATION = re.compile(r"\[lore:([a-z0-9][a-z0-9-]*)\]")
 _ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TIERS = frozenset({"book", "product", "secondary"})
+# A setting question must name the school, a founder, the faculty, the
+# curriculum, the Auror pathway or the post-war setting. A book question that
+# merely shares "Defence Against the Dark Arts" must not pull lore into the
+# prompt.
+_SETTING_CUE = re.compile(
+    r"\b(ashcombe|professor crane|professor vale|professor hale|"
+    r"professor raman|professor ashby|the school|this school|the academy|"
+    r"the faculty|the founders?|founded|founding|curriculum|"
+    r"auror pathway|auror office|auror subjects?|post-war|"
+    r"battle of hogwarts)\b",
+    re.IGNORECASE,
+)
+DEFAULT_LORE_TOP_K = 3
 _WORD = re.compile(r"[a-z0-9]+")
 _STOP = frozenset(
     {
@@ -96,10 +108,40 @@ class LoreStore:
     def ids(self) -> set[str]:
         return set(self.by_id)
 
+    def version(self) -> str:
+        """A short hash of the full pack, for the answer cache scope."""
+        payload = json.dumps(
+            [
+                (
+                    entry.id,
+                    entry.subject,
+                    entry.tier,
+                    entry.title,
+                    entry.body,
+                    entry.source,
+                    entry.tags,
+                )
+                for entry in self.entries
+            ]
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+
     def select(
-        self, question: str, *, subject: str | None = None, limit: int = 3
+        self,
+        question: str,
+        *,
+        subject: str | None = None,
+        limit: int = DEFAULT_LORE_TOP_K,
+        require_cue: bool = True,
     ) -> list[LoreEntry]:
-        """Return the entries that share the most terms with the question."""
+        """Return the entries that share the most terms with the question.
+
+        With `require_cue`, a question must name the setting before any entry is
+        returned. That keeps a book question about Defence Against the Dark Arts
+        from pulling the school's setting notes into its prompt.
+        """
+        if require_cue and _SETTING_CUE.search(question) is None:
+            return []
         query = _tokens(question)
         if not query:
             return []

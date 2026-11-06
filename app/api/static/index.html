@@ -140,7 +140,11 @@
               } else if (name === "final") {
                 answerEl.textContent = payload.answer;
                 citationsEl.replaceChildren();
-                for (const id of payload.citations) {
+                const chips = [
+                  ...payload.citations,
+                  ...(payload.lore_citations || []).map((id) => `lore:${id}`),
+                ];
+                for (const id of chips) {
                   const li = document.createElement("li");
                   li.textContent = id;
                   citationsEl.appendChild(li);

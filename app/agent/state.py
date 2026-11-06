@@ -18,6 +18,7 @@ class AgentState(TypedDict, total=False):
     chunks: list[Chunk]
     answer: str
     citations: list[str]
+    lore_citations: list[str]
     abstained: bool
     needs_input: bool
     attempts: int

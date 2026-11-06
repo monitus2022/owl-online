@@ -31,13 +31,16 @@ Response `200`:
 {
   "answer": "Alastor Moody ... [b4-c25-0075]",
   "citations": ["b4-c25-0075"],
-  "abstained": false
+  "abstained": false,
+  "lore_citations": []
 }
 ```
 
-`citations` are book chunk ids. `abstained` is true when retrieval is weak, the
-draft cites nothing, or the model refuses. The answer text is always returned;
-an abstention is a `200`, not an error.
+`citations` are book chunk ids. `lore_citations` are setting-entry ids in the
+`[lore:<id>]` space. The two spaces are validated separately; an unknown id of
+either kind is stripped from the text. `abstained` is true when there is no book
+or lore evidence, the draft cites nothing, or the model refuses. The answer text
+is always returned; an abstention is a `200`, not an error.
 
 ### `POST /ask/stream`
 
@@ -63,7 +66,7 @@ The response is `text/event-stream`. Events:
 | `mode` | `{"mode": "answer"}` | after the router; can be `answer`, `practice`, `feedback`, `meta` or `personal` |
 | `token` | `{"text": "..."}` | each streamed token |
 | `reset` | `{}` or `{"reason": "retry"}` / `{"reason": "fallback"}` | clear the draft before a retry, a fallback, an error, or an abstained final |
-| `final` | `answer`, `citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | terminal; always preceded by `reset` |
 
 `final` is the authoritative payload. A client should replace the draft on
@@ -96,7 +99,9 @@ bounded, because a legitimate stream can outlive the deadline.
   100/day per-IP cap and a 200k daily token budget. The counters live in the one
   API process and reset on restart.
 - Corpus-only answers use an exact answer cache. Practice, feedback, meta and
-  personal are never cached.
+  personal are never cached. The cache scope includes the lore pack version.
+- The lore pack is loaded from `OWL_LORE_PATH` (a Markdown directory or a JSONL
+  file). Absent means the answer path stays book-only.
 
 ## Planned versioned surface
 
