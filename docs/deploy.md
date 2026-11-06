@@ -5,12 +5,12 @@ embedder. Read the two constraints before picking a host.
 
 ## Two runtime constraints
 
-1. Corpus and index. The source text is copyrighted, so neither `chunks.jsonl`
+1. Corpus, index and lore pack. The source text is copyrighted, so neither `chunks.jsonl`
    nor the vector index is in the image or the repo. The host must be given both
    out of band, as a mounted volume or a private bucket, at `OWL_CHUNKS_PATH` and
    `OWL_INDEX_DIR`. Build the index locally once (`uv run python
    scripts/build_index.py`) and upload `data/chunks.jsonl` plus
-   `data/index/chroma/`. The index directory must be writable: Chroma opens its
+   `data/index/chroma/`, plus the authored `data/lore/` pack. The index directory must be writable: Chroma opens its
    SQLite store read-write at startup, so mount it writable (or copy it to a
    writable path) rather than read-only. The planned subject packs live under
    `/data/subjects/`, and the planned exam database lives under `/data/`; both
@@ -262,6 +262,7 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_OPENROUTER_API_KEY=...
    OWL_EMBEDDER_PROVIDER=bedrock
    OWL_CHUNKS_PATH=/data/chunks.jsonl
+   OWL_LORE_PATH=/data/lore
    OWL_INDEX_DIR=/data/index/titan
    OWL_RERANK_PROVIDER=bedrock
    OWL_RERANK_CACHE_PATH=/data/rerank_cache.jsonl

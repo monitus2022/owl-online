@@ -13,7 +13,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal nodes |
-| Knowledge | `app/knowledge/` | lore pack schema and loader; planned subject taxonomy, material packs, source refs and pack validation |
+| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; planned subject taxonomy, material packs, source refs and pack validation |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -240,8 +240,8 @@ sequenceDiagram
     LLM-->>A: answer citing [chunk-id] or [lore:id]
     alt draft is empty or uncited and retries remain
       A->>A: verify_draft -> retry
-      A->>LLM: generate(retry prompt, same excerpts)
-      LLM-->>A: answer citing [chunk-id]
+      A->>LLM: generate(retry prompt, same excerpts or setting notes)
+      LLM-->>A: answer citing [chunk-id] or [lore:id]
     end
     alt verification passed
       A-->>API: AskResult(answer, citations, lore_citations, attempts)
@@ -332,7 +332,7 @@ sequenceDiagram
   alt draft is empty or uncited and retries remain
     G-->>API: custom {type: reset}
     API-->>C: event: reset
-    G->>LLM: stream(retry prompt, same excerpts)
+    G->>LLM: stream(retry prompt, same excerpts or setting notes)
     LLM-->>G: token
     G-->>API: custom {type: token}
     API-->>C: event: token
@@ -596,7 +596,7 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, lore_chars, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
 | `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, lore_citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |

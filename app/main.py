@@ -219,6 +219,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 str(app_settings.multi_book),
                 persona_scope,
                 runtime.lore.version() if runtime.lore is not None else "none",
+                app_settings.lore_subject,
                 model,
             ]
         )
@@ -560,6 +561,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 answer=str(final.get("answer", "")),
                 citations=list(final.get("citations", [])),
                 lore_citations=list(final.get("lore_citations", [])),
+                lore_chars=int(final.get("lore_chars") or 0),
                 abstained=bool(final.get("abstained", False)),
                 chunks=list(final.get("chunks", [])),
                 attempts=int(final.get("attempts", 1)),

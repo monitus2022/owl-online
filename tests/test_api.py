@@ -495,3 +495,27 @@ def test_ask_returns_lore_citations():
     assert body["abstained"] is False
     assert body["citations"] == []
     assert body["lore_citations"] == ["school-001"]
+
+
+def test_ask_stream_carries_lore_citations():
+    from pathlib import Path
+
+    from app.knowledge import load_lore
+
+    store = load_lore(
+        Path(__file__).resolve().parents[1] / "eval" / "fixtures" / "lore"
+    )
+    app = create_app(
+        app_settings=Settings(),
+        runtime=Runtime(retriever=_WeakRetriever(), llm=_LoreLlm(), lore=store),
+    )
+    with TestClient(app) as client:
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "When was Ashcombe founded?"},
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    finals = [data for name, data in events if name == "final"]
+    assert finals[0]["lore_citations"] == ["school-001"]

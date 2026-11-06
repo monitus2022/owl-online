@@ -165,10 +165,23 @@ async def test_a_book_id_cannot_pass_as_lore_and_vice_versa():
 
 
 async def test_a_draft_with_no_citation_in_either_space_abstains():
+    llm = _Llm("A confident claim with no citation.")
     result = await ask(
         "When was Ashcombe founded?",
         retriever=_WeakRetriever(),
-        llm=_Llm("A confident claim with no citation."),
+        llm=llm,
+        lore=STORE,
+    )
+    assert result.abstained
+    assert result.abstain_reason == "uncited"
+    assert "cited no setting note" in llm.systems[1]
+
+
+async def test_a_bare_lore_id_cannot_pass_as_a_chunk():
+    result = await ask(
+        "Who is Professor Crane?",
+        retriever=_Retriever(),
+        llm=_Llm("A claim [school-001]."),
         lore=STORE,
     )
     assert result.abstained

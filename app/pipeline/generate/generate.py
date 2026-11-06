@@ -202,7 +202,8 @@ def build_prompt(
         parts.append(f"Excerpts:\n\n{render_evidence(chunks)}")
     if lore_entries:
         notes = "\n\n".join(
-            f"[lore:{entry.id}] {entry.title}: {sanitize_evidence(entry.body)[0]}"
+            f"[lore:{entry.id}] {sanitize_evidence(entry.title)[0]}: "
+            f"{sanitize_evidence(entry.body)[0]}"
             for entry in lore_entries
         )
         parts.append(f"Setting notes:\n\n{notes}")

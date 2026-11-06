@@ -27,8 +27,6 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-# Reserved for the next ticket, when lore citations join the answer path.
-LORE_CITATION = re.compile(r"\[lore:([a-z0-9][a-z0-9-]*)\]")
 _ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TIERS = frozenset({"book", "product", "secondary"})
 # A setting question must name the school, a founder, the faculty, the
