@@ -62,6 +62,10 @@
   first-relevant p10 is 0.0015 and some relevant books score 0.0001.
 - The generator and judge calls are cached by (model, input); the recorded run
   is one stochastic sample before the cache was added, so a rerun may differ.
+- Spend is estimated from character volume at the placeholder
+  `OWL_CHAT_*_PRICE_PER_MTOK` settings. It excludes judge, reranker and embedder
+  cost, and cache hits still increment the character counters, so it is an upper
+  bound, not a bill.
 - The final holdout run uses k3-book: the best coverage/completeness config,
   about 39% of k15-book's spend, with the p95 risk noted. The flag stays off
   unless the holdout clears the pre-registered bars.

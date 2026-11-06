@@ -38,7 +38,7 @@ page describes what comes next and why.
   citations, validated against the pack. The variant bank (#120) gives every
   scripted meta topic, the personal reply and the abstention line several
   reviewed phrasings. The real pack and the lore eval follow. The full persona
-  voice still follows #105.
+  voice still follows the real pack and a fixture-driven lore eval.
 - #16's deterministic CI gate is merged; the required-check setting is the last
   step. #74 and #75 follow. #107 is deferred.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
@@ -104,9 +104,9 @@ ends with one answer, practice question or feedback response.
 ## Phase A2: Multi-book answer path
 
 Status: time-boxed spike complete. The flag-off path is merged. The k=3
-configuration improved coverage and cost, but faithfulness and the item-level
-citation Wilson lower bound miss the pre-registered bars, so `OWL_MULTI_BOOK`
-stays off. There is no second cycle.
+configuration improved coverage and cost, but faithfulness, the item-level
+citation Wilson lower bound and the 3k token bar miss the pre-registered bars,
+so `OWL_MULTI_BOOK` stays off. There is no second cycle.
 
 | Ticket | Scope |
 |---|---|
@@ -547,6 +547,8 @@ persists exam attempts and chat history.
 | Eval harness | #9, #10, #12 |
 | Retrieval foundation | #96, #70, #71, #72, #78 |
 | Held-out set | #106 |
+| Multi-book spike | #105 (flag off) |
+| Ingest | #113 |
 
 ## Backlog policy
 
@@ -557,10 +559,10 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-Next work: #97's thin professor slice. #16 is merged; the required-check
-setting is the last step. The #105 multi-book spike and #113 ingest fix follow in
-Next. #96 and #106 are closed. #107 is deferred and likely superseded by the
-per-book path.
+Next work: #74 and #75 deploy hardening. #16 is merged; the required-check
+setting is the last step. #105 is complete with the flag off and #113 is merged.
+#96 and #106 are closed. #107 is deferred and likely superseded by the per-book
+path.
 
 ## Decisions
 
