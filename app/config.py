@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Experimental multi-book answer path: per-book extraction, merge, one
     # synthesis and a coverage statement. Off keeps the single-pass answer.
     multi_book: bool = False
+    # Persona layer: the reviewed professor tone, scripted meta and personal
+    # replies. Off keeps the plain grounded assistant.
+    persona: bool = False
 
     # Deadline for one /ask request (retrieve plus generate). /ask/stream is not
     # bounded because a legitimate stream can outlive it.

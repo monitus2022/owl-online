@@ -23,6 +23,7 @@ from sse_starlette.sse import EventSourceResponse
 from starlette.background import BackgroundTask
 
 from app.agent import build_graph
+from app.agent.persona import PERSONA
 from app.agent.router import classify
 from app.api.cache import AnswerCache, cache_key
 from app.api.limits import ChatLimiter, Decision
@@ -103,6 +104,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     built.llm,
                     max_retries=app_settings.retry_budget,
                     multi_book=app_settings.multi_book,
+                    persona=PERSONA if app_settings.persona else None,
                     small_llm=built.small_llm,
                 ),
             )
@@ -203,6 +205,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 str(app_settings.rerank_min_score),
                 str(app_settings.retry_budget),
                 str(app_settings.multi_book),
+                str(app_settings.persona),
                 model,
             ]
         )
@@ -327,6 +330,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         llm=llm,
                         max_retries=app_settings.retry_budget,
                         multi_book=app_settings.multi_book,
+                        persona_suffix=(
+                            PERSONA.answer_suffix() if app_settings.persona else None
+                        ),
                         on_stage=mark,
                     )
             except TimeoutError:

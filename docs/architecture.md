@@ -390,14 +390,36 @@ excerpts.
 
 ## Chat intents vs exam bank
 
-The chat graph is the online surface. Its three intents are intentionally
-lightweight:
+The chat graph is the online surface. Its three core intents are intentionally
+lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 
 | Intent | Trigger | Output | Persisted | Authoritative |
 |---|---|---|---|---|
 | `answer` | a question about the books | grounded explanation with citations | no | no |
 | `practice` | "give me a practice question on ..." | one or two grounded questions, streamed | no | no |
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
+| `meta` | persona on; identity, subject scope, exam format, school, professor, Auror pathway | reviewed text from the persona card, no model call | no | no |
+| `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
+
+## Persona layer
+
+`OWL_PERSONA` (default false) adds the reviewed professor card in
+`config/persona.toml` to the answer prompt and enables the two scripted intents.
+The card is the source of truth; `docs/persona.md` is the human copy.
+
+The answer path appends `Persona.answer_suffix()` after the grounding rules, so
+citations and abstention still apply. The persona never adds facts. Scripted
+meta and personal replies are not generated, so the professor cannot invent a
+date, a rule or a fact while introducing himself.
+
+The persona is DADA-only. Other subjects are deferred. The card and the doc
+change together; `tests/test_persona.py` asserts every meta topic exists.
+
+`app/knowledge/lore.py` holds authored setting facts with a canonicity tier
+(`book`, `product`, `secondary`). It is raw JSONL selected by subject and
+keyword, not embedded, so a setting edit is a text edit plus a reload. The thin
+slice uses `eval/fixtures/lore.jsonl`; the real pack stays out of git.
+Lore-grounded answers and `[lore:<id>]` citations are the next ticket.
 
 The exam bank is a separate, offline surface. It is not a chat intent and it does
 not run inside `/ask` or `/ask/stream`. Generation and lesson mode read from
@@ -540,7 +562,7 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

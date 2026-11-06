@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from langgraph.graph.state import CompiledStateGraph
 
 from app.agent import build_graph
+from app.agent.persona import PERSONA
 from app.config import Settings
 from app.pipeline.retrieve import compose_retriever
 from app.providers.contracts import Llm, Retriever
@@ -65,6 +66,7 @@ async def build_runtime(settings: Settings) -> Runtime:
             llm,
             max_retries=settings.retry_budget,
             multi_book=settings.multi_book,
+            persona=PERSONA if settings.persona else None,
             small_llm=small_llm,
         ),
         small_llm=small_llm,

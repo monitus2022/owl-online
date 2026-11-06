@@ -26,9 +26,12 @@ page describes what comes next and why.
 - The #105 follow-up is a time-boxed spike: retrieval-only diagnostic, ingest
   trailing-pages fix (#113), one ablation, a frozen holdout-2 and one final run.
   If it fails, the flag stays off and the work stops.
-- #97 thin meta-only path and #16 CI gate start now, in parallel, because
-  neither depends on the multi-book result. The full persona voice follows #105.
-  #74 and #75 follow. #107 is deferred.
+- #97's thin slice is implemented behind `OWL_PERSONA`: persona card, DADA
+  scope, scripted meta and personal replies, and the lore schema with a
+  five-entry fixture. The real lore pack and the extended timeline follow. The
+  full persona voice still follows #105.
+- #16's deterministic CI gate is merged; the required-check setting is the last
+  step. #74 and #75 follow. #107 is deferred.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
 
 ## Product shape
@@ -470,7 +473,7 @@ persists exam attempts and chat history.
 | Ticket | Scope | Milestone |
 |---|---|---|
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
-| #97 | Thin meta-only professor path (full voice after #105) | V2 - Deepening |
+| #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 
 ### Next
 
