@@ -70,6 +70,27 @@ corpus text is stored; ids and short answers only.
 Unanswerable items carry a `reason` instead of evidence ids. Answerable items
 carry locatable evidence ids, checked against the corpus before they were added.
 
+## Aggregation fixture
+
+`fixtures/aggregation.jsonl`: 10 true multi-book questions and 5 near-misses that
+sound plural but are single-hop. A multi-book item lists the expected entities
+for each book, not one reference answer. A near-miss lists one book, so a plural
+count alone cannot pass as multi-book.
+
+`scripts/measure_aggregation.py` scores retrieval on:
+
+| Metric | Meaning |
+|---|---|
+| Book coverage | fraction of expected books with a retrieved chunk containing an expected entity |
+| Full coverage | fraction of multi-book items with every expected book covered |
+| Entity completeness | fraction of expected entities found in the retrieved set |
+| Citation validity | fraction of retrieved chunks from an expected book |
+| Near-miss book precision | fraction of near-miss chunks from the single expected book |
+
+The script verifies every expected entity against the corpus before measuring, so
+the fixture cannot drift into invented facts. It is retrieval only; synthesis
+faithfulness is measured with the multi-book path.
+
 ## Run
 
 ```

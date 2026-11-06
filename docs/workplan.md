@@ -288,6 +288,7 @@ Canon constraints:
 Adapted for this product:
 
 - 10 questions per subject paper, not a full two-week timetable;
+- 50 questions pre-generated for each subject randomly selected for each attempt;
 - fixed marks and duration;
 - a practical section written as a simulation: incantation, wand movement,
   intended effect and counter-measure, not actual spellcasting;
@@ -428,6 +429,7 @@ system prompt.
 | Auth and long-term memory last | Largest privacy and security surface; not needed for a usable exam |
 | Model routing for practice/feedback is rejected | Mistral was cheaper and faster but lost citations and specific error naming; the flag stays off |
 | Multi-book questions use a bounded map-reduce path | Per-book retrieval and extraction make coverage structural; one top-5 pass cannot represent seven books |
+| Aggregation fixture scores per-book coverage, not one reference answer | A single answer hides which book was missed; coverage and completeness make the multi-book path testable |
 | Strategy delegation is deterministic | Pre-retrieval scope cues plus a post-retrieval coverage check; no model call to decide the path |
 | The professor is an original character, not a canon one | Limits IP exposure and avoids invented quotations; persona is tone and meta only, never facts |
 
