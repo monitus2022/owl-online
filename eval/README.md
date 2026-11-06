@@ -153,10 +153,10 @@ coverage statement is deterministic bookkeeping, so the faithfulness judge sees
 the answer body only.
 
 Held-out generation at per-book k=15 and final top-k 7
-(`20261106T093000Z`): book coverage 0.93, entity completeness 0.93, answer-text
-coverage 0.86, citation validity 0.89, faithfulness 0.73, p50 10.8s, p95 16.5s,
-about $0.025 per 15 items. Citation validity and faithfulness miss their bars,
-so `OWL_MULTI_BOOK` stays off. See
+(`20261106T110000Z`): book coverage 0.84, entity completeness 0.84, answer-text
+coverage 0.81, citation validity 0.87 and faithfulness 0.79 on the 14 synthesis
+items, p50 9.6s, p95 14.3s, about $0.025 per 15 items. Citation validity and
+faithfulness miss their bars, so `OWL_MULTI_BOOK` stays off. See
 `docs/runs/2026-11-06-105-multibook-generation.md`.
 
 ## Run

@@ -84,14 +84,19 @@ def coverage_statement(
 ) -> str:
     """A deterministic statement of which searched books had evidence."""
     selected = set(searched) if searched is not None else set(range(1, MAX_BOOKS + 1))
+    covered = covered & selected
     missing = sorted(selected - covered)
     if not missing:
         if selected == set(range(1, MAX_BOOKS + 1)):
             return "Coverage: all seven books had evidence."
+        if len(selected) == 1:
+            return f"Coverage: the selected book ({next(iter(selected))}) had evidence."
         return f"Coverage: all {len(selected)} selected books had evidence."
     if not covered:
         if selected == set(range(1, MAX_BOOKS + 1)):
             return "Coverage: none of the seven books had evidence."
+        if len(selected) == 1:
+            return f"Coverage: the selected book ({next(iter(selected))}) had none."
         return f"Coverage: none of the {len(selected)} selected books had evidence."
     return (
         f"Coverage: {_book_phrase(sorted(covered))} had evidence; "
@@ -124,7 +129,12 @@ def _normalise(text: str) -> str:
 
 
 def _parse_extract(text: str, chunks: list[Chunk]) -> tuple[str, ...]:
-    """Keep only direct quotes that appear verbatim in one of this book's chunks."""
+    """Keep only direct quotes that appear verbatim in the cited chunk.
+
+    An extract line must cite exactly one chunk from this book, and the quote
+    must be found verbatim in that chunk. A line with several citations or an
+    unknown one is rejected rather than guessed at.
+    """
     if text.strip().upper().startswith("NO_EVIDENCE"):
         return ()
     by_id = {chunk.id: _normalise(chunk.text) for chunk in chunks}
@@ -136,12 +146,12 @@ def _parse_extract(text: str, chunks: list[Chunk]) -> tuple[str, ...]:
         if line.startswith(("-", "*")):
             line = line[1:].strip()
         cited = _CITATION.findall(line)
-        if not cited or any(cid not in by_id for cid in cited):
+        if len(cited) != 1 or cited[0] not in by_id:
             continue
         quote = _normalise(_CITATION.sub("", line))
         if len(quote) < 15:
             continue
-        if not any(quote in by_id[cid] for cid in cited if cid in by_id):
+        if quote not in by_id[cited[0]]:
             continue
         lines.append(line)
         if len(lines) == 3:
@@ -228,25 +238,28 @@ def _cap_evidence(extracts: list[BookExtract], top_k: int) -> list[BookExtract]:
     keep = set(kept)
     capped: list[BookExtract] = []
     for extract in extracts:
-        chunks = tuple(chunk for chunk in extract.chunks if chunk.id in keep)
-        if not chunks:
-            continue
         lines = tuple(
             line for line in extract.lines if set(_CITATION.findall(line)) <= keep
         )
         if not lines:
+            continue
+        # Keep only the chunks a surviving line actually cites, so a dropped
+        # line does not hold a cap slot.
+        line_ids = {cid for line in lines for cid in _CITATION.findall(line)}
+        chunks = tuple(chunk for chunk in extract.chunks if chunk.id in line_ids)
+        if not chunks:
             continue
         capped.append(BookExtract(extract.book_num, chunks, lines))
     return capped
 
 
 def _line_supported(line: str, by_id: dict[str, Chunk]) -> bool:
-    """A synthesis line passes only if its quote sits in the chunk it cites.
+    """A synthesis line passes only if its quote sits in the chunks it cites.
 
     Every citation must name an extracted chunk, the `Book N` label must match
-    that chunk's book, and every segment of the quote (split on ellipses) must
-    be found verbatim. A paraphrase, a cross-book quote or an invented clause
-    fails.
+    those chunks' books, and every non-empty segment of the quote (split on
+    ellipses) must be found verbatim. A paraphrase, a cross-book quote or an
+    invented clause fails, including a short invented tail.
     """
     cited = _CITATION.findall(line)
     known = [cid for cid in cited if cid in by_id]
@@ -264,7 +277,7 @@ def _line_supported(line: str, by_id: dict[str, Chunk]) -> bool:
     segments = [
         segment
         for segment in (_normalise(part) for part in _SEGMENT_SPLIT.split(quote))
-        if len(segment) >= 15
+        if segment
     ]
     if not segments:
         return False
@@ -355,7 +368,7 @@ async def ask_multi_book(
         return AskResult(
             ABSTAIN_MESSAGE,
             abstained=True,
-            chunks=chunks,
+            chunks=chunks[:top_k],
             attempts=0,
             abstain_reason="no_evidence",
             model_calls=calls,

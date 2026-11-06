@@ -282,11 +282,11 @@ book. Dedupe is per book: a repeated sentence is dropped inside one book but
 kept across books, because the coverage claim is per book. Conflicting lines are
 not resolved by the merger; both reach synthesis labelled by book.
 
-After synthesis, a line is kept only when every segment of its quote appears in
-the chunk it cites and its `Book N` label matches that chunk. Unknown citations
-are stripped by `ground_answer`. The coverage statement is computed from the
-lines that survive binding, so a book whose only line was dropped is reported as
-having no evidence rather than being claimed as covered. This path does not use the single-pass retry: a
+After synthesis, a line is kept only when every non-empty segment of its quote
+appears in the chunks it cites and its `Book N` label matches those chunks.
+Unknown citations are stripped by `ground_answer`. The coverage statement is
+computed from the lines that survive binding, so a book whose only line was
+dropped is reported as having no evidence rather than being claimed as covered. This path does not use the single-pass retry: a
 synthesis with no supported citation abstains instead of retrying. A provider or
 per-book retrieval failure is not converted to no evidence; it propagates and
 `/ask` returns 502.
@@ -539,8 +539,8 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, retry_reason, abstain_reason |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input, attempts, retry_reason |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

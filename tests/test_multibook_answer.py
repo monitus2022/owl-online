@@ -142,6 +142,12 @@ def test_coverage_statement_all_partial_and_none():
     assert coverage_statement(set()) == (
         "Coverage: none of the seven books had evidence."
     )
+    assert coverage_statement({3}, {3}) == (
+        "Coverage: the selected book (3) had evidence."
+    )
+    assert coverage_statement({9}, {1, 2}) == (
+        "Coverage: none of the 2 selected books had evidence."
+    )
 
 
 async def test_ask_routes_to_the_multi_book_path_when_enabled():
@@ -286,7 +292,7 @@ def test_line_supported_accepts_a_verbatim_quote():
     )
 
 
-async def test_multi_book_path_keeps_both_books_for_a_repeated_line():
+async def test_multi_book_path_keeps_both_books_for_distinct_lines():
     class _RepeatLlm(_Llm):
         async def generate(self, system: str, prompt: str, *, context=None) -> str:
             if system == MULTI_BOOK_EXTRACT_SYSTEM:
@@ -337,3 +343,90 @@ async def test_multi_book_path_respects_explicit_book_numbers():
     assert not result.abstained
     assert "all 2 selected books had evidence" in result.answer
     assert {chunk.metadata.book_num for chunk in result.chunks} == {1, 2}
+
+
+async def test_coverage_excludes_a_book_whose_line_was_dropped():
+    class _PartlyInventedLlm(_Llm):
+        async def generate(self, system: str, prompt: str, *, context=None) -> str:
+            if system == MULTI_BOOK_SYSTEM:
+                return (
+                    "Book 1: Book 1 says something relevant. [b1-c01-0000]\n"
+                    "Book 2: An invented claim about book 2. [b2-c01-0000]"
+                )
+            return await super().generate(system, prompt)
+
+    result = await ask_multi_book(
+        "Who appears in each book?",
+        retriever=_Retriever(missing=set(range(4, 8))),
+        llm=_PartlyInventedLlm(),
+    )
+    assert not result.abstained
+    assert "book 1 had evidence" in result.answer
+    assert "books 2, 3, 4, 5, 6 and 7 had none" in result.answer
+    assert "book 2 had evidence" not in result.answer
+
+
+async def test_a_repeated_sentence_is_kept_for_each_book():
+    class _SameTextRetriever(_Retriever):
+        async def retrieve_book(self, query: str, book_num: int, top_k: int):
+            if book_num > 2:
+                return []
+            chunk = _chunk(book_num).model_copy(
+                update={"text": "A shared relevant sentence about the topic."}
+            )
+            return [chunk]
+
+    class _SameTextLlm(_Llm):
+        async def generate(self, system: str, prompt: str, *, context=None) -> str:
+            if system == MULTI_BOOK_EXTRACT_SYSTEM:
+                match = re.search(r"\[(b\d+-c\d+-\d+)\] (.+)", prompt)
+                return f"- {match.group(2).strip()} [{match.group(1)}]"
+            if system == MULTI_BOOK_SYSTEM:
+                return (
+                    "Book 1: A shared relevant sentence about the topic. "
+                    "[b1-c01-0000]\n"
+                    "Book 2: A shared relevant sentence about the topic. "
+                    "[b2-c01-0000]"
+                )
+            raise AssertionError(system)
+
+    result = await ask_multi_book(
+        "Who appears in each book?",
+        retriever=_SameTextRetriever(),
+        llm=_SameTextLlm(),
+    )
+    assert not result.abstained
+    assert "books 1 and 2 had evidence" in result.answer
+    assert set(result.citations) == {"b1-c01-0000", "b2-c01-0000"}
+
+
+async def test_extraction_provider_error_propagates():
+    class _ProviderLlm(_Llm):
+        async def generate(self, system: str, prompt: str, *, context=None) -> str:
+            if system == MULTI_BOOK_EXTRACT_SYSTEM:
+                raise ProviderError("extraction down")
+            return await super().generate(system, prompt)
+
+    with pytest.raises(ProviderError, match="extraction down"):
+        await ask_multi_book(
+            "Who appears in each book?",
+            retriever=_Retriever(missing=set(range(2, 8))),
+            llm=_ProviderLlm(),
+        )
+
+
+async def test_multi_book_graph_carries_model_calls():
+    from app.agent import build_graph
+
+    graph = build_graph(_Retriever(), _Llm(), multi_book=True)
+    state = await graph.ainvoke(
+        {
+            "question": "Who teaches in each book?",
+            "requested_mode": "auto",
+            "student_answer": None,
+            "top_k": 7,
+        }
+    )
+    assert state["model_calls"] == 8
+    assert state["abstain_reason"] is None
+    assert "Coverage:" in state["answer"]

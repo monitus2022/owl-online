@@ -89,14 +89,14 @@ does not pass the gate, so `OWL_MULTI_BOOK` stays off.
 | #106 | Held-out multi-book set, written before tuning (complete) |
 | #105 | Per-book extraction, merge, one synthesis, coverage statement, flag wiring |
 
-Held-out generation (`20261106T093000Z`, per-book k=15, final top-k 7): book
-coverage 0.93, entity completeness 0.93, answer-text coverage 0.86, citation
-validity 0.89, faithfulness 0.73, p50 10.8s, p95 16.5s, about $0.025 per 15
-items. Coverage and completeness pass; citation validity (0.89) and
-faithfulness (0.73 against a 0.93 baseline) do not. The remaining defect is
-extractor precision: a chunk that shares a keyword with the question can be
-quoted as evidence. Tune on the development fixture, then rerun the held-out
-measurement once.
+Held-out generation (`20261106T110000Z`, per-book k=15, final top-k 7): book
+coverage 0.84, entity completeness 0.84, answer-text coverage 0.81, citation
+validity 0.87 on the 14 synthesis items, faithfulness 0.79 on those items,
+p50 9.6s, p95 14.3s, about $0.025 per 15 items. Coverage and completeness pass;
+citation validity (0.87) and faithfulness (0.79 against a 0.93 baseline) do not.
+The remaining defect is extractor precision: a chunk that shares a keyword with
+the question can be quoted as evidence, and front-matter chunks can be retrieved.
+Tune on the development fixture, then rerun the held-out measurement once.
 
 Exit criteria:
 

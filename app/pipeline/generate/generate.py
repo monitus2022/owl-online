@@ -208,7 +208,10 @@ async def ask(
             cues=list(decision.cues),
         )
     if multi_book and decision.is_multi_book and hasattr(retriever, "retrieve_book"):
-        from app.pipeline.generate.multibook import ask_multi_book
+        from app.pipeline.generate.multibook import (
+            DEFAULT_FINAL_TOP_K,
+            ask_multi_book,
+        )
 
         books = (
             [int(cue) for cue in decision.cues]
@@ -219,7 +222,7 @@ async def ask(
             question,
             retriever=retriever,
             llm=llm,
-            top_k=max(top_k, 7),
+            top_k=DEFAULT_FINAL_TOP_K,
             books=books,
             on_token=on_token,
             on_stage=on_stage,

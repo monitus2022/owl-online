@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import re
 import sys
 import time
@@ -305,9 +306,22 @@ async def run(args) -> int:
 
     multi = [score for score in scores if score.kind == "multi_book"]
     near = [score for score in scores if score.kind == "near_miss"]
+    # Items that actually ran the synthesis path. hold15 is a multi-book fixture
+    # item that the router sends single-hop, so the ticket's "after synthesis"
+    # bar applies to this subset, not to all 15.
+    synthesis = [score for score in multi if score.routed == "multi_book"]
 
     def mean(values: list[float]) -> float:
         return sum(values) / len(values) if values else 0.0
+
+    def citation_rate(items: list[ItemScore]) -> float:
+        total = sum(s.citations for s in items)
+        return sum(s.valid_citations for s in items) / total if total else 0.0
+
+    def faithful_rate(items: list[ItemScore]) -> float:
+        # A judge parse failure is counted as unfaithful, matching judge_sample.
+        judged = [s for s in items if not s.abstained]
+        return mean([1.0 if s.faithful else 0.0 for s in judged])
 
     coverage = mean([s.books_covered / s.books_expected for s in multi])
     completeness = mean([s.entities_found / s.entities_expected for s in multi])
@@ -318,12 +332,16 @@ async def run(args) -> int:
     full = mean([1.0 if s.books_covered == s.books_expected else 0.0 for s in multi])
     citations = sum(s.citations for s in multi)
     valid = sum(s.valid_citations for s in multi)
-    judged = [s.faithful for s in multi if s.faithful is not None]
-    faithful_rate = mean([1.0 if value else 0.0 for value in judged])
+    faithful_all = faithful_rate(multi)
+    faithful_synth = faithful_rate(synthesis)
     abstained = mean([1.0 if s.abstained else 0.0 for s in multi])
     latencies = sorted(s.latency_ms for s in multi)
     p50 = median(latencies) if latencies else 0.0
-    p95 = latencies[max(0, int(len(latencies) * 0.95) - 1)] if latencies else 0.0
+    # Nearest-rank p95: the smallest value at or above the 95th percentile.
+    p95 = (
+        latencies[max(0, math.ceil(0.95 * len(latencies)) - 1)] if latencies else 0.0
+    )
+    slowest = latencies[-1] if latencies else 0.0
     calls = sum(s.model_calls for s in multi)
     input_tokens = sum(s.input_chars for s in multi) // 4
     output_tokens = sum(s.output_chars for s in multi) // 4
@@ -363,15 +381,21 @@ async def run(args) -> int:
     )
     print(
         f"  citation_validity={valid / citations if citations else 0.0:.2f} "
-        f"faithfulness={faithful_rate:.2f} (n={len(judged)}) "
+        f"faithfulness={faithful_all:.2f} (n={len(multi)}) "
         f"abstention={abstained:.2f}"
+    )
+    print(
+        f"  synthesis-only n={len(synthesis)} "
+        f"citation_validity={citation_rate(synthesis):.2f} "
+        f"faithfulness={faithful_synth:.2f}"
     )
     print(
         f"  near_miss n={len(near)} entity_hit={near_hit:.2f} "
         f"book_share={near_share:.2f}"
     )
     print(
-        f"  latency p50={p50:.0f}ms p95={p95:.0f}ms "
+        f"  latency p50={p50:.0f}ms p95={p95:.0f}ms max={slowest:.0f}ms "
+        f"deadline={settings.ask_timeout_s:.0f}s "
         f"model_calls={calls} input_tokens~{input_tokens} "
         f"output_tokens~{output_tokens} spend~${spend:.4f}"
     )
@@ -419,10 +443,15 @@ async def run(args) -> int:
                 "completeness": round(completeness, 3),
                 "answer_text_coverage": round(text_coverage, 3),
                 "answer_text_completeness": round(text_completeness, 3),
-                "citation_validity": round(valid / citations if citations else 0.0, 3),
-                "faithfulness": round(faithful_rate, 3),
+                "citation_validity": round(
+                    valid / citations if citations else 0.0, 3
+                ),
+                "faithfulness": round(faithful_all, 3),
+                "synthesis_citation_validity": round(citation_rate(synthesis), 3),
+                "synthesis_faithfulness": round(faithful_synth, 3),
                 "latency_p50_ms": round(p50, 0),
                 "latency_p95_ms": round(p95, 0),
+                "latency_max_ms": round(slowest, 0),
                 "spend_usd": round(spend, 4),
             }
         )
