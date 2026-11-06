@@ -10,6 +10,7 @@ async def test_run_passes_the_manifest_retry_budget(monkeypatch, tmp_path):
     manifest = {"generation": {"retry_budget": 0}}
 
     async def fake_compose(*args, **kwargs):
+        seen["subquery_quota"] = kwargs["subquery_quota"]
         return SimpleNamespace(retriever=object(), dims=1024, text_hash="hash")
 
     async def fake_retrieval(*args, **kwargs):
@@ -63,4 +64,8 @@ async def test_run_passes_the_manifest_retry_budget(monkeypatch, tmp_path):
         pin_baseline=False,
     )
 
-    assert seen == {"abstention": 0, "judge": 0}
+    assert seen == {
+        "subquery_quota": runner.settings.subquery_quota,
+        "abstention": 0,
+        "judge": 0,
+    }

@@ -78,7 +78,12 @@ def _manifest() -> dict:
             "local": {"model": "ollama", "dimensions": 1024},
         },
         "chunking": {"size": 500, "overlap": 75, "min_size": 200},
-        "retrieval": {"top_k": 5, "rrf_k": 60, "candidates": 50},
+        "retrieval": {
+            "top_k": 5,
+            "rrf_k": 60,
+            "candidates": 50,
+            "subquery_quota": 0,
+        },
     }
 
 
@@ -282,6 +287,25 @@ def test_config_mismatch_is_refused(tmp_path):
         latest, [ResultRow("latest", "pinned", "overall", "hit_at_k", 0.70, manifest)]
     )
     with pytest.raises(CheckError, match="different configurations"):
+        check(results, baseline)
+
+
+def test_subquery_quota_mismatch_is_refused(tmp_path):
+    results, baseline = _files(tmp_path, OVERALL, OVERALL)
+    latest = results / "20260101T000000Z.csv"
+    manifest = manifest_row(
+        _manifest(),
+        embedder_provider="local",
+        rerank_enabled=True,
+        judged_sample=15,
+        gold_hash="abc123",
+        rerank_min_score=0.0,
+        subquery_quota=2,
+    )
+    write_results(
+        latest, [ResultRow("latest", "pinned", "overall", "hit_at_k", 0.70, manifest)]
+    )
+    with pytest.raises(CheckError, match="subquery_quota"):
         check(results, baseline)
 
 

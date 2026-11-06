@@ -10,6 +10,7 @@ async def test_build_runtime_passes_the_retry_budget(monkeypatch):
     captured: dict[str, int] = {}
 
     async def fake_compose(*args, **kwargs):
+        captured["subquery_quota"] = kwargs["subquery_quota"]
         return SimpleNamespace(retriever=object(), dims=1024, text_hash="hash")
 
     def fake_build_graph(retriever, llm, **kwargs):
@@ -25,4 +26,5 @@ async def test_build_runtime_passes_the_retry_budget(monkeypatch):
     built = await runtime_module.build_runtime(Settings(retry_budget=0))
 
     assert captured["max_retries"] == 0
+    assert captured["subquery_quota"] == 0
     assert built.agent is not None
