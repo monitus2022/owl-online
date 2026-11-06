@@ -11,6 +11,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/harness/gold.py` | `GoldItem`, `load_gold` |
 | `eval/harness/aggregation.py` | multi-book fixture loader, coverage and citation metrics |
 | `eval/harness/retrieval.py` | Hit@k, Recall@k, MRR |
+| `app/pipeline/retrieve/multibook.py` | per-book retrieval, merge and fan-out cap |
 | `eval/harness/abstention.py` | refusal counts and rate |
 | `eval/harness/generation.py` | EM, F1, judge buckets, aggregates |
 | `eval/harness/judging.py` | judge prompts, reply parsers, sample selection |
@@ -19,6 +20,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/thresholds.toml` | baseline, gate bands and slice kinds |
 | `eval/test_harness.py` | harness tests, no network |
 | `eval/test_aggregation.py` | aggregation fixture and metric tests, no network |
+| `tests/test_multibook.py` | per-book retrieval tests, no network |
 | `eval/fixtures/aggregation.jsonl` | 10 multi-book questions and 5 near-misses |
 | `eval/test_results.py` | result CSV tests, no network |
 | `eval/runner.py` | one run: compose, score, write the CSV |
@@ -96,6 +98,11 @@ count alone cannot pass as multi-book.
 The script also scores the deterministic router on the fixture: precision and
 recall for `multi_book` versus `near_miss`. The cue set was chosen after seeing
 the fixture, so a perfect score is in-sample and not a generalisation claim.
+
+`--strategy` selects the retrieval path: `single_hop` is the current one-pass
+baseline, `multi_book` runs every item through the per-book path, and `routed`
+uses the router so near-misses stay single-hop. The per-book path is capped at
+seven map calls with a fan-out of four.
 
 The script verifies every expected entity against the corpus before measuring, so
 the fixture cannot drift into invented facts. It is retrieval only; synthesis

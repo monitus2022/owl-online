@@ -51,12 +51,30 @@ def _unique(ids: Iterable[str]) -> list[str]:
 
 
 def _combine_filter(
-    part: MetadataFilter | None, base: MetadataFilter | None
+    part: MetadataFilter | None,
+    base: MetadataFilter | None,
+    *,
+    authoritative_book: bool = False,
 ) -> MetadataFilter | None:
-    """Merge a sub-query filter with the original question's book context."""
+    """Merge a sub-query filter with the original question's book context.
+
+    With `authoritative_book`, the base book wins even when the sub-query names
+    another book or a book title. That is what makes a per-book pass stay in its
+    book.
+    """
+    if base is None:
+        return part
+    if authoritative_book and base.book_num is not None:
+        chapter = (
+            part.chapter_num
+            if part is not None
+            and part.book_num in (None, base.book_num)
+            else None
+        )
+        return MetadataFilter(base.book_num, chapter, explicit=True)
     if part is None:
         return base
-    if part.book_num is None and base is not None and base.book_num is not None:
+    if part.book_num is None and base.book_num is not None:
         return MetadataFilter(base.book_num, part.chapter_num)
     return part
 
@@ -128,8 +146,27 @@ class HybridRetriever:
         trace, _ = await self._run(query, top_k)
         return trace
 
+    async def retrieve_book(
+        self, query: str, book_num: int, top_k: int
+    ) -> list[Chunk]:
+        """Retrieve only from one book, for the per-book aggregation path."""
+        _, chunks = await self._run(
+            query,
+            top_k,
+            base_filter=MetadataFilter(book_num=book_num, explicit=True),
+            authoritative_book=True,
+            allow_unfiltered_fallback=False,
+        )
+        return chunks
+
     async def _run(
-        self, query: str, top_k: int
+        self,
+        query: str,
+        top_k: int,
+        *,
+        base_filter: MetadataFilter | None = None,
+        authoritative_book: bool = False,
+        allow_unfiltered_fallback: bool = True,
     ) -> tuple[RetrievalTrace, list[Chunk]]:
         """One retrieval pass, decomposed when the question asks two things."""
         decision = classify_retrieval_strategy(query)
@@ -138,9 +175,14 @@ class HybridRetriever:
         # Keep the original question as an extra leg: it carries the context that
         # a bare sub-query loses, such as a pronoun in "who escapes from it?".
         retrieval_queries = sub_queries + ([query] if decomposed else [])
-        base_filter = parse_metadata_filter(query)
+        if base_filter is None:
+            base_filter = parse_metadata_filter(query)
         filters = [
-            _combine_filter(parse_metadata_filter(part), base_filter)
+            _combine_filter(
+                parse_metadata_filter(part),
+                base_filter,
+                authoritative_book=authoritative_book,
+            )
             for part in retrieval_queries
         ]
         legs = await asyncio.gather(
@@ -159,7 +201,11 @@ class HybridRetriever:
         explicit_filter = any(
             spec is not None and spec.explicit for spec in filters
         )
-        if filtered and not any(dense_lists + sparse_lists):
+        if (
+            allow_unfiltered_fallback
+            and filtered
+            and not any(dense_lists + sparse_lists)
+        ):
             # The filtered pool would be empty: retry both legs unfiltered.
             legs = await asyncio.gather(
                 *(self._dense_run(part, None) for part in retrieval_queries),

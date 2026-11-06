@@ -151,9 +151,12 @@ source count.
 `app/pipeline/retrieve/strategy.py` labels each question `single_hop` or
 `multi_book` from deterministic coverage cues and explicit book numbers. The
 label, reason and cues are emitted in the trace and carried on
-`RetrievalTrace`. The per-book path is not wired yet, so the label does not
-change retrieval today; it is the measurement seam for that path. That path will
-cap map calls at seven, one per book, with a bounded fan-out.
+`RetrievalTrace`. `app/pipeline/retrieve/multibook.py` implements the retrieval
+half of that path: one filtered pass per book, capped at seven calls with a
+fan-out of four, then merge, dedupe and score order. The path is measured with
+`scripts/measure_aggregation.py --strategy routed`, but it is not wired into
+`ask()` yet, so chat behavior is unchanged. Extraction, synthesis and the
+coverage statement remain for the path PR.
 
 ## Module dependencies
 
