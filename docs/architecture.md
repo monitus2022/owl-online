@@ -30,6 +30,11 @@ Pipeline stages, in order:
 | Generate | `app/pipeline/generate/` | `ask`, `build_prompt`, `ground_answer`, `verify_draft` |
 | Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node` |
 
+`parse_chapters` drops the front matter before book 1 and trims the next book's
+copyright, contents and dedication from the previous book's last chapter (#113).
+The trim uses the copyright page as the boundary and a short backward scan, so
+chapter detection and chunk size are unchanged.
+
 Planned exam-bank stages, not built yet:
 
 | Stage | Module | Responsibility |

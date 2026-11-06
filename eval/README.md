@@ -142,8 +142,9 @@ has no coverage cue. The held-out set is frozen; failures are recorded, not
 fixed on this set.
 
 The script checks every expected entity against narrative chunks and ignores
-front-matter `CONTENTS` and copyright pages. It is a substring check, not a
-semantic proof.
+front-matter `CONTENTS` and copyright pages. Ingest now trims those pages (#113);
+the check keeps the ignore as a guard. It is a substring check, not a semantic
+proof.
 
 `scripts/measure_multibook_generation.py` runs the flag-on answer path on the
 same fixture: routing, per-book extraction, quote binding, synthesis and the

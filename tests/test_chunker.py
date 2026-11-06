@@ -28,14 +28,61 @@ def test_parse_chapters_resets_book_on_chapter_one():
     pages = ["front matter with no headings"] + [
         _page(1, "ONE", "THE BOY WHO LIVED"),
         _page(2, "TWO", "THE VANISHING GLASS"),
-        "interlude: next book title page",
+        "Text copyright © 1998 by the author.",
+        "CONTENTS\nONE\nA New Start",
+        "TO SOMEONE,\nWITH LOVE",
         _page(3, "ONE", "OLET'S BEGIN"),  # typo'd title still parses as caps line
     ]
     chapters = parse_chapters(pages)
     assert [(c.book_num, c.chapter_num) for c in chapters] == [(1, 1), (1, 2), (2, 1)]
     assert chapters[0].chapter_name == "THE BOY WHO LIVED"
-    # interlude page attaches to the previous chapter (documented V1 trade-off)
-    assert "interlude" in chapters[1].text
+    # The next book's front matter is trimmed from the previous chapter.
+    assert "Text copyright" not in chapters[1].text
+    assert "CONTENTS" not in chapters[1].text
+    assert "WITH LOVE" not in chapters[1].text
+    assert "Paragraph 2 text." in chapters[1].text
+
+
+def test_next_book_front_matter_is_not_labelled_with_the_previous_book():
+    pages = [
+        _page(1, "ONE", "A START"),
+        _page(2, "TWO", "AN END"),
+        "Text copyright © 1998 by the author.\nAll rights reserved.",
+        "CONTENTS\nONE\nA New Start",
+        _page(3, "ONE", "A NEW START"),
+    ]
+    chapters = parse_chapters(pages)
+    last = chapters[1]
+    assert (last.book_num, last.chapter_num) == (1, 2)
+    assert "Text copyright" not in last.text
+    assert "CONTENTS" not in last.text
+    chunks = make_chunks(last)
+    assert all("CONTENTS" not in chunk.text for chunk in chunks)
+    assert all("Text copyright" not in chunk.text for chunk in chunks)
+
+
+def test_trailing_back_matter_is_trimmed_from_the_last_chapter():
+    pages = [
+        _page(1, "ONE", "A START"),
+        _page(2, "TWO", "AN END"),
+        "Text copyright © 1998 by the author.",
+    ]
+    chapters = parse_chapters(pages)
+    last = chapters[-1]
+    assert (last.book_num, last.chapter_num) == (1, 2)
+    assert "Text copyright" not in last.text
+    assert "Paragraph 2 text." in last.text
+
+
+def test_a_book_boundary_without_a_copyright_marker_keeps_the_pages():
+    pages = [
+        _page(1, "ONE", "A START"),
+        _page(2, "TWO", "AN END"),
+        "no marker here",
+        _page(3, "ONE", "A NEW START"),
+    ]
+    chapters = parse_chapters(pages)
+    assert "no marker here" in chapters[1].text
 
 
 def test_chunk_text_respects_chunk_size_and_keeps_ends():

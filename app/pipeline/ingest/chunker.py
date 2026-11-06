@@ -85,16 +85,37 @@ class ParsedChapter:
     book_name: str
     chapter_name: str
     page_start: int
-    page_end: int  # Use next chapter's page start as reference
+    page_end: int  # Exclusive; trimmed to exclude next-book front matter
     text: str
+
+
+# Every book opens with a copyright page; the last book also ends with one.
+# Scanning a short window back from a book boundary is enough to find it, and
+# the window stops a stray mention in story text from trimming a chapter.
+_MATTER_MARKER = re.compile(r"Text copyright © \d{4}")
+_MATTER_SCAN = 16
+
+
+def _matter_start(pages: list[str], end: int, *, floor: int) -> int:
+    """First page of a trailing front/back-matter block, or `end` if none.
+
+    The corpus puts a copyright page at the start of each book's front matter
+    and after the final page of the last book. Trimming from that page keeps the
+    next book's title, contents and dedication out of the previous chapter.
+    """
+    for page in range(end - 1, max(floor, end - _MATTER_SCAN) - 1, -1):
+        if _MATTER_MARKER.search(pages[page]):
+            return page
+    return end
 
 
 def parse_chapters(pages: list[str]) -> list[ParsedChapter]:
     """Loop pages, chapter number starts a chapter, a CHAPTER ONE reset starts a book
 
-    Text before the first heading (front matter) is dropped. Pages after a book's
-    last chapter (title pages of the next book) attach to the previous chapter —
-    ~1 page per book of noise, accepted for V1.
+    Text before the first heading (front matter) is dropped. Text after a book's
+    last chapter (the next book's copyright, contents and dedication) is trimmed
+    before chunking, so the next book's front matter cannot be labelled with the
+    previous book.
     """
     hits: list[tuple[int, int, str]] = []  # (page, chapter_num, chapter_name)
     for i, text in enumerate(pages):
@@ -120,7 +141,7 @@ def parse_chapters(pages: list[str]) -> list[ParsedChapter]:
     bounds = hits + [(len(pages), 0, "")]
     # strict=False is intentional: bounds has exactly one sentinel more than the
     # pairs we want — each hit zipped with its successor.
-    for (start, num, name), (end, _, _) in zip(bounds, bounds[1:], strict=False):
+    for (start, num, name), (end, next_num, _) in zip(bounds, bounds[1:], strict=False):
         if num == 1 and chapter_count > 0:
             book_num += 1
             prev_num = 0
@@ -135,6 +156,13 @@ def parse_chapters(pages: list[str]) -> list[ParsedChapter]:
                 f"{prev_num} -> {num} at page {start}"
             )
         prev_num = num
+        # The next hit starts a new book, or this is the final chapter: trim any
+        # trailing front/back matter before slicing the text.
+        page_end = (
+            _matter_start(pages, end, floor=start)
+            if next_num == 1 or end == len(pages)
+            else end
+        )
         chapters.append(
             ParsedChapter(
                 book_num=book_num,
@@ -142,8 +170,8 @@ def parse_chapters(pages: list[str]) -> list[ParsedChapter]:
                 book_name=BOOK_NAMES[book_num],
                 chapter_name=name,
                 page_start=start,
-                page_end=end,
-                text="\n".join(pages[start:end]),
+                page_end=page_end,
+                text="\n".join(pages[start:page_end]),
             )
         )
     return chapters

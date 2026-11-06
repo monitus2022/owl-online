@@ -66,6 +66,8 @@ so on.
 | 2026-11-06 | #106 | `20261106T121335Z` | `aggregation_holdout` (routed per-book k=7) | n/a | n/a | n/a | [Held-out routed k=7](2026-11-06-v2-holdout-routed-k7.md) |
 | 2026-11-06 | #105 | `20261106T110000Z` | `aggregation_holdout` (multi-book generation, k=15 / top-k 7) | n/a | n/a | 11/15 | [Multi-book generation](2026-11-06-105-multibook-generation.md) |
 | 2026-11-07 | #118 | `20261106T203024Z` | `pinned` | 0.76 | 0.30 | 13/14 | [Lore answers gate](2026-11-07-118-lore-answers.md) |
+| 2026-11-07 | #113 | `20261106T214850Z` | `pinned` | 0.76 | 0.31 | 13/15 | [Ingest re-baseline](2026-11-07-113-ingest-rebaseline.md) |
+| 2026-11-07 | #113 | `20261106T214917Z` | `pinned` | 0.76 | 0.31 | 13/15 | [Ingest gate](2026-11-07-113-ingest-gate.md) |
 
 ## Template
 
