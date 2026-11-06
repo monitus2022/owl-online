@@ -394,6 +394,9 @@ persists exam attempts and chat history.
 | Retrieval and guardrails | #79, #72, #23, #73, #63 | A |
 | Observability and close-out | #82, #29, #31, #32, #22 | A |
 | Retrieval quality | #96, #70, #71 | A |
+| Multi-book answer path | #105 | A |
+| Held-out retrieval eval | #106 | A |
+| Retrieval selection experiments | #107 | A (deferred) |
 | Chat persona | #97, #43 | A/C |
 | Eval gate | #77, #16, #10, #9, #12, #14, #24 | A |
 | Subject knowledge packs | #87 | B1 |
@@ -404,10 +407,11 @@ persists exam attempts and chat history.
 | Lesson mode | #43 | C |
 | Auth and long-term memory | #35, #44 | D |
 
-Next work: #96 retrieval quality (multi-book strategy and coverage) comes first,
-because the measured loss is selection and coverage. #97 chat persona follows,
-with a thin meta-only path allowed earlier because it does not change the answer
-system prompt.
+Next work: #105 multi-book answer path comes first, with #106 written as a
+held-out set before tuning. #96 closes after one retrieval-only ablation table.
+#107 is deferred and likely superseded by the per-book path. #97 chat persona
+follows, with a thin meta-only path allowed earlier because it does not change
+the answer system prompt.
 
 ## Decisions
 
