@@ -16,6 +16,7 @@ from rank_bm25 import BM25Okapi
 from app.pipeline.index import tokenize
 from app.pipeline.retrieve.decompose import split_question
 from app.pipeline.retrieve.filters import MetadataFilter, parse_metadata_filter
+from app.pipeline.retrieve.strategy import classify_retrieval_strategy
 from app.providers.contracts import Embedder, Reranker
 from app.schemas import Chunk
 
@@ -33,6 +34,9 @@ class RetrievalTrace:
     sparse_ids: tuple[str, ...]
     pool_ids: tuple[str, ...]
     result_ids: tuple[str, ...]
+    strategy: str = "single_hop"
+    strategy_reason: str = ""
+    strategy_cues: tuple[str, ...] = ()
 
 
 def _unique(ids: Iterable[str]) -> list[str]:
@@ -128,6 +132,7 @@ class HybridRetriever:
         self, query: str, top_k: int
     ) -> tuple[RetrievalTrace, list[Chunk]]:
         """One retrieval pass, decomposed when the question asks two things."""
+        decision = classify_retrieval_strategy(query)
         sub_queries = split_question(query)
         decomposed = len(sub_queries) > 1
         # Keep the original question as an extra leg: it carries the context that
@@ -216,6 +221,9 @@ class HybridRetriever:
             sparse_ids=tuple(sparse_ids),
             pool_ids=pool_ids,
             result_ids=tuple(chunk.id for chunk in result),
+            strategy=decision.name,
+            strategy_reason=decision.reason,
+            strategy_cues=decision.cues,
         )
         return trace, result
 

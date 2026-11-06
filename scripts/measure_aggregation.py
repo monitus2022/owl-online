@@ -20,6 +20,7 @@ if str(REPO) not in sys.path:
 from app.config import settings  # noqa: E402
 from app.pipeline.index.builder import load_chunks  # noqa: E402
 from app.pipeline.retrieve import compose_retriever  # noqa: E402
+from app.pipeline.retrieve.strategy import classify_retrieval_strategy  # noqa: E402
 from app.providers.factory import make_embedder, make_reranker  # noqa: E402
 from eval.harness import (  # noqa: E402
     aggregation_metrics,
@@ -97,6 +98,27 @@ async def run(args) -> int:
         f"{manifest['chunking']['min_size']} "
         f"top_k={args.k} rrf_k={manifest['retrieval']['rrf_k']} "
         f"quota={settings.subquery_quota}"
+    )
+    true_positive = false_positive = false_negative = 0
+    for item in items:
+        predicted = classify_retrieval_strategy(item.question).is_multi_book
+        actual = item.kind == "multi_book"
+        true_positive += predicted and actual
+        false_positive += predicted and not actual
+        false_negative += not predicted and actual
+    precision = (
+        true_positive / (true_positive + false_positive)
+        if true_positive + false_positive
+        else 0.0
+    )
+    recall = (
+        true_positive / (true_positive + false_negative)
+        if true_positive + false_negative
+        else 0.0
+    )
+    print(
+        f"router: precision={precision:.2f} recall={recall:.2f} "
+        f"tp={true_positive} fp={false_positive} fn={false_negative}"
     )
     print(_render(scores, metrics))
     return 0

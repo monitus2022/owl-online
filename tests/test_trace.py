@@ -48,14 +48,29 @@ async def test_ask_emits_ordered_spans_without_prompt_text():
     finally:
         end_trace(token)
     names = [record["span"] for record in sink.records]
-    assert names[:3] == ["retrieve", "generate", "verify"]
+    assert names[:4] == ["retrieval_strategy", "retrieve", "generate", "verify"]
     assert names[-1] == "final"
+    assert sink.records[0]["strategy"] == "single_hop"
     blob = json.dumps(sink.records)
     assert "Rowan trims the wick" not in blob
     assert "Who trims the wick?" not in blob
     generate = next(record for record in sink.records if record["span"] == "generate")
     assert generate["prompt_sha"]
     assert generate["prompt_chars"] > 0
+
+
+async def test_ask_traces_a_multi_book_strategy_with_its_reason():
+    sink = _Sink()
+    token = start_trace("trace-2", sink)  # type: ignore[arg-type]
+    try:
+        await ask("Who teaches in each book?", retriever=_Retriever(), llm=_Llm())
+    finally:
+        end_trace(token)
+    strategy = sink.records[0]
+    assert strategy["span"] == "retrieval_strategy"
+    assert strategy["strategy"] == "multi_book"
+    assert strategy["reason"] == "coverage_cue:each"
+    assert strategy["cues"] == ["each"]
 
 
 def test_instruction_lines_are_removed_from_evidence():

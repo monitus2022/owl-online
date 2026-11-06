@@ -148,6 +148,12 @@ merging by score; the default 0 fuses all legs globally. The reranker request is
 capped at the pool size because Bedrock rejects `numberOfResults` above the
 source count.
 
+`app/pipeline/retrieve/strategy.py` labels each question `single_hop` or
+`multi_book` from deterministic coverage cues and explicit book numbers. The
+label, reason and cues are emitted in the trace and carried on
+`RetrievalTrace`. The per-book path is not wired yet, so the label does not
+change retrieval today; it is the measurement seam for that path.
+
 ## Module dependencies
 
 Dependencies point inward. Vendor SDKs (`openai`, `boto3`, `httpx`, `chromadb`) are
@@ -194,6 +200,7 @@ sequenceDiagram
   API->>R: get_retriever / get_llm
   API->>A: ask(question, retriever, llm)
   A->>RET: retrieve(question, top_k)
+  RET->>RET: classify single-hop vs multi-book from coverage cues
   RET->>RET: parse book/chapter reference
   RET->>RET: split into up to three sub-queries + original
   RET->>RET: dense (optional where) + BM25 legs
