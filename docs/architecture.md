@@ -433,7 +433,9 @@ in-world refusal; the `abstained` flag and empty citations are unchanged.
 The persona is DADA-only. The lore pack already carries the five founders and
 departments, but the chatbot speaks only for Defense; other subject personas are
 deferred. The card and the doc change together; `tests/test_persona.py` asserts
-every meta topic exists.
+every meta topic exists. The scripted meta, personal and abstention replies carry
+a reviewed variant bank; one phrasing is chosen at random per request, and the
+facts, boundaries and `abstained` flag are identical across variants.
 
 The suffix applies to the single-pass answer path. `OWL_MULTI_BOOK` and
 `OWL_PERSONA` together are unsupported until the multi-book path lands; the
@@ -601,7 +603,7 @@ generate) for the per-call detail.
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
-| `Persona` | `app/agent/persona.py` | dataclass | reviewed identity, register, boundaries, scripted meta and personal replies, in-world abstention |
+| `Persona` | `app/agent/persona.py` | dataclass | reviewed identity, register, boundaries, variant banks for meta, personal and abstain replies, in-world abstention |
 | `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
 | `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |

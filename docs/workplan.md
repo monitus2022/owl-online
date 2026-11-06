@@ -1,6 +1,6 @@
 # Workplan
 
-Last updated: 2026-11-06.
+Last updated: 2026-11-07.
 
 This page is the plan of record for the V2-V4 work. Update it when a phase,
 boundary or ticket changes. The architecture page describes what is built; this

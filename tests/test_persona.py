@@ -1,6 +1,7 @@
 """Persona card and lore pack, no network."""
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -30,6 +31,10 @@ def test_persona_card_has_every_meta_topic():
         assert variants, topic
         for text in variants:
             assert text.strip(), (topic, text)
+    for text in PERSONA.personal_variants():
+        assert text.strip()
+    for text in PERSONA.abstain_variants():
+        assert text.strip()
 
 
 def test_every_meta_topic_has_a_variant_bank():
@@ -64,6 +69,7 @@ _FACTS = {
         "Charms",
         "Potions",
         "Herbology",
+        "temporary",
     ),
     "boundaries": ("Defense Against the Dark Arts", "examination format"),
     "greeting": ("Defense", "understanding"),
@@ -77,10 +83,32 @@ def test_every_variant_keeps_the_same_facts():
                 assert fact.casefold() in text.casefold(), (topic, fact, text)
     for text in PERSONA.personal_variants():
         assert "not a counsellor" in text.casefold()
+        assert "teacher" in text.casefold()
         assert "qualified" in text.casefold()
     for text in PERSONA.abstain_variants():
         assert "confirm" in text.casefold()
         assert "guess" in text.casefold()
+
+
+def test_persona_doc_lists_every_variant():
+    doc = Path(__file__).resolve().parents[1] / "docs" / "persona.md"
+    rows = [
+        (match.group(1), match.group(2))
+        for line in doc.read_text(encoding="utf-8").splitlines()
+        if (
+            match := re.match(
+                r"^\| `((?:meta|personal|abstain)\.[a-z]+)` \| (.+) \|$", line
+            )
+        )
+    ]
+    expected = [
+        (f"meta.{topic}", variant)
+        for topic in META_TOPICS
+        for variant in PERSONA.meta_variants(topic)
+    ]
+    expected += [("personal.response", text) for text in PERSONA.personal_variants()]
+    expected += [("abstain.response", text) for text in PERSONA.abstain_variants()]
+    assert rows == expected
 
 
 def test_answer_suffix_keeps_the_grounding_rules():
@@ -95,12 +123,16 @@ def test_answer_suffix_keeps_the_grounding_rules():
     assert "Do not disclose the school examination format" in suffix
 
 
-def test_exam_syllabus_and_grading_do_not_disclose_format():
-    for topic in ("exam", "syllabus", "grading"):
-        for text in PERSONA.meta_variants(topic):
-            folded = text.casefold()
-            for word in _FORMAT_WORDS:
-                assert word not in folded, (topic, word, text)
+def test_every_variant_does_not_disclose_the_format():
+    texts = [
+        text for topic in META_TOPICS for text in PERSONA.meta_variants(topic)
+    ]
+    texts.extend(PERSONA.personal_variants())
+    texts.extend(PERSONA.abstain_variants())
+    for text in texts:
+        folded = text.casefold()
+        for word in _FORMAT_WORDS:
+            assert word not in folded, (word, text)
 
 
 def test_meta_and_personal_text_has_no_time_pressure():
@@ -349,6 +381,60 @@ def test_meta_topic_rejects_a_non_string_variant(tmp_path):
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match="invalid meta.identity"):
+        load_persona(path)
+
+
+def _card_with_personal_literal(literal: str) -> str:
+    return _minimal_card().replace('response = "Hello."', f"response = {literal}")
+
+
+def _card_with_abstain_literal(literal: str) -> str:
+    return _minimal_card().replace(
+        'response = "I cannot confirm that."', f"response = {literal}"
+    )
+
+
+def test_personal_reply_accepts_a_reviewed_list(tmp_path):
+    path = tmp_path / "persona.toml"
+    path.write_text(
+        _card_with_personal_literal('["First line.", "Second line."]'),
+        encoding="utf-8",
+    )
+    card = load_persona(path)
+    assert card.personal_variants() == ("First line.", "Second line.")
+
+
+def test_abstain_reply_accepts_a_reviewed_list(tmp_path):
+    path = tmp_path / "persona.toml"
+    path.write_text(
+        _card_with_abstain_literal('["First line.", "Second line."]'),
+        encoding="utf-8",
+    )
+    card = load_persona(path)
+    assert card.abstain_variants() == ("First line.", "Second line.")
+
+
+def test_personal_reply_rejects_an_empty_variant(tmp_path):
+    path = tmp_path / "persona.toml"
+    path.write_text(_card_with_personal_literal("[]"), encoding="utf-8")
+    with pytest.raises(ValueError, match="empty personal.response"):
+        load_persona(path)
+
+
+def test_abstain_reply_rejects_an_empty_variant(tmp_path):
+    path = tmp_path / "persona.toml"
+    path.write_text(_card_with_abstain_literal("[]"), encoding="utf-8")
+    with pytest.raises(ValueError, match="empty abstain.response"):
+        load_persona(path)
+
+
+def test_persona_rejects_a_duplicate_variant(tmp_path):
+    path = tmp_path / "persona.toml"
+    path.write_text(
+        _card_with_identity_literal('["Same line.", "Same line."]'),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="duplicate variant"):
         load_persona(path)
 
 

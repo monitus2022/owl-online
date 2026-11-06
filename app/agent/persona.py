@@ -120,6 +120,8 @@ def _variants(value: object, where: str) -> tuple[str, ...]:
         if not text:
             raise ValueError(f"persona card has an empty {where}")
         texts.append(text)
+    if len(set(texts)) != len(texts):
+        raise ValueError(f"persona card has a duplicate variant in {where}")
     return tuple(texts)
 
 

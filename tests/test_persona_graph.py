@@ -71,7 +71,11 @@ async def test_a_repeated_meta_question_can_return_a_different_phrasing(monkeypa
     variants = PERSONA.meta_variants("identity")
     assert len(variants) > 1
     picks = iter([variants[0], variants[1]])
-    monkeypatch.setattr(persona_module.random, "choice", lambda seq: next(picks))
+    monkeypatch.setattr(
+        persona_module.Persona,
+        "_pick",
+        staticmethod(lambda variants, choice: next(picks)),
+    )
     graph = build_graph(_Retriever(), _Llm(), persona=PERSONA)
     request = {
         "question": "Who are you?",
@@ -85,6 +89,32 @@ async def test_a_repeated_meta_question_can_return_a_different_phrasing(monkeypa
     assert second["answer"] == variants[1]
     assert first["abstained"] is False
     assert second["abstained"] is False
+
+
+async def test_a_repeated_unanswerable_question_can_vary_the_refusal(monkeypatch):
+    from app.agent import persona as persona_module
+
+    variants = PERSONA.abstain_variants()
+    assert len(variants) > 1
+    picks = iter([variants[0], variants[1]])
+    monkeypatch.setattr(
+        persona_module.Persona,
+        "_pick",
+        staticmethod(lambda variants, choice: next(picks)),
+    )
+    graph = build_graph(_WeakRetriever(), _Llm(), persona=PERSONA)
+    request = {
+        "question": "Who trims the wick?",
+        "requested_mode": "auto",
+        "student_answer": None,
+        "top_k": 5,
+    }
+    first = await graph.ainvoke(request)
+    second = await graph.ainvoke(request)
+    assert first["answer"] == variants[0]
+    assert second["answer"] == variants[1]
+    assert first["abstained"] is True
+    assert second["abstained"] is True
 
 
 async def test_personal_question_routes_to_the_scripted_reply():
