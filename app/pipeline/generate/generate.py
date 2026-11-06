@@ -14,6 +14,7 @@ from typing import Literal
 
 from app.pipeline.generate.verify import verify_draft
 from app.pipeline.retrieve.retriever import DEFAULT_RRF_K, QUERY_CANDIDATES
+from app.pipeline.retrieve.strategy import classify_retrieval_strategy
 from app.providers.contracts import Llm, Retriever
 from app.schemas import Chunk
 from app.trace import current_tracer, prompt_fingerprint
@@ -194,6 +195,14 @@ async def ask(
     """
     tracer = current_tracer()
     floor = retrieval_floor(retriever, min_score)
+    decision = classify_retrieval_strategy(question)
+    if tracer is not None:
+        tracer.emit(
+            "retrieval_strategy",
+            strategy=decision.name,
+            reason=decision.reason,
+            cues=list(decision.cues),
+        )
     if on_stage is not None:
         on_stage("retrieve")
     retrieve_span = tracer.start("retrieve") if tracer else None

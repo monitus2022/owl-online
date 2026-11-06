@@ -2,6 +2,7 @@
 
 import json
 
+from app.agent.nodes.common import retrieve_evidence
 from app.pipeline.generate import SYSTEM_PROMPT, ask, render_evidence
 from app.schemas import Chunk, ChunkMetadata
 from app.trace import end_trace, start_trace
@@ -48,14 +49,41 @@ async def test_ask_emits_ordered_spans_without_prompt_text():
     finally:
         end_trace(token)
     names = [record["span"] for record in sink.records]
-    assert names[:3] == ["retrieve", "generate", "verify"]
+    assert names[:4] == ["retrieval_strategy", "retrieve", "generate", "verify"]
     assert names[-1] == "final"
+    assert names.count("retrieval_strategy") == 1
+    assert sink.records[0]["strategy"] == "single_hop"
     blob = json.dumps(sink.records)
     assert "Rowan trims the wick" not in blob
     assert "Who trims the wick?" not in blob
     generate = next(record for record in sink.records if record["span"] == "generate")
     assert generate["prompt_sha"]
     assert generate["prompt_chars"] > 0
+
+
+async def test_ask_traces_a_multi_book_strategy_with_its_reason():
+    sink = _Sink()
+    token = start_trace("trace-2", sink)  # type: ignore[arg-type]
+    try:
+        await ask("Who teaches in each book?", retriever=_Retriever(), llm=_Llm())
+    finally:
+        end_trace(token)
+    strategy = sink.records[0]
+    assert strategy["span"] == "retrieval_strategy"
+    assert strategy["strategy"] == "multi_book"
+    assert strategy["reason"] == "coverage_cue:each"
+    assert strategy["cues"] == ["each"]
+
+
+async def test_retrieve_evidence_traces_one_strategy_event():
+    sink = _Sink()
+    token = start_trace("trace-3", sink)  # type: ignore[arg-type]
+    try:
+        await retrieve_evidence("Who teaches in each book?", _Retriever(), 5)
+    finally:
+        end_trace(token)
+    assert [record["span"] for record in sink.records].count("retrieval_strategy") == 1
+    assert sink.records[0]["strategy"] == "multi_book"
 
 
 def test_instruction_lines_are_removed_from_evidence():

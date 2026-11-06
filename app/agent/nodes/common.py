@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from app.pipeline.generate import render_evidence, retrieval_floor, sanitize_evidence
+from app.pipeline.retrieve.strategy import classify_retrieval_strategy
 from app.providers.contracts import Llm, Retriever
 from app.providers.errors import ProviderError
 from app.schemas import Chunk
@@ -22,8 +23,17 @@ async def retrieve_evidence(
     retriever: Retriever,
     top_k: int,
     min_score: float | None = None,
+    strategy_question: str | None = None,
 ) -> list[Chunk]:
     tracer = current_tracer()
+    decision = classify_retrieval_strategy(strategy_question or question)
+    if tracer is not None:
+        tracer.emit(
+            "retrieval_strategy",
+            strategy=decision.name,
+            reason=decision.reason,
+            cues=list(decision.cues),
+        )
     span = tracer.start("retrieve") if tracer else None
     chunks = await retriever.retrieve(question, top_k)
     if tracer is not None and span is not None:

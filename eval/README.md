@@ -93,6 +93,10 @@ count alone cannot pass as multi-book.
 | Near-miss entity completeness | fraction of near-miss expected entities found |
 | Near-miss book precision | fraction of near-miss chunks that are relevant to the single expected book |
 
+The script also scores the deterministic router on the fixture: precision and
+recall for `multi_book` versus `near_miss`. The cue set was chosen after seeing
+the fixture, so a perfect score is in-sample and not a generalisation claim.
+
 The script verifies every expected entity against the corpus before measuring, so
 the fixture cannot drift into invented facts. It is retrieval only; synthesis
 faithfulness is measured with the multi-book path.

@@ -88,6 +88,20 @@ async def test_diagnose_returns_each_retrieval_stage(index_parts):
     assert trace.sparse_ids
 
 
+async def test_diagnose_records_the_retrieval_strategy_offline():
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=_StubCollection(["b1-c01-0000"]),
+        bm25=_StubBM25([5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+    )
+    trace = await retriever.diagnose("Who teaches in each book?", top_k=1)
+    assert trace.strategy == "multi_book"
+    assert trace.strategy_reason == "coverage_cue:each"
+    assert trace.strategy_cues == ("each",)
+
+
 async def test_compose_retriever_from_disk(tmp_path, ollama_running):
     """The composition function wires a retriever straight from a chunks file."""
     if not ollama_running:
