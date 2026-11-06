@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: V1 shipped. V2 in progress: eval gate, retrieval hardening and the LangGraph chat foundation. V2.5 is the exam bank with hybrid grading. Grounded RAG is live at https://api.monitus.org. See [`docs/workplan.md`](docs/workplan.md) and the milestones.
+> Status: V1 shipped. The V2 chat foundation is delivered: guardrails, LangGraph chat, cost controls and the eval gate. The retrieval foundation (#96) is complete. Current focus is the multi-book answer path (#105), with a held-out set (#106) written before tuning. V2.5 is the exam bank with hybrid grading. Grounded RAG is live at https://api.monitus.org. See [`docs/workplan.md`](docs/workplan.md) and the milestones.
 
 ---
 
@@ -13,8 +13,8 @@ O.W.L. Online has two product surfaces on one retrieval core:
 | Surface | What it does | State |
 |---|---|---|
 | Chat answer | Grounded Q&A with citations | live |
-| Chat practice | On-demand grounded practice question | D4 |
-| Chat feedback | Formative feedback and a provisional mark | D4 |
+| Chat practice | On-demand grounded practice question | live |
+| Chat feedback | Formative feedback and a provisional mark | live |
 | Exam bank | Pre-generated 10-question papers stored in a DB, served statically, graded by a hybrid scorer | planned V2.5 |
 | Lesson mode | A future chat intent | future iteration |
 
@@ -150,6 +150,19 @@ First measured run (V1 mini-eval #51, reranker #6; details in `eval/README.md`):
 | Judge correct / partial / wrong | 9 / 0 / 0 of 10 | 7 / 1 / 2 of 10 |
 | Grounded | 9 / 10 | 8 / 10 |
 
+Current pinned baseline (`20261106T060737Z`, quota 0):
+
+| Metric | Value |
+|---|---:|
+| Hit@5 overall | 0.76 |
+| Hit@5 multi-part | 0.67 |
+| Hit@5 named reference | 1.00 |
+| Judge correct | 13/14 |
+| Faithful | 13/14 |
+| Abstention on unanswerable | 10/10 |
+
+The aggregation fixture adds cross-book coverage: book coverage 0.46, entity completeness 0.45, full coverage 0.00. The routed per-book prototype reaches 0.79 coverage and 0.76 completeness at equal k=7, but it is not wired into chat yet. The router separates all 10 multi-book items from the 5 near-misses on the fixture, in-sample.
+
 Generator `qwen/qwen3-30b-a3b-instruct-2507`; judge `deepseek/deepseek-v4.1-flash-1017` (different family); reranker `amazon.rerank-v1:0`. The pinned configuration (model slugs, chunking, `top_k`, `rrf_k`, pool) is in [`config/manifest.toml`](config/manifest.toml). The eval reads the judge slug from it, and `eval/test_manifest.py` asserts the code's pinned defaults agree, so the gate fails on drift.
 
 Every finished eval run also gets a committed Markdown record under [`docs/runs/`](docs/runs/README.md): run id, configuration, per-slice tables, reading notes, and the raw summary. The record is the strategy history; timestamped CSVs stay local.
@@ -167,9 +180,9 @@ Execution is phased:
 | Phase | Scope | Status |
 |---|---|---|
 | V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval + rerank, cited generation with abstention, API, mini-eval, deployed | shipped (https://api.monitus.org) |
-| V2 - Deepening | guardrails, chat intents (LangGraph), Bedrock Llm adapter, cost controls, full eval harness as CI gate | in progress |
-| V2.5 - Exam bank | subject knowledge packs, offline 10-question papers, evidence snapshots, static serving, hybrid grading, grading eval | next |
-| V3 - Continuity | short-term chat memory, threads, follow-up rewrite, professor persona, lesson mode | after V2.5 |
+| V2 - Deepening | guardrails, chat intents (LangGraph), Bedrock Llm adapter, cost controls, eval gate, retrieval foundation, multi-book answer path, professor persona | delivered; multi-book answer path #105 and persona #97 in progress |
+| V2.5 - Exam bank | subject knowledge packs, offline 10-question papers, evidence snapshots, static serving, hybrid grading, grading eval | after #105 and #97 |
+| V3 - Continuity | short-term chat memory, threads, follow-up rewrite, lesson mode | after V2.5 |
 | V4 - Identity (optional) | Google auth, per-user chat and exam history, progress tracking, long-term memory | last, if needed |
 
 ---

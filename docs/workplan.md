@@ -6,6 +6,19 @@ This page is the plan of record for the V2-V4 work. Update it when a phase,
 boundary or ticket changes. The architecture page describes what is built; this
 page describes what comes next and why.
 
+## Current status
+
+- V1 is shipped.
+- The V2 chat foundation is delivered: LangGraph intents, verification and retry,
+  guardrails, cost controls, tracing and the eval gate.
+- The retrieval foundation #96 is closed: aggregation fixture, deterministic
+  router and bounded per-book retrieval. Routed per-book retrieval reaches 0.79
+  coverage and 0.76 completeness at equal k=7, but it is not wired into chat.
+- Current work is #106, the held-out multi-book set, followed by #105, the
+  multi-book answer path. Chat is still one-pass until #105 lands.
+- #97 persona follows #105. #107 selection experiments are deferred.
+- V2.5 subject packs and the exam bank follow the answer path.
+
 ## Product shape
 
 Two surfaces share one retrieval core and one subject knowledge layer.
@@ -37,16 +50,16 @@ bands are deterministic.
 
 ## Phase A: V2 chat foundation
 
-Status: in progress.
+Status: delivered, except the deploy and CI hardening tracked in #16, #74 and #75.
 
 | Ticket | Scope |
 |---|---|
 | #80 | Bedrock Converse Llm, LangGraph chat graph, answer/practice/feedback router, SSE |
 | #81 | Chat verification and bounded retry: deterministic verify, one extra draft |
 | #79 | Retrieval lexical, abstention, deadline, fabrication checks: tokenizer measured (stemming rejected), floor pinned at 0, /ask deadline, novel-entity signal |
-| #82 | Agent observability: request spans, injection guard, close-out docs; intent routing to Mistral Small 3.2 (default off, measurement pending) |
+| #82 | Agent observability: request spans, injection guard, close-out docs; intent routing measured and rejected, flag off |
 | #88 | Cost controls: per-session and per-IP caps, token budget, exact cache, usage accounting, graceful degradation |
-| #77 | Eval gate and deploy hardening, where not already done |
+| #77 | Eval gate and deploy hardening; remaining work is #16, #74 and #75 |
 
 Exit criteria:
 
@@ -62,6 +75,28 @@ Exit criteria:
 
 Chat remains stateless in this phase. A request starts from a fresh state and
 ends with one answer, practice question or feedback response.
+
+## Phase A2: Multi-book answer path
+
+Status: in progress.
+
+| Ticket | Scope |
+|---|---|
+| #106 | Held-out multi-book set, written before tuning |
+| #105 | Per-book extraction, merge, one synthesis, coverage statement, flag wiring |
+
+Exit criteria:
+
+- the held-out set is frozen before the path is tuned;
+- the path is wired behind a flag for `multi_book` questions only;
+- coverage is at least 0.75 and completeness at least 0.70;
+- citation validity after synthesis is at least 0.90;
+- faithfulness is no worse than the baseline;
+- simple and named slices do not regress;
+- latency and spend fit the chat budget;
+- the gate passes and a run record is committed.
+
+Caps: seven map calls, fan-out 4, per-book k 1, final top-k 7, one synthesis.
 
 ## Cost and abuse controls
 
@@ -386,34 +421,65 @@ persists exam attempts and chat history.
 
 ## Ticket map
 
-| Area | Tickets | Phase |
+### Now
+
+| Ticket | Scope | Milestone |
 |---|---|---|
-| Chat foundation | #80, #25, #26, #36, #18 | A |
-| Chat verification | #81, #28, #27 | A |
-| Cost controls | #88 | A |
-| Retrieval and guardrails | #79, #72, #23, #73, #63 | A |
-| Observability and close-out | #82, #29, #31, #32, #22 | A |
-| Retrieval foundation | #96, #70, #71 | A |
-| Multi-book answer path | #105 | A |
-| Held-out multi-book eval | #106 | A |
-| Retrieval selection experiments | #107 | A |
-| Chat persona | #97, #43 | A/C |
-| Eval gate | #77, #16, #10, #9, #12, #14, #24 | A |
-| Subject knowledge packs | #87 | B1 |
-| Exam data and generation | #38, #39 | B2 |
-| Exam grading and API | #41, #42 | B2 |
-| Exam eval | #40 | B2 |
-| Conversation memory | #30 | C |
-| Lesson mode | #43 | C |
-| Auth and long-term memory | #35, #44 | D |
+| #106 | Held-out multi-book set, written before tuning | V2 - Deepening |
+| #105 | Per-book extraction, synthesis, coverage statement, flag wiring | V2 - Deepening |
 
-Next work: #105 multi-book answer path comes first, with #106 written as a
-held-out set before tuning. #96 closes once its remaining measurements and the
-eval gate run are recorded. #107 is deferred and likely superseded by the
-per-book path. #97 chat persona follows, with a thin meta-only path allowed
-earlier because it does not change the answer system prompt.
+### Next
 
-The three new tickets are part of the #96 split.
+| Ticket | Scope | Milestone |
+|---|---|---|
+| #97 | Virtual professor voice and meta intent | V2 - Deepening |
+| #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
+| #74 | Move `/data` to a dedicated EBS volume | V2 - Deepening |
+| #75 | Replace static AWS keys with GitHub OIDC | V2 - Deepening |
+| #87 | Subject knowledge packs: taxonomy, materials, source links | V3 - Product |
+
+### Later
+
+| Ticket | Scope | Milestone |
+|---|---|---|
+| #38, #39 | Exam data model, offline generation and validation | V3 - Product |
+| #41, #42 | Hybrid grading and exam endpoints | V3 - Product |
+| #40 | Exam and grading evaluation | V3 - Product |
+| #43 | Lesson mode | V3 - Product |
+| #30 | Conversation memory and follow-up rewrite | V3 - Product |
+| #35, #44 | Google auth, progress tracking and weak topics | V3 - Product |
+
+### Icebox
+
+| Ticket | Scope | Milestone |
+|---|---|---|
+| #107 | Quota 3, per-sub-query rerank, top-k 8 | Future / Backlog |
+| #34 | Semantic cache | Future / Backlog |
+| #33 | Dashboards | Future / Backlog |
+| #14 | Closed-book control | Future / Backlog |
+| #24 | Perturbation probes | Future / Backlog |
+
+### Delivered
+
+| Area | Tickets |
+|---|---|
+| Chat foundation | #80, #81, #82, #88, #79, #72, #23, #73, #63, #29, #31, #32, #22 |
+| Verification and cache | #27, #28, #8, #19 |
+| Eval harness | #9, #10, #12 |
+| Retrieval foundation | #96, #70, #71, #78 |
+
+## Backlog policy
+
+- Now holds one implementation ticket and one evaluation ticket.
+- Next is committed only after Now is clear.
+- Later is phase work; it is not active.
+- Icebox is revisited after V2.5.
+- A delivered or superseded ticket is closed with a link; nothing is deleted.
+- An active ticket needs a `Done when` and a verification step.
+
+Next work: #106 held-out set first, then #105. #96 is closed. #107 is deferred and
+likely superseded by the per-book path. #97 follows #105, with a thin meta-only
+path allowed earlier because it does not change the answer system prompt.
 
 ## Decisions
 

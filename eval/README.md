@@ -59,6 +59,25 @@ docs/runs/<date>-<ticket>-<slug>.md   (committed run record)
 - Generation: a sample of answers graded by a second model (correct / partial /
   wrong, and grounded / ungrounded).
 
+## Current baseline
+
+Pinned run `20261106T060737Z`, quota 0:
+
+| Metric | Value |
+|---|---:|
+| Hit@5 overall | 0.76 |
+| Hit@5 multi-part | 0.67 |
+| Hit@5 named reference | 1.00 |
+| Judge correct | 13/14 |
+| Faithful | 13/14 |
+| Abstention on unanswerable | 10/10 |
+
+The aggregation fixture adds cross-book coverage: 0.46 book coverage, 0.45 entity
+completeness and 0.00 full coverage. The routed per-book prototype reaches 0.79
+coverage and 0.76 completeness at equal k=7, but it is not wired into chat. The
+router separates 10/10 multi-book items from 0/5 near-misses on the fixture,
+in-sample.
+
 ## Gold set
 
 `gold/questions.jsonl`: 51 answerable and 10 unanswerable items. Each item is an
