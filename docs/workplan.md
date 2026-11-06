@@ -432,7 +432,7 @@ system prompt.
 | Aggregation fixture scores per-book coverage, not one reference answer | A single answer hides which book was missed; coverage and completeness make the multi-book path testable |
 | Strategy delegation is deterministic | Pre-retrieval scope cues plus a post-retrieval coverage check; no model call to decide the path |
 | Router ships pre-retrieval first | The cue set is measured on the fixture; the coverage check belongs with the per-book path, which caps at seven map calls with a bounded fan-out |
-| Per-book retrieval is measured before wiring | The prototype raises coverage 0.46 to 0.72 and keeps near-misses single-hop; chat stays one-pass until extraction and synthesis land |
+| Per-book retrieval is measured before wiring | At equal k=7 the prototype raises coverage 0.58 to 0.79 and keeps near-misses single-hop; chat stays one-pass until extraction and synthesis land |
 | The professor is an original character, not a canon one | Limits IP exposure and avoids invented quotations; persona is tone and meta only, never facts |
 
 ## Evaluation

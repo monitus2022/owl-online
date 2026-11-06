@@ -44,6 +44,19 @@ _PLURAL_COUNT = re.compile(r"\b(two|three|four|five|six|seven)\b", re.I)
 _BOOK_LIST = re.compile(r"\bbooks?\s+((?:\d+\s*(?:,|and|&)?\s*)+)", re.I)
 
 
+def explicit_book_numbers(question: str) -> tuple[int, ...]:
+    """Book numbers named in the question, in ascending order."""
+    numbers = {
+        int(number) for number in re.findall(r"\bbooks?\s+(\d+)", question)
+    }
+    book_match = _BOOK_LIST.search(question)
+    if book_match:
+        numbers.update(
+            int(number) for number in re.findall(r"\d+", book_match.group(1))
+        )
+    return tuple(sorted(numbers))
+
+
 @dataclass(frozen=True)
 class RetrievalStrategy:
     """The chosen retrieval strategy plus the cue that decided it."""
@@ -65,19 +78,12 @@ def classify_retrieval_strategy(question: str) -> RetrievalStrategy:
     case the fixture measures.
     """
     text = question.strip()
-    book_numbers = {
-        int(number) for number in re.findall(r"\bbooks?\s+(\d+)", text)
-    }
-    book_match = _BOOK_LIST.search(text)
-    if book_match:
-        book_numbers.update(
-            int(number) for number in re.findall(r"\d+", book_match.group(1))
-        )
+    book_numbers = explicit_book_numbers(text)
     if len(book_numbers) >= 2:
         return RetrievalStrategy(
             "multi_book",
             f"multiple_book_numbers:{len(book_numbers)}",
-            tuple(str(number) for number in sorted(book_numbers)),
+            tuple(str(number) for number in book_numbers),
         )
 
     cues = tuple(name for name, pattern in _COVERAGE_CUES if pattern.search(text))

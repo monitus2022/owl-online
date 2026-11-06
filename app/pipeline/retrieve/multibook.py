@@ -7,10 +7,14 @@ half of the multi-book path; extraction and synthesis happen later.
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Iterable
+from itertools import islice
 from typing import Protocol
 
 from app.schemas import Chunk
+
+logger = logging.getLogger(__name__)
 
 MAX_BOOKS = 7
 DEFAULT_FANOUT = 4
@@ -42,7 +46,7 @@ async def retrieve_multi_book(
         raise ValueError("per_book_k must be at least 1")
     if fanout < 1:
         raise ValueError("fanout must be at least 1")
-    selected = tuple(books)[:MAX_BOOKS]
+    selected = tuple(islice(books, MAX_BOOKS))
     if not selected:
         return []
     semaphore = asyncio.Semaphore(fanout)
@@ -51,13 +55,16 @@ async def retrieve_multi_book(
         async with semaphore:
             return await retriever.retrieve_book(query, book_num, per_book_k)
 
-    groups = await asyncio.gather(*(one(book_num) for book_num in selected))
-    seen: set[str] = set()
-    merged: list[Chunk] = []
-    for group in groups:
+    groups = await asyncio.gather(
+        *(one(book_num) for book_num in selected), return_exceptions=True
+    )
+    by_id: dict[str, Chunk] = {}
+    for book_num, group in zip(selected, groups, strict=True):
+        if isinstance(group, BaseException):
+            logger.warning("per-book retrieval failed for book %d: %s", book_num, group)
+            continue
         for chunk in group:
-            if chunk.id in seen:
-                continue
-            seen.add(chunk.id)
-            merged.append(chunk)
-    return sorted(merged, key=lambda chunk: chunk.score, reverse=True)
+            current = by_id.get(chunk.id)
+            if current is None or chunk.score > current.score:
+                by_id[chunk.id] = chunk
+    return sorted(by_id.values(), key=lambda chunk: chunk.score, reverse=True)

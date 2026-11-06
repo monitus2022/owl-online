@@ -11,6 +11,7 @@ from app.pipeline.retrieve.retriever import HybridRetriever
 from app.pipeline.retrieve.strategy import (
     RetrievalStrategy,
     classify_retrieval_strategy,
+    explicit_book_numbers,
 )
 
 __all__ = [
@@ -22,5 +23,6 @@ __all__ = [
     "RetrievalStrategy",
     "classify_retrieval_strategy",
     "compose_retriever",
+    "explicit_book_numbers",
     "retrieve_multi_book",
 ]

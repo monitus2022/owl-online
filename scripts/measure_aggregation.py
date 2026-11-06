@@ -20,7 +20,10 @@ if str(REPO) not in sys.path:
 from app.config import settings  # noqa: E402
 from app.pipeline.index.builder import load_chunks  # noqa: E402
 from app.pipeline.retrieve import compose_retriever, retrieve_multi_book  # noqa: E402
-from app.pipeline.retrieve.strategy import classify_retrieval_strategy  # noqa: E402
+from app.pipeline.retrieve.strategy import (  # noqa: E402
+    classify_retrieval_strategy,
+    explicit_book_numbers,
+)
 from app.providers.factory import make_embedder, make_reranker  # noqa: E402
 from eval.harness import (  # noqa: E402
     aggregation_metrics,
@@ -71,9 +74,15 @@ class _MultiBookRetriever:
     async def retrieve(self, query: str, top_k: int):
         if self._routed and not classify_retrieval_strategy(query).is_multi_book:
             return await self._retriever.retrieve(query, top_k)
-        return await retrieve_multi_book(
-            self._retriever, query, per_book_k=self._per_book_k
+        numbers = explicit_book_numbers(query)
+        books = numbers if len(numbers) >= 2 else range(1, 8)
+        chunks = await retrieve_multi_book(
+            self._retriever,
+            query,
+            per_book_k=self._per_book_k,
+            books=books,
         )
+        return chunks[:top_k]
 
 
 async def run(args) -> int:

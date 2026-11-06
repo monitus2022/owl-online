@@ -350,6 +350,34 @@ async def test_retrieve_book_filters_to_one_book():
     assert collection.wheres == [{"book_num": {"$eq": 2}}]
 
 
+async def test_retrieve_book_keeps_the_book_when_the_question_names_another():
+    collection = _FilterCollection(["b1-c03-0000"], ["b1-c01-0000"])
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=collection,
+        bm25=_StubBM25([5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+    )
+    hits = await retriever.retrieve_book("Order of the Phoenix", 3, top_k=1)
+    assert hits[0].id == "b1-c03-0000"
+    assert collection.wheres == [{"book_num": {"$eq": 3}}]
+
+
+async def test_retrieve_book_does_not_fall_back_to_all_books():
+    collection = _FilterCollection([], ["b1-c02-0000"])
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=collection,
+        bm25=_StubBM25([0.0] * len(_CHUNKS)),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+    )
+    assert await retriever.retrieve_book("anything", 6, top_k=1) == []
+    assert len(collection.wheres) == 1
+    assert collection.wheres[0] == {"book_num": {"$eq": 6}}
+
+
 async def test_empty_filtered_result_falls_back_to_unfiltered():
     collection = _FilterCollection([], ["b1-c02-0000"])
     retriever = HybridRetriever(
