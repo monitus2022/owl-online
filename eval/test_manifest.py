@@ -70,6 +70,7 @@ def test_manifest_pins_the_small_model():
 
 def test_manifest_pins_the_subquery_quota():
     default = Settings.model_fields["subquery_quota"].default
+    assert default == 0
     assert MANIFEST["retrieval"]["subquery_quota"] == default
 
 

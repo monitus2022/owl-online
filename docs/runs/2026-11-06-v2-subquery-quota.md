@@ -14,10 +14,11 @@
 | Judge | `deepseek/deepseek-v4.1-flash-1017` |
 | Reranker | `amazon.rerank-v1:0`, pool 50, floor 0.0 |
 | Embedder | `local` / `qwen3-embedding:0.6b`, 1024 dims |
+| Chunking | size 500, overlap 75, min size 200 |
 | Retrieval | hybrid, `k = 5`, `rrf_k = 60`, candidates 50 |
 | Sub-query quota | 2 per retrieval leg in this experiment; default 0 |
 | Gold set | 61 items: 51 answerable, 10 unanswerable |
-| Judged sample | 15 |
+| Judged sample | 15, round-robin across the answerable slices |
 
 ## Retrieval
 
@@ -56,9 +57,14 @@ Novel entities: 0/14.
 ## Gate
 
 ```text
+baseline: eval/results/baseline.csv (run 20261105T160001Z)
+latest:   eval/results/20261105T204517Z.csv
 uv run python scripts/run_eval.py --check --latest eval/results/20261105T204517Z.csv
 gate: PASS
 ```
+
+This gate passed while `subquery_quota` was still absent from the CSV manifest
+fields. The run is an experiment, not the default configuration.
 
 ## Reading
 
@@ -85,6 +91,9 @@ uv run python scripts/run_eval.py --check --latest eval/results/20261105T204517Z
 ```
 
 ## Raw summary
+
+The raw output is verbatim and still contains the invalid diagnostics block; see
+Diagnostics above.
 
 ```text
 gold: 61 items (51 answerable, 10 unanswerable)
