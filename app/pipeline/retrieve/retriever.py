@@ -128,8 +128,21 @@ class HybridRetriever:
         trace, _ = await self._run(query, top_k)
         return trace
 
+    async def retrieve_book(
+        self, query: str, book_num: int, top_k: int
+    ) -> list[Chunk]:
+        """Retrieve only from one book, for the per-book aggregation path."""
+        _, chunks = await self._run(
+            query, top_k, base_filter=MetadataFilter(book_num=book_num)
+        )
+        return chunks
+
     async def _run(
-        self, query: str, top_k: int
+        self,
+        query: str,
+        top_k: int,
+        *,
+        base_filter: MetadataFilter | None = None,
     ) -> tuple[RetrievalTrace, list[Chunk]]:
         """One retrieval pass, decomposed when the question asks two things."""
         decision = classify_retrieval_strategy(query)
@@ -138,7 +151,8 @@ class HybridRetriever:
         # Keep the original question as an extra leg: it carries the context that
         # a bare sub-query loses, such as a pronoun in "who escapes from it?".
         retrieval_queries = sub_queries + ([query] if decomposed else [])
-        base_filter = parse_metadata_filter(query)
+        if base_filter is None:
+            base_filter = parse_metadata_filter(query)
         filters = [
             _combine_filter(parse_metadata_filter(part), base_filter)
             for part in retrieval_queries

@@ -336,6 +336,20 @@ async def test_metadata_filter_is_applied_to_both_legs():
     assert hits[0].id == "b1-c01-0000"
 
 
+async def test_retrieve_book_filters_to_one_book():
+    collection = _FilterCollection(["b1-c02-0000"], ["b1-c01-0000"])
+    retriever = HybridRetriever(
+        embedder=FakeEmbedder(),
+        collection=collection,
+        bm25=_StubBM25([5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        chunk_ids=[c.id for c in _CHUNKS],
+        chunks_by_id={c.id: c for c in _CHUNKS},
+    )
+    hits = await retriever.retrieve_book("anything", 2, top_k=1)
+    assert hits[0].id == "b1-c02-0000"
+    assert collection.wheres == [{"book_num": {"$eq": 2}}]
+
+
 async def test_empty_filtered_result_falls_back_to_unfiltered():
     collection = _FilterCollection([], ["b1-c02-0000"])
     retriever = HybridRetriever(

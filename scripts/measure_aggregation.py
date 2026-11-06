@@ -19,7 +19,7 @@ if str(REPO) not in sys.path:
 
 from app.config import settings  # noqa: E402
 from app.pipeline.index.builder import load_chunks  # noqa: E402
-from app.pipeline.retrieve import compose_retriever  # noqa: E402
+from app.pipeline.retrieve import compose_retriever, retrieve_multi_book  # noqa: E402
 from app.pipeline.retrieve.strategy import classify_retrieval_strategy  # noqa: E402
 from app.providers.factory import make_embedder, make_reranker  # noqa: E402
 from eval.harness import (  # noqa: E402
@@ -60,6 +60,22 @@ def _render(scores, metrics) -> str:
     return "\n".join(lines)
 
 
+class _MultiBookRetriever:
+    """Adapter so the aggregation scorer can use the per-book path."""
+
+    def __init__(self, retriever, per_book_k: int, routed: bool = False) -> None:
+        self._retriever = retriever
+        self._per_book_k = per_book_k
+        self._routed = routed
+
+    async def retrieve(self, query: str, top_k: int):
+        if self._routed and not classify_retrieval_strategy(query).is_multi_book:
+            return await self._retriever.retrieve(query, top_k)
+        return await retrieve_multi_book(
+            self._retriever, query, per_book_k=self._per_book_k
+        )
+
+
 async def run(args) -> int:
     items = load_aggregation(args.fixture)
     chunks = load_chunks(args.chunks)
@@ -82,14 +98,24 @@ async def run(args) -> int:
         min_score=settings.rerank_min_score,
         subquery_quota=settings.subquery_quota,
     )
+    retriever = (
+        _MultiBookRetriever(
+            setup.retriever,
+            args.per_book_k,
+            routed=args.strategy == "routed",
+        )
+        if args.strategy in {"multi_book", "routed"}
+        else setup.retriever
+    )
     try:
-        scores, metrics = await aggregation_metrics(setup.retriever, items, args.k)
+        scores, metrics = await aggregation_metrics(retriever, items, args.k)
     finally:
         await setup.retriever.aclose()
     manifest = load_manifest()
     embedder_key = "cloud" if settings.embedder_provider == "bedrock" else "local"
     print(f"run: {args.run_id}")
     print(
+        f"strategy={args.strategy} per_book_k={args.per_book_k} "
         f"manifest: generator={manifest['generator']['model']} "
         f"judge={manifest['judge']['model']} "
         f"reranker={manifest['reranker']['model']} pool={settings.rerank_pool} "
@@ -136,6 +162,12 @@ def main() -> int:
         "--index", type=Path, default=REPO / "data" / "index" / "chroma"
     )
     parser.add_argument("--k", type=int, default=5)
+    parser.add_argument(
+        "--strategy",
+        choices=("single_hop", "multi_book", "routed"),
+        default="single_hop",
+    )
+    parser.add_argument("--per-book-k", type=int, default=1)
     parser.add_argument(
         "--run-id",
         default=datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"),
