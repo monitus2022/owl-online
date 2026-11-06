@@ -125,7 +125,8 @@ budget.
 The bounded cycle, in order:
 
 1. Retrieval-only diagnostic on the current index: per-book hit@1/3/5/7/15 and
-   the score distribution, no generation tokens.
+   the score distribution, no generation tokens. Complete: hit@1 0.82, hit@3
+   0.95, hit@5 0.96, hit@7 0.98, hit@15 0.98; one miss (`agg08` book 4).
 2. Fix #113, re-index, audit the one gold id in a last chapter (`s07` to
    `b2-c18-0025`), re-run and re-pin the gate baseline. Complete: run
    `20261106T214850Z`, gate PASS.
