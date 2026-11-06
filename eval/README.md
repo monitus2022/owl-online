@@ -22,6 +22,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/test_aggregation.py` | aggregation fixture and metric tests, no network |
 | `tests/test_multibook.py` | per-book retrieval tests, no network |
 | `eval/fixtures/aggregation.jsonl` | 10 multi-book questions and 5 near-misses |
+| `eval/fixtures/aggregation_holdout.jsonl` | 15 held-out multi-book questions and 5 near-misses |
 | `eval/test_results.py` | result CSV tests, no network |
 | `eval/runner.py` | one run: compose, score, write the CSV |
 | `eval/report.py` | result rows and printed summary |
@@ -112,7 +113,7 @@ count alone cannot pass as multi-book.
 | Citation validity | fraction of retrieved chunks from an expected book that also contain an expected entity for that book |
 | Near-miss entity hit | fraction of near-miss items with at least one expected entity |
 | Near-miss entity completeness | fraction of near-miss expected entities found |
-| Near-miss book precision | fraction of near-miss chunks that are relevant to the single expected book |
+| Near-miss book share | fraction of near-miss chunks from the declared answer book; the entity may also appear elsewhere |
 
 The script also scores the deterministic router on the fixture: precision and
 recall for `multi_book` versus `near_miss`. The cue set was chosen after seeing
@@ -123,9 +124,27 @@ baseline, `multi_book` runs every item through the per-book path, and `routed`
 uses the router so near-misses stay single-hop. The per-book path is capped at
 seven map calls with a fan-out of four.
 
-The script verifies every expected entity against the corpus before measuring, so
-the fixture cannot drift into invented facts. It is retrieval only; synthesis
-faithfulness is measured with the multi-book path.
+`fixtures/aggregation_holdout.jsonl` is the held-out set: 15 multi-book
+questions and 5 near-misses, 90 expected entities, written before tuning and not
+used to change the cues or the path. Held-out retrieval at k=7:
+
+| Metric | Single-hop | Routed per-book |
+|---|---:|---:|
+| Book coverage | 0.69 | 0.77 |
+| Full coverage | 0.13 | 0.47 |
+| Entity completeness | 0.69 | 0.77 |
+| Citation validity | 0.74 | 0.49 |
+| Near-miss book share | 0.43 | 0.43 |
+
+The router scores 1.00 precision and 0.93 recall on the held-out set. The one
+miss is `How many books mention an Animagus?`, which is a designed negative: it
+has no coverage cue. The held-out set is frozen; failures are recorded, not
+fixed on this set.
+
+The script checks every expected entity against narrative chunks and ignores
+front-matter `CONTENTS` and copyright pages. It is a substring check, not a
+semantic proof. The run is retrieval only; synthesis faithfulness is measured
+with #105.
 
 ## Run
 

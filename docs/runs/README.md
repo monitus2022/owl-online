@@ -60,6 +60,8 @@ so on.
 | 2026-11-06 | #96 | `20261106T104138Z` | `aggregation` (router) | n/a | n/a | n/a | [Router on the aggregation fixture](2026-11-06-v2-router-fixture.md) |
 | 2026-11-06 | #96 | `20261106T105801Z` | `aggregation` (single-hop k=7) | n/a | n/a | n/a | [Single-hop k=7 comparison](2026-11-06-v2-multibook-baseline-k7.md) |
 | 2026-11-06 | #96 | `20261106T105819Z` | `aggregation` (routed per-book k=7) | n/a | n/a | n/a | [Per-book retrieval prototype](2026-11-06-v2-multibook-retrieval.md) |
+| 2026-11-06 | #106 | `20261106T121322Z` | `aggregation_holdout` (single-hop k=7) | n/a | n/a | n/a | [Held-out single-hop k=7](2026-11-06-v2-holdout-single-k7.md) |
+| 2026-11-06 | #106 | `20261106T121335Z` | `aggregation_holdout` (routed per-book k=7) | n/a | n/a | n/a | [Held-out routed k=7](2026-11-06-v2-holdout-routed-k7.md) |
 
 ## Template
 
