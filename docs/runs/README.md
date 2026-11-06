@@ -70,6 +70,7 @@ so on.
 | 2026-11-07 | #113 | `20261106T214917Z` | `pinned` | 0.76 | 0.31 | 13/15 | [Ingest gate](2026-11-07-113-ingest-gate.md) |
 | 2026-11-07 | #105 | `20261106T224550Z` | `aggregation` (retrieval diagnostic) | n/a | n/a | n/a | [Multi-book diagnostic](2026-11-07-105-multibook-diagnostic.md) |
 | 2026-11-07 | #105 | `20261106T224853Z` | `aggregation` (k x selection ablation) | n/a | n/a | n/a | [Multi-book ablation](2026-11-07-105-multibook-ablation.md) |
+| 2026-11-07 | #105 | `20261106T233126Z` | `aggregation_holdout` (multi-book k=3) | n/a | n/a | 11/15 | [Multi-book holdout k=3](2026-11-07-105-multibook-holdout-k3.md) |
 
 ## Template
 
