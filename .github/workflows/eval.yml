@@ -1,0 +1,58 @@
+# Eval gate for pull requests (#16).
+#
+# The corpus and index are not in git: the source text is copyrighted, so the
+# live eval run that feeds `run_eval.py --check` cannot happen on a
+# GitHub-hosted runner. CI enforces the deterministic parts on every pull
+# request:
+#
+# - ruff and the unit suite;
+# - the eval harness, the gate logic (`eval/test_check.py`, which proves a drop
+#   beyond the band fails) and the manifest drift test.
+#
+# The live gate (`uv run python scripts/run_eval.py --check`) runs on the host
+# or locally before merge. See eval/README.md.
+#
+# Required check: `lint-and-tests` from the `eval` workflow. Pick it from the
+# status-check list in the repository ruleset or branch protection for main
+# after the first green run.
+
+name: eval
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: eval-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.13.1"
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Unit tests
+        run: uv run pytest tests
+
+      - name: Eval harness and gate logic
+        run: uv run pytest eval/

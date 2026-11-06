@@ -10,16 +10,25 @@ page describes what comes next and why.
 
 - V1 is shipped.
 - The V2 chat foundation is delivered: LangGraph intents, verification and retry,
-  guardrails, cost controls, tracing and the local eval gate. The PR CI gate is
-  still #16.
+  guardrails, cost controls, tracing and the local eval gate. The deterministic
+  PR CI gate is in place (#16); the live gate runs on the host because the
+  corpus is not in git, and the required-check setting is the last #16 step.
 - The retrieval foundation #96 is closed: aggregation fixture, deterministic
   router, bounded per-book retrieval and the quota-2 measurement (multi-part
   Hit@5 0.667 to 0.778, judge 14/14, left opt-in). Routed per-book retrieval
   reaches 0.79 coverage and 0.76 completeness at equal k=7, but citation
-  validity is 0.56 and it is not wired into chat.
-- The held-out multi-book set #106 is complete. Current work is #105, the
-  multi-book answer path. Chat is still one-pass until #105 lands.
-- #97 persona follows #105. #107 selection experiments are deferred.
+  validity is 0.56. The retrieval-only prototype is not wired; the #105 answer
+  path is wired but flag-off.
+- The held-out multi-book set #106 is complete. The multi-book answer path #105
+  is merged behind `OWL_MULTI_BOOK` but off: the held-out generation run gives
+  coverage 0.84, citation validity 0.87 and faithfulness 0.79, so it fails two
+  bars. Chat is still one-pass.
+- The #105 follow-up is a time-boxed spike: retrieval-only diagnostic, ingest
+  trailing-pages fix (#113), one ablation, a frozen holdout-2 and one final run.
+  If it fails, the flag stays off and the work stops.
+- #97 thin meta-only path and #16 CI gate start now, in parallel, because
+  neither depends on the multi-book result. The full persona voice follows #105.
+  #74 and #75 follow. #107 is deferred.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
 
 ## Product shape
@@ -53,7 +62,8 @@ bands are deterministic.
 
 ## Phase A: V2 chat foundation
 
-Status: delivered, except the deploy and CI hardening tracked in #16, #74 and #75.
+Status: delivered, except the deploy hardening in #74 and #75 and the
+required-check setting in #16. The deterministic CI gate is in place.
 
 | Ticket | Scope |
 |---|---|
@@ -81,13 +91,15 @@ ends with one answer, practice question or feedback response.
 
 ## Phase A2: Multi-book answer path
 
-Status: in progress. The flag-off path is merged; the held-out generation run
-does not pass the gate, so `OWL_MULTI_BOOK` stays off.
+Status: time-boxed spike. The flag-off path is merged; the held-out generation
+run does not pass the gate, so `OWL_MULTI_BOOK` stays off. One cycle remains,
+then the work stops whether or not it passes.
 
 | Ticket | Scope |
 |---|---|
 | #106 | Held-out multi-book set, written before tuning (complete) |
 | #105 | Per-book extraction, merge, one synthesis, coverage statement, flag wiring |
+| #113 | Ingest: drop trailing next-book front matter from the previous chapter |
 
 Held-out generation (`20261106T110000Z`, per-book k=15, final top-k 7): book
 coverage 0.84, entity completeness 0.84, answer-text coverage 0.81, citation
@@ -96,7 +108,26 @@ p50 9.6s, p95 14.3s, about $0.025 per 15 items. Coverage and completeness pass;
 citation validity (0.87) and faithfulness (0.79 against a 0.93 baseline) do not.
 The remaining defect is extractor precision: a chunk that shares a keyword with
 the question can be quoted as evidence, and front-matter chunks can be retrieved.
-Tune on the development fixture, then rerun the held-out measurement once.
+The 8-call fan-out also costs about 12x a single-pass answer, which caps the path
+at roughly 14 questions per day at the default token budget.
+
+The bounded cycle, in order:
+
+1. Retrieval-only diagnostic on the current index: per-book hit@1/3/5/7/15 and
+   the score distribution, no generation tokens.
+2. Fix #113, re-index, audit the one gold id in a last chapter (`s07` to
+   `b2-c18-0025`), re-run and re-pin the gate baseline.
+3. Ablate per-book k in {1, 3, 5} crossed with selection in {top-1 plus floor,
+   batched top-3 call, per-book call}, plus k=15 per-book as a control. Develop
+   fixture only.
+4. Freeze holdout-2 at 20 items and pre-register the rule: coverage at least
+   0.80, citation validity at least 18/20 with a Wilson lower bound of 0.80,
+   faithfulness at least 0.88 with a lower bound of 0.70, at most 3k tokens per
+   item and p95 under 30s. Boundary results do not round.
+5. One final run. If it passes, enable behind the flag with a canary. If not,
+   keep the flag off, commit the negative record, and continue with #97 and #16.
+
+Do not tune prompts on the held-out set, and do not add a second cycle.
 
 Exit criteria:
 
@@ -438,14 +469,15 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #105 | Per-book extraction, synthesis, coverage statement, flag wiring | V2 - Deepening |
+| #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
+| #97 | Thin meta-only professor path (full voice after #105) | V2 - Deepening |
 
 ### Next
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #97 | Virtual professor voice and meta intent | V2 - Deepening |
-| #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
+| #105 | Bounded multi-book spike: diagnostic, ablation, holdout-2 | V2 - Deepening |
+| #113 | Ingest trailing-pages fix, re-index and re-baseline | V2 - Deepening |
 | #74 | Move `/data` to a dedicated EBS volume | V2 - Deepening |
 | #75 | Replace static AWS keys with GitHub OIDC | V2 - Deepening |
 
@@ -493,15 +525,16 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-Next work: #105 multi-book answer path. #96 and #106 are closed. #107 is deferred
-and likely superseded by the per-book path. #97 follows #105, with a thin
-meta-only path allowed earlier because it does not change the answer system
-prompt.
+Next work: #16 CI gate and #97 persona, in parallel. The #105 multi-book spike
+and #113 ingest fix follow in Next. #96 and #106 are closed. #107 is deferred and
+likely superseded by the per-book path.
 
 ## Decisions
 
 | Decision | Rationale |
 |---|---|
+| Multi-book is a time-boxed spike, not the main line | Citation validity, faithfulness and cost miss their bars; one bounded cycle then a documented fallback |
+| A new answer path gets a retrieval-only measurement and a token estimate before generation code | The multi-book path built the expensive half before the cheap diagnostic |
 | Subject packs are the source of truth for exam and lesson generation | Prevents free-model memory and makes coverage auditable |
 | Every material has source refs | A lesson or question can always be traced to the books |
 | Every generated question or lesson cites a material and source | Unsupported content is rejected before publication |

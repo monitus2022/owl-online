@@ -7,6 +7,8 @@ history of how the RAG strategy moved over the sprint.
 
 - Every finished run of `scripts/run_eval.py` gets a record. A run without a
   record does not count as done.
+- `run_eval.py --check` produces no run id and needs no record. It gates a run
+  that already has one.
 - Write it after the run finishes, before closing the ticket.
 - One record per run id. Do not rewrite the metrics of a past run; a changed
   configuration is a new record.
