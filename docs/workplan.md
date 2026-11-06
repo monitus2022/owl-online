@@ -132,7 +132,10 @@ The bounded cycle, in order:
    `20261106T214850Z`, gate PASS.
 3. Ablate per-book k in {1, 3, 5} crossed with selection in {top-1 plus floor,
    batched top-3 call, per-book call}, plus k=15 per-book as a control. Develop
-   fixture only.
+   fixture only. Complete: k3-book had the best coverage and completeness
+   (0.83/0.79) and tied the best faithfulness (0.70); k1-batch was cheapest but
+   below the coverage bar; k15-book was the most expensive and not the best. The
+   final holdout run uses k3-book.
 4. Freeze holdout-2 at 20 items and pre-register the rule: coverage at least
    0.80, citation validity at least 18/20 with a Wilson lower bound of 0.80,
    faithfulness at least 0.88 with a lower bound of 0.70, at most 3k tokens per

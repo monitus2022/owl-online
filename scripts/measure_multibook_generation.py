@@ -30,7 +30,12 @@ if str(REPO) not in sys.path:
 
 from app.config import settings  # noqa: E402
 from app.pipeline.generate import ask  # noqa: E402
-from app.pipeline.generate.multibook import DEFAULT_FINAL_TOP_K, PER_BOOK_K  # noqa: E402
+from app.pipeline.generate.multibook import (  # noqa: E402
+    DEFAULT_FINAL_TOP_K,
+    DEFAULT_SELECTION,
+    DEFAULT_SELECTION_FLOOR,
+    PER_BOOK_K,
+)
 from app.pipeline.index.builder import load_chunks  # noqa: E402
 from app.pipeline.retrieve import compose_retriever  # noqa: E402
 from app.pipeline.retrieve.strategy import classify_retrieval_strategy  # noqa: E402
@@ -193,6 +198,17 @@ def _render_evidence(chunks: list[Chunk]) -> str:
     )
 
 
+def _wilson_lower(successes: int, n: int, z: float = 1.96) -> float:
+    """Wilson score interval lower bound for a binomial proportion."""
+    if n <= 0:
+        return 0.0
+    p = successes / n
+    denominator = 1 + z * z / n
+    centre = p + z * z / (2 * n)
+    margin = z * math.sqrt((p * (1 - p) + z * z / (4 * n)) / n)
+    return max(0.0, (centre - margin) / denominator)
+
+
 async def _faithful(judge: Llm, item: AggregationItem, answer: str, chunks: list[Chunk]):
     if not chunks:
         return None
@@ -248,6 +264,9 @@ async def run(args) -> int:
                 llm=llm,
                 top_k=DEFAULT_FINAL_TOP_K,
                 multi_book=True,
+                multi_book_per_book_k=args.per_book_k,
+                multi_book_selection=args.selection,
+                multi_book_selection_floor=args.selection_floor,
             )
             latency_ms = (time.perf_counter() - start) * 1000
             cited_chunks = [
@@ -336,6 +355,13 @@ async def run(args) -> int:
     faithful_synth = faithful_rate(synthesis)
     judged_all = len([s for s in multi if not s.abstained])
     judged_synth = len([s for s in synthesis if not s.abstained])
+    citation_items = [s for s in synthesis if s.citations > 0]
+    citation_pass = sum(
+        1 for s in citation_items if s.valid_citations == s.citations
+    )
+    citation_wilson = _wilson_lower(citation_pass, len(citation_items))
+    faithful_pass = sum(1 for s in synthesis if not s.abstained and s.faithful)
+    faithful_wilson = _wilson_lower(faithful_pass, judged_synth)
     abstained = mean([1.0 if s.abstained else 0.0 for s in multi])
     latencies = sorted(s.latency_ms for s in multi)
     p50 = median(latencies) if latencies else 0.0
@@ -363,7 +389,9 @@ async def run(args) -> int:
     print()
     print(f"run: {args.run_id}")
     print(
-        f"path=multi_book per_book_k={PER_BOOK_K} final_top_k={DEFAULT_FINAL_TOP_K} "
+        f"path=multi_book per_book_k={args.per_book_k} "
+        f"selection={args.selection} selection_floor={args.selection_floor} "
+        f"final_top_k={DEFAULT_FINAL_TOP_K} "
         f"manifest: generator={manifest['generator']['model']} "
         f"judge={judge_model} "
         f"reranker={manifest['reranker']['model']} pool={settings.rerank_pool} "
@@ -390,6 +418,11 @@ async def run(args) -> int:
         f"  synthesis-only n={len(synthesis)} judged={judged_synth} "
         f"citation_validity={citation_rate(synthesis):.2f} "
         f"faithfulness={faithful_synth:.2f}"
+    )
+    print(
+        f"  synthesis_items citation_pass={citation_pass}/{len(citation_items)} "
+        f"wilson_lower={citation_wilson:.2f} "
+        f"faithful_wilson_lower={faithful_wilson:.2f}"
     )
     print(
         f"  near_miss n={len(near)} entity_hit={near_hit:.2f} "
@@ -451,6 +484,10 @@ async def run(args) -> int:
                 "faithfulness": round(faithful_all, 3),
                 "synthesis_citation_validity": round(citation_rate(synthesis), 3),
                 "synthesis_faithfulness": round(faithful_synth, 3),
+                "synthesis_citation_items_pass": citation_pass,
+                "synthesis_citation_items_n": len(citation_items),
+                "synthesis_citation_wilson_lower": round(citation_wilson, 3),
+                "synthesis_faithfulness_wilson_lower": round(faithful_wilson, 3),
                 "latency_p50_ms": round(p50, 0),
                 "latency_p95_ms": round(p95, 0),
                 "latency_max_ms": round(slowest, 0),
@@ -476,6 +513,15 @@ def main() -> int:
     )
     parser.add_argument(
         "--results", type=Path, default=REPO / "eval" / "results"
+    )
+    parser.add_argument("--per-book-k", type=int, default=PER_BOOK_K)
+    parser.add_argument(
+        "--selection",
+        choices=("per_book", "top1_floor", "batched_top3"),
+        default=DEFAULT_SELECTION,
+    )
+    parser.add_argument(
+        "--selection-floor", type=float, default=DEFAULT_SELECTION_FLOOR
     )
     parser.add_argument(
         "--run-id",

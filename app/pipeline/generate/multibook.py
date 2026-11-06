@@ -33,9 +33,18 @@ FANOUT = 4
 # Candidates retrieved per book before extraction. k=1 missed the answer chunk
 # for some books; 15 covers a chapter's worth without unbounded prompt growth.
 PER_BOOK_K = 15
+# Extraction strategies for the #105 ablation. `per_book` is the shipped path:
+# one extraction call per book over its per-book candidates. `top1_floor` uses
+# only the top candidate and drops a book below the floor. `batched_top3` sends
+# the top three candidates per book to one extraction call.
+DEFAULT_SELECTION = "per_book"
+SELECTIONS = frozenset({"per_book", "top1_floor", "batched_top3"})
+DEFAULT_SELECTION_FLOOR = 0.0
+BATCH_TOP_N = 3
 # Final evidence cap: at most one chunk per book under the default seven.
 DEFAULT_FINAL_TOP_K = 7
 _CITATION = re.compile(r"\[(b\d+-c\d+-\d+)\]")
+_BOOK_LABEL = re.compile(r"^[-*]?\s*Book (\d+):\s*", re.IGNORECASE)
 
 MULTI_BOOK_EXTRACT_SYSTEM = (
     "You extract direct quotes from one book for a multi-book question. Use only "
@@ -43,6 +52,16 @@ MULTI_BOOK_EXTRACT_SYSTEM = (
     "quote copied verbatim from one excerpt, followed by that excerpt's chunk id "
     "in square brackets, for example [b3-c01-0000]. Do not paraphrase or infer. "
     "If no sentence directly answers the question, reply exactly: NO_EVIDENCE"
+)
+
+MULTI_BOOK_BATCH_EXTRACT_SYSTEM = (
+    "You extract direct quotes from several books for a multi-book question. Use "
+    "only the excerpts. For each book, return up to three bullet lines. Each line "
+    "must start with `Book N:` and contain a direct quote copied verbatim from "
+    "one excerpt, followed by that excerpt's chunk id in square brackets, for "
+    "example `Book 3: \"...\" [b3-c01-0000]`. Do not paraphrase or infer. If a "
+    "book has no sentence that directly answers the question, write "
+    "`Book N: NO_EVIDENCE`."
 )
 
 MULTI_BOOK_SYSTEM = (
@@ -179,6 +198,84 @@ async def _extract_book(
     return BookExtract(clean[0].metadata.book_num, cited_chunks, lines)
 
 
+def _batched_extract_prompt(
+    question: str, by_book: dict[int, list[Chunk]], top_n: int
+) -> str:
+    blocks: list[str] = []
+    for book_num in sorted(by_book):
+        excerpts = "\n\n".join(
+            f"[{chunk.id}] {chunk.text.strip()}"
+            for chunk in by_book[book_num][:top_n]
+        )
+        blocks.append(f"Book {book_num}:\n{excerpts}")
+    return (
+        f"Question: {question}\n\n"
+        + "\n\n".join(blocks)
+        + "\n\nExtract:"
+    )
+
+
+def _parse_batched_extract(
+    text: str, chunks: list[Chunk]
+) -> list[BookExtract]:
+    """Keep verbatim quotes, grouped by the book of the chunk they cite."""
+    by_id = {chunk.id: _normalise(chunk.text) for chunk in chunks}
+    book_of = {chunk.id: chunk.metadata.book_num for chunk in chunks}
+    grouped: dict[int, list[str]] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith(("-", "*")):
+            line = line[1:].strip()
+        label = _BOOK_LABEL.match(line)
+        label_book = int(label.group(1)) if label else None
+        if label is not None:
+            line = line[label.end() :].strip()
+        if line.upper().startswith("NO_EVIDENCE"):
+            continue
+        cited = _CITATION.findall(line)
+        if len(cited) != 1 or cited[0] not in by_id:
+            continue
+        book_num = book_of[cited[0]]
+        if label_book is not None and label_book != book_num:
+            continue
+        quote = _normalise(_CITATION.sub("", line))
+        if len(quote) < 15:
+            continue
+        if quote not in by_id[cited[0]]:
+            continue
+        grouped.setdefault(book_num, []).append(line)
+    extracts: list[BookExtract] = []
+    for book_num, lines in sorted(grouped.items()):
+        cited_ids = {cid for line in lines for cid in _CITATION.findall(line)}
+        cited_chunks = tuple(chunk for chunk in chunks if chunk.id in cited_ids)
+        if cited_chunks:
+            extracts.append(BookExtract(book_num, cited_chunks, tuple(lines[:3])))
+    return extracts
+
+
+async def _extract_batched(
+    question: str,
+    chunks: list[Chunk],
+    llm: Llm,
+    *,
+    top_n: int = BATCH_TOP_N,
+) -> list[BookExtract]:
+    clean: list[Chunk] = []
+    for chunk in chunks:
+        text, _ = sanitize_evidence(chunk.text)
+        clean.append(chunk.model_copy(update={"text": text}))
+    by_book: dict[int, list[Chunk]] = {}
+    for chunk in clean:
+        by_book.setdefault(chunk.metadata.book_num, []).append(chunk)
+    response = await llm.generate(
+        MULTI_BOOK_BATCH_EXTRACT_SYSTEM,
+        _batched_extract_prompt(question, by_book, top_n),
+    )
+    return _parse_batched_extract(response, clean)
+
+
 def _synthesis_prompt(question: str, extracts: list[BookExtract]) -> str:
     blocks: list[str] = []
     for extract in extracts:
@@ -303,10 +400,15 @@ async def ask_multi_book(
     llm: Llm,
     top_k: int = DEFAULT_FINAL_TOP_K,
     books: list[int] | None = None,
+    per_book_k: int = PER_BOOK_K,
+    selection: str = DEFAULT_SELECTION,
+    selection_floor: float = DEFAULT_SELECTION_FLOOR,
     on_token: Callable[[str], None] | None = None,
     on_stage: Callable[[str], None] | None = None,
 ) -> AskResult:
     """Answer a multi-book question from per-book evidence, with coverage."""
+    if selection not in SELECTIONS:
+        raise ValueError(f"unknown multi-book selection {selection!r}")
     tracer = current_tracer()
     if on_stage is not None:
         on_stage("retrieve")
@@ -316,7 +418,7 @@ async def ask_multi_book(
     chunks = await retrieve_multi_book(
         retriever,
         question,
-        per_book_k=PER_BOOK_K,
+        per_book_k=per_book_k,
         fanout=FANOUT,
         books=sorted(searched),
     )
@@ -340,22 +442,35 @@ async def ask_multi_book(
     if on_stage is not None:
         on_stage("extract")
     extract_span = tracer.start("extract") if tracer else None
-    semaphore = asyncio.Semaphore(FANOUT)
 
     by_book: dict[int, list[Chunk]] = {}
     for chunk in chunks:
         by_book.setdefault(chunk.metadata.book_num, []).append(chunk)
 
-    async def one(book_num: int, book_chunks: list[Chunk]):
-        async with semaphore:
-            return await _extract_book(question, book_chunks, llm)
+    if selection == "batched_top3":
+        extracts = _dedupe_extracts(
+            await _extract_batched(question, chunks, llm, top_n=BATCH_TOP_N)
+        )
+        calls = 1
+    else:
+        if selection == "top1_floor":
+            by_book = {
+                book_num: book_chunks[:1]
+                for book_num, book_chunks in by_book.items()
+                if book_chunks and book_chunks[0].score >= selection_floor
+            }
+        semaphore = asyncio.Semaphore(FANOUT)
 
-    extracted = await asyncio.gather(
-        *(one(book_num, book_chunks) for book_num, book_chunks in by_book.items())
-    )
-    extracts = _dedupe_extracts([item for item in extracted if item is not None])
+        async def one(book_num: int, book_chunks: list[Chunk]):
+            async with semaphore:
+                return await _extract_book(question, book_chunks, llm)
+
+        extracted = await asyncio.gather(
+            *(one(book_num, book_chunks) for book_num, book_chunks in by_book.items())
+        )
+        extracts = _dedupe_extracts([item for item in extracted if item is not None])
+        calls = len(by_book)
     extracts = _cap_evidence(extracts, top_k)
-    calls = len(by_book)
     if tracer is not None and extract_span is not None:
         tracer.finish(
             extract_span,
