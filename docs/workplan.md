@@ -1,6 +1,6 @@
 # Workplan
 
-Last updated: 2026-11-06.
+Last updated: 2026-11-07.
 
 This page is the plan of record for the V2-V4 work. Update it when a phase,
 boundary or ticket changes. The architecture page describes what is built; this
@@ -30,8 +30,10 @@ page describes what comes next and why.
   scope, scripted meta and personal replies, and the lore schema. The dev pack
   now has the five founders, the 1998/2008/2026 timeline and the Auror pathway.
   Lore-grounded answers (#118) are wired: setting notes carry `[lore:<id>]`
-  citations, validated against the pack. The real pack and the lore eval follow.
-  The full persona voice still follows #105.
+  citations, validated against the pack. The variant bank (#120) gives every
+  scripted meta topic, the personal reply and the abstention line several
+  reviewed phrasings. The real pack and the lore eval follow. The full persona
+  voice still follows #105.
 - #16's deterministic CI gate is merged; the required-check setting is the last
   step. #74 and #75 follow. #107 is deferred.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
@@ -477,6 +479,7 @@ persists exam attempts and chat history.
 |---|---|---|
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
+| #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
 
 ### Next
 

@@ -444,7 +444,7 @@ def test_ask_stream_routes_meta_to_the_scripted_reply():
     finals = [data for name, data in events if name == "final"]
     tokens = [data for name, data in events if name == "token"]
     assert modes[0]["mode"] == "meta"
-    assert finals[0]["answer"] == PERSONA.meta_response("identity")
+    assert finals[0]["answer"] in PERSONA.meta_variants("identity")
     assert finals[0]["citations"] == []
     assert tokens == []
     assert len(app.state.cache) == 0
@@ -462,7 +462,7 @@ def test_ask_persona_abstention_uses_the_in_world_line():
         response = client.post("/ask", json={"question": "Who trims the wick?"})
     body = response.json()
     assert body["abstained"] is True
-    assert body["answer"] == PERSONA.abstain_response()
+    assert body["answer"] in PERSONA.abstain_variants()
 
 
 class _LoreLlm:

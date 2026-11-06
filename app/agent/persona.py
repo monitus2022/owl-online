@@ -6,6 +6,7 @@ This module is the single source of truth the prompts and the meta nodes read.
 
 from __future__ import annotations
 
+import random
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,9 +41,21 @@ class Persona:
     pacing: str
     stance: str
     boundaries: dict[str, str]
-    meta: dict[str, str]
-    personal: str
-    abstain: str
+    meta: dict[str, tuple[str, ...]]
+    personal: tuple[str, ...]
+    abstain: tuple[str, ...]
+
+    @staticmethod
+    def _pick(variants: tuple[str, ...], choice: int | None) -> str:
+        """One reviewed variant.
+
+        Selection is random per request so a repeated meta, personal or
+        abstention message does not repeat the same line. Tests pass `choice`
+        to make the result reproducible.
+        """
+        if choice is None:
+            return random.choice(variants)
+        return variants[choice % len(variants)]
 
     def answer_suffix(self) -> str:
         """The tone instruction appended to a grounded answer prompt.
@@ -63,14 +76,53 @@ class Persona:
             f"{self.boundaries['exam']}"
         )
 
-    def meta_response(self, topic: str) -> str | None:
-        return self.meta.get(topic)
+    def meta_response(self, topic: str, *, choice: int | None = None) -> str | None:
+        variants = self.meta.get(topic)
+        if not variants:
+            return None
+        return self._pick(variants, choice)
 
-    def personal_response(self) -> str:
+    def meta_variants(self, topic: str) -> tuple[str, ...]:
+        return self.meta.get(topic, ())
+
+    def personal_response(self, *, choice: int | None = None) -> str:
+        return self._pick(self.personal, choice)
+
+    def personal_variants(self) -> tuple[str, ...]:
         return self.personal
 
-    def abstain_response(self) -> str:
+    def abstain_response(self, *, choice: int | None = None) -> str:
+        return self._pick(self.abstain, choice)
+
+    def abstain_variants(self) -> tuple[str, ...]:
         return self.abstain
+
+
+def _variants(value: object, where: str) -> tuple[str, ...]:
+    """Read a reviewed string or a list of reviewed strings from the card.
+
+    A variant bank keeps the facts identical and only changes the phrasing, so
+    every entry is validated here rather than at request time.
+    """
+    if isinstance(value, str):
+        raw: list[object] = [value]
+    elif isinstance(value, list):
+        raw = value
+    else:
+        raise ValueError(f"persona card has an invalid {where}")
+    if not raw:
+        raise ValueError(f"persona card has an empty {where}")
+    texts: list[str] = []
+    for item in raw:
+        if not isinstance(item, str):
+            raise ValueError(f"persona card has an invalid {where}")
+        text = item.strip()
+        if not text:
+            raise ValueError(f"persona card has an empty {where}")
+        texts.append(text)
+    if len(set(texts)) != len(texts):
+        raise ValueError(f"persona card has a duplicate variant in {where}")
+    return tuple(texts)
 
 
 def load_persona(path: Path = PERSONA_PATH) -> Persona:
@@ -106,8 +158,15 @@ def load_persona(path: Path = PERSONA_PATH) -> Persona:
             raise ValueError(f"persona card has an empty {where}.{key}")
         return value
 
+    def variants(
+        section: dict[str, object], key: str, where: str
+    ) -> tuple[str, ...]:
+        if key not in section:
+            raise ValueError(f"persona card is missing {where}.{key}")
+        return _variants(section[key], f"{where}.{key}")
+
     meta_values = {
-        topic: text(meta, topic, "meta") for topic in META_TOPICS
+        topic: variants(meta, topic, "meta") for topic in META_TOPICS
     }
     return Persona(
         name=text(identity, "name", "identity"),
@@ -123,8 +182,8 @@ def load_persona(path: Path = PERSONA_PATH) -> Persona:
             for key in REQUIRED_BOUNDARIES
         },
         meta=meta_values,
-        personal=text(personal, "response", "personal"),
-        abstain=text(abstain, "response", "abstain"),
+        personal=variants(personal, "response", "personal"),
+        abstain=variants(abstain, "response", "abstain"),
     )
 
 
