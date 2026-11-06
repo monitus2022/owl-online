@@ -261,10 +261,11 @@ def _quota_retriever(*, quota: int, reranker=None, pool: int | None = None) -> H
 
 
 async def test_quota_keeps_a_candidate_from_each_leg():
-    """Quota 1 keeps one fused hit per leg, so the second part survives."""
+    """Quota 1 keeps one fused hit per leg, dropping deeper dominant-leg hits."""
     retriever = _quota_retriever(quota=1)
-    hits = await retriever.retrieve(_QUOTA_QUERY, top_k=3)
+    hits = await retriever.retrieve(_QUOTA_QUERY, top_k=4)
     assert [c.id for c in hits] == ["b1-c05-0000", "b1-c01-0000", "b1-c02-0000"]
+    assert "b1-c03-0000" not in [c.id for c in hits]
     scores = [c.score for c in hits]
     assert scores == sorted(scores, reverse=True)
 
