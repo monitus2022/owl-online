@@ -133,8 +133,7 @@ temperature variant, so a cached reply from an earlier sampling setup is not
 reused. The rows also record `subquery_quota`, so the gate refuses to compare a
 quota-2 experiment with the quota-0 baseline. `--k` controls the retrieval cutoff
 and `--sample` controls the judged sample. The sample is taken round-robin across
-the answerable slices, so the
-default of 15 covers simple, named and multi-part.
+the answerable slices, so the default of 15 covers simple, named and multi-part.
 
 A clean checkout cannot run the full eval: the corpus and Chroma index are host
 data and stay out of git. The CI workflow will either run on a self-hosted runner
