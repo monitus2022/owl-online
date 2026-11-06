@@ -1,7 +1,7 @@
 # Run record: deterministic router on the aggregation fixture
 
 - Date: 2026-11-06
-- Run id: `20261106T102144Z`
+- Run id: `20261106T104138Z`
 - Ticket: #96
 - Config: `aggregation`, pre-retrieval router, quota 0
 - Artifacts: no result CSV (retrieval-only script); `eval/fixtures/aggregation.jsonl`, `scripts/measure_aggregation.py`
@@ -84,13 +84,13 @@ gate: PASS
 ## Reproduce
 
 ```text
-uv run python scripts/measure_aggregation.py --run-id 20261106T102144Z
+uv run python scripts/measure_aggregation.py --run-id 20261106T104138Z
 ```
 
 ## Raw output
 
 ```text
-run: 20261106T102144Z
+run: 20261106T104138Z
 manifest: generator=qwen/qwen3-30b-a3b-instruct-2507 judge=deepseek/deepseek-v4.1-flash-1017 reranker=amazon.rerank-v1:0 pool=50 embedder=qwen3-embedding:0.6b chunking=500/75/200 top_k=5 rrf_k=60 quota=0
 router: precision=1.00 recall=1.00 tp=10 fp=0 fn=0
 expected entities: 79
