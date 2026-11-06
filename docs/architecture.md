@@ -319,6 +319,11 @@ first because the draft may already be on the client. The route and any
 fallback are trace spans, and the model is on the usage line. No model call is
 used to decide the route.
 
+The routing experiment was measured and rejected: Mistral Small 3.2 was cheaper
+and faster, but citations dropped from 15/20 to 13/20 and specific error naming
+from 5/5 to 2/6. `OWL_ROUTING` stays off. See
+`docs/runs/2026-11-06-v2-routing-comparison.md`.
+
 A vendor policy check runs before an adapter is built. OpenAI, Anthropic and
 Google models are rejected, including their open-weight releases, because the
 deployment region bans them regardless of host.
