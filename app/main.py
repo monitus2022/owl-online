@@ -86,6 +86,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     """Build the app; tests inject a Runtime so startup builds nothing real."""
     app_settings = app_settings or settings
     configure_logging(app_settings.log_level)
+    if app_settings.multi_book and app_settings.persona:
+        logger.warning(
+            "OWL_MULTI_BOOK and OWL_PERSONA are both on; the multi-book path "
+            "ignores the persona suffix"
+        )
     trusted = [
         ipaddress.ip_network(item.strip())
         for item in app_settings.trusted_proxies.split(",")
@@ -192,6 +197,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
 
     def cache_scope(runtime: Runtime, model: str) -> str:
         """Everything besides the question that can change a cached answer."""
+        persona_scope = (
+            hashlib.sha256(PERSONA.answer_suffix().encode("utf-8")).hexdigest()[:8]
+            if app_settings.persona
+            else "off"
+        )
         return "|".join(
             [
                 runtime.index_hash,
@@ -205,7 +215,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 str(app_settings.rerank_min_score),
                 str(app_settings.retry_budget),
                 str(app_settings.multi_book),
-                str(app_settings.persona),
+                persona_scope,
                 model,
             ]
         )
@@ -242,20 +252,32 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         student: str = "",
     ) -> None:
         limiter: ChatLimiter = app.state.limiter
-        attempts = max(1, result.model_calls or result.attempts)
-        per_draft = len(SYSTEM_PROMPT) + len(question) + len(student) + sum(
-            len(chunk.text) for chunk in result.chunks
+        # A scripted meta or personal reply makes no model call; it must not
+        # charge the daily budget as if it did.
+        scripted = result.model_calls == 0 and result.attempts == 0
+        attempts = 0 if scripted else max(1, result.model_calls or result.attempts)
+        persona_chars = (
+            len(PERSONA.answer_suffix()) if app_settings.persona else 0
         )
-        input_tokens = 0 if cache_hit else max(1, attempts * per_draft // 4)
+        per_draft = (
+            len(SYSTEM_PROMPT)
+            + persona_chars
+            + len(question)
+            + len(student)
+            + sum(len(chunk.text) for chunk in result.chunks)
+        )
+        input_tokens = (
+            0 if cache_hit or scripted else max(1, attempts * per_draft // 4)
+        )
         output_chars = attempts * (200 if result.abstained else len(result.answer))
-        output_tokens = 0 if cache_hit else max(1, output_chars // 4)
+        output_tokens = 0 if cache_hit or scripted else max(1, output_chars // 4)
         small_model = getattr(getattr(request.app.state.runtime, "small_llm", None), "name", None)
         cost = (
             0.0
-            if cache_hit
+            if cache_hit or scripted
             else limiter.cost(input_tokens, output_tokens, small=model == small_model)
         )
-        if not cache_hit:
+        if not cache_hit and not scripted:
             limiter.record(input_tokens, output_tokens)
         logger.info(
             "chat usage session=%s intent=%s model=%s cache=%s in_tokens=%d "
@@ -391,9 +413,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             body.question,
             requested_mode=body.mode,
             student_answer=body.student_answer,
+            persona=app_settings.persona,
         )
-        # Only corpus-only answers are shared; feedback is personalised and
-        # practice is meant to vary.
+        # Only corpus-only answers are shared; feedback is personalised,
+        # practice is meant to vary, and meta/personal are scripted.
         key = (
             cache_key(body.question, cache_scope(runtime, model), model)
             if intent == "answer"

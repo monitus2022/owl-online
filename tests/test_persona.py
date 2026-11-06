@@ -119,3 +119,43 @@ def test_lore_rejects_a_duplicate_id(tmp_path):
     )
     with pytest.raises(ValueError, match="duplicate id"):
         load_lore(path)
+
+
+def test_lore_rejects_an_invalid_id(tmp_path):
+    path = tmp_path / "lore.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "id": "Bad ID",
+                "subject": "dada",
+                "tier": "product",
+                "title": "Bad",
+                "body": "Bad.",
+                "source": "test",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="id must be"):
+        load_lore(path)
+
+
+def test_lore_rejects_an_empty_body(tmp_path):
+    path = tmp_path / "lore.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "id": "empty-001",
+                "subject": "dada",
+                "tier": "product",
+                "title": "Empty",
+                "body": "   ",
+                "source": "test",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="empty body"):
+        load_lore(path)

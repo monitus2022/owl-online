@@ -105,3 +105,33 @@ async def test_no_persona_suffix_keeps_the_plain_prompt():
     llm = _Llm()
     await ask("Who trims the wick?", retriever=_Retriever(), llm=llm)
     assert "Professor Crane" not in llm.systems[0]
+
+
+def test_book_questions_do_not_steal_the_meta_route():
+    from app.agent.router import classify
+
+    assert classify("What school did Harry attend?", persona=True) == "answer"
+    assert classify("How did Tonks become an Auror?", persona=True) == "answer"
+
+
+def test_meta_topics_cover_greeting_syllabus_and_grading():
+    from app.agent.router import classify
+
+    assert classify("Hello", persona=True) == "meta"
+    assert classify("What is the syllabus?", persona=True) == "meta"
+    assert classify("How is the exam graded?", persona=True) == "meta"
+
+
+async def test_an_uncited_draft_still_abstains_with_the_persona_suffix():
+    class _UncitedLlm(_Llm):
+        async def generate(self, system: str, prompt: str, *, context=None) -> str:
+            return "A confident answer with no citation."
+
+    result = await ask(
+        "Who trims the wick?",
+        retriever=_Retriever(),
+        llm=_UncitedLlm(),
+        persona_suffix=PERSONA.answer_suffix(),
+    )
+    assert result.abstained
+    assert result.abstain_reason == "uncited"

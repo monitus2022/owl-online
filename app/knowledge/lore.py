@@ -11,8 +11,10 @@ Each entry carries a canonicity tier:
 - `product`: authored product canon, reviewed by a human;
 - `secondary`: a secondary reference used only for authoring.
 
-Runtime answers cite book chunks as `[b1-c01-0000]` and lore entries as
-`[lore:school-001]`. The two id spaces never overlap.
+The next ticket wires lore into the answer path. When it lands, answers will
+cite book chunks as `[b1-c01-0000]` and lore entries as `[lore:school-001]`; the
+two id spaces never overlap. Until then the schema, loader and fixture are in
+place, and the answer path stays book-only.
 """
 
 from __future__ import annotations
@@ -160,17 +162,26 @@ def load_lore(path: Path) -> LoreStore:
         body = str(_require(row, "body", line_number)).strip()
         if not body:
             raise ValueError(f"lore line {line_number}: empty body")
+        subject = str(_require(row, "subject", line_number)).strip()
+        if not subject:
+            raise ValueError(f"lore line {line_number}: empty subject")
+        title = str(_require(row, "title", line_number)).strip()
+        if not title:
+            raise ValueError(f"lore line {line_number}: empty title")
+        source = str(_require(row, "source", line_number)).strip()
+        if not source:
+            raise ValueError(f"lore line {line_number}: empty source")
         tags = row.get("tags", [])
         if not isinstance(tags, list) or any(not isinstance(tag, str) for tag in tags):
             raise ValueError(f"lore line {line_number}: tags must be a list of strings")
         entries.append(
             LoreEntry(
                 id=entry_id,
-                subject=str(_require(row, "subject", line_number)),
+                subject=subject,
                 tier=tier,
-                title=str(_require(row, "title", line_number)).strip(),
+                title=title,
                 body=body,
-                source=str(_require(row, "source", line_number)).strip(),
+                source=source,
                 tags=tuple(tag.strip() for tag in tags),
             )
         )

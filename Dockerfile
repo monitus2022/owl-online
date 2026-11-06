@@ -19,6 +19,9 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-default-groups --no-cache
 
 COPY app ./app
+# The persona card is loaded at import time, so it must be in the image even
+# when OWL_PERSONA is off.
+COPY config ./config
 
 ENV PATH="/app/.venv/bin:$PATH" \
     OWL_CHUNKS_PATH=/data/chunks.jsonl \

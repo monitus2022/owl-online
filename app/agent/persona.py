@@ -16,11 +16,15 @@ META_TOPICS = (
     "identity",
     "scope",
     "exam",
+    "syllabus",
+    "grading",
     "school",
     "professor",
     "auror",
     "boundaries",
+    "greeting",
 )
+REQUIRED_BOUNDARIES = ("facts", "advice", "canon", "exam")
 
 
 @dataclass(frozen=True)
@@ -48,12 +52,12 @@ class Persona:
         """
         return (
             f"You are {self.address}, a {self.role}. "
-            f"Speak in a {self.tone} register. "
+            f"Speak in this register: {self.tone}. "
             f"{self.stance}. {self.pacing}. "
             "Use every name, place and title exactly as it appears in the "
             "excerpts; never rename or relocate it. "
             "Keep the citation and abstention rules above exactly. "
-            f"{self.boundaries['facts']}"
+            f"{self.boundaries['facts']} {self.boundaries['advice']}"
         )
 
     def meta_response(self, topic: str) -> str | None:
@@ -81,18 +85,36 @@ def load_persona(path: Path = PERSONA_PATH) -> Persona:
     missing = [topic for topic in META_TOPICS if topic not in meta]
     if missing:
         raise ValueError(f"persona card is missing meta topics: {missing}")
+    missing_boundaries = [key for key in REQUIRED_BOUNDARIES if key not in boundaries]
+    if missing_boundaries:
+        raise ValueError(
+            f"persona card is missing boundaries: {missing_boundaries}"
+        )
+
+    def text(section: dict[str, object], key: str, where: str) -> str:
+        value = str(section[key]).strip()
+        if not value:
+            raise ValueError(f"persona card has an empty {where}.{key}")
+        return value
+
+    meta_values = {
+        topic: text(meta, topic, "meta") for topic in META_TOPICS
+    }
     return Persona(
-        name=str(identity["name"]),
-        address=str(identity["address"]),
-        role=str(identity["role"]),
-        school=str(identity["school"]),
-        subject=str(identity["subject"]),
-        tone=str(register["tone"]),
-        pacing=str(register["pacing"]),
-        stance=str(register["stance"]),
-        boundaries={str(key): str(value) for key, value in boundaries.items()},
-        meta={str(key): str(value) for key, value in meta.items()},
-        personal=str(personal["response"]),
+        name=text(identity, "name", "identity"),
+        address=text(identity, "address", "identity"),
+        role=text(identity, "role", "identity"),
+        school=text(identity, "school", "identity"),
+        subject=text(identity, "subject", "identity"),
+        tone=text(register, "tone", "register"),
+        pacing=text(register, "pacing", "register"),
+        stance=text(register, "stance", "register"),
+        boundaries={
+            str(key): text(boundaries, str(key), "boundaries")
+            for key in REQUIRED_BOUNDARIES
+        },
+        meta=meta_values,
+        personal=text(personal, "response", "personal"),
     )
 
 

@@ -528,9 +528,10 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-Next work: #16 CI gate and #97 persona, in parallel. The #105 multi-book spike
-and #113 ingest fix follow in Next. #96 and #106 are closed. #107 is deferred and
-likely superseded by the per-book path.
+Next work: #97's thin professor slice. #16 is merged; the required-check
+setting is the last step. The #105 multi-book spike and #113 ingest fix follow in
+Next. #96 and #106 are closed. #107 is deferred and likely superseded by the
+per-book path.
 
 ## Decisions
 

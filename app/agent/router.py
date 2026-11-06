@@ -1,4 +1,4 @@
-"""Deterministic chat-intent router: answer | practice | feedback.
+"""Deterministic chat-intent router: answer | practice | feedback | meta | personal.
 
 These are chat intents, not product modes. Practice is an ephemeral, grounded
 question or two. Feedback is formative and provisional. The formal exam bank is
@@ -60,8 +60,19 @@ _META_CUES: dict[str, re.Pattern[str]] = {
         r"how is the exam (?:graded|marked)|grading scale)\b",
         re.IGNORECASE,
     ),
+    "syllabus": re.compile(
+        r"\b(what is the syllabus|course outline|what will we cover|"
+        r"what does the course cover)\b",
+        re.IGNORECASE,
+    ),
+    "grading": re.compile(
+        r"\b(how (?:is|are) (?:the exam|the paper|answers?) (?:graded|marked)|"
+        r"grading scale)\b",
+        re.IGNORECASE,
+    ),
     "school": re.compile(
-        r"\b(what school|where is (?:this|the) school|tell me about the school)\b",
+        r"\b(what school (?:do you|is this)|where is (?:this|the) school|"
+        r"tell me about the school)\b",
         re.IGNORECASE,
     ),
     "professor": re.compile(
@@ -70,12 +81,22 @@ _META_CUES: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "auror": re.compile(
-        r"\b(how do i become an auror|auror requirements?|become an auror)\b",
+        r"\b(how do i become an auror|what (?:are|do) (?:the )?auror "
+        r"requirements?|auror requirements?)\b",
+        re.IGNORECASE,
+    ),
+    "boundaries": re.compile(
+        r"\b(what can you (?:help|do)|what do you cover|can you help with)\b",
+        re.IGNORECASE,
+    ),
+    # Last: "Hello, who are you?" should answer the identity, not the greeting.
+    "greeting": re.compile(
+        r"^\s*(hi|hello|hey|good (?:morning|afternoon|evening))\b",
         re.IGNORECASE,
     ),
 }
 _PERSONAL = re.compile(
-    r"\b(i feel|i am (?:stressed|worried|anxious|sad|tired)|i failed|"
+    r"\b(i feel|i(?:'m| am) (?:stressed|worried|anxious|sad|tired)|i failed|"
     r"can i talk to you|my (?:day|life|family))\b",
     re.IGNORECASE,
 )

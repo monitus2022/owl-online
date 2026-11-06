@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: V1 shipped. The V2 chat foundation is delivered: guardrails, LangGraph chat, cost controls, the local eval gate and the deterministic PR CI gate (#16). The retrieval foundation (#96) and the held-out set (#106) are complete. The multi-book answer path (#105) is merged but flag-off; it is a time-boxed spike. Current focus is the thin meta-only professor path (#97) and the required-check setting. V2.5 is the exam bank with hybrid grading. Grounded RAG is live at https://api.monitus.org. See [`docs/workplan.md`](docs/workplan.md) and the milestones.
+> Status: V1 shipped. The V2 chat foundation is delivered: guardrails, LangGraph chat, cost controls, the local eval gate and the deterministic PR CI gate (#16). The retrieval foundation (#96) and the held-out set (#106) are complete. The multi-book answer path (#105) is merged but flag-off; it is a time-boxed spike. Current focus is the thin professor slice (#97) and the required-check setting. V2.5 is the exam bank with hybrid grading. Grounded RAG is live at https://api.monitus.org. See [`docs/workplan.md`](docs/workplan.md) and the milestones.
 
 ---
 
