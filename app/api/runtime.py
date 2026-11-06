@@ -3,15 +3,19 @@
 The API receives wired contracts and never builds a provider per request.
 """
 
+import logging
 from dataclasses import dataclass
 
 from langgraph.graph.state import CompiledStateGraph
 
 from app.agent import build_graph
+from app.agent.persona import PERSONA
 from app.config import Settings
 from app.pipeline.retrieve import compose_retriever
 from app.providers.contracts import Llm, Retriever
 from app.providers.factory import make_embedder, make_llm, make_reranker
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -50,6 +54,11 @@ async def build_runtime(settings: Settings) -> Runtime:
         min_score=settings.rerank_min_score,
         subquery_quota=settings.subquery_quota,
     )
+    if settings.multi_book and settings.persona:
+        logger.warning(
+            "OWL_MULTI_BOOK and OWL_PERSONA are both on; the multi-book path "
+            "ignores the persona suffix"
+        )
     llm = make_llm(settings.provider)
     small_llm = (
         make_llm(settings.small_provider, model=settings.small_model)
@@ -65,6 +74,7 @@ async def build_runtime(settings: Settings) -> Runtime:
             llm,
             max_retries=settings.retry_budget,
             multi_book=settings.multi_book,
+            persona=PERSONA if settings.persona else None,
             small_llm=small_llm,
         ),
         small_llm=small_llm,

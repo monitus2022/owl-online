@@ -2,6 +2,7 @@
 
 from langgraph.config import get_stream_writer
 
+from app.agent.persona import Persona
 from app.agent.state import AgentState
 from app.pipeline.generate import DEFAULT_MAX_RETRIES, ask
 from app.providers.contracts import Llm, Retriever
@@ -16,6 +17,7 @@ async def answer_node(
     min_score: float | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
     multi_book: bool = False,
+    persona: Persona | None = None,
 ) -> dict[str, object]:
     writer = get_stream_writer()
 
@@ -35,6 +37,7 @@ async def answer_node(
         on_reset=reset,
         max_retries=max_retries,
         multi_book=multi_book,
+        persona_suffix=persona.answer_suffix() if persona is not None else None,
     )
     return {
         "chunks": result.chunks,

@@ -184,6 +184,7 @@ async def ask(
     on_stage: StageSink | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
     multi_book: bool = False,
+    persona_suffix: str | None = None,
 ) -> AskResult:
     """Answer from the corpus, citing chunk ids, or abstain on weak retrieval.
 
@@ -196,7 +197,16 @@ async def ask(
     on_reset runs once before a retry so the client can discard the rejected
     draft. The grounding check still runs on the complete answer, so a streamed
     draft can still end in abstention.
+
+    `persona_suffix` adds a reviewed tone instruction after the grounding rules.
+    It never replaces them: the suffix is appended, so citations and abstention
+    still apply.
     """
+    system = SYSTEM_PROMPT
+    retry_system = RETRY_SYSTEM_PROMPT
+    if persona_suffix:
+        system = f"{SYSTEM_PROMPT}\n\n{persona_suffix}"
+        retry_system = f"{RETRY_SYSTEM_PROMPT}\n\n{persona_suffix}"
     tracer = current_tracer()
     floor = retrieval_floor(retriever, min_score)
     decision = classify_retrieval_strategy(question)
@@ -286,15 +296,15 @@ async def ask(
     retry_reason: str | None = None
     while True:
         attempt += 1
-        system = SYSTEM_PROMPT if attempt == 1 else RETRY_SYSTEM_PROMPT
+        prompt_system = system if attempt == 1 else retry_system
         generate_span = tracer.start("generate") if tracer else None
-        draft = await _one_draft(system, prompt, llm, on_token)
+        draft = await _one_draft(prompt_system, prompt, llm, on_token)
         if tracer is not None and generate_span is not None:
             tracer.finish(
                 generate_span,
                 attempt=attempt,
                 model=getattr(llm, "name", "?"),
-                **prompt_fingerprint(system, prompt),
+                **prompt_fingerprint(prompt_system, prompt),
             )
         result = ground_answer(draft, chunks)
         verdict = verify_draft(draft, result)

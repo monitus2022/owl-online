@@ -425,3 +425,27 @@ def test_deadline_logs_the_in_flight_stage(caplog):
     with TestClient(app) as client:
         client.post("/ask", json={"question": "Who trims the wick?"})
     assert "deadline exceeded in generate" in caplog.text
+
+
+def test_ask_stream_routes_meta_to_the_scripted_reply():
+    from app.agent.persona import PERSONA
+
+    app = create_app(
+        app_settings=Settings(persona=True),
+        runtime=Runtime(retriever=_Retriever(), llm=_Llm()),
+    )
+    with TestClient(app) as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who are you?"}
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    modes = [data for name, data in events if name == "mode"]
+    finals = [data for name, data in events if name == "final"]
+    tokens = [data for name, data in events if name == "token"]
+    assert modes[0]["mode"] == "meta"
+    assert finals[0]["answer"] == PERSONA.meta_response("identity")
+    assert finals[0]["citations"] == []
+    assert tokens == []
+    assert len(app.state.cache) == 0
+    assert app.state.limiter.tokens_used == 0

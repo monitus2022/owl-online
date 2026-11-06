@@ -1,4 +1,4 @@
-"""Compiled LangGraph chat graph: router -> answer | practice | feedback."""
+"""Compiled LangGraph chat graph: router -> answer | practice | feedback | meta | personal."""
 
 from functools import partial
 
@@ -7,7 +7,9 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.agent.nodes.answer import answer_node
 from app.agent.nodes.feedback import feedback_node
+from app.agent.nodes.persona import meta_node, personal_node
 from app.agent.nodes.practice import practice_node
+from app.agent.persona import PERSONA, Persona
 from app.agent.router import route
 from app.agent.state import AgentState
 from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K
@@ -22,11 +24,12 @@ def build_graph(
     min_score: float | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
     multi_book: bool = False,
+    persona: Persona | None = None,
     small_llm: Llm | None = None,
 ) -> CompiledStateGraph:
     """Build the stateless per-request graph; no checkpointer in D4."""
     graph = StateGraph(AgentState)
-    graph.add_node("router", route)
+    graph.add_node("router", partial(route, persona=persona is not None))
 
     # Only the answer path verifies and retries; practice and feedback stay
     # single-pass and ephemeral.
@@ -40,9 +43,16 @@ def build_graph(
             min_score=min_score,
             max_retries=max_retries,
             multi_book=multi_book,
+            persona=persona,
         ),
     )
     graph.add_edge("answer", END)
+
+    active_persona = persona or PERSONA
+    graph.add_node("meta", partial(meta_node, persona=active_persona))
+    graph.add_node("personal", partial(personal_node, persona=active_persona))
+    graph.add_edge("meta", END)
+    graph.add_edge("personal", END)
 
     for name, node in (
         ("practice", practice_node),
@@ -65,6 +75,12 @@ def build_graph(
     graph.add_conditional_edges(
         "router",
         lambda state: state["mode"],
-        {"answer": "answer", "practice": "practice", "feedback": "feedback"},
+        {
+            "answer": "answer",
+            "practice": "practice",
+            "feedback": "feedback",
+            "meta": "meta",
+            "personal": "personal",
+        },
     )
     return graph.compile()

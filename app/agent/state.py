@@ -4,7 +4,7 @@ from typing import Literal, TypedDict
 
 from app.schemas import Chunk
 
-Mode = Literal["answer", "practice", "feedback"]
+Mode = Literal["answer", "practice", "feedback", "meta", "personal"]
 RequestedMode = Literal["auto", "answer", "practice", "feedback"]
 
 
@@ -14,6 +14,7 @@ class AgentState(TypedDict, total=False):
     student_answer: str | None
     top_k: int
     mode: Mode
+    meta_topic: str | None
     chunks: list[Chunk]
     answer: str
     citations: list[str]

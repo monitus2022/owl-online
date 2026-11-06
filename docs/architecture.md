@@ -12,8 +12,8 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | Layer | Path | Responsibility |
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
-| Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback nodes |
-| Knowledge | `app/knowledge/` | planned subject taxonomy, material packs, source refs and pack validation |
+| Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal nodes |
+| Knowledge | `app/knowledge/` | lore pack schema and loader; planned subject taxonomy, material packs, source refs and pack validation |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -28,7 +28,7 @@ Pipeline stages, in order:
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
 | Generate | `app/pipeline/generate/` | `ask`, `build_prompt`, `ground_answer`, `verify_draft` |
-| Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node` |
+| Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node` |
 
 Planned exam-bank stages, not built yet:
 
@@ -169,7 +169,6 @@ imported only inside `app/providers` and the index builder, never by the API or 
 flowchart TD
   main[app/main.py] --> api[app/api]
   main --> agent[app/agent]
-  main --> knowledge[app/knowledge]
   main --> pipeline[app/pipeline]
   main --> providers[app/providers]
   main --> config[app/config.py]
@@ -204,7 +203,7 @@ sequenceDiagram
   API->>API: cache.get (hit -> return)
   API->>API: session cookie, limiter.admit (429 / 503)
   API->>R: get_retriever / get_llm
-  API->>A: ask(question, retriever, llm)
+  API->>A: ask(question, retriever, llm, persona_suffix)
   A->>RET: retrieve(question, top_k)
   RET->>RET: classify single-hop vs multi-book from coverage cues
   RET->>RET: parse book/chapter reference
@@ -306,7 +305,7 @@ sequenceDiagram
   API->>API: cache.get when the intent is answer
   API->>API: limiter.admit (429 / 503)
   API->>G: astream(state)
-  G->>G: router -> answer | practice | feedback
+  G->>G: router -> answer | practice | feedback | meta | personal
   G-->>API: mode update
   API-->>C: event: mode
   G->>R: retrieve(question, top_k)
@@ -342,7 +341,9 @@ SSE events:
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
 deterministic: an explicit mode wins, a supplied student answer is a feedback
 request, a practice request is a question or short set of questions, and
-everything else is answer. Tokens are a draft. Citation validation runs on the
+everything else is answer. When `OWL_PERSONA` is on, narrow meta and personal
+cues route to scripted replies before the answer path. Meta and personal skip
+retrieval and the model, so they stream no tokens. Tokens are a draft. Citation validation runs on the
 complete answer, so an ungrounded stream emits `reset` before the authoritative
 `final` event. A failed deterministic verification emits `reset` and streams one
 retry when the budget allows; the client drops the rejected draft on the same
@@ -390,14 +391,44 @@ excerpts.
 
 ## Chat intents vs exam bank
 
-The chat graph is the online surface. Its three intents are intentionally
-lightweight:
+The chat graph is the online surface. Its three core intents are intentionally
+lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 
 | Intent | Trigger | Output | Persisted | Authoritative |
 |---|---|---|---|---|
 | `answer` | a question about the books | grounded explanation with citations | no | no |
 | `practice` | "give me a practice question on ..." | one or two grounded questions, streamed | no | no |
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
+| `meta` | persona on; identity, subject scope, exam format, syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
+| `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
+
+## Persona layer
+
+`OWL_PERSONA` (default false) adds the reviewed professor card in
+`config/persona.toml` to the answer prompt and enables the two scripted intents.
+The card is the source of truth; `docs/persona.md` is the human copy.
+
+The answer path appends `Persona.answer_suffix()` after the grounding rules, so
+citations and abstention still apply. The persona never adds facts. Scripted
+meta and personal replies are not generated, so the professor cannot invent a
+date, a rule or a fact while introducing himself.
+
+The persona is DADA-only. Other subjects are deferred. The card and the doc
+change together; `tests/test_persona.py` asserts every meta topic exists.
+
+The suffix applies to the single-pass answer path. `OWL_MULTI_BOOK` and
+`OWL_PERSONA` together are unsupported until the multi-book path lands; the
+multi-book branch ignores the suffix, and `create_app` logs a warning when both
+flags are on.
+
+The non-stream `/ask` endpoint is the grounded answer API. Meta and personal are
+chat intents on `/ask/stream`; `/ask` does not route them.
+
+`app/knowledge/lore.py` holds authored setting facts with a canonicity tier
+(`book`, `product`, `secondary`). It is raw JSONL selected by subject and
+keyword, not embedded, so a setting edit is a text edit plus a reload. The thin
+slice uses `eval/fixtures/lore.jsonl`; the real pack stays out of git.
+Lore-grounded answers and `[lore:<id>]` citations are the next ticket.
 
 The exam bank is a separate, offline surface. It is not a chat intent and it does
 not run inside `/ask` or `/ask/stream`. Generation and lesson mode read from
@@ -513,9 +544,10 @@ restart resets the windows; auth later moves them to a user id.
 
 Corpus-only answers pass through an in-process exact cache keyed by prompt
 version, index text hash, retrieval settings, embedder and reranker config,
-model and normalised question. Practice and feedback never
-read or write it: feedback is personalised by the student answer and practice is
-meant to vary. Usage is logged for each processed request, cache hits included; a
+model, normalised question, the persona flag and a hash of the persona suffix.
+Practice, feedback, meta and personal never read or write it: feedback is
+personalised by the student answer, practice is meant to vary, and meta/personal
+are scripted. Usage is logged for each processed request, cache hits included; a
 429, 502, 503 or 504 does not produce a line. The line carries estimated
 input/output tokens,
 model, intent, cache hit, cost and latency; a client that disconnects before the
@@ -540,10 +572,12 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
+| `Persona` | `app/agent/persona.py` | dataclass | reviewed identity, register, boundaries, scripted meta and personal replies |
+| `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
 | `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
