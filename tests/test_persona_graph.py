@@ -162,3 +162,12 @@ async def test_persona_abstention_uses_the_in_world_line():
     )
     assert state["abstained"] is True
     assert state["answer"] == PERSONA.abstain_response()
+    assert state["citations"] == []
+    assert state["abstain_reason"] == "no_evidence"
+
+
+def test_grading_cue_is_reachable():
+    from app.agent.router import meta_topic
+
+    assert meta_topic("How is the exam graded?") == "grading"
+    assert meta_topic("What is the exam format?") == "exam"

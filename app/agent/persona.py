@@ -48,8 +48,9 @@ class Persona:
         """The tone instruction appended to a grounded answer prompt.
 
         Deliberately omits the school and the lore: the answer prompt carries
-        tone only. Naming the school here invites the model to substitute it for
-        a place in the excerpts, which is a grounding error.
+        tone, the facts and advice boundaries, and the Ashcombe exam boundary.
+        Naming the school here invites the model to substitute it for a place in
+        the excerpts, which is a grounding error.
         """
         return (
             f"You are {self.address}, a {self.role}. "

@@ -449,3 +449,17 @@ def test_ask_stream_routes_meta_to_the_scripted_reply():
     assert tokens == []
     assert len(app.state.cache) == 0
     assert app.state.limiter.tokens_used == 0
+
+
+def test_ask_persona_abstention_uses_the_in_world_line():
+    from app.agent.persona import PERSONA
+
+    app = create_app(
+        app_settings=Settings(persona=True),
+        runtime=Runtime(retriever=_WeakRetriever(), llm=_Llm()),
+    )
+    with TestClient(app) as client:
+        response = client.post("/ask", json={"question": "Who trims the wick?"})
+    body = response.json()
+    assert body["abstained"] is True
+    assert body["answer"] == PERSONA.abstain_response()

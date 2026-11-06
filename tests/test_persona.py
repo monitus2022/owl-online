@@ -38,7 +38,7 @@ def test_answer_suffix_keeps_the_grounding_rules():
     assert "exactly as it appears" in suffix
     assert "Ashcombe" not in suffix
     assert "lore" not in suffix.casefold()
-    assert "Do not disclose the examination format" in suffix
+    assert "Do not disclose the school examination format" in suffix
 
 
 def test_exam_syllabus_and_grading_do_not_disclose_format():
@@ -272,4 +272,40 @@ def test_lore_rejects_markdown_with_an_empty_body(tmp_path):
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match="empty body"):
+        load_lore(directory)
+
+
+def test_lore_rejects_unterminated_markdown_front_matter(tmp_path):
+    directory = tmp_path / "lore"
+    directory.mkdir()
+    (directory / "bad.md").write_text("+++\nid = \"x-001\"\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="unterminated TOML front matter"):
+        load_lore(directory)
+
+
+def test_lore_rejects_invalid_markdown_toml(tmp_path):
+    directory = tmp_path / "lore"
+    directory.mkdir()
+    (directory / "bad.md").write_text(
+        "+++\nid = \n+++\n\nBody.\n", encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="invalid TOML front matter"):
+        load_lore(directory)
+
+
+def test_lore_rejects_a_front_matter_body_key(tmp_path):
+    directory = tmp_path / "lore"
+    directory.mkdir()
+    (directory / "bad.md").write_text(
+        "+++\n"
+        'id = "x-001"\n'
+        'subject = "dada"\n'
+        'tier = "product"\n'
+        'title = "X"\n'
+        'source = "test"\n'
+        'body = "front matter"\n'
+        "+++\n\nBody.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="must not set body"):
         load_lore(directory)

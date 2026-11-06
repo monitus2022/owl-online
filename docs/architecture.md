@@ -416,13 +416,17 @@ date, a rule or a fact while introducing himself. When a grounded answer
 abstains, the persona-on path replaces only the user-facing line with the card's
 in-world refusal; the `abstained` flag and empty citations are unchanged.
 
-The persona is DADA-only. Other subjects are deferred. The card and the doc
-change together; `tests/test_persona.py` asserts every meta topic exists.
+The persona is DADA-only. The lore pack already carries the five founders and
+departments, but the chatbot speaks only for Defense; other subject personas are
+deferred. The card and the doc change together; `tests/test_persona.py` asserts
+every meta topic exists.
 
 The suffix applies to the single-pass answer path. `OWL_MULTI_BOOK` and
 `OWL_PERSONA` together are unsupported until the multi-book path lands; the
 multi-book branch ignores the suffix, and `create_app` logs a warning when both
-flags are on.
+flags are on. The persona's exam boundary is qualified to the school
+examination, so a question about a book exam, such as an O.W.L., is still
+answerable from the excerpts.
 
 The non-stream `/ask` endpoint is the grounded answer API. Meta and personal are
 chat intents on `/ask/stream`; `/ask` does not route them.
@@ -580,7 +584,7 @@ generate) for the per-call detail.
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
-| `Persona` | `app/agent/persona.py` | dataclass | reviewed identity, register, boundaries, scripted meta and personal replies |
+| `Persona` | `app/agent/persona.py` | dataclass | reviewed identity, register, boundaries, scripted meta and personal replies, in-world abstention |
 | `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
 | `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |

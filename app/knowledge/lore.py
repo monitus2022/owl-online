@@ -159,7 +159,12 @@ def _read_jsonl(path: Path) -> list[tuple[str, dict]]:
     ):
         if not line.strip():
             continue
-        row = json.loads(line)
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise ValueError(
+                f"lore line {line_number}: invalid JSON: {error}"
+            ) from error
         if not isinstance(row, dict):
             raise ValueError(f"lore line {line_number}: expected a JSON object")
         rows.append((f"lore line {line_number}", row))
