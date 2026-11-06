@@ -201,6 +201,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 str(app_settings.rerank_pool),
                 str(app_settings.rerank_min_score),
                 str(app_settings.retry_budget),
+                str(app_settings.multi_book),
                 model,
             ]
         )

@@ -154,9 +154,11 @@ label, reason and cues are emitted in the trace and carried on
 `RetrievalTrace`. `app/pipeline/retrieve/multibook.py` implements the retrieval
 half of that path: one filtered pass per book, capped at seven calls with a
 fan-out of four, then merge, dedupe and score order. The path is measured with
-`scripts/measure_aggregation.py --strategy routed`, but it is not wired into
-`ask()` yet, so chat behavior is unchanged. Extraction, synthesis and the
-coverage statement remain for #105.
+`scripts/measure_aggregation.py --strategy routed`. With
+`OWL_MULTI_BOOK=true`, `ask()` delegates a `multi_book` question to
+`app/pipeline/generate/multibook.py`: per-book retrieval, one extraction per
+book, merge, one synthesis and a deterministic coverage statement. The flag is
+off by default, so the default chat path is unchanged.
 
 ## Module dependencies
 
@@ -250,6 +252,29 @@ retried, so abstention keeps its meaning. A paraphrase refusal is final when it
 cites nothing, trails into a further refusal, or has nothing but the refusal
 clause; a cited partial answer that moves on to a new or contrastive clause is
 kept. The retry budget is `OWL_RETRY_BUDGET` (default 1, so at most two drafts).
+
+## Multi-book answer path
+
+This path is flag-gated and runs only when the router says `multi_book`.
+
+```mermaid
+sequenceDiagram
+  participant A as ask()
+  participant R as HybridRetriever
+  participant LLM as Llm
+  A->>R: retrieve_book(question, book, 15) x7, fan-out 4
+  R-->>A: up to 15 candidates per book
+  A->>LLM: extract cited lines per book, fan-out 4
+  LLM-->>A: bullet lines with chunk ids, or NO_EVIDENCE
+  A->>A: merge, dedupe, coverage set
+  A->>LLM: one synthesis over the extracts
+  LLM-->>A: cited answer
+  A->>A: validate citations, append coverage statement
+```
+
+Caps: seven retrieval calls, seven extraction calls, fan-out four, up to 15 candidates per book, one synthesis.
+If no book yields a cited extract, the path abstains. The coverage statement is
+deterministic and names the books with and without evidence.
 
 ## Request flow: POST /ask/stream
 

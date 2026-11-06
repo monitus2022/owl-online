@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     # Per-retrieval-leg candidate quota for decomposed questions (sub-queries
     # plus the original question). 0 keeps the original global fusion.
     subquery_quota: int = Field(default=0, ge=0)
+    # Experimental multi-book answer path: per-book extraction, merge, one
+    # synthesis and a coverage statement. Off keeps the single-pass answer.
+    multi_book: bool = False
 
     # Deadline for one /ask request (retrieve plus generate). /ask/stream is not
     # bounded because a legitimate stream can outlive it.

@@ -12,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from typing import Literal
 
+from app.config import settings
 from app.pipeline.generate.verify import verify_draft
 from app.pipeline.retrieve.retriever import DEFAULT_RRF_K, QUERY_CANDIDATES
 from app.pipeline.retrieve.strategy import classify_retrieval_strategy
@@ -202,6 +203,19 @@ async def ask(
             strategy=decision.name,
             reason=decision.reason,
             cues=list(decision.cues),
+        )
+    if settings.multi_book and decision.is_multi_book and hasattr(
+        retriever, "retrieve_book"
+    ):
+        from app.pipeline.generate.multibook import ask_multi_book
+
+        return await ask_multi_book(
+            question,
+            retriever=retriever,
+            llm=llm,
+            top_k=max(top_k, 7),
+            on_token=on_token,
+            on_stage=on_stage,
         )
     if on_stage is not None:
         on_stage("retrieve")
