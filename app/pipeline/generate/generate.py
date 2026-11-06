@@ -242,6 +242,9 @@ async def ask(
     on_stage: StageSink | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
     multi_book: bool = False,
+    multi_book_per_book_k: int | None = None,
+    multi_book_selection: str | None = None,
+    multi_book_selection_floor: float | None = None,
     persona_suffix: str | None = None,
     lore: LoreStore | None = None,
     subject: str = "dada",
@@ -261,6 +264,11 @@ async def ask(
     `persona_suffix` adds a reviewed tone instruction after the grounding rules.
     It never replaces them: the suffix is appended, so citations and abstention
     still apply.
+
+    `multi_book_per_book_k`, `multi_book_selection` and
+    `multi_book_selection_floor` tune the multi-book extraction path. Their
+    defaults are the shipped per-book path; the experimental strategies are for
+    measurement only.
     """
     tracer = current_tracer()
     floor = retrieval_floor(retriever, min_score)
@@ -275,6 +283,9 @@ async def ask(
     if multi_book and decision.is_multi_book and hasattr(retriever, "retrieve_book"):
         from app.pipeline.generate.multibook import (
             DEFAULT_FINAL_TOP_K,
+            DEFAULT_SELECTION,
+            DEFAULT_SELECTION_FLOOR,
+            PER_BOOK_K,
             ask_multi_book,
         )
 
@@ -289,6 +300,21 @@ async def ask(
             llm=llm,
             top_k=DEFAULT_FINAL_TOP_K,
             books=books,
+            per_book_k=(
+                PER_BOOK_K
+                if multi_book_per_book_k is None
+                else multi_book_per_book_k
+            ),
+            selection=(
+                DEFAULT_SELECTION
+                if multi_book_selection is None
+                else multi_book_selection
+            ),
+            selection_floor=(
+                DEFAULT_SELECTION_FLOOR
+                if multi_book_selection_floor is None
+                else multi_book_selection_floor
+            ),
             on_token=on_token,
             on_stage=on_stage,
         )

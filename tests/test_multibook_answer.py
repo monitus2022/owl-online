@@ -6,11 +6,13 @@ import pytest
 
 from app.pipeline.generate import generate as generate_module
 from app.pipeline.generate.multibook import (
+    MULTI_BOOK_BATCH_EXTRACT_SYSTEM,
     MULTI_BOOK_EXTRACT_SYSTEM,
     MULTI_BOOK_SYSTEM,
     BookExtract,
     _cap_evidence,
     _line_supported,
+    _parse_batched_extract,
     ask_multi_book,
     coverage_statement,
 )
@@ -52,13 +54,25 @@ class _Llm:
 
     def __init__(self, no_evidence: bool = False) -> None:
         self.no_evidence = no_evidence
+        self.calls = 0
 
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        self.calls += 1
         if system == MULTI_BOOK_EXTRACT_SYSTEM:
             if self.no_evidence:
                 return "NO_EVIDENCE"
             match = re.search(r"\[(b\d+-c\d+-\d+)\] (.+)", prompt)
             return f"- {match.group(2).strip()} [{match.group(1)}]"
+        if system == MULTI_BOOK_BATCH_EXTRACT_SYSTEM:
+            if self.no_evidence:
+                return "NO_EVIDENCE"
+            lines = [
+                f"- Book {book}: {text.strip()} [{cid}]"
+                for book, cid, text in re.findall(
+                    r"Book (\d+):\n\[(b\d+-c\d+-\d+)\] (.+)", prompt
+                )
+            ]
+            return "\n".join(lines)
         if system == MULTI_BOOK_SYSTEM:
             quotes = [
                 line[2:].strip()
@@ -130,6 +144,114 @@ async def test_multi_book_path_abstains_on_uncited_synthesis():
     )
     assert result.abstained
     assert result.abstain_reason == "uncited"
+
+
+async def test_top1_floor_keeps_books_above_the_floor():
+    result = await ask_multi_book(
+        "Who appears in each book?",
+        retriever=_Retriever(),
+        llm=_Llm(),
+        selection="top1_floor",
+        selection_floor=0.5,
+    )
+    assert not result.abstained
+    assert result.citations == [f"b{book}-c01-0000" for book in range(1, 8)]
+
+
+async def test_top1_floor_skips_a_book_below_the_floor():
+    class _LowScoreRetriever(_Retriever):
+        async def retrieve_book(self, query, book_num, top_k):
+            chunks = await super().retrieve_book(query, book_num, top_k)
+            if book_num == 3:
+                return [chunk.model_copy(update={"score": 0.1}) for chunk in chunks]
+            return chunks
+
+    result = await ask_multi_book(
+        "Who appears in each book?",
+        retriever=_LowScoreRetriever(),
+        llm=_Llm(),
+        selection="top1_floor",
+        selection_floor=0.5,
+    )
+    assert not result.abstained
+    assert "b3-c01-0000" not in result.citations
+    assert "book 3 had none" in result.answer
+
+
+async def test_batched_top3_uses_one_extraction_call():
+    llm = _Llm()
+    result = await ask_multi_book(
+        "Who appears in each book?",
+        retriever=_Retriever(),
+        llm=llm,
+        selection="batched_top3",
+    )
+    assert not result.abstained
+    assert result.citations == [f"b{book}-c01-0000" for book in range(1, 8)]
+    # One batched extraction plus one synthesis.
+    assert llm.calls == 2
+
+
+def test_batched_parser_caps_lines_before_collecting_chunks():
+    chunks = [
+        Chunk(
+            id=f"b1-c01-{index:04d}",
+            text=f"Quote number {index} is here.",
+            metadata=ChunkMetadata(
+                book_num=1,
+                chapter_num=1,
+                book_name="Book 1",
+                chapter_name="Chapter 1",
+            ),
+            score=1.0,
+        )
+        for index in range(5)
+    ]
+    response = "\n".join(
+        f"- Book 1: Quote number {index} is here. [b1-c01-{index:04d}]"
+        for index in range(5)
+    )
+    extracts = _parse_batched_extract(response, chunks)
+    assert len(extracts) == 1
+    assert len(extracts[0].lines) == 3
+    assert len(extracts[0].chunks) == 3
+
+
+async def test_unknown_selection_is_rejected():
+    with pytest.raises(ValueError, match="unknown multi-book selection"):
+        await ask_multi_book(
+            "Who appears in each book?",
+            retriever=_Retriever(),
+            llm=_Llm(),
+            selection="nope",
+        )
+
+
+async def test_ask_forwards_multibook_parameters(monkeypatch):
+    from app.pipeline.generate import multibook as multibook_module
+
+    captured: dict[str, object] = {}
+
+    async def fake_ask_multi_book(question, **kwargs):
+        captured.update(kwargs)
+        return generate_module.AskResult("ok [b1-c01-0000]", ["b1-c01-0000"])
+
+    monkeypatch.setattr(
+        multibook_module, "ask_multi_book", fake_ask_multi_book
+    )
+    result = await generate_module.ask(
+        "Who teaches in each book?",
+        retriever=_Retriever(),
+        llm=_Llm(),
+        multi_book=True,
+        multi_book_per_book_k=3,
+        multi_book_selection="top1_floor",
+        multi_book_selection_floor=0.5,
+    )
+    assert result.citations == ["b1-c01-0000"]
+    assert captured["per_book_k"] == 3
+    assert captured["selection"] == "top1_floor"
+    assert captured["selection_floor"] == 0.5
 
 
 def test_coverage_statement_all_partial_and_none():

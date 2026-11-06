@@ -23,11 +23,14 @@ page describes what comes next and why.
   is merged behind `OWL_MULTI_BOOK` but off: the held-out generation run gives
   coverage 0.84, citation validity 0.87 and faithfulness 0.79, so it fails two
   bars. Chat is still one-pass.
-- The #105 follow-up is a time-boxed spike: retrieval-only diagnostic, ingest
+- The #105 follow-up spike is complete: retrieval-only diagnostic, ingest
   trailing-pages fix (#113), one ablation, a frozen holdout-2 and one final run.
-  If it fails, the flag stays off and the work stops. #113 is complete: ingest
-  trims the next book's front matter, the corpus is re-ingested, the gold ids
-  resolve and the gate baseline is re-pinned to `20261106T214850Z`.
+  #113 is complete: ingest trims the next book's front matter, the corpus is
+  re-ingested, the gold ids resolve and the gate baseline is re-pinned to
+  `20261106T214850Z`. The final k=3 holdout passes coverage, completeness,
+  citation micro-average and latency, but faithfulness, the item-level citation
+  Wilson lower bound and the 3k token bar on the conservative total fail, so
+  `OWL_MULTI_BOOK` stays off and the work stops.
 - #97's thin slice is implemented behind `OWL_PERSONA`: persona card, DADA
   scope, scripted meta and personal replies, and the lore schema. The dev pack
   now has the five founders, the 1998/2008/2026 timeline and the Auror pathway.
@@ -35,7 +38,7 @@ page describes what comes next and why.
   citations, validated against the pack. The variant bank (#120) gives every
   scripted meta topic, the personal reply and the abstention line several
   reviewed phrasings. The real pack and the lore eval follow. The full persona
-  voice still follows #105.
+  voice still follows the real pack and a fixture-driven lore eval.
 - #16's deterministic CI gate is merged; the required-check setting is the last
   step. #74 and #75 follow. #107 is deferred.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
@@ -100,14 +103,15 @@ ends with one answer, practice question or feedback response.
 
 ## Phase A2: Multi-book answer path
 
-Status: time-boxed spike. The flag-off path is merged; the held-out generation
-run does not pass the gate, so `OWL_MULTI_BOOK` stays off. One cycle remains,
-then the work stops whether or not it passes.
+Status: time-boxed spike complete. The flag-off path is merged. The k=3
+configuration improved coverage and cost, but faithfulness, the item-level
+citation Wilson lower bound and the 3k token bar miss the pre-registered bars,
+so `OWL_MULTI_BOOK` stays off. There is no second cycle.
 
 | Ticket | Scope |
 |---|---|
 | #106 | Held-out multi-book set, written before tuning (complete) |
-| #105 | Per-book extraction, merge, one synthesis, coverage statement, flag wiring |
+| #105 | Per-book extraction, merge, one synthesis, coverage statement, flag wiring (complete, flag off) |
 | #113 | Ingest: drop trailing next-book front matter from the previous chapter (complete) |
 | #118 | Lore-grounded answers: `[lore:<id>]` citations and validation |
 
@@ -122,22 +126,39 @@ retrieved before #113. The 8-call fan-out also costs about 12x a single-pass
 answer, which caps the path at roughly 14 questions per day at the default token
 budget.
 
+The final k=3 run (`20261106T233126Z`) reached coverage 0.88, completeness 0.88,
+citation validity 0.93 on the 14 synthesis items, faithfulness 0.79, p95 22.9s
+and $0.0095. It passes coverage, completeness, the citation micro-average and
+latency. Faithfulness (Wilson lower 0.52), the item-level citation Wilson lower
+bound (0.60) and the 3k token bar (4.7k total / 3.8k input per multi-book item)
+fail, so the flag stays off.
+
 The bounded cycle, in order:
 
 1. Retrieval-only diagnostic on the current index: per-book hit@1/3/5/7/15 and
-   the score distribution, no generation tokens.
+   the score distribution, no generation tokens. Complete: hit@1 0.82, hit@3
+   0.95, hit@5 0.96, hit@7 0.98, hit@15 0.98; one miss (`agg08` book 4).
 2. Fix #113, re-index, audit the one gold id in a last chapter (`s07` to
    `b2-c18-0025`), re-run and re-pin the gate baseline. Complete: run
    `20261106T214850Z`, gate PASS.
 3. Ablate per-book k in {1, 3, 5} crossed with selection in {top-1 plus floor,
    batched top-3 call, per-book call}, plus k=15 per-book as a control. Develop
-   fixture only.
+   fixture only. Complete: k3-book had the best coverage and completeness
+   (0.83/0.79) and tied the best faithfulness (0.70); k1-batch was cheapest but
+   below the coverage bar; k15-book was the most expensive and not the best. The
+   final holdout run uses k3-book.
 4. Freeze holdout-2 at 20 items and pre-register the rule: coverage at least
    0.80, citation validity at least 18/20 with a Wilson lower bound of 0.80,
    faithfulness at least 0.88 with a lower bound of 0.70, at most 3k tokens per
-   item and p95 under 30s. Boundary results do not round.
+   item and p95 under 30s. Boundary results do not round. Complete: the fixture
+   was frozen before tuning. The citation bar is unsatisfiable at 95%: 18/20 is
+   about 0.70 and 20/20 about 0.84, so the faithfulness bar decides.
 5. One final run. If it passes, enable behind the flag with a canary. If not,
    keep the flag off, commit the negative record, and continue with #97 and #16.
+   Complete: run `20261106T233126Z` passes coverage, completeness, the citation
+   micro-average and latency, but faithfulness is 0.79 (Wilson lower 0.52), the
+   item-level citation Wilson lower bound is 0.60, and tokens per multi-book
+   item are 4.7k total / 3.8k input. The flag stays off and the work stops.
 
 Do not tune prompts on the held-out set, and do not add a second cycle.
 
@@ -489,7 +510,6 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #105 | Bounded multi-book spike: diagnostic, ablation, holdout-2 | V2 - Deepening |
 | #74 | Move `/data` to a dedicated EBS volume | V2 - Deepening |
 | #75 | Replace static AWS keys with GitHub OIDC | V2 - Deepening |
 
@@ -527,6 +547,8 @@ persists exam attempts and chat history.
 | Eval harness | #9, #10, #12 |
 | Retrieval foundation | #96, #70, #71, #72, #78 |
 | Held-out set | #106 |
+| Multi-book spike | #105 (flag off) |
+| Ingest | #113 |
 
 ## Backlog policy
 
@@ -537,10 +559,10 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-Next work: #97's thin professor slice. #16 is merged; the required-check
-setting is the last step. The #105 multi-book spike and #113 ingest fix follow in
-Next. #96 and #106 are closed. #107 is deferred and likely superseded by the
-per-book path.
+Next work: #74 and #75 deploy hardening. #16 is merged; the required-check
+setting is the last step. #105 is complete with the flag off and #113 is merged.
+#96 and #106 are closed. #107 is deferred and likely superseded by the per-book
+path.
 
 ## Decisions
 

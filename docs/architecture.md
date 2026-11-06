@@ -164,7 +164,10 @@ fan-out of four, then merge, dedupe and score order. The path is measured with
 `OWL_MULTI_BOOK=true`, `ask()` delegates a `multi_book` question to
 `app/pipeline/generate/multibook.py`: per-book retrieval, one extraction per
 book, merge, one synthesis and a deterministic coverage statement. The flag is
-off by default, so the default chat path is unchanged.
+off by default, so the default chat path is unchanged. The `top1_floor` and
+`batched_top3` extraction strategies exist for the #105 ablation;
+`per_book` is the shipped default. The flag stays off after the negative
+holdout.
 
 ## Module dependencies
 
