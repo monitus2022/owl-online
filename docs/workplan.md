@@ -27,9 +27,9 @@ page describes what comes next and why.
   trailing-pages fix (#113), one ablation, a frozen holdout-2 and one final run.
   If it fails, the flag stays off and the work stops.
 - #97's thin slice is implemented behind `OWL_PERSONA`: persona card, DADA
-  scope, scripted meta and personal replies, and the lore schema with a
-  five-entry fixture. The real lore pack and the extended timeline follow. The
-  full persona voice still follows #105.
+  scope, scripted meta and personal replies, and the lore schema. The dev pack
+  now has the five founders, the 1998/2008/2026 timeline and the Auror pathway.
+  The real pack is being collected. The full persona voice still follows #105.
 - #16's deterministic CI gate is merged; the required-check setting is the last
   step. #74 and #75 follow. #107 is deferred.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
@@ -559,7 +559,7 @@ per-book path.
 | Strategy delegation is deterministic | Pre-retrieval scope cues plus a post-retrieval coverage check; no model call to decide the path |
 | Router ships pre-retrieval first | The cue set is measured on the fixture; the coverage check belongs with the per-book path, which caps at seven map calls with a bounded fan-out |
 | Per-book retrieval is measured before wiring | At equal k=7 the prototype raises coverage 0.58 to 0.79 and keeps near-misses single-hop; chat stays one-pass until extraction and synthesis land |
-| The professor is an original character, not a canon one | Limits IP exposure and avoids invented quotations; persona is tone and meta only, never facts |
+| The professor is an original character, not a canon one | Limits IP exposure and avoids invented quotations; the persona is tone plus reviewed meta facts, and never adds facts to a grounded answer |
 
 ## Evaluation
 

@@ -57,7 +57,7 @@ _META_CUES: dict[str, re.Pattern[str]] = {
     ),
     "exam": re.compile(
         r"\b(exam(?:ination)? format|what(?:'s| is) on the exam|"
-        r"how is the exam (?:graded|marked)|grading scale)\b",
+        r"what is on the test)\b",
         re.IGNORECASE,
     ),
     "syllabus": re.compile(

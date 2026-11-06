@@ -1,5 +1,7 @@
 """Answer node: the existing grounded ask() path, with token streaming."""
 
+from dataclasses import replace
+
 from langgraph.config import get_stream_writer
 
 from app.agent.persona import Persona
@@ -39,6 +41,9 @@ async def answer_node(
         multi_book=multi_book,
         persona_suffix=persona.answer_suffix() if persona is not None else None,
     )
+    if result.abstained and persona is not None:
+        # Keep the abstention contract; only the user-facing line changes.
+        result = replace(result, answer=persona.abstain_response())
     return {
         "chunks": result.chunks,
         "answer": result.answer,

@@ -24,6 +24,11 @@ class _Retriever:
         return [_chunk()]
 
 
+class _WeakRetriever:
+    async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
+        return []
+
+
 class _Llm:
     name = "fake/persona"
 
@@ -143,3 +148,26 @@ async def test_an_uncited_draft_still_abstains_with_the_persona_suffix():
     )
     assert result.abstained
     assert result.abstain_reason == "uncited"
+
+
+async def test_persona_abstention_uses_the_in_world_line():
+    graph = build_graph(_WeakRetriever(), _Llm(), persona=PERSONA)
+    state = await graph.ainvoke(
+        {
+            "question": "Who trims the wick?",
+            "requested_mode": "auto",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["abstained"] is True
+    assert state["answer"] == PERSONA.abstain_response()
+    assert state["citations"] == []
+    assert state["abstain_reason"] == "no_evidence"
+
+
+def test_grading_cue_is_reachable():
+    from app.agent.router import meta_topic
+
+    assert meta_topic("How is the exam graded?") == "grading"
+    assert meta_topic("What is the exam format?") == "exam"

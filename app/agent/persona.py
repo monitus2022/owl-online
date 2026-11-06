@@ -42,13 +42,15 @@ class Persona:
     boundaries: dict[str, str]
     meta: dict[str, str]
     personal: str
+    abstain: str
 
     def answer_suffix(self) -> str:
         """The tone instruction appended to a grounded answer prompt.
 
         Deliberately omits the school and the lore: the answer prompt carries
-        tone only. Naming the school here invites the model to substitute it for
-        a place in the excerpts, which is a grounding error.
+        tone, the facts and advice boundaries, and the Ashcombe exam boundary.
+        Naming the school here invites the model to substitute it for a place in
+        the excerpts, which is a grounding error.
         """
         return (
             f"You are {self.address}, a {self.role}. "
@@ -57,7 +59,8 @@ class Persona:
             "Use every name, place and title exactly as it appears in the "
             "excerpts; never rename or relocate it. "
             "Keep the citation and abstention rules above exactly. "
-            f"{self.boundaries['facts']} {self.boundaries['advice']}"
+            f"{self.boundaries['facts']} {self.boundaries['advice']} "
+            f"{self.boundaries['exam']}"
         )
 
     def meta_response(self, topic: str) -> str | None:
@@ -65,6 +68,9 @@ class Persona:
 
     def personal_response(self) -> str:
         return self.personal
+
+    def abstain_response(self) -> str:
+        return self.abstain
 
 
 def load_persona(path: Path = PERSONA_PATH) -> Persona:
@@ -80,6 +86,7 @@ def load_persona(path: Path = PERSONA_PATH) -> Persona:
         boundaries = data["boundaries"]
         meta = data["meta"]
         personal = data["personal"]
+        abstain = data["abstain"]
     except KeyError as error:
         raise ValueError(f"persona card is missing section {error}") from error
     missing = [topic for topic in META_TOPICS if topic not in meta]
@@ -117,6 +124,7 @@ def load_persona(path: Path = PERSONA_PATH) -> Persona:
         },
         meta=meta_values,
         personal=text(personal, "response", "personal"),
+        abstain=text(abstain, "response", "abstain"),
     )
 
 

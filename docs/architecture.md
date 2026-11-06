@@ -399,7 +399,7 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 | `answer` | a question about the books | grounded explanation with citations | no | no |
 | `practice` | "give me a practice question on ..." | one or two grounded questions, streamed | no | no |
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
-| `meta` | persona on; identity, subject scope, exam format, syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
+| `meta` | persona on; identity, subject scope, exam (non-disclosure), syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
 
 ## Persona layer
@@ -409,25 +409,33 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 The card is the source of truth; `docs/persona.md` is the human copy.
 
 The answer path appends `Persona.answer_suffix()` after the grounding rules, so
-citations and abstention still apply. The persona never adds facts. Scripted
+citations and abstention still apply. The persona never adds facts to a grounded
+answer; scripted meta replies state reviewed setting facts from the card. Scripted
 meta and personal replies are not generated, so the professor cannot invent a
-date, a rule or a fact while introducing himself.
+date, a rule or a fact while introducing himself. When a grounded answer
+abstains, the persona-on path replaces only the user-facing line with the card's
+in-world refusal; the `abstained` flag and empty citations are unchanged.
 
-The persona is DADA-only. Other subjects are deferred. The card and the doc
-change together; `tests/test_persona.py` asserts every meta topic exists.
+The persona is DADA-only. The lore pack already carries the five founders and
+departments, but the chatbot speaks only for Defense; other subject personas are
+deferred. The card and the doc change together; `tests/test_persona.py` asserts
+every meta topic exists.
 
 The suffix applies to the single-pass answer path. `OWL_MULTI_BOOK` and
 `OWL_PERSONA` together are unsupported until the multi-book path lands; the
 multi-book branch ignores the suffix, and `create_app` logs a warning when both
-flags are on.
+flags are on. The persona's exam boundary is qualified to the school
+examination, so a question about a book exam, such as an O.W.L., is still
+answerable from the excerpts.
 
 The non-stream `/ask` endpoint is the grounded answer API. Meta and personal are
 chat intents on `/ask/stream`; `/ask` does not route them.
 
 `app/knowledge/lore.py` holds authored setting facts with a canonicity tier
-(`book`, `product`, `secondary`). It is raw JSONL selected by subject and
-keyword, not embedded, so a setting edit is a text edit plus a reload. The thin
-slice uses `eval/fixtures/lore.jsonl`; the real pack stays out of git.
+(`book`, `product`, `secondary`). It is raw Markdown with TOML front matter, one
+entry per file, selected by subject and keyword, not embedded, so a setting edit
+is a text edit plus a reload. A single JSONL file is also accepted. The thin
+slice uses `eval/fixtures/lore/` (one Markdown entry per file, TOML front matter); the real pack stays out of git.
 Lore-grounded answers and `[lore:<id>]` citations are the next ticket.
 
 The exam bank is a separate, offline surface. It is not a chat intent and it does
@@ -576,7 +584,7 @@ generate) for the per-call detail.
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
-| `Persona` | `app/agent/persona.py` | dataclass | reviewed identity, register, boundaries, scripted meta and personal replies |
+| `Persona` | `app/agent/persona.py` | dataclass | reviewed identity, register, boundaries, scripted meta and personal replies, in-world abstention |
 | `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
 | `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
