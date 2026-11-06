@@ -6,7 +6,7 @@ from app.api import runtime as runtime_module
 from app.config import Settings
 
 
-async def test_build_runtime_passes_the_retrieval_settings(monkeypatch):
+async def test_build_runtime_passes_the_retrieval_settings(monkeypatch, tmp_path):
     captured: dict[str, int] = {}
 
     async def fake_compose(*args, **kwargs):
@@ -24,9 +24,14 @@ async def test_build_runtime_passes_the_retrieval_settings(monkeypatch):
     monkeypatch.setattr(runtime_module, "build_graph", fake_build_graph)
 
     built = await runtime_module.build_runtime(
-        Settings(retry_budget=0, subquery_quota=2)
+        Settings(
+            retry_budget=0,
+            subquery_quota=2,
+            lore_path=tmp_path / "absent-lore",
+        )
     )
 
     assert captured["max_retries"] == 0
     assert captured["subquery_quota"] == 2
     assert built.agent is not None
+    assert built.lore is None
