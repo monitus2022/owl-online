@@ -12,6 +12,7 @@ from eval.harness import (
     aggregation_metrics,
     entity_matches,
     load_aggregation,
+    missing_entities,
     score_item,
     summarize_aggregation,
 )
@@ -103,10 +104,13 @@ def test_loader_rejects_a_near_miss_with_two_books(tmp_path):
         load_aggregation(path)
 
 
-def test_entity_match_is_case_insensitive_substring():
+def test_entity_match_is_word_bounded_and_plural_friendly():
     assert entity_matches("Professor Quirrell teaches", "quirrell")
     assert entity_matches("the Horcruxes are", "Horcrux")
+    assert entity_matches("the Dursleys leave", "Dursley")
     assert not entity_matches("Lockhart", "Lupin")
+    assert not entity_matches("in amazement", "maze")
+    assert entity_matches("the Cloak of Invisibility", "Cloak of Invisibility")
 
 
 def test_score_item_counts_books_entities_and_citations():
@@ -185,6 +189,7 @@ def test_summarize_aggregation_separates_multi_and_near():
     assert metrics.entity_completeness == 1.0
     assert metrics.full_coverage_rate == 1.0
     assert metrics.near_miss_entity_hit == 1.0
+    assert metrics.near_miss_entity_completeness == 1.0
     assert metrics.near_miss_book_precision == 0.5
     assert metrics.citation_validity == 0.75
 
@@ -216,3 +221,129 @@ async def test_aggregation_metrics_retrieves_once_per_item():
     assert retriever.calls == ["q"]
     assert scores[0].covered_books == 2
     assert metrics.book_coverage == 1.0
+
+
+def test_in_book_but_irrelevant_chunk_is_not_a_valid_citation():
+    item = AggregationItem(
+        id="a",
+        question="q",
+        kind="multi_book",
+        books=(
+            BookExpectation(1, ("Quirrell",)),
+            BookExpectation(2, ("Lockhart",)),
+        ),
+    )
+    score = score_item(
+        item,
+        [
+            _chunk("b1-c01-0001", 1, "Quirrell teaches."),
+            _chunk("b1-c01-0002", 1, "A different topic."),
+        ],
+    )
+    assert score.citations == 2
+    assert score.valid_citations == 1
+
+
+def test_missing_entities_reports_the_book_and_entity():
+    item = AggregationItem(
+        id="a",
+        question="q",
+        kind="multi_book",
+        books=(
+            BookExpectation(1, ("Quirrell",)),
+            BookExpectation(2, ("Lockhart",)),
+        ),
+    )
+    missing = missing_entities(
+        [item], [_chunk("b1-c01-0001", 1, "Quirrell teaches.")]
+    )
+    assert missing == ["a book 2: 'Lockhart'"]
+
+
+def test_loader_rejects_an_unknown_kind(tmp_path):
+    path = tmp_path / "bad.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "id": "bad",
+                "question": "q",
+                "kind": "other",
+                "books": [{"book_num": 1, "expected_entities": ["x"]}],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="unknown kind"):
+        load_aggregation(path)
+
+
+def test_loader_rejects_an_out_of_range_book(tmp_path):
+    path = tmp_path / "bad.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "id": "bad",
+                "question": "q",
+                "kind": "near_miss",
+                "books": [{"book_num": 8, "expected_entities": ["x"]}],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="book_num must be 1..7"):
+        load_aggregation(path)
+
+
+def test_loader_rejects_empty_entities(tmp_path):
+    path = tmp_path / "bad.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "id": "bad",
+                "question": "q",
+                "kind": "near_miss",
+                "books": [{"book_num": 1, "expected_entities": []}],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="non-empty list"):
+        load_aggregation(path)
+
+
+def test_loader_rejects_duplicate_books(tmp_path):
+    path = tmp_path / "bad.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "id": "bad",
+                "question": "q",
+                "kind": "multi_book",
+                "books": [
+                    {"book_num": 1, "expected_entities": ["x"]},
+                    {"book_num": 1, "expected_entities": ["y"]},
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="duplicate book_num"):
+        load_aggregation(path)
+
+
+def test_loader_rejects_an_empty_file(tmp_path):
+    path = tmp_path / "bad.jsonl"
+    path.write_text("", encoding="utf-8")
+    with pytest.raises(ValueError, match="no aggregation items"):
+        load_aggregation(path)
+
+
+def test_loader_rejects_a_missing_key(tmp_path):
+    path = tmp_path / "bad.jsonl"
+    path.write_text(json.dumps({"id": "bad"}) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="missing 'question'"):
+        load_aggregation(path)

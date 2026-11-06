@@ -8,9 +8,11 @@ single book, so a plural count alone cannot make a question look multi-book.
 from __future__ import annotations
 
 import json
+import re
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from app.providers.contracts import Retriever
 from app.schemas import Chunk
@@ -62,7 +64,14 @@ class AggregationMetrics:
     citation_validity: float
     full_coverage_rate: float
     near_miss_entity_hit: float
+    near_miss_entity_completeness: float
     near_miss_book_precision: float
+
+
+def _require(row: dict, key: str, line_number: int):
+    if key not in row:
+        raise ValueError(f"line {line_number}: missing {key!r}")
+    return row[key]
 
 
 def _check_book(book: BookExpectation, item_id: str) -> None:
@@ -78,26 +87,46 @@ def load_aggregation(path: Path) -> list[AggregationItem]:
     """Read and validate the aggregation JSONL."""
     items: list[AggregationItem] = []
     seen: set[str] = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line_number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(), 1
+    ):
         if not line.strip():
             continue
         row = json.loads(line)
-        item_id = str(row["id"])
+        if not isinstance(row, dict):
+            raise ValueError(f"line {line_number}: expected a JSON object")
+        item_id = str(_require(row, "id", line_number)).strip()
+        if not item_id:
+            raise ValueError(f"line {line_number}: empty id")
         if item_id in seen:
             raise ValueError(f"duplicate aggregation id: {item_id}")
         seen.add(item_id)
-        kind = str(row["kind"])
+        question = str(_require(row, "question", line_number)).strip()
+        if not question:
+            raise ValueError(f"{item_id}: empty question")
+        kind = str(_require(row, "kind", line_number))
         if kind not in {"multi_book", "near_miss"}:
             raise ValueError(f"{item_id}: unknown kind {kind!r}")
-        books = tuple(
-            BookExpectation(
-                book_num=int(book["book_num"]),
-                expected_entities=tuple(
-                    str(entity) for entity in book["expected_entities"]
-                ),
+        raw_books = _require(row, "books", line_number)
+        if not isinstance(raw_books, list) or not raw_books:
+            raise ValueError(f"{item_id}: books must be a non-empty list")
+        books: list[BookExpectation] = []
+        for raw_book in raw_books:
+            if not isinstance(raw_book, dict):
+                raise ValueError(f"{item_id}: each book must be an object")
+            if "book_num" not in raw_book:
+                raise ValueError(f"{item_id}: book is missing book_num")
+            if "expected_entities" not in raw_book:
+                raise ValueError(f"{item_id}: book is missing expected_entities")
+            entities = raw_book["expected_entities"]
+            if not isinstance(entities, list) or not entities:
+                raise ValueError(f"{item_id}: expected_entities must be a non-empty list")
+            books.append(
+                BookExpectation(
+                    book_num=int(raw_book["book_num"]),
+                    expected_entities=tuple(str(entity) for entity in entities),
+                )
             )
-            for book in row.get("books", [])
-        )
         if kind == "multi_book" and len(books) < 2:
             raise ValueError(f"{item_id}: multi_book needs at least two books")
         if kind == "near_miss" and len(books) != 1:
@@ -109,9 +138,9 @@ def load_aggregation(path: Path) -> list[AggregationItem]:
         items.append(
             AggregationItem(
                 id=item_id,
-                question=str(row["question"]),
-                kind=kind,  # type: ignore[arg-type]
-                books=books,
+                question=question,
+                kind=cast(AggregationKind, kind),
+                books=tuple(books),
                 notes=str(row.get("notes", "")),
             )
         )
@@ -121,13 +150,14 @@ def load_aggregation(path: Path) -> list[AggregationItem]:
 
 
 def entity_matches(text: str, entity: str) -> bool:
-    """Case-insensitive substring match; entities are names, not regexes."""
-    return entity.casefold() in text.casefold()
+    """Word-boundary, plural-friendly match; entities are names, not regexes."""
+    pattern = rf"\b{re.escape(entity)}\w*"
+    return re.search(pattern, text, re.IGNORECASE) is not None
 
 
 def score_item(item: AggregationItem, chunks: list[Chunk]) -> AggregationScore:
     """Score one item's retrieved chunks against its per-book expectations."""
-    expected_books = {book.book_num for book in item.books}
+    by_book = {book.book_num: book for book in item.books}
     covered_books = 0
     expected_entities = 0
     found_entities = 0
@@ -139,10 +169,14 @@ def score_item(item: AggregationItem, chunks: list[Chunk]) -> AggregationScore:
             if any(entity_matches(c.text, entity) for c in book_chunks):
                 found_entities += 1
                 covered = True
-        covered_books += covered
-    valid_citations = sum(
-        c.metadata.book_num in expected_books for c in chunks
-    )
+        covered_books += int(covered)
+
+    def is_relevant(chunk: Chunk) -> bool:
+        book = by_book.get(chunk.metadata.book_num)
+        return book is not None and any(
+            entity_matches(chunk.text, entity) for entity in book.expected_entities
+        )
+
     return AggregationScore(
         item_id=item.id,
         kind=item.kind,
@@ -151,7 +185,7 @@ def score_item(item: AggregationItem, chunks: list[Chunk]) -> AggregationScore:
         expected_entities=expected_entities,
         found_entities=found_entities,
         citations=len(chunks),
-        valid_citations=valid_citations,
+        valid_citations=sum(is_relevant(chunk) for chunk in chunks),
     )
 
 
@@ -191,10 +225,34 @@ def summarize_aggregation(scores: list[AggregationScore]) -> AggregationMetrics:
             if near_n
             else 0.0
         ),
+        near_miss_entity_completeness=(
+            sum(score.found_entities / score.expected_entities for score in near)
+            / near_n
+            if near_n
+            else 0.0
+        ),
         near_miss_book_precision=(
             near_valid / near_citations if near_citations else 0.0
         ),
     )
+
+
+def missing_entities(
+    items: list[AggregationItem], chunks: list[Chunk]
+) -> list[str]:
+    """Expected entities that do not appear in their book in the corpus."""
+    by_book: dict[int, list[str]] = defaultdict(list)
+    for chunk in chunks:
+        by_book[chunk.metadata.book_num].append(chunk.text)
+    missing: list[str] = []
+    for item in items:
+        for book in item.books:
+            for entity in book.expected_entities:
+                if not any(
+                    entity_matches(text, entity) for text in by_book[book.book_num]
+                ):
+                    missing.append(f"{item.id} book {book.book_num}: {entity!r}")
+    return missing
 
 
 async def aggregation_scores(

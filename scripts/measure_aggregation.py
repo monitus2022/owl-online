@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
-from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -24,27 +23,16 @@ from app.pipeline.retrieve import compose_retriever  # noqa: E402
 from app.providers.factory import make_embedder, make_reranker  # noqa: E402
 from eval.harness import (  # noqa: E402
     aggregation_metrics,
-    entity_matches,
     load_aggregation,
+    missing_entities,
 )
-
-
-def _verify_entities(items, chunks) -> list[str]:
-    """Every expected entity must appear in its book; catch invented fixture facts."""
-    by_book: dict[int, list[str]] = defaultdict(list)
-    for chunk in chunks:
-        by_book[chunk.metadata.book_num].append(chunk.text)
-    missing: list[str] = []
-    for item in items:
-        for book in item.books:
-            for entity in book.expected_entities:
-                if not any(entity_matches(text, entity) for text in by_book[book.book_num]):
-                    missing.append(f"{item.id} book {book.book_num}: {entity!r}")
-    return missing
+from eval.results import load_manifest  # noqa: E402
 
 
 def _render(scores, metrics) -> str:
+    total_entities = sum(score.expected_entities for score in scores)
     lines = [
+        f"expected entities: {total_entities}",
         "aggregation fixture",
         "item     kind        books covered entities found citations valid",
     ]
@@ -63,6 +51,7 @@ def _render(scores, metrics) -> str:
             f"full_coverage={metrics.full_coverage_rate:.2f} "
             f"entity_completeness={metrics.entity_completeness:.2f}",
             f"  near_miss  n={metrics.n_near} entity_hit={metrics.near_miss_entity_hit:.2f} "
+            f"entity_completeness={metrics.near_miss_entity_completeness:.2f} "
             f"book_precision={metrics.near_miss_book_precision:.2f}",
             f"  citation_validity={metrics.citation_validity:.2f}",
         ]
@@ -73,7 +62,7 @@ def _render(scores, metrics) -> str:
 async def run(args) -> int:
     items = load_aggregation(args.fixture)
     chunks = load_chunks(args.chunks)
-    missing = _verify_entities(items, chunks)
+    missing = missing_entities(items, chunks)
     if missing:
         print("fixture entities missing from the corpus:", file=sys.stderr)
         for line in missing:
@@ -96,7 +85,19 @@ async def run(args) -> int:
         scores, metrics = await aggregation_metrics(setup.retriever, items, args.k)
     finally:
         await setup.retriever.aclose()
+    manifest = load_manifest()
+    embedder_key = "cloud" if settings.embedder_provider == "bedrock" else "local"
     print(f"run: {args.run_id}")
+    print(
+        f"manifest: generator={manifest['generator']['model']} "
+        f"judge={manifest['judge']['model']} "
+        f"reranker={manifest['reranker']['model']} pool={settings.rerank_pool} "
+        f"embedder={manifest['embedder'][embedder_key]['model']} "
+        f"chunking={manifest['chunking']['size']}/{manifest['chunking']['overlap']}/"
+        f"{manifest['chunking']['min_size']} "
+        f"top_k={args.k} rrf_k={manifest['retrieval']['rrf_k']} "
+        f"quota={settings.subquery_quota}"
+    )
     print(_render(scores, metrics))
     return 0
 

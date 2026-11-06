@@ -22,6 +22,7 @@ from eval.harness.aggregation import (
     aggregation_scores,
     entity_matches,
     load_aggregation,
+    missing_entities,
     score_item,
     summarize_aggregation,
 )
@@ -99,6 +100,7 @@ __all__ = [
     "judge_sample",
     "load_aggregation",
     "load_gold",
+    "missing_entities",
     "novel_entities",
     "normalize_answer",
     "parse_faithful",
