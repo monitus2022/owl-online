@@ -266,17 +266,30 @@ sequenceDiagram
   R-->>A: up to 15 candidates per book
   A->>LLM: extract cited lines per book, fan-out 4
   LLM-->>A: bullet lines with chunk ids, or NO_EVIDENCE
-  A->>A: merge, dedupe, coverage set
+  A->>A: dedupe within a book, cap evidence at final top-k 7
   A->>LLM: one synthesis over the extracts
   LLM-->>A: cited answer
-  A->>A: validate citations, append coverage statement
+  A->>A: bind each quote to its cited chunk, append coverage statement
 ```
 
 Caps: seven retrieval calls, seven extraction calls, fan-out four, up to 15
-candidates per book, one synthesis, final top-k 7. If no book yields a cited
-extract, the path abstains. The coverage statement is deterministic and names
-the books with and without evidence. This path does not use the single-pass
-retry: a synthesis with no supported citation abstains instead of retrying.
+candidates per book, one synthesis, final top-k 7. An explicit book-number
+question searches only the named books, and the coverage statement covers that
+subset. If no book yields a cited extract, the path abstains.
+
+Extraction keeps a line only when its quote is verbatim in a chunk from that
+book. Dedupe is per book: a repeated sentence is dropped inside one book but
+kept across books, because the coverage claim is per book. Conflicting lines are
+not resolved by the merger; both reach synthesis labelled by book.
+
+After synthesis, a line is kept only when every non-empty segment of its quote
+appears in the chunks it cites and its `Book N` label matches those chunks.
+Unknown citations are stripped by `ground_answer`. The coverage statement is
+computed from the lines that survive binding, so a book whose only line was
+dropped is reported as having no evidence rather than being claimed as covered. This path does not use the single-pass retry: a
+synthesis with no supported citation abstains instead of retrying. A provider or
+per-book retrieval failure is not converted to no evidence; it propagates and
+`/ask` returns 502.
 
 ## Request flow: POST /ask/stream
 
@@ -526,8 +539,8 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, retry_reason, abstain_reason |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input, attempts, retry_reason |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, student answer, chunks, answer, citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

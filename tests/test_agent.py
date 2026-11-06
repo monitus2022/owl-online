@@ -255,3 +255,17 @@ async def test_budget_exhaustion_abstains_at_the_graph_level():
     assert state["attempts"] == 2
     assert state["retry_reason"] == "uncited"
     assert state["citations"] == []
+
+
+async def test_answer_state_carries_model_calls_and_abstain_reason():
+    graph = build_graph(_Retriever(), _Llm("Rowan trims the wick [b1-c01-0000]."))
+    state = await graph.ainvoke(
+        {
+            "question": "Who trims the wick?",
+            "requested_mode": "auto",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["model_calls"] == 1
+    assert state["abstain_reason"] is None

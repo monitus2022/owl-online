@@ -62,6 +62,7 @@ so on.
 | 2026-11-06 | #96 | `20261106T105819Z` | `aggregation` (routed per-book k=7) | n/a | n/a | n/a | [Per-book retrieval prototype](2026-11-06-v2-multibook-retrieval.md) |
 | 2026-11-06 | #106 | `20261106T121322Z` | `aggregation_holdout` (single-hop k=7) | n/a | n/a | n/a | [Held-out single-hop k=7](2026-11-06-v2-holdout-single-k7.md) |
 | 2026-11-06 | #106 | `20261106T121335Z` | `aggregation_holdout` (routed per-book k=7) | n/a | n/a | n/a | [Held-out routed k=7](2026-11-06-v2-holdout-routed-k7.md) |
+| 2026-11-06 | #105 | `20261106T110000Z` | `aggregation_holdout` (multi-book generation, k=15 / top-k 7) | n/a | n/a | 11/15 | [Multi-book generation](2026-11-06-105-multibook-generation.md) |
 
 ## Template
 

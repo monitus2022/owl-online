@@ -93,9 +93,11 @@ class AskResult:
     """A grounded answer plus the chunk ids it rests on.
 
     `attempts` counts drafts generated; it is 0 when retrieval abstained before
-    any draft. `abstain_reason` separates a weak retrieval (`no_evidence`) from a
-    draft that cited nothing (`uncited`) or refused (`refused`), so callers do
-    not have to infer it from the text.
+    any draft. `model_calls` counts every model call the answer cost, which is
+    more than `attempts` when a path fans out (the multi-book path makes one
+    call per book plus one synthesis). `abstain_reason` separates a weak
+    retrieval (`no_evidence`) from a draft that cited nothing (`uncited`) or
+    refused (`refused`), so callers do not have to infer it from the text.
     """
 
     answer: str
@@ -206,7 +208,10 @@ async def ask(
             cues=list(decision.cues),
         )
     if multi_book and decision.is_multi_book and hasattr(retriever, "retrieve_book"):
-        from app.pipeline.generate.multibook import ask_multi_book
+        from app.pipeline.generate.multibook import (
+            DEFAULT_FINAL_TOP_K,
+            ask_multi_book,
+        )
 
         books = (
             [int(cue) for cue in decision.cues]
@@ -217,7 +222,7 @@ async def ask(
             question,
             retriever=retriever,
             llm=llm,
-            top_k=max(top_k, 7),
+            top_k=DEFAULT_FINAL_TOP_K,
             books=books,
             on_token=on_token,
             on_stage=on_stage,

@@ -102,6 +102,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     built.retriever,
                     built.llm,
                     max_retries=app_settings.retry_budget,
+                    multi_book=app_settings.multi_book,
                     small_llm=built.small_llm,
                 ),
             )
@@ -517,6 +518,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 abstained=bool(final.get("abstained", False)),
                 chunks=list(final.get("chunks", [])),
                 attempts=int(final.get("attempts", 1)),
+                model_calls=int(final.get("model_calls") or 0),
                 abstain_reason=final.get("abstain_reason"),  # type: ignore[arg-type]
             )
             if key is not None and not result.abstained:
