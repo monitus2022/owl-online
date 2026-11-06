@@ -22,6 +22,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/test_aggregation.py` | aggregation fixture and metric tests, no network |
 | `tests/test_multibook.py` | per-book retrieval tests, no network |
 | `eval/fixtures/aggregation.jsonl` | 10 multi-book questions and 5 near-misses |
+| `eval/fixtures/aggregation_holdout.jsonl` | 15 held-out multi-book questions and 5 near-misses |
 | `eval/test_results.py` | result CSV tests, no network |
 | `eval/runner.py` | one run: compose, score, write the CSV |
 | `eval/report.py` | result rows and printed summary |
@@ -122,6 +123,21 @@ the fixture, so a perfect score is in-sample and not a generalisation claim.
 baseline, `multi_book` runs every item through the per-book path, and `routed`
 uses the router so near-misses stay single-hop. The per-book path is capped at
 seven map calls with a fan-out of four.
+
+`fixtures/aggregation_holdout.jsonl` is the held-out set: 15 multi-book
+questions and 5 near-misses, written before tuning and not used to change the
+cues or the path. Held-out retrieval at k=7:
+
+| Metric | Single-hop | Routed per-book |
+|---|---:|---:|
+| Book coverage | 0.68 | 0.77 |
+| Full coverage | 0.13 | 0.47 |
+| Entity completeness | 0.68 | 0.77 |
+| Citation validity | 0.74 | 0.51 |
+
+The router scores 1.00 precision and 0.93 recall on the held-out set. The one
+miss is `How many books mention an Animagus?`, which has no coverage cue. The
+held-out set is frozen; failures are recorded, not fixed on this set.
 
 The script verifies every expected entity against the corpus before measuring, so
 the fixture cannot drift into invented facts. It is retrieval only; synthesis

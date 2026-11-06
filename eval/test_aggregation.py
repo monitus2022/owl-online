@@ -18,6 +18,7 @@ from eval.harness import (
 )
 
 FIXTURE = Path(__file__).with_name("fixtures") / "aggregation.jsonl"
+HOLDOUT = Path(__file__).with_name("fixtures") / "aggregation_holdout.jsonl"
 
 
 def _chunk(chunk_id: str, book: int, text: str) -> Chunk:
@@ -48,6 +49,18 @@ def test_fixture_keeps_the_pinned_shape():
         for book in item.books
         for entity in book.expected_entities
     )
+
+
+def test_holdout_fixture_keeps_its_shape():
+    items = load_aggregation(HOLDOUT)
+    development = load_aggregation(FIXTURE)
+    assert len(items) == 20
+    assert sum(item.kind == "multi_book" for item in items) == 15
+    assert sum(item.kind == "near_miss" for item in items) == 5
+    assert {item.id for item in items}.isdisjoint({item.id for item in development})
+    assert all(1 <= book.book_num <= 7 for item in items for book in item.books)
+    assert all(len(item.books) >= 2 for item in items if item.kind == "multi_book")
+    assert all(len(item.books) == 1 for item in items if item.kind == "near_miss")
 
 
 def test_loader_rejects_a_multi_book_item_with_one_book(tmp_path):
