@@ -3,7 +3,7 @@ id = "raman-001"
 subject = "charms"
 tier = "product"
 title = "Professor Priya Raman"
-source = "authored; reviewed 2026-11-07"
+source = "authored; reviewed 2026-11-07; post-war scheme per supplementary material"
 tags = ["professor", "raman", "charms", "faculty", "founder"]
 +++
 

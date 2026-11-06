@@ -3,7 +3,7 @@ id = "vale-001"
 subject = "potions"
 tier = "product"
 title = "Professor Edith Vale"
-source = "authored; reviewed 2026-11-07"
+source = "authored; reviewed 2026-11-07; post-war scheme per supplementary material"
 tags = ["professor", "vale", "potions", "faculty", "founder"]
 +++
 

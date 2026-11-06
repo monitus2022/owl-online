@@ -399,7 +399,7 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 | `answer` | a question about the books | grounded explanation with citations | no | no |
 | `practice` | "give me a practice question on ..." | one or two grounded questions, streamed | no | no |
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
-| `meta` | persona on; identity, subject scope, exam format, syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
+| `meta` | persona on; identity, subject scope, exam (non-disclosure), syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
 
 ## Persona layer
@@ -409,9 +409,12 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 The card is the source of truth; `docs/persona.md` is the human copy.
 
 The answer path appends `Persona.answer_suffix()` after the grounding rules, so
-citations and abstention still apply. The persona never adds facts. Scripted
+citations and abstention still apply. The persona never adds facts to a grounded
+answer; scripted meta replies state reviewed setting facts from the card. Scripted
 meta and personal replies are not generated, so the professor cannot invent a
-date, a rule or a fact while introducing himself.
+date, a rule or a fact while introducing himself. When a grounded answer
+abstains, the persona-on path replaces only the user-facing line with the card's
+in-world refusal; the `abstained` flag and empty citations are unchanged.
 
 The persona is DADA-only. Other subjects are deferred. The card and the doc
 change together; `tests/test_persona.py` asserts every meta topic exists.
@@ -427,7 +430,7 @@ chat intents on `/ask/stream`; `/ask` does not route them.
 `app/knowledge/lore.py` holds authored setting facts with a canonicity tier
 (`book`, `product`, `secondary`). It is raw Markdown with TOML front matter, one
 entry per file, selected by subject and keyword, not embedded, so a setting edit
-is a text edit plus a reload. The thin
+is a text edit plus a reload. A single JSONL file is also accepted. The thin
 slice uses `eval/fixtures/lore/` (one Markdown entry per file, TOML front matter); the real pack stays out of git.
 Lore-grounded answers and `[lore:<id>]` citations are the next ticket.
 

@@ -3,7 +3,7 @@ id = "hale-001"
 subject = "transfiguration"
 tier = "product"
 title = "Professor Marcus Hale"
-source = "authored; reviewed 2026-11-07"
+source = "authored; reviewed 2026-11-07; post-war scheme per supplementary material"
 tags = ["professor", "hale", "transfiguration", "faculty", "founder"]
 +++
 

@@ -131,7 +131,7 @@ def _require(row: dict, key: str, where: str) -> object:
     return row[key]
 
 
-def _read_markdown(path: Path) -> dict:
+def _read_markdown(path: Path) -> tuple[str, dict]:
     """Read one Markdown entry with TOML front matter between +++ fences."""
     text = path.read_text(encoding="utf-8")
     if not text.startswith("+++"):
@@ -139,16 +139,21 @@ def _read_markdown(path: Path) -> dict:
     parts = text.split("+++", 2)
     if len(parts) < 3:
         raise ValueError(f"{path.name}: unterminated TOML front matter")
-    row = tomllib.loads(parts[1])
+    try:
+        row = tomllib.loads(parts[1])
+    except tomllib.TOMLDecodeError as error:
+        raise ValueError(f"{path.name}: invalid TOML front matter: {error}") from error
+    if "body" in row:
+        raise ValueError(f"{path.name}: front matter must not set body")
     body = parts[2].strip()
     if not body:
         raise ValueError(f"{path.name}: empty body")
     row["body"] = body
-    return row
+    return path.name, row
 
 
-def _read_jsonl(path: Path) -> list[dict]:
-    rows: list[dict] = []
+def _read_jsonl(path: Path) -> list[tuple[str, dict]]:
+    rows: list[tuple[str, dict]] = []
     for line_number, line in enumerate(
         path.read_text(encoding="utf-8").splitlines(), 1
     ):
@@ -157,15 +162,14 @@ def _read_jsonl(path: Path) -> list[dict]:
         row = json.loads(line)
         if not isinstance(row, dict):
             raise ValueError(f"lore line {line_number}: expected a JSON object")
-        rows.append(row)
+        rows.append((f"lore line {line_number}", row))
     return rows
 
 
-def _build_store(rows: list[dict], where: str) -> LoreStore:
+def _build_store(items: list[tuple[str, dict]], source: Path) -> LoreStore:
     entries: list[LoreEntry] = []
     seen: set[str] = set()
-    for index, row in enumerate(rows, 1):
-        label = f"{where} {index}"
+    for label, row in items:
         entry_id = str(_require(row, "id", label)).strip()
         if not _ID.match(entry_id):
             raise ValueError(
@@ -189,8 +193,8 @@ def _build_store(rows: list[dict], where: str) -> LoreStore:
         title = str(_require(row, "title", label)).strip()
         if not title:
             raise ValueError(f"{label}: empty title")
-        source = str(_require(row, "source", label)).strip()
-        if not source:
+        source_note = str(_require(row, "source", label)).strip()
+        if not source_note:
             raise ValueError(f"{label}: empty source")
         tags = row.get("tags", [])
         if not isinstance(tags, list) or any(not isinstance(tag, str) for tag in tags):
@@ -202,12 +206,12 @@ def _build_store(rows: list[dict], where: str) -> LoreStore:
                 tier=tier,
                 title=title,
                 body=body,
-                source=source,
+                source=source_note,
                 tags=tuple(tag.strip() for tag in tags),
             )
         )
     if not entries:
-        raise ValueError(f"no lore entries in {where}")
+        raise ValueError(f"no lore entries in {source}")
     return LoreStore(tuple(entries), {entry.id: entry for entry in entries})
 
 
@@ -223,5 +227,5 @@ def load_lore(path: Path) -> LoreStore:
         files = sorted(path.glob("*.md"))
         if not files:
             raise ValueError(f"no lore markdown files in {path}")
-        return _build_store([_read_markdown(file) for file in files], "lore entry")
-    return _build_store(_read_jsonl(path), "lore line")
+        return _build_store([_read_markdown(file) for file in files], path)
+    return _build_store(_read_jsonl(path), path)

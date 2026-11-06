@@ -3,7 +3,7 @@ id = "ashby-001"
 subject = "herbology"
 tier = "product"
 title = "Professor Nell Ashby"
-source = "authored; reviewed 2026-11-07"
+source = "authored; reviewed 2026-11-07; post-war scheme per supplementary material"
 tags = ["professor", "ashby", "herbology", "faculty", "founder"]
 +++
 

@@ -1,6 +1,6 @@
 +++
 id = "school-001"
-subject = "dada"
+subject = "all"
 tier = "product"
 title = "Ashcombe Academy of Magic"
 source = "authored; reviewed 2026-11-07"

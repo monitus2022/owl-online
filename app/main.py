@@ -359,6 +359,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         ),
                         on_stage=mark,
                     )
+                    if app_settings.persona and result.abstained:
+                        result = replace(
+                            result, answer=PERSONA.abstain_response()
+                        )
             except TimeoutError:
                 request_id = get_request_id()
                 logger.warning(

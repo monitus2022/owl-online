@@ -3,7 +3,7 @@ id = "crane-001"
 subject = "dada"
 tier = "product"
 title = "Professor Alistair Crane"
-source = "authored; reviewed 2026-11-07"
+source = "authored; reviewed 2026-11-07; post-war scheme per supplementary material"
 tags = ["professor", "crane", "auror", "faculty", "dada", "founder"]
 +++
 
