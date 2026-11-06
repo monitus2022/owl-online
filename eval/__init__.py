@@ -1,4 +1,4 @@
-"""Eval harness, gold set and result CSVs. The CI gate lands in V2 D2 (#77)."""
+"""Eval harness, gold set and result CSVs. The PR CI gate is #16."""
 
 from eval.harness import (
     JUDGE_MODEL,

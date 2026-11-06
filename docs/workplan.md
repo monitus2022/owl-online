@@ -10,22 +10,25 @@ page describes what comes next and why.
 
 - V1 is shipped.
 - The V2 chat foundation is delivered: LangGraph intents, verification and retry,
-  guardrails, cost controls, tracing and the local eval gate. The PR CI gate is
-  still #16.
+  guardrails, cost controls, tracing and the local eval gate. The deterministic
+  PR CI gate is in place (#16); the live gate runs on the host because the
+  corpus is not in git, and the required-check setting is the last #16 step.
 - The retrieval foundation #96 is closed: aggregation fixture, deterministic
   router, bounded per-book retrieval and the quota-2 measurement (multi-part
   Hit@5 0.667 to 0.778, judge 14/14, left opt-in). Routed per-book retrieval
   reaches 0.79 coverage and 0.76 completeness at equal k=7, but citation
-  validity is 0.56 and it is not wired into chat.
+  validity is 0.56. The retrieval-only prototype is not wired; the #105 answer
+  path is wired but flag-off.
 - The held-out multi-book set #106 is complete. The multi-book answer path #105
   is merged behind `OWL_MULTI_BOOK` but off: the held-out generation run gives
   coverage 0.84, citation validity 0.87 and faithfulness 0.79, so it fails two
   bars. Chat is still one-pass.
-- #105 is now a time-boxed spike: retrieval-only diagnostic, ingest
+- The #105 follow-up is a time-boxed spike: retrieval-only diagnostic, ingest
   trailing-pages fix (#113), one ablation, a frozen holdout-2 and one final run.
   If it fails, the flag stays off and the work stops.
-- #97 persona and #16 CI gate start now, in parallel, because neither depends on
-  the multi-book result. #74 and #75 follow. #107 is deferred.
+- #97 thin meta-only path and #16 CI gate start now, in parallel, because
+  neither depends on the multi-book result. The full persona voice follows #105.
+  #74 and #75 follow. #107 is deferred.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
 
 ## Product shape
@@ -59,7 +62,8 @@ bands are deterministic.
 
 ## Phase A: V2 chat foundation
 
-Status: delivered, except the deploy and CI hardening tracked in #16, #74 and #75.
+Status: delivered, except the deploy hardening in #74 and #75 and the
+required-check setting in #16. The deterministic CI gate is in place.
 
 | Ticket | Scope |
 |---|---|
@@ -529,7 +533,7 @@ likely superseded by the per-book path.
 
 | Decision | Rationale |
 |---|---|
-| Multi-book is a time-boxed spike, not the main line | Coverage and cost both miss their bars; one bounded cycle then a documented fallback |
+| Multi-book is a time-boxed spike, not the main line | Citation validity, faithfulness and cost miss their bars; one bounded cycle then a documented fallback |
 | A new answer path gets a retrieval-only measurement and a token estimate before generation code | The multi-book path built the expensive half before the cheap diagnostic |
 | Subject packs are the source of truth for exam and lesson generation | Prevents free-model memory and makes coverage auditable |
 | Every material has source refs | A lesson or question can always be traced to the books |

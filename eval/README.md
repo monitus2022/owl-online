@@ -195,22 +195,27 @@ set hash or rerank floor), because those deltas would not be comparable.
 `.github/workflows/eval.yml` runs on every pull request and on `main`:
 
 - `uv run ruff check .`
-- `uv run pytest`, which includes the unit suite and the eval harness
-- `uv run pytest eval/test_check.py eval/test_manifest.py`, the gate logic and
-  the manifest drift test
+- `uv run pytest tests`, the unit suite
+- `uv run pytest eval/`, the harness, the gate logic and the manifest drift test
 
-The live eval cannot run on a GitHub-hosted runner because the corpus and index
-are not in git: the source text is copyrighted. The live gate stays a host or
-local step before merge:
+The live eval run cannot happen on a GitHub-hosted runner because the corpus and
+index are not in git: the source text is copyrighted. `--check` only reads CSVs,
+but it needs a CSV the host produced. The live gate stays a host or local step
+before merge:
 
 ```
 uv run python scripts/run_eval.py --check
 ```
 
-Add `eval / lint-and-tests` as a required status check in the repository ruleset
-or branch protection for `main`. Until the live gate is enforced by a host-side
-runner, the merge rule is: a green CI check plus a recorded `gate: PASS` from the
-host run.
+Add the `lint-and-tests` check from the `eval` workflow as a required status
+check in the repository ruleset or branch protection for `main`. Pick it from the
+status-check list rather than typing the slash form; GitHub matches the reported
+job name, which is `lint-and-tests`. Until the live gate is enforced by a
+host-side runner, the merge rule is: a green CI check plus a recorded
+`gate: PASS` from the host run.
+
+The Ollama-backed retrieval tests skip when no local daemon is present, so CI
+reports them as skips rather than failures.
 
 Bands are absolute. For rate metrics the effective band is `max(base, 1 / n)` for
 that slice, so one item is normally allowed: 0.05 on overall retrieval with n=50,
@@ -246,13 +251,12 @@ and `--sample` controls the judged sample. The sample is taken round-robin acros
 the answerable slices, so the default of 15 covers simple, named and multi-part.
 
 A clean checkout cannot run the full eval: the corpus and Chroma index are host
-data and stay out of git. The CI workflow will either run on a self-hosted runner
-with `/data` mounted or restore a private index artifact; that decision is part of
-#16 before `eval.yml` is written. Use `--latest <csv>` in CI so the gate scores
-the artifact the job produced instead of whatever file sorts last. Until the CI
-cache is pinned, a cold run can still move a stochastic metric inside its
-one-item band; the bands are sized for that, and the re-pin procedure is a new
-baseline run plus a new record.
+data and stay out of git. The live run needs the host corpus and index; CI runs
+the deterministic parts only. `--latest <csv>` is a host-side flag for
+`run_eval.py --check`, so the gate scores the artifact the host job produced
+instead of whatever file sorts last. Until the eval cache is pinned, a cold run
+can still move a stochastic metric inside its one-item band; the bands are sized
+for that, and the re-pin procedure is a new baseline run plus a new record.
 
 ## Result files
 

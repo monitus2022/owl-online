@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: V1 shipped. The V2 chat foundation is delivered: guardrails, LangGraph chat, cost controls and the local eval gate; the PR CI gate is still #16. The retrieval foundation (#96) is complete. The held-out set (#106) is complete. Current focus is the multi-book answer path (#105). V2.5 is the exam bank with hybrid grading. Grounded RAG is live at https://api.monitus.org. See [`docs/workplan.md`](docs/workplan.md) and the milestones.
+> Status: V1 shipped. The V2 chat foundation is delivered: guardrails, LangGraph chat, cost controls, the local eval gate and the deterministic PR CI gate (#16). The retrieval foundation (#96) and the held-out set (#106) are complete. The multi-book answer path (#105) is merged but flag-off; it is a time-boxed spike. Current focus is the thin meta-only professor path (#97) and the required-check setting. V2.5 is the exam bank with hybrid grading. Grounded RAG is live at https://api.monitus.org. See [`docs/workplan.md`](docs/workplan.md) and the milestones.
 
 ---
 
@@ -173,14 +173,15 @@ Every finished eval run also gets a committed Markdown record under [`docs/runs/
 
 The full vision (bottom-up): a packaged pipeline, an eval harness and local gate,
 a streaming API, grounding guardrails, an agentic loop, observability and deploy,
-and a static exam bank. The PR CI gate is #16.
+and a static exam bank. The deterministic PR CI gate is in place; the live gate
+runs on the host because the corpus is not in git.
 
 Execution is phased:
 
 | Phase | Scope | Status |
 |---|---|---|
 | V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval + rerank, cited generation with abstention, API, mini-eval, deployed | shipped (https://api.monitus.org) |
-| V2 - Deepening | guardrails, chat intents (LangGraph), Bedrock Llm adapter, cost controls, local eval gate, retrieval foundation, multi-book answer path, professor persona | chat foundation, retrieval foundation and held-out set delivered; #105 in progress; #97 next |
+| V2 - Deepening | guardrails, chat intents (LangGraph), Bedrock Llm adapter, cost controls, local eval gate, retrieval foundation, multi-book answer path, professor persona | chat foundation, retrieval foundation, held-out set and deterministic CI gate delivered; #105 flag-off and time-boxed; #97 next |
 | V2.5 - Exam bank | subject knowledge packs, offline 10-question papers, evidence snapshots, static serving, hybrid grading, grading eval | after #105 and #97 |
 | V3 - Continuity | short-term chat memory, threads, follow-up rewrite, lesson mode | after V2.5 |
 | V4 - Identity (optional) | Google auth, per-user chat and exam history, progress tracking, long-term memory | last, if needed |
@@ -189,7 +190,7 @@ Execution is phased:
 
 ## Tech
 
-`Python` - `FastAPI` - `LangGraph` - hybrid retrieval (vector + BM25 + RRF) + rerank - LLM adapters - eval harness and local gate; PR CI gate #16
+`Python` - `FastAPI` - `LangGraph` - hybrid retrieval (vector + BM25 + RRF) + rerank - LLM adapters - eval harness and local gate; deterministic PR CI gate
 
 ---
 
