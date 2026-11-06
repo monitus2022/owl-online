@@ -7,14 +7,11 @@ half of the multi-book path; extraction and synthesis happen later.
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections.abc import Iterable
 from itertools import islice
 from typing import Protocol
 
 from app.schemas import Chunk
-
-logger = logging.getLogger(__name__)
 
 MAX_BOOKS = 7
 DEFAULT_FANOUT = 4
@@ -55,14 +52,9 @@ async def retrieve_multi_book(
         async with semaphore:
             return await retriever.retrieve_book(query, book_num, per_book_k)
 
-    groups = await asyncio.gather(
-        *(one(book_num) for book_num in selected), return_exceptions=True
-    )
+    groups = await asyncio.gather(*(one(book_num) for book_num in selected))
     by_id: dict[str, Chunk] = {}
-    for book_num, group in zip(selected, groups, strict=True):
-        if isinstance(group, BaseException):
-            logger.warning("per-book retrieval failed for book %d: %s", book_num, group)
-            continue
+    for group in groups:
         for chunk in group:
             current = by_id.get(chunk.id)
             if current is None or chunk.score > current.score:

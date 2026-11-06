@@ -67,15 +67,15 @@ async def test_retrieve_multi_book_keeps_the_highest_scored_duplicate():
     assert chunks[0].score == float(MAX_BOOKS)
 
 
-async def test_retrieve_multi_book_skips_a_failed_book():
+async def test_retrieve_multi_book_propagates_a_failed_book():
     class _FlakyRetriever:
         async def retrieve_book(self, query: str, book_num: int, top_k: int):
             if book_num == 3:
                 raise RuntimeError("book 3 failed")
             return [_chunk(f"b{book_num}-c01-0000", book_num, 1.0)]
 
-    chunks = await retrieve_multi_book(_FlakyRetriever(), "q")
-    assert {chunk.metadata.book_num for chunk in chunks} == {1, 2, 4, 5, 6, 7}
+    with pytest.raises(RuntimeError, match="book 3 failed"):
+        await retrieve_multi_book(_FlakyRetriever(), "q")
 
 
 async def test_retrieve_multi_book_respects_the_fanout():

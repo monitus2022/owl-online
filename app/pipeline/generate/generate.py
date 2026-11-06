@@ -105,6 +105,7 @@ class AskResult:
     attempts: int = 0
     retry_reason: str | None = None
     abstain_reason: AbstainReason | None = None
+    model_calls: int = 0
 
 
 def retrieval_floor(
@@ -180,6 +181,7 @@ async def ask(
     on_reset: Callable[[], None] | None = None,
     on_stage: StageSink | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    multi_book: bool = False,
 ) -> AskResult:
     """Answer from the corpus, citing chunk ids, or abstain on weak retrieval.
 
@@ -202,6 +204,23 @@ async def ask(
             strategy=decision.name,
             reason=decision.reason,
             cues=list(decision.cues),
+        )
+    if multi_book and decision.is_multi_book and hasattr(retriever, "retrieve_book"):
+        from app.pipeline.generate.multibook import ask_multi_book
+
+        books = (
+            [int(cue) for cue in decision.cues]
+            if decision.reason.startswith("multiple_book_numbers:")
+            else None
+        )
+        return await ask_multi_book(
+            question,
+            retriever=retriever,
+            llm=llm,
+            top_k=max(top_k, 7),
+            books=books,
+            on_token=on_token,
+            on_stage=on_stage,
         )
     if on_stage is not None:
         on_stage("retrieve")
@@ -306,7 +325,12 @@ async def ask(
             chunks=chunks,
             abstain_reason="refused",
         )
-    result = replace(result, attempts=attempt, retry_reason=retry_reason)
+    result = replace(
+        result,
+        attempts=attempt,
+        retry_reason=retry_reason,
+        model_calls=attempt,
+    )
     if tracer is not None:
         tracer.emit(
             "final",

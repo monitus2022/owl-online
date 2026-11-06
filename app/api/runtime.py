@@ -64,6 +64,7 @@ async def build_runtime(settings: Settings) -> Runtime:
             setup.retriever,
             llm,
             max_retries=settings.retry_budget,
+            multi_book=settings.multi_book,
             small_llm=small_llm,
         ),
         small_llm=small_llm,
