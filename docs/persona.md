@@ -57,6 +57,19 @@ pathway, boundaries, and a bare greeting.
 The exam, syllabus and grading answers are refusals: no format, no contents, no
 marking scheme.
 
+## Variant bank
+
+Every meta topic, the personal reply and the abstention line can be one string
+or a list of reviewed strings. The loader stores a tuple per key and the chat
+picks one variant at random per request, so a repeated out-of-context or personal
+message does not repeat the same line. Tests pass an explicit choice, so they
+stay reproducible.
+
+Variants change the phrasing only. The facts, the school, the subject, the
+boundaries and the `abstained` flag are identical across the bank. Exam, syllabus
+and grading remain refusals in every variant, and no variant names a format, a
+mark scheme or a deadline.
+
 ## Irrelevant questions
 
 - Book or world questions with context: the grounded answer path, with citations.
@@ -84,3 +97,4 @@ marking scheme.
 |---|---|
 | 2026-11-07 | First card: identity, register, boundaries, meta responses, DADA scope |
 | 2026-11-07 | Lore foundation: Battle veteran, post-war Auror scheme, five founders, Ashcombe founded 2008; exam, syllabus and grading are non-disclosure; in-world abstention and the exam boundary in the answer prompt |
+| 2026-11-07 | Variant bank: every meta topic, the personal reply and the abstention line carry reviewed phrasings; facts and the `abstained` flag stay identical |

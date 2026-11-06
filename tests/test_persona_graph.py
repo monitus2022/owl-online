@@ -61,8 +61,30 @@ async def test_meta_question_routes_to_the_scripted_answer():
         }
     )
     assert state["mode"] == "meta"
-    assert state["answer"] == PERSONA.meta_response("identity")
+    assert state["answer"] in PERSONA.meta_variants("identity")
     assert state["abstained"] is False
+
+
+async def test_a_repeated_meta_question_can_return_a_different_phrasing(monkeypatch):
+    from app.agent import persona as persona_module
+
+    variants = PERSONA.meta_variants("identity")
+    assert len(variants) > 1
+    picks = iter([variants[0], variants[1]])
+    monkeypatch.setattr(persona_module.random, "choice", lambda seq: next(picks))
+    graph = build_graph(_Retriever(), _Llm(), persona=PERSONA)
+    request = {
+        "question": "Who are you?",
+        "requested_mode": "auto",
+        "student_answer": None,
+        "top_k": 5,
+    }
+    first = await graph.ainvoke(request)
+    second = await graph.ainvoke(request)
+    assert first["answer"] == variants[0]
+    assert second["answer"] == variants[1]
+    assert first["abstained"] is False
+    assert second["abstained"] is False
 
 
 async def test_personal_question_routes_to_the_scripted_reply():
@@ -76,7 +98,7 @@ async def test_personal_question_routes_to_the_scripted_reply():
         }
     )
     assert state["mode"] == "personal"
-    assert state["answer"] == PERSONA.personal_response()
+    assert state["answer"] in PERSONA.personal_variants()
 
 
 async def test_persona_off_keeps_the_answer_route():
@@ -161,7 +183,7 @@ async def test_persona_abstention_uses_the_in_world_line():
         }
     )
     assert state["abstained"] is True
-    assert state["answer"] == PERSONA.abstain_response()
+    assert state["answer"] in PERSONA.abstain_variants()
     assert state["citations"] == []
     assert state["abstain_reason"] == "no_evidence"
 
