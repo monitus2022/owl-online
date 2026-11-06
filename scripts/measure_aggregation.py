@@ -56,7 +56,7 @@ def _render(scores, metrics) -> str:
             f"entity_completeness={metrics.entity_completeness:.2f}",
             f"  near_miss  n={metrics.n_near} entity_hit={metrics.near_miss_entity_hit:.2f} "
             f"entity_completeness={metrics.near_miss_entity_completeness:.2f} "
-            f"book_precision={metrics.near_miss_book_precision:.2f}",
+            f"book_share={metrics.near_miss_book_share:.2f}",
             f"  citation_validity={metrics.citation_validity:.2f}",
         ]
     )

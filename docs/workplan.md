@@ -17,7 +17,7 @@ page describes what comes next and why.
   Hit@5 0.667 to 0.778, judge 14/14, left opt-in). Routed per-book retrieval
   reaches 0.79 coverage and 0.76 completeness at equal k=7, but citation
   validity is 0.56 and it is not wired into chat.
-- Current work is #106, the held-out multi-book set, followed by #105, the
+- The held-out multi-book set #106 is complete. Current work is #105, the
   multi-book answer path. Chat is still one-pass until #105 lands.
 - #97 persona follows #105. #107 selection experiments are deferred.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
@@ -85,7 +85,7 @@ Status: in progress.
 
 | Ticket | Scope |
 |---|---|
-| #106 | Held-out multi-book set, written before tuning |
+| #106 | Held-out multi-book set, written before tuning (complete) |
 | #105 | Per-book extraction, merge, one synthesis, coverage statement, flag wiring |
 
 Exit criteria:
@@ -428,7 +428,6 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #106 | Held-out multi-book set, written before tuning | V2 - Deepening |
 | #105 | Per-book extraction, synthesis, coverage statement, flag wiring | V2 - Deepening |
 
 ### Next
@@ -473,6 +472,7 @@ persists exam attempts and chat history.
 | Verification | #28 |
 | Eval harness | #9, #10, #12 |
 | Retrieval foundation | #96, #70, #71, #72, #78 |
+| Held-out set | #106 |
 
 ## Backlog policy
 
@@ -483,9 +483,10 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-Next work: #106 held-out set first, then #105. #96 is closed. #107 is deferred and
-likely superseded by the per-book path. #97 follows #105, with a thin meta-only
-path allowed earlier because it does not change the answer system prompt.
+Next work: #105 multi-book answer path. #96 and #106 are closed. #107 is deferred
+and likely superseded by the per-book path. #97 follows #105, with a thin
+meta-only path allowed earlier because it does not change the answer system
+prompt.
 
 ## Decisions
 

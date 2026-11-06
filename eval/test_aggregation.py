@@ -57,7 +57,14 @@ def test_holdout_fixture_keeps_its_shape():
     assert len(items) == 20
     assert sum(item.kind == "multi_book" for item in items) == 15
     assert sum(item.kind == "near_miss" for item in items) == 5
+    assert sum(
+        len(book.expected_entities) for item in items for book in item.books
+    ) == 90
     assert {item.id for item in items}.isdisjoint({item.id for item in development})
+    assert {item.question.casefold() for item in items}.isdisjoint(
+        {item.question.casefold() for item in development}
+    )
+    assert len({item.question.casefold() for item in items}) == len(items)
     assert all(1 <= book.book_num <= 7 for item in items for book in item.books)
     assert all(len(item.books) >= 2 for item in items if item.kind == "multi_book")
     assert all(len(item.books) == 1 for item in items if item.kind == "near_miss")
@@ -203,7 +210,7 @@ def test_summarize_aggregation_separates_multi_and_near():
     assert metrics.full_coverage_rate == 1.0
     assert metrics.near_miss_entity_hit == 1.0
     assert metrics.near_miss_entity_completeness == 1.0
-    assert metrics.near_miss_book_precision == 0.5
+    assert metrics.near_miss_book_share == 0.5
     assert metrics.citation_validity == 0.75
 
 
@@ -360,3 +367,24 @@ def test_loader_rejects_a_missing_key(tmp_path):
     path.write_text(json.dumps({"id": "bad"}) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="missing 'question'"):
         load_aggregation(path)
+
+
+def test_missing_entities_ignores_front_matter():
+    item = AggregationItem(
+        id="a",
+        question="q",
+        kind="near_miss",
+        books=(BookExpectation(3, ("Pensieve",)),),
+    )
+    missing = missing_entities(
+        [item],
+        [
+            _chunk(
+                "b3-c22-0071",
+                3,
+                "CONTENTS ... The Pensieve ... The Third Task",
+            ),
+            _chunk("b3-c01-0000", 3, "A narrative chunk without the word."),
+        ],
+    )
+    assert missing == ["a book 3: 'Pensieve'"]

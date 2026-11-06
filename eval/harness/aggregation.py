@@ -18,6 +18,12 @@ from app.providers.contracts import Retriever
 from app.schemas import Chunk
 
 AggregationKind = Literal["multi_book", "near_miss"]
+_FRONT_MATTER = re.compile(r"\bCONTENTS\b|All rights reserved|ISBN", re.I)
+
+
+def _is_front_matter(text: str) -> bool:
+    """Table-of-contents and copyright pages are not narrative evidence."""
+    return _FRONT_MATTER.search(text) is not None
 
 
 @dataclass(frozen=True)
@@ -65,7 +71,7 @@ class AggregationMetrics:
     full_coverage_rate: float
     near_miss_entity_hit: float
     near_miss_entity_completeness: float
-    near_miss_book_precision: float
+    near_miss_book_share: float
 
 
 def _require(row: dict, key: str, line_number: int):
@@ -231,7 +237,7 @@ def summarize_aggregation(scores: list[AggregationScore]) -> AggregationMetrics:
             if near_n
             else 0.0
         ),
-        near_miss_book_precision=(
+        near_miss_book_share=(
             near_valid / near_citations if near_citations else 0.0
         ),
     )
@@ -243,6 +249,8 @@ def missing_entities(
     """Expected entities that do not appear in their book in the corpus."""
     by_book: dict[int, list[str]] = defaultdict(list)
     for chunk in chunks:
+        if _is_front_matter(chunk.text):
+            continue
         by_book[chunk.metadata.book_num].append(chunk.text)
     missing: list[str] = []
     for item in items:

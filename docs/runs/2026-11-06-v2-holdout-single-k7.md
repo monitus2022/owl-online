@@ -1,7 +1,7 @@
 # Run record: held-out single-hop k=7
 
 - Date: 2026-11-06
-- Run id: `20261106T120152Z`
+- Run id: `20261106T121322Z`
 - Ticket: #106
 - Config: `aggregation_holdout`, single-hop, top-k 7, quota 0
 - Artifacts: no result CSV (retrieval-only script); `eval/fixtures/aggregation_holdout.jsonl`
@@ -11,6 +11,7 @@
 | Field | Value |
 |---|---|
 | Fixture | 20 items: 15 multi-book, 5 near-miss |
+| Expected entities | 90 |
 | Path | single-hop, one pass |
 | Final top-k | 7 |
 | Generator | `qwen/qwen3-30b-a3b-instruct-2507` (manifest; not called) |
@@ -25,13 +26,13 @@
 
 | Metric | Value |
 |---|---:|
-| Book coverage | 0.68 |
+| Book coverage | 0.69 |
 | Full coverage | 0.13 |
-| Entity completeness | 0.68 |
+| Entity completeness | 0.69 |
 | Citation validity | 0.74 |
 | Near-miss entity hit | 0.80 |
-| Near-miss entity completeness | 0.80 |
-| Near-miss book precision | 0.37 |
+| Near-miss entity completeness | 0.75 |
+| Near-miss book share | 0.43 |
 
 ## Router
 
@@ -44,8 +45,9 @@
 | False negatives | 1 |
 
 The one false negative is `hold15`, phrased as `How many books mention an
-Animagus?` with no coverage cue. It stays single-hop, which is the measured
-held-out failure.
+Animagus?` with no coverage cue. It is a designed negative: the held-out set
+contains one multi-book question without a cue, and the router misses it by
+construction. The 0.93 recall includes that item.
 
 ## Reading
 
@@ -56,6 +58,9 @@ held-out failure.
   single-hop set, so near-miss entity hit is 0.80 rather than 1.00.
 - Citation validity is 0.74. The routed run is lower because it returns a chunk
   from every book, including books outside the item's expected set.
+- Near-miss book share is the fraction of near-miss chunks from the declared
+  answer book. The entities may also appear in other books, so this is not a
+  precision metric.
 
 ## Gate
 
@@ -69,41 +74,41 @@ gate: PASS
 ## Reproduce
 
 ```text
-uv run python scripts/measure_aggregation.py --fixture eval/fixtures/aggregation_holdout.jsonl --strategy single_hop --k 7 --run-id 20261106T120152Z
+uv run python scripts/measure_aggregation.py --fixture eval/fixtures/aggregation_holdout.jsonl --strategy single_hop --k 7 --run-id 20261106T121322Z
 ```
 
 ## Raw output
 
 ```text
-run: 20261106T120152Z
+run: 20261106T121322Z
 strategy=single_hop per_book_k=1 manifest: generator=qwen/qwen3-30b-a3b-instruct-2507 judge=deepseek/deepseek-v4.1-flash-1017 reranker=amazon.rerank-v1:0 pool=50 embedder=qwen3-embedding:0.6b chunking=500/75/200 top_k=7 rrf_k=60 quota=0
 router: precision=1.00 recall=0.93 tp=14 fp=0 fn=1
-expected entities: 94
+expected entities: 90
 aggregation fixture
 item     kind        books covered entities found citations valid
-hold01   multi_book      5       5        5     5         7     5
-hold02   multi_book      3       3        3     3         7     3
-hold03   multi_book      3       3        3     3         7     3
-hold04   multi_book      6       6        6     6         7     6
-hold05   multi_book      6       3        6     3         7     3
-hold06   multi_book      7       4        7     4         7     4
-hold07   multi_book      6       4        6     4         7     4
-hold08   multi_book      6       4        6     4         7     4
-hold09   multi_book      7       7        7     7         7     7
-hold10   multi_book      4       3        4     3         7     3
-hold11   multi_book      5       3        5     3         7     3
-hold12   multi_book      7       3        7     3         7     3
-hold13   multi_book      6       6        6     6         7     6
-hold14   multi_book      3       3        3     3         7     3
+hold01   multi_book      4       4        4     4         7     6
+hold02   multi_book      3       2        3     2         7     7
+hold03   multi_book      3       3        3     3         7     7
+hold04   multi_book      6       5        6     5         7     7
+hold05   multi_book      6       4        6     4         7     5
+hold06   multi_book      7       3        7     3         7     6
+hold07   multi_book      5       4        5     4         7     7
+hold08   multi_book      5       3        5     3         7     5
+hold09   multi_book      7       4        7     4         7     5
+hold10   multi_book      4       3        4     3         7     6
+hold11   multi_book      4       3        4     3         7     5
+hold12   multi_book      7       3        7     3         7     7
+hold13   multi_book      5       4        5     4         7     7
+hold14   multi_book      3       2        3     2         7     7
 hold15   multi_book      3       1        3     1         7     1
 hnear01  near_miss       1       1        3     3         7     5
 hnear02  near_miss       1       1        4     4         7     2
 hnear03  near_miss       1       0        3     0         7     0
 hnear04  near_miss       1       1        4     4         7     2
-hnear05  near_miss       1       1        3     3         7     4
+hnear05  near_miss       1       1        4     3         7     6
 
 aggregate
-  multi_book n=15 book_coverage=0.68 full_coverage=0.13 entity_completeness=0.68
-  near_miss  n=5 entity_hit=0.80 entity_completeness=0.80 book_precision=0.37
+  multi_book n=15 book_coverage=0.69 full_coverage=0.13 entity_completeness=0.69
+  near_miss  n=5 entity_hit=0.80 entity_completeness=0.75 book_share=0.43
   citation_validity=0.74
 ```
