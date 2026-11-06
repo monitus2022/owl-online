@@ -27,9 +27,9 @@ page describes what comes next and why.
   trailing-pages fix (#113), one ablation, a frozen holdout-2 and one final run.
   If it fails, the flag stays off and the work stops.
 - #97's thin slice is implemented behind `OWL_PERSONA`: persona card, DADA
-  scope, scripted meta and personal replies, and the lore schema with a
-  five-entry fixture. The real lore pack and the extended timeline follow. The
-  full persona voice still follows #105.
+  scope, scripted meta and personal replies, and the lore schema. The dev pack
+  now has the five founders, the 1998/2008/2026 timeline and the Auror pathway.
+  The real pack is being collected. The full persona voice still follows #105.
 - #16's deterministic CI gate is merged; the required-check setting is the last
   step. #74 and #75 follow. #107 is deferred.
 - V2.5 subject packs and the exam bank follow the answer path and #97.

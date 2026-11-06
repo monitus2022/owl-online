@@ -8,7 +8,7 @@ import pytest
 from app.agent.persona import META_TOPICS, PERSONA, load_persona
 from app.knowledge import load_lore
 
-FIXTURE = Path(__file__).resolve().parents[1] / "eval" / "fixtures" / "lore.jsonl"
+FIXTURE = Path(__file__).resolve().parents[1] / "eval" / "fixtures" / "lore"
 _TIME_WORDS = ("deadline", "tomorrow", "next week", "hurry", "countdown", "tonight")
 
 
@@ -79,10 +79,11 @@ def test_persona_card_missing_topic_fails(tmp_path):
 
 def test_lore_fixture_loads_and_selects_the_professor():
     store = load_lore(FIXTURE)
-    assert len(store.entries) == 5
+    assert len(store.entries) == 11
+    assert store.get("school-001") is not None
     assert store.get("crane-001") is not None
     assert store.select("who is Professor Crane", subject="dada")[0].id == "crane-001"
-    assert store.select("the exam format", subject="dada")[0].id == "exam-001"
+    assert store.select("the five Auror subjects", subject="dada")[0].id == "auror-001"
 
 
 def test_lore_rejects_an_unknown_tier(tmp_path):

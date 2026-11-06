@@ -1,9 +1,10 @@
 """Lore pack: authored setting facts with their own citations.
 
 The books are the primary corpus. The lore pack holds product canon: the school,
-the professor, the curriculum, the exam format and the timeline. It is raw text
-loaded from a private path and selected by subject, tag and keyword. No
-embeddings, so a setting edit is a text edit plus a reload.
+the five founders, the curriculum and the timeline. It is raw text loaded from a
+private path and selected by subject, tag and keyword. A pack is a directory of
+Markdown files with TOML front matter, one entry per file; a single JSONL file is
+also accepted. No embeddings, so a setting edit is a text edit plus a reload.
 
 Each entry carries a canonicity tier:
 
@@ -21,6 +22,7 @@ from __future__ import annotations
 
 import json
 import re
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -123,20 +125,30 @@ def _tokens(text: str) -> set[str]:
     }
 
 
-def _require(row: dict, key: str, line_number: int) -> object:
+def _require(row: dict, key: str, where: str) -> object:
     if key not in row:
-        raise ValueError(f"lore line {line_number}: missing {key!r}")
+        raise ValueError(f"{where}: missing {key!r}")
     return row[key]
 
 
-def load_lore(path: Path) -> LoreStore:
-    """Read and validate a lore JSONL file.
+def _read_markdown(path: Path) -> dict:
+    """Read one Markdown entry with TOML front matter between +++ fences."""
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("+++"):
+        raise ValueError(f"{path.name}: missing TOML front matter")
+    parts = text.split("+++", 2)
+    if len(parts) < 3:
+        raise ValueError(f"{path.name}: unterminated TOML front matter")
+    row = tomllib.loads(parts[1])
+    body = parts[2].strip()
+    if not body:
+        raise ValueError(f"{path.name}: empty body")
+    row["body"] = body
+    return row
 
-    Fails loudly on a duplicate id, an unknown tier or an empty body: a broken
-    setting pack should stop the app, not produce a quietly wrong answer.
-    """
-    entries: list[LoreEntry] = []
-    seen: set[str] = set()
+
+def _read_jsonl(path: Path) -> list[dict]:
+    rows: list[dict] = []
     for line_number, line in enumerate(
         path.read_text(encoding="utf-8").splitlines(), 1
     ):
@@ -145,36 +157,44 @@ def load_lore(path: Path) -> LoreStore:
         row = json.loads(line)
         if not isinstance(row, dict):
             raise ValueError(f"lore line {line_number}: expected a JSON object")
-        entry_id = str(_require(row, "id", line_number)).strip()
+        rows.append(row)
+    return rows
+
+
+def _build_store(rows: list[dict], where: str) -> LoreStore:
+    entries: list[LoreEntry] = []
+    seen: set[str] = set()
+    for index, row in enumerate(rows, 1):
+        label = f"{where} {index}"
+        entry_id = str(_require(row, "id", label)).strip()
         if not _ID.match(entry_id):
             raise ValueError(
-                f"lore line {line_number}: id must be lowercase letters, digits "
-                f"and hyphens, got {entry_id!r}"
+                f"{label}: id must be lowercase letters, digits and hyphens, "
+                f"got {entry_id!r}"
             )
         if entry_id in seen:
-            raise ValueError(f"lore line {line_number}: duplicate id {entry_id!r}")
+            raise ValueError(f"{label}: duplicate id {entry_id!r}")
         seen.add(entry_id)
-        tier = str(_require(row, "tier", line_number))
+        tier = str(_require(row, "tier", label))
         if tier not in TIERS:
             raise ValueError(
-                f"lore line {line_number}: tier must be one of {sorted(TIERS)}, "
-                f"got {tier!r}"
+                f"{label}: tier must be one of {sorted(TIERS)}, got {tier!r}"
             )
-        body = str(_require(row, "body", line_number)).strip()
+        body = str(_require(row, "body", label)).strip()
         if not body:
-            raise ValueError(f"lore line {line_number}: empty body")
-        subject = str(_require(row, "subject", line_number)).strip()
+            raise ValueError(f"{label}: empty body")
+        subject = str(_require(row, "subject", label)).strip()
         if not subject:
-            raise ValueError(f"lore line {line_number}: empty subject")
-        title = str(_require(row, "title", line_number)).strip()
+            raise ValueError(f"{label}: empty subject")
+        title = str(_require(row, "title", label)).strip()
         if not title:
-            raise ValueError(f"lore line {line_number}: empty title")
-        source = str(_require(row, "source", line_number)).strip()
+            raise ValueError(f"{label}: empty title")
+        source = str(_require(row, "source", label)).strip()
         if not source:
-            raise ValueError(f"lore line {line_number}: empty source")
+            raise ValueError(f"{label}: empty source")
         tags = row.get("tags", [])
         if not isinstance(tags, list) or any(not isinstance(tag, str) for tag in tags):
-            raise ValueError(f"lore line {line_number}: tags must be a list of strings")
+            raise ValueError(f"{label}: tags must be a list of strings")
         entries.append(
             LoreEntry(
                 id=entry_id,
@@ -187,5 +207,21 @@ def load_lore(path: Path) -> LoreStore:
             )
         )
     if not entries:
-        raise ValueError(f"no lore entries in {path}")
+        raise ValueError(f"no lore entries in {where}")
     return LoreStore(tuple(entries), {entry.id: entry for entry in entries})
+
+
+def load_lore(path: Path) -> LoreStore:
+    """Read and validate a lore pack.
+
+    A directory is read as one Markdown entry per file, with TOML front matter
+    between `+++` fences. A file is read as JSONL. Both fail loudly on a
+    duplicate id, an unknown tier or an empty body: a broken setting pack should
+    stop the app, not produce a quietly wrong answer.
+    """
+    if path.is_dir():
+        files = sorted(path.glob("*.md"))
+        if not files:
+            raise ValueError(f"no lore markdown files in {path}")
+        return _build_store([_read_markdown(file) for file in files], "lore entry")
+    return _build_store(_read_jsonl(path), "lore line")

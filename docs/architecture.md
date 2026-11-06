@@ -425,9 +425,10 @@ The non-stream `/ask` endpoint is the grounded answer API. Meta and personal are
 chat intents on `/ask/stream`; `/ask` does not route them.
 
 `app/knowledge/lore.py` holds authored setting facts with a canonicity tier
-(`book`, `product`, `secondary`). It is raw JSONL selected by subject and
-keyword, not embedded, so a setting edit is a text edit plus a reload. The thin
-slice uses `eval/fixtures/lore.jsonl`; the real pack stays out of git.
+(`book`, `product`, `secondary`). It is raw Markdown with TOML front matter, one
+entry per file, selected by subject and keyword, not embedded, so a setting edit
+is a text edit plus a reload. The thin
+slice uses `eval/fixtures/lore/` (one Markdown entry per file, TOML front matter); the real pack stays out of git.
 Lore-grounded answers and `[lore:<id>]` citations are the next ticket.
 
 The exam bank is a separate, offline surface. It is not a chat intent and it does
