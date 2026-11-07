@@ -158,9 +158,11 @@ shapes as of #126:
 | harvest_failures.jsonl | Failure | url, stage (fetch, parse), reason |
 | invalid_chapters.jsonl | InvalidEdge | entry_url, code - books codes outside the corpus chapter table |
 | sidebar_missing.jsonl | ReviewRow | urls whose page had no detectable Sources widget |
+| canon_index.jsonl | CanonEdge | #127: entry_key, family, title, book, chapter, epilogue, agreement, sources, low_precision, total_hits, candidates (chunk id, text hash, span, phrase) |
 
-`canon_index.jsonl` (the resolved join with candidate chunk ids and text
-hashes) lands with #127.
+`canon_index.jsonl` carries chunk ids, text hashes and `[start, end)` spans
+only - never book text; the pack builder (#128) reconstructs a quote by
+slicing the corpus, so copyrighted text stays in one gitignored place.
 
 Committed to git: the schema (pydantic models), the code-to-book table, the
 parser, synthetic fixtures, and (once built) a summary coverage report checked
@@ -256,6 +258,55 @@ Each assignment is recorded as: concept id, subject, tier, basis, source refs,
 references, review status. The workplan publication rule carries over: no
 material publishes without a reviewed basis and at least one books-bucket
 source ref.
+
+## Resolver results (#127, 2026-11-08)
+
+`app/knowledge/lexicon.py` + `scripts/lexicon_report.py` join the harvest to
+itself and to the corpus, emitting `data/lexicon/canon_index.jsonl`:
+
+| Measure | Value |
+|---|---:|
+| canon edges (entry, book, chapter, epilogue) | 19,747 |
+| agreement both / forward-only / reverse-only | 5,697 / 10,834 / 3,216 |
+| edges with at least one chunk candidate | 8,328 |
+| candidate refs retained (cap 8) / total hits | 22,611 / 33,144 |
+| integrity failures (id missing, hash mismatch, span-without-phrase) | 0 |
+| unparseable entry urls skipped | 0 |
+| low-precision edges (hits exceed the cap) | 760 |
+| sidebar-only edges (disagreement queue) | 8,559 |
+
+The join is keyed `family/slug`; family is the first path segment that is a
+known family (so nested `place/…/the-burrow` keys correctly) and the slug the
+last segment. An early version keyed the last two segments and silently
+skipped 6,851 nested urls; the fix (segment scan plus an on-build skip counter
+and integrity pass) surfaced the ~5,300 place/creature edges the first cut
+hid, which is exactly what the "recorded, never silently dropped" rule is for.
+
+Every build calls `verify_edges`: each candidate's chunk id must exist, its
+text hash must recompute to the chunk's current text, and its `[start, end)`
+span must contain the match phrase. `--check-only` summarises an existing
+index; `--sample N` prints a deterministic N-per-class review list with a
+per-edge hash verdict.
+
+Spot-check (ticket Done-when, two parts): the machine-checkable part is done
+and recorded - `scripts/lexicon_report.py --sample 25` printed 25
+both-agreement and 25 forward-only edges from the real corpus, every
+candidate-bearing edge in the sample reported `hash-ok` (for example
+`creature/acromantula` b5c16 -> `b5-c16-0057`, `magic/polyjuice-potion`
+b5c31 -> `b5-c31-0062`) and the rest `no-candidate` (mostly event/place
+entries whose titles are chapter names or formal geography, not verbatim
+phrases). The full-index `verify_edges` pass (0 problems) is the same check
+over everything, not just the sample. The human part - reading the sampled
+quotes against the books, per pilot subject - is pending on the PR review:
+until it is recorded here, this criterion is automated-met / human-pending,
+and #127 stays open.
+
+Rules as planned: the incantation beats the title as match phrase (rare
+tokens; plural-tolerant word-boundary spans); book-level citations scan the
+whole book; `DHE` resolves to b7-c36 from chunk ordinal 103 on and stays a
+distinct edge from plain `DH36`; reverse-only edges are kept as hints; nothing
+dropped silently. No book text is persisted: candidates carry spans only, so
+the pack builder slices the quote from the corpus at build time.
 
 ## Validation
 

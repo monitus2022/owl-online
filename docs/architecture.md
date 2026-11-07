@@ -36,12 +36,12 @@ the previous book's last chapter (#113). The trim uses the copyright page as the
 boundary, requires a contents page at a book boundary, and scans a short window
 back, so chapter detection and chunk size are unchanged.
 
-Planned exam-bank stages, not built yet:
+Exam-bank and canon-index stages (canon-index rows are built; the rest is planned):
 
 | Stage | Module | Responsibility |
 |---|---|---|
 | Canon index harvest (built, #125+#126) | `app/pipeline/ingest/lexicon/` | sitemap discovery, polite cached fetch of hp-lexicon.org, entry and chapter parse plus fetch metadata to gitignored JSONL |
-| Canon index resolve (planned, #127) | `app/knowledge/lexicon.py` | citation-code buckets, forward/reverse join, chunk candidate resolution feeding pack build |
+| Canon index resolve (built, #127) | `app/knowledge/lexicon.py` | agreement join (forward citations vs chapter tabs vs sidebar), chunk-candidate resolution with phrase priority and spans, deterministic review sample and integrity verification |
 | Subject packs | `app/knowledge/` | subject taxonomy, material records, source refs, pack build and validation |
 | Exam build | `app/pipeline/exam/` | offline plan, retrieve, generate, validate, persist |
 | Exam store | `app/storage/` | SQLite models and repository for exams, questions, attempts |
@@ -665,14 +665,14 @@ canon index resolves to chunk candidates, #127):
 | `SubjectPack` | `app/knowledge/packs.py` | manifest, records, load and write |
 | `PackValidation` / `Coverage` | `app/knowledge/packs.py` | deterministic corpus join and thin-subject report |
 
-Canon-index types (spike shapes landed on #125; the join types land with #127):
+Canon-index types (spike shapes and resolver landed on #125/#127):
 
 | Type | Module | Purpose |
 |---|---|---|
 | `ResolvedCitation` | `app/pipeline/ingest/lexicon/codes.py` | citation code with bucket, book, chapter, medium and epilogue flag |
 | `Citation` / `EntryPage` / `ChapterPage` | `app/pipeline/ingest/lexicon/parse.py` | page structure: code plus origin plus parse-time bucket, entry identity, chapter reverse tabs |
 | `QueueItem` / `FetchResult` | `app/pipeline/ingest/lexicon/{discovery,fetch}.py` | work queue row; fetch record with access date and response hash |
-| `CanonEdge` | `app/knowledge/lexicon.py` | planned: entry, chapter, agreement label, candidate chunk ids and hashes |
+| `CanonEdge` / `Candidate` | `app/knowledge/lexicon.py` | built (#127): entry, book/chapter/epilogue key, agreement, sources, candidate refs as (chunk id, text hash, span) |
 
 Planned exam-bank types, once the offline pipeline lands:
 

@@ -59,7 +59,12 @@ page describes what comes next and why.
   4,993 entries plus all 199 novel chapters, 22,797 valid books edges, 3
   flagged broken-href edges, 3 page failures (all site meta pages); results and
   the chapter-title cross-check are in the plan doc's Harvest results section;
-  the branch awaits review. #127 (resolver) consumes the gitignored artifacts.
+  the branch awaits review. #127 (resolver) is delivered on branch
+  `127/lexicon-resolver`: 19,747 canon edges joined and resolved to 22,611
+  retained chunk candidates (id + text hash + span, in-pool, 0 integrity
+  failures enforced by the build itself, 0 skipped urls), agreement labels
+  and the sidebar disagreement queue recorded, deterministic review sample
+  with the human read pending on the PR. #128 (pack wiring) is next.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
 
 ## Product shape
@@ -605,9 +610,10 @@ persists exam attempts and chat history.
 Next work: #74 and #75 deploy hardening. #16 is merged; the required-check
 setting is the last step. #105 is complete with the flag off and #113 is merged.
 #96 and #106 are closed. #107 is deferred and likely superseded by the per-book
-path. On the pack line: the #125 spike is complete (draft PR #130); #126 starts
-on the spike branch head. The Lexicon courtesy note is deferred to project
-completion by maintainer decision, so no contact gate blocks the harvest.
+path. On the pack line: the canon index is harvested (#125, #126 merged) and
+resolved (#127 open); the courtesy note to the Lexicon is deferred to project
+completion by maintainer decision. #87's schema half is open (PR #153); #128
+wires the resolved index into pack seeding.
 
 ## Decisions
 
