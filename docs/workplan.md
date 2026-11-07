@@ -50,10 +50,11 @@ page describes what comes next and why.
   flagged broken-href edges, 3 page failures (all site meta pages); results and
   the chapter-title cross-check are in the plan doc's Harvest results section;
   the branch awaits review. #127 (resolver) is delivered on branch
-  `127/lexicon-resolver`: 14,452 canon edges joined and resolved to 15,244
-  chunk candidates (id + text hash + span, 0 integrity failures), agreement
-  labels and the sidebar disagreement queue recorded, hub-page and
-  low-precision review queues surfaced. #128 (pack wiring) is next.
+  `127/lexicon-resolver`: 19,747 canon edges joined and resolved to 22,611
+  retained chunk candidates (id + text hash + span, in-pool, 0 integrity
+  failures enforced by the build itself, 0 skipped urls), agreement labels
+  and the sidebar disagreement queue recorded, deterministic review sample
+  with the human read pending on the PR. #128 (pack wiring) is next.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
 
 ## Product shape

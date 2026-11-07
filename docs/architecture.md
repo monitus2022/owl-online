@@ -36,7 +36,7 @@ the previous book's last chapter (#113). The trim uses the copyright page as the
 boundary, requires a contents page at a book boundary, and scans a short window
 back, so chapter detection and chunk size are unchanged.
 
-Planned exam-bank stages, not built yet:
+Exam-bank and canon-index stages (canon-index rows are built; the rest is planned):
 
 | Stage | Module | Responsibility |
 |---|---|---|
@@ -639,7 +639,7 @@ Planned subject knowledge types, once the packs land:
 | `ReferenceLink` | `app/knowledge/materials.py` | optional secondary source with title, URL, publisher and access date |
 | `SubjectPack` | `app/knowledge/packs.py` | version, status, coverage and manifest |
 
-Canon-index types (spike shapes landed on #125; the join types land with #127):
+Canon-index types (spike shapes and resolver landed on #125/#127):
 
 | Type | Module | Purpose |
 |---|---|---|

@@ -6,11 +6,14 @@ builder uses, keeping the join honest.
 """
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from app.knowledge.lexicon import (
     EPILOGUE_FIRST_ORDINAL,
+    CanonEdge,
     EdgeKey,
+    LexiconEntry,
     build_canon_index,
     canon_row,
     chunk_text_hash,
@@ -20,7 +23,9 @@ from app.knowledge.lexicon import (
     load_entries,
     resolve_candidates,
     reverse_edges,
+    sample_edges,
     summarize,
+    verify_edges,
 )
 from app.schemas import Chunk, ChunkMetadata
 
@@ -380,3 +385,86 @@ def test_novel_table_matches_the_harvest_grammar():
     from app.pipeline.ingest.lexicon.codes import NOVEL_BY_CODE as GRAMMAR_TABLE
 
     assert RESOLVER_TABLE == GRAMMAR_TABLE
+
+
+def test_underscore_slug_and_hub_rejection():
+    # the real lilys_letter slug that exposed the hyphen-only regex
+    assert entry_key_from_href("/thing/lilys_letter/") == "thing/lilys_letter"
+    # a bare family hub page is not an entry
+    assert entry_key_from_href("/magic/") is None
+    assert entry_key_from_href("https://www.hp-lexicon.org/place/") is None
+
+
+# --- verify_edges --------------------------------------------------------------
+
+
+def _edge_with_candidate():
+    chunk = _chunk("b4-c06-0007", "Accio summon the broom", 4, 6)
+    edge = EdgeKey(entry_key="magic/summoning-charm", book=4, chapter=6)
+    candidates, _, _total = resolve_candidates(
+        LexiconEntry(key=edge.entry_key, family="magic", slug="summoning-charm",
+                     title="Summoning Charm", incantation="Accio"),
+        edge,
+        group_chunks([chunk]),
+    )
+    return (
+        [CanonEdge(key=edge, family="magic", title="Summoning Charm",
+                   agreement="forward-only", sources=("article",), candidates=candidates)],
+        {chunk.id: chunk},
+    )
+
+
+def test_verify_edges_clean_on_honest_index():
+    edges, chunks = _edge_with_candidate()
+    assert verify_edges(edges, chunks) == []
+
+
+def test_verify_edges_catches_tampering():
+    edges, chunks = _edge_with_candidate()
+    cand = edges[0].candidates[0]
+
+    tampered_hash = replace(edges[0], candidates=[replace(cand, text_hash="0" * 16)])
+    assert any("text hash" in p for p in verify_edges([tampered_hash], chunks))
+
+    tampered_span = replace(edges[0], candidates=[replace(cand, span=(0, 1))])
+    assert any("span" in p for p in verify_edges([tampered_span], chunks))
+
+    assert any("not in corpus" in p for p in verify_edges(edges, {}))
+
+    # the chunk exists but belongs to another chapter: outside the edge pool
+    moved = {cand.chunk_id: _chunk(cand.chunk_id, "Accio summon the broom", 4, 9)}
+    problems = verify_edges(edges, moved)
+    assert any("outside the edge" in p for p in problems)
+
+
+def test_sample_edges_deterministic_and_bounded():
+    edges = []
+    for i in range(60):
+        edges.append(
+            CanonEdge(
+                key=EdgeKey(entry_key=f"magic/e{i:02d}", book=1, chapter=1),
+                family="magic",
+                title=f"E{i:02d}",
+                agreement="both" if i % 2 else "forward-only",
+                sources=("article", "tab"),
+            )
+        )
+    first = sample_edges(edges, 25)
+    second = sample_edges(edges, 25)
+    assert [e.key.entry_key for e in first["both"]] == [e.key.entry_key for e in second["both"]]
+    assert len(first["both"]) <= 25 and len(first["forward-only"]) <= 25
+    # n larger than the pool returns the whole pool, not padding
+    big = sample_edges(edges, 500)
+    assert len(big["both"]) == 30
+    # a mid-size pool (n <= size < 2n) must return exactly n, spread evenly
+    both40 = [replace(e, agreement="both") for e in edges[:40]]
+    mid = sample_edges(both40, 25)["both"]
+    keys = [e.key.entry_key for e in mid]
+    assert len(keys) == 25
+    assert keys == sorted(keys)  # order-stable
+    assert keys[-1] == "magic/e38"  # reaches the pool tail, not first-n
+    assert sample_edges(both40, 25)["both"] == mid  # deterministic
+
+
+def test_sample_edges_zero_requests_is_empty():
+    assert sample_edges([], 0) == {"both": [], "forward-only": []}

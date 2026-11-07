@@ -288,14 +288,18 @@ span must contain the match phrase. `--check-only` summarises an existing
 index; `--sample N` prints a deterministic N-per-class review list with a
 per-edge hash verdict.
 
-Spot-check (ticket Done-when): `scripts/lexicon_report.py --sample 25` on the
-real corpus printed 25 both-agreement and 25 forward-only edges; every
-candidate-bearing sample edge reported `hash-ok` (for example
-`creature/acromantula` b5c16 -> `b5-c16-0057`, `magic/polyjuice-potion` b5c31
--> `b5-c31-0062`) and the rest `no-candidate` (mostly event/place entries whose
-titles are chapter names or formal geography, not verbatim phrases). The
-0-integrity-failures line above is the whole-index form of the same check, so
-the sample is corroborating, not load-bearing.
+Spot-check (ticket Done-when, two parts): the machine-checkable part is done
+and recorded - `scripts/lexicon_report.py --sample 25` printed 25
+both-agreement and 25 forward-only edges from the real corpus, every
+candidate-bearing edge in the sample reported `hash-ok` (for example
+`creature/acromantula` b5c16 -> `b5-c16-0057`, `magic/polyjuice-potion`
+b5c31 -> `b5-c31-0062`) and the rest `no-candidate` (mostly event/place
+entries whose titles are chapter names or formal geography, not verbatim
+phrases). The full-index `verify_edges` pass (0 problems) is the same check
+over everything, not just the sample. The human part - reading the sampled
+quotes against the books, per pilot subject - is pending on the PR review:
+until it is recorded here, this criterion is automated-met / human-pending,
+and #127 stays open.
 
 Rules as planned: the incantation beats the title as match phrase (rare
 tokens; plural-tolerant word-boundary spans); book-level citations scan the

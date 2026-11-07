@@ -184,6 +184,8 @@ def entry_key_from_href(href: str) -> str | None:
     slug = segments[-1]
     if not re.fullmatch(r"[a-z0-9_-]+", slug):
         return None
+    if slug == family:
+        return None  # a bare family hub page (/magic/) is not an entry
     return f"{family}/{slug}"
 
 
@@ -206,7 +208,7 @@ def load_entries(path: Path, skipped: list[str] | None = None) -> dict[str, Lexi
             continue
         entries[key] = LexiconEntry(
             key=key,
-            family=row["family"],
+            family=family,
             slug=slug,
             title=row["title"],
             incantation=row.get("incantation", ""),
@@ -293,9 +295,15 @@ def index_chunks(chunks: list[Chunk]) -> dict[str, Chunk]:
     return {chunk.id: chunk for chunk in chunks}
 
 
+def _phrase_re(phrase: str) -> re.Pattern[str]:
+    """One builder for the match expression, used by both the matcher and
+    the verifier: identical semantics is the point of verifying at all."""
+    return re.compile(rf"\b{re.escape(phrase)}(?:e?s)?\b", re.IGNORECASE)
+
+
 def _chunk_ordinal(chunk_id: str) -> int:
     tail = chunk_id.rsplit("-", 1)[-1]
-    return int(tail) if tail.isdigit() else -1  # a foreign id is never "after"
+    return int(tail) if tail.isascii() and tail.isdigit() else -1  # a foreign id is never "after"
 
 
 def _match_spans(text: str, phrase: str) -> list[tuple[int, int]]:
@@ -303,7 +311,7 @@ def _match_spans(text: str, phrase: str) -> list[tuple[int, int]]:
     hits "charms"), extended to the sentence end (capped) so a span covers a
     usable quote without regex on prose."""
     spans: list[tuple[int, int]] = []
-    pattern = re.compile(rf"\b{re.escape(phrase)}(?:e?s)?\b", re.IGNORECASE)
+    pattern = _phrase_re(phrase)
     for m in pattern.finditer(text):
         start = m.start()
         limit = min(len(text), start + MAX_MATCH_SPAN_CHARS)
@@ -422,13 +430,29 @@ def verify_edges(edges: list[CanonEdge], chunks: dict[str, Chunk]) -> list[str]:
             if chunk is None:
                 problems.append(f"{at} {cand.chunk_id}: chunk not in corpus")
                 continue
+            meta = chunk.metadata
+            if edge.key.chapter is None:
+                in_pool = meta.book_num == edge.key.book
+            elif edge.key.epilogue:
+                in_pool = (
+                    meta.book_num == EPILOGUE_BOOK
+                    and meta.chapter_num == EPILOGUE_CHAPTER
+                    and _chunk_ordinal(cand.chunk_id) >= EPILOGUE_FIRST_ORDINAL
+                )
+            else:
+                in_pool = (meta.book_num, meta.chapter_num) == (
+                    edge.key.book,
+                    edge.key.chapter,
+                )
+            if not in_pool:
+                problems.append(f"{at} {cand.chunk_id}: chunk outside the edge's pool")
+                continue
             if chunk_text_hash(chunk.text) != cand.text_hash:
                 problems.append(f"{at} {cand.chunk_id}: text hash no longer matches")
                 continue
             start, end = cand.span
             fragment = chunk.text[start:end]
-            phrase_re = re.compile(rf"\b{re.escape(cand.phrase)}(?:e?s)?\b", re.IGNORECASE)
-            if not phrase_re.search(fragment):
+            if not _phrase_re(cand.phrase).search(fragment):
                 problems.append(f"{at} {cand.chunk_id}: span no longer contains phrase")
     return problems
 
@@ -492,21 +516,24 @@ def summarize(edges: list[CanonEdge]) -> dict:
 
 
 def sample_edges(edges: list[CanonEdge], n: int) -> dict[str, list[CanonEdge]]:
-    """Deterministic review sample: stride through each agreement class in
-    sorted order. The human spot-check (ticket Done-when) runs on this list;
-    `--sample` also prints it with its per-edge integrity result."""
+    """Deterministic review sample: exactly min(n, pool) edges spread evenly
+    across each agreement class in sorted order (no randomness, no seed).
+
+    The human spot-check (ticket Done-when) runs on this list; `--sample`
+    also prints each edge's machine-checkable first-candidate verdict.
+    """
     out: dict[str, list[CanonEdge]] = {}
     for agreement in ("both", "forward-only"):
         pool = sorted(
             (e for e in edges if e.agreement == agreement),
             key=lambda e: (e.key.entry_key, e.key.book, e.key.epilogue, e.key.chapter or 0),
         )
-        if not pool or n <= 0:
+        if n <= 0 or not pool:
             out[agreement] = []
             continue
-        stride = max(1, len(pool) // n)
-        picked = pool[::stride]
-        out[agreement] = picked[:n] if len(picked) >= n else picked
+        k = min(n, len(pool))
+        picked = [pool[j * len(pool) // k] for j in range(k)]
+        out[agreement] = list(dict.fromkeys(picked))  # dedupe, keep order
     return out
 
 

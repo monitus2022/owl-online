@@ -11,9 +11,11 @@ Run:
 Logic lives in `app/knowledge/lexicon.py`; this file is params, IO and the
 review surface. Writes `canon_index.jsonl` (gitignored): chunk ids, hashes
 and spans, never book text. Every build verifies all candidates against the
-corpus (id exists, text hash recomputes, span contains the phrase) and
-`--sample N` prints a deterministic per-agreement review list for the
-human spot-check required by the ticket.
+corpus (id exists, in the edge's pool, text hash recomputes, span contains
+the phrase); a non-empty problem list means the artifact is not written and
+the run exits non-zero. `--sample N` prints a deterministic per-agreement
+review list; its per-edge verdict machine-checks the first candidate only -
+the human read of the quotes remains a human act.
 """
 
 from __future__ import annotations
@@ -99,12 +101,15 @@ def main() -> int:
     edges = build_canon_index(entries, forward, reverse, group_chunks(list(chunks.values())))
 
     problems = verify_edges(edges, chunks)
-    write_jsonl(out, [canon_row(edge) for edge in edges])
     print(json.dumps(summarize(edges), indent=2, sort_keys=True))
     print(f"unparseable entry urls skipped: {len(skipped)}")
     print(f"integrity problems (must be 0): {len(problems)}")
     for problem in problems[:10]:
         print(f"  {problem}")
+    if problems:
+        # Never write an index that failed its own integrity pass.
+        return 1
+    write_jsonl(out, [canon_row(edge) for edge in edges])
 
     low = [e for e in edges if e.low_precision]
     sidebar_only = [e for e in edges if "sidebar" in e.sources and "article" not in e.sources]
