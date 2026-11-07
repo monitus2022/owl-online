@@ -81,7 +81,7 @@ export function VenuePage() {
           className={tab === "chat" ? "tab tab-on" : "tab"}
           onClick={() => setTab("chat")}
         >
-          {subject.personaState === "live" ? "Ask the professor" : "Ask the owl"}
+          Ask the professor
         </button>
         <button
           id="tab-exam"
