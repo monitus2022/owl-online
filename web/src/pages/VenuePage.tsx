@@ -26,14 +26,25 @@ export function VenuePage() {
   const subject = getSubject(slug);
   const [tab, setTab] = useState<Tab>("chat");
 
-  // WAI-ARIA tabs: arrow keys move activation around the ring of tabs.
+  // WAI-ARIA tabs: arrow keys move activation around the ring of tabs,
+  // Home/End jump to the ends. The list is short, so activation follows
+  // focus (automatic activation) instead of separate selection state.
   function moveTab(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
     const index = TABS.findIndex((entry) => entry.id === tab);
-    const step = event.key === "ArrowRight" ? 1 : TABS.length - 1;
-    const next = TABS[(index + step) % TABS.length];
-    setTab(next.id);
-    document.getElementById(`tab-${next.id}`)?.focus();
+    let next: Tab | null = null;
+    if (event.key === "ArrowRight") {
+      next = TABS[(index + 1) % TABS.length].id;
+    } else if (event.key === "ArrowLeft") {
+      next = TABS[(index + TABS.length - 1) % TABS.length].id;
+    } else if (event.key === "Home") {
+      next = TABS[0].id;
+    } else if (event.key === "End") {
+      next = TABS[TABS.length - 1].id;
+    }
+    if (next === null) return;
+    event.preventDefault();
+    setTab(next);
+    document.getElementById(`tab-${next}`)?.focus();
   }
 
   if (!subject) return <Navigate to="/cloister" replace />;
@@ -125,6 +136,7 @@ export function VenuePage() {
         id="panel-papers"
         role="tabpanel"
         aria-labelledby="tab-papers"
+        tabIndex={0}
         hidden={tab !== "papers"}
       >
         <HistoryPanel subject={subject} active={tab === "papers"} />

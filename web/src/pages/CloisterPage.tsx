@@ -11,26 +11,27 @@ import { SUBJECTS } from "../data/subjects";
 // and professors land, so the closed doors are honest placeholders, not
 // half-built pages.
 export function CloisterPage() {
-  const [bests, setBests] = useState<Record<string, StoredAttempt | null>>({});
+  const [bests, setBests] = useState<Record<string, StoredAttempt | null | undefined>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let live = true;
     Promise.all(
       SUBJECTS.map(async (subject) => {
-        const best = await resultsStore.best(subject.slug);
-        return [subject.slug, best] as const;
-      }),
-    )
-      .then((entries) => {
-        if (live) {
-          setBests(Object.fromEntries(entries));
-          setLoading(false);
+        try {
+          return [subject.slug, await resultsStore.best(subject.slug)] as const;
+        } catch {
+          // undefined = unreadable drawer for this department, distinct from
+          // null = genuinely no records; the board words them differently.
+          return [subject.slug, undefined] as const;
         }
-      })
-      .catch(() => {
-        if (live) setLoading(false);
-      });
+      }),
+    ).then((entries) => {
+      if (live) {
+        setBests(Object.fromEntries(entries));
+        setLoading(false);
+      }
+    });
     return () => {
       live = false;
     };
@@ -48,7 +49,7 @@ export function CloisterPage() {
         Five departments, one per founder. Each door leads to that
         department&rsquo;s classroom.
       </p>
-      <ul className="door-row">
+      <ul className="door-row" role="list">
         {SUBJECTS.map((subject) => (
           <Door key={subject.slug} subject={subject} />
         ))}
