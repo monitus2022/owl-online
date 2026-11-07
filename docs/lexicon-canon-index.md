@@ -109,11 +109,10 @@ Book code to corpus mapping:
 | DH | 7 | 1-36 |
 
 The counts above match `data/chunks.jsonl` exactly (verified 2026-11-07). Two
-known deltas to handle in the resolver:
+known deltas, both settled by the spike (see Spike findings):
 
-- `DHE`: the epilogue. Our ingest only splits on CHAPTER headings, so epilogue
-  text lives at the tail of book 7 chapter 36 chunks. The spike must confirm
-  this and pin the resolution rule.
+- `DHE`: the epilogue text lives at the tail of book 7 chapter 36, from the
+  marker inside chunk `b7-c36-0103`; `DHE` resolves to that slice;
 - The Lexicon cites the UK Bloomsbury text; our corpus is the US edition.
   Chapter titles and numbering are identical across the seven books; book 1
   differs only in title (Philosopher's vs Sorcerer's Stone). Record both titles.
@@ -126,7 +125,7 @@ All under `data/lexicon/` (gitignored), JSONL one record per line:
 |---|---|---|
 | pages/ | fetch cache | raw HTML by url hash, fetch date, response hash |
 | entries.jsonl | LexiconEntry | url, slug, title, entry_type, magic_types, incantation, canonicity note |
-| citations.jsonl | CanonCitation | entry_url, code, bucket, book_num, chapter_num, origin (forward-list, sources-sidebar), parse confidence |
+| citations.jsonl | CanonCitation | entry_url, code, bucket, book_num, chapter_num, origin (href, anchor, bare), parse confidence |
 | chapter_index.jsonl | ChapterLink | book_num, chapter_num, entry_urls with their Related-Entries tab |
 | canon_index.jsonl | CanonEdge | entry_id, book_num, chapter_num, agreement (forward, reverse, both), candidate chunk ids, text hashes |
 
@@ -150,19 +149,15 @@ CLI entry points follow the existing style: `scripts/harvest_lexicon.py`
 (discover, fetch, parse) and `scripts/lexicon_report.py` (resolve, report), both
 thin wrappers over library code, as with `scripts/ingest_corpus.py`.
 
-Parsing notes the spike must settle:
+Parsing notes, settled by the spike (see Spike findings above):
 
-- citation codes appear as hyperlinks in the References list but bare
-  parenthesials for non-novel sources; parse anchor text first, fall back to a
-  code regex over the bullet;
-- one bullet can cite several chapters (`DH10`, `DH26` in the same sentence);
-  edges are per code, with the bullet's ordinal kept as a locator only (no
-  prose);
-- the Sources sidebar and the References list can disagree; both are recorded
-  with origin, and the disagreement lands in the review queue;
-- Related Entries tabs are curated by the editors and are broader than literal
-  mentions; they corroborate but do not create source_refs on their own - a
-  reverse-only edge must still pass chunk token match.
+- codes arrive as hyperlinks or bare parenthesials; novel codes derive from the
+  href, non-novel ones from the anchor text or the parens;
+- one sentence can cite several chapters; edges are per code;
+- forward sections and the Sources sidebar can disagree; both are recorded
+  with origin, disagreement lands in the review queue;
+- Related Entries tabs are editor-curated and broader than literal mentions:
+  they corroborate but never create source refs on their own.
 
 ## Consumers
 
@@ -239,6 +234,49 @@ source ref.
   in the current index and a matching text hash;
 - counts sanity: the seven novels produce roughly 198 chapter pages; all are
   fetched and parsed, zero parse failures on the References section presence.
+
+## Spike findings (#125, 2026-11-07)
+
+The spike crawled 55 hand-picked spell/potion entries around the DADA and
+Charms pilot plus 14 chapter pages (gitignored cache under `data/lexicon/`).
+Result: 322 citations; 274 books-bucket edges, 39 excluded (film/play/screenplay),
+9 secondary-books, 10 unknown tokens queued. Spot-checked mappings agree with
+the book text (for example Summoning Charm cites GF6 and `Accio!` appears in
+chunk `b4-c06-0011`). The parse rules were rebuilt on these observations:
+
+- citations live anywhere in the article, not only the references list; prose
+  outside the section still carries real citations;
+- the references block is a `<ul>` on most pages but plain `<p>` blocks on
+  some, and the heading is "References from the canon" or "Canon references";
+- every page's footer nav links every chapter of every book: the article
+  region MUST end at the first `related_container` or the index is destroyed;
+- novel codes are derived from the href (`/gf/gf6` -> `GF6`), which also picks
+  up anchors whose text is not the code; non-novel codes stay bare parenthesials;
+- capitalisation drift is real: `Pm` (Pottermore) beside `PM`;
+- decimal scene codes exist for the play (`CC2.13`, `CC3.9`): bucket from the
+  prefix, chapter left unset;
+- whole-book citations occur (no chapter number): the edge is book-scoped,
+  `chapter_num` null;
+- the Deathly Hallows epilogue settles cleanly: the site's page is
+  `/dh/dhe/` (abbreviation `DH/e`, 55 related entries) and the forward code
+  `DHE` resolves to book 7 chapter 36, whose text in our corpus ends with the
+  epilogue after the `NINETEEN YEARS LATER / EPILOGUE` marker inside chunk
+  `b7-c36-0103`. Resolver rule: `DHE` -> chunks of b7-c36 from that marker on;
+- chapter reverse tabs use mixed group names (plural `characters`/`things`,
+  singular `magic`): normalise; reverse edges corroborate, never create refs;
+- some entries legitimately have no book citations (film-only spells such as
+  Protego Diabolica, Pottermore-only mentions such as Wideye Potion): about 2
+  of 55 in this sample. Zero-edge is a reported state, not an error, but each
+  one is listed for review;
+- the unknown queue caught editorial/news abbreviations (SDNY, MACUSA, BCE,
+  WSch, PmP) - quarantine works - plus four real source codes to add in #126:
+  `FWT`, `BLC`, `TLC2` and per-tale `TBB/xx` codes for Beedle the Bard;
+- parenthesised bare numbers (`2015`) reach the queue: require at least one
+  letter in the #126 token filter.
+
+The spike module lives in `app/pipeline/ingest/lexicon/` (codes, parse) with
+synthetic-structure tests (`tests/test_lexicon_codes.py`,
+`tests/test_lexicon_parse.py`) and the sample runner `scripts/lexicon_spike.py`.
 
 ## Ticket breakdown
 

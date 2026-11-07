@@ -48,10 +48,16 @@ def test_secondary_book_codes_are_recorded_not_books():
 
 
 def test_screenplay_and_other_canon_are_excluded():
-    for code in ["WFT", "CG48", "SD", "CC", "PM", "JKR:Tw", "DP", "MagSp"]:
+    for code in ["WFT", "CG48", "SD", "CC", "PM", "Pm", "JKR:Tw", "DP", "MagSp"]:
         resolved = classify(code)
         assert resolved.bucket == BUCKET_EXCLUDED, code
         assert not resolved.usable_for_packs
+
+
+def test_decimal_scene_codes_stay_excluded_and_chapterless():
+    resolved = classify("CC3.9")
+    assert resolved.bucket == BUCKET_EXCLUDED
+    assert resolved.chapter_num is None
 
 
 def test_film_and_game_suffixes_never_land_in_books():

@@ -135,12 +135,11 @@ def main() -> None:
                     "entry_title": page.title,
                     "code": citation.code,
                     "origin": citation.origin,
-                    "bullet": citation.bullet,
                     "href": citation.href,
                     **vars(resolved),
                 }
             )
-        for candidate in page.bare_code_candidates:
+        for candidate in page.unknown_tokens:
             unknown.append((url, candidate))
 
     reverse: set[tuple[str, int | None, str]] = set()
@@ -163,17 +162,26 @@ def main() -> None:
             }
         )
         for group, title, href in page.related:
-            if group in {"character", "essay", "quote", "trivia"}:
+            # Reverse edges keep the item families; characters and essays are
+            # the site's own tabs, not pack materials at this stage.
+            if group not in {"magic", "things", "creatures", "locations", "place"}:
                 continue
-            slug = href.split("/magic/")[-1].rstrip("/") if "/magic/" in href else href
+            if "/magic/" not in href:
+                continue  # the forward sample is spell/potion only
+            slug = href.split("/magic/")[-1].rstrip("/")
             reverse.add((slug, -1 if page.is_epilogue else page.chapter_num, title))
 
-    forward_slugs = {
+    sample_slugs = {u.split("/magic/")[-1].rstrip("/") for u in entry_urls}
+    forward_pairs = {
         (c["entry_url"].split("/magic/")[-1].rstrip("/"), c.get("chapter_num"))
         for c in citations_out
         if c["bucket"] == "books" and c.get("book_num")
     }
-    agreements = sum(1 for slug, chapter, _ in reverse if (slug, chapter) in forward_slugs)
+    reverse_in_sample = {e for e in reverse if e[0] in sample_slugs}
+    reverse_pairs = {(slug, chapter) for slug, chapter, _ in reverse_in_sample}
+    agreements = len(forward_pairs & reverse_pairs)
+    forward_only = len(forward_pairs - reverse_pairs)
+    reverse_only = len(reverse_pairs - forward_pairs)
 
     (root / "entries.jsonl").write_text(
         "\n".join(json.dumps(e) for e in entries_out) + "\n", encoding="utf-8"
@@ -196,7 +204,10 @@ def main() -> None:
     print(f"no citations ({len(no_refs)}):")
     for url in no_refs[:25]:
         print(f"  {url}")
-    print(f"reverse edges: {len(reverse)}  agreeing with forward: {agreements}")
+    print(
+        f"reverse edges in sample chapters: {len(reverse_in_sample)}  "
+        f"both: {agreements}  forward-only: {forward_only}  reverse-only: {reverse_only}"
+    )
 
 
 if __name__ == "__main__":

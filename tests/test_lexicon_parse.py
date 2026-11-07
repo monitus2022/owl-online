@@ -22,14 +22,15 @@ ENTRY_HTML = """
 <div class="data">Incantation <span>Assurgo</span></div>
 <div class="data">Pronunciation <span>a-SUR-go</span></div>
 <h2>History and Notes</h2>
-<p>Invented placeholder prose about the charm.</p>
+<p>Invented placeholder prose about the charm
+(<a href="/source/the-harry-potter-novels/op/op35">OP35</a>).</p>
 <h2>References from the canon</h2>
 <ul>
 <li>The student raised a feather in the first class
-(<a href="/source/the-harry-potter-novels/ss/ss6">PS6</a>).</li>
+(<a href="/source/the-harry-potter-novels/ps/ps6">PS6</a>).</li>
 <li>The pupil practised on chairs
 (<a href="/source/the-harry-potter-novels/gf/gf20">GF20</a>).
-She rehearsed daily.</li>
+She rehearsed daily (<a href="/source/the-harry-potter-novels/gf/gf20">GF20</a>).</li>
 <li>A shopkeeper used it offscreen
 (<a href="/source/films-and-plays/cg">CG48</a>).</li>
 <li>Twin objects were recalled at once
@@ -37,6 +38,7 @@ She rehearsed daily.</li>
 <a href="/source/the-harry-potter-novels/dh/dh26">DH26</a>).</li>
 <li>A companion volume notes the counter-enchantment (BoS4).</li>
 <li>A film-only usage exists (CS/f).</li>
+<li>Pottermore repeats it (Pm).</li>
 <li>Something cites (Mystery9), an unknown abbreviation.</li>
 </ul>
 <div class="related_container">
@@ -48,6 +50,10 @@ She rehearsed daily.</li>
     <a class="relatedlink related-thing" href="/thing/feather/">Feather</a>
 </div>
 </div>
+</div>
+<div class="site-footer">
+<a href="/source/the-harry-potter-novels/gf/gf9/">9</a>
+<a href="/source/the-harry-potter-novels/gf/gf10/">10</a>
 </div>
 </body></html>
 """
@@ -80,31 +86,45 @@ def test_entry_page_identity_and_info_lines():
     assert page.has_references_section
 
 
-def test_linked_and_bare_citations_are_all_harvested():
+def test_novel_codes_are_derived_from_the_href_anywhere_in_the_article():
+    page = parse_entry_page(ENTRY_HTML, ENTRY_URL)
+    books = {c.code for c in page.citations if c.origin == "href"}
+    assert {"PS6", "GF20", "DH10", "DH26", "OP35"} <= books
+
+
+def test_prose_citation_outside_the_references_section_is_harvested():
+    page = parse_entry_page(ENTRY_HTML, ENTRY_URL)
+    assert any(c.code == "OP35" for c in page.citations)
+
+
+def test_linked_non_novel_and_bare_parenthetical_citations():
     page = parse_entry_page(ENTRY_HTML, ENTRY_URL)
     codes = {c.code: c.origin for c in page.citations}
-    assert codes["GF20"] == "references"
+    assert codes["CG48"] == "anchor"
     assert codes["BoS4"] == "bare"
     assert codes["CS/f"] == "bare"
-    assert codes["CG48"] == "references"
+    assert codes["Pm"] == "bare"
 
 
-def test_multi_code_bullet_yields_one_edge_per_code():
+def test_multi_code_novel_bullet_yields_one_edge_per_code():
     page = parse_entry_page(ENTRY_HTML, ENTRY_URL)
     dh_codes = [c.code for c in page.citations if c.code.startswith("DH")]
     assert dh_codes == ["DH10", "DH26"]
-    bullets = {c.code: c.bullet for c in page.citations}
-    assert bullets["DH10"] == bullets["DH26"]
 
 
-def test_linked_codes_are_not_double_counted_from_the_parens():
+def test_repeated_code_is_deduplicated():
     page = parse_entry_page(ENTRY_HTML, ENTRY_URL)
     assert sum(1 for c in page.citations if c.code == "GF20") == 1
 
 
+def test_site_footer_chapter_nav_is_not_scanned():
+    page = parse_entry_page(ENTRY_HTML, ENTRY_URL)
+    assert not any(c.code in {"GF9", "GF10"} for c in page.citations)
+
+
 def test_unknown_codes_queue_for_review_instead_of_silence():
     page = parse_entry_page(ENTRY_HTML, ENTRY_URL)
-    assert "Mystery9" in page.bare_code_candidates
+    assert "Mystery9" in page.unknown_tokens
     assert all(c.code != "Mystery9" for c in page.citations)
 
 
@@ -136,3 +156,22 @@ def test_epilogue_chapter_page_is_flagged():
 def test_non_novel_source_url_fails_loudly():
     with pytest.raises(ValueError):
         parse_chapter_page(CHAPTER_HTML, "https://www.hp-lexicon.org/source/other-canon/pm/pm1/")
+
+
+def test_paragraph_style_references_and_heading_variant():
+    """Observed in the #125 sample: sectumsempra uses <p> blocks; the
+    Animagus page names the section 'Canon references'."""
+    html = """
+    <html><body><h1>Curse Example</h1>
+    <h2>Canon references</h2>
+    <p>Used by a villain against a target
+    (<a href="/source/the-harry-potter-novels/hbp/hbp21">HBP21</a>).</p>
+    <p>A companion book lists it as dark (BoS16).</p>
+    <div class="related_container"></div>
+    </body></html>
+    """
+    page = parse_entry_page(html, "https://www.hp-lexicon.org/magic/curse-example/")
+    assert page.has_references_section
+    codes = {c.code: c.origin for c in page.citations}
+    assert codes["HBP21"] == "href"
+    assert codes["BoS16"] == "bare"

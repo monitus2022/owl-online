@@ -31,7 +31,7 @@ NOVEL_BY_CODE = {
 SECONDARY_BOOK_CODES = {"QA", "FB", "TBB", "BoS", "BoP"}
 EXCLUDED_CODES = {
     "WFT", "CG", "SD", "CC",  # screenplays and the play
-    "PM", "JKR", "DP", "FW", "BFT", "Pre", "HPM", "MagSp",
+    "PM", "Pm", "JKR", "DP", "FW", "BFT", "Pre", "HPM", "MagSp",
 }
 
 # Chapter counts of the seven novels in our corpus (data/chunks.jsonl).
@@ -57,7 +57,7 @@ _CODES = sorted(
     reverse=True,
 )
 CITATION_RE = re.compile(
-    r"\b(" + "|".join(_CODES) + r")(?::Tw)?(?:\s*(\d+))?(?:/([fg]))?\b"
+    r"\b(" + "|".join(_CODES) + r")(?::Tw)?(?:\s*(\d+(?:\.\d+)?))?(?:/([fg]))?\b"
 )
 
 
@@ -90,7 +90,14 @@ def classify(raw: str) -> ResolvedCitation:
     if m is None:
         return ResolvedCitation(code=code, bucket=BUCKET_UNKNOWN)
     prefix, chapter_text, medium_suffix = m.groups()
-    chapter_num = int(chapter_text) if chapter_text else None
+    if chapter_text is None:
+        chapter_num = None
+    else:
+        # Scene-style numbers (`CC3.9`) keep the code but no chapter int.
+        try:
+            chapter_num = int(chapter_text)
+        except ValueError:
+            chapter_num = None
     if prefix == EPILOGUE_CODE:
         return ResolvedCitation(
             code=code, bucket=BUCKET_BOOKS, book_num=7, chapter_num=36

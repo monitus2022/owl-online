@@ -1,15 +1,20 @@
 """Spike parsers for Lexicon entry and chapter pages.
 
 HTML from hp-lexicon.org is regular WordPress markup. The observed anchors
-(docs/lexicon-canon-index.md, Site anatomy):
+(docs/lexicon-canon-index.md, Site anatomy; refined by the #125 sample crawl):
 
-- entry pages: `<h2>References from the canon</h2>` followed by a `<ul>` whose
-  `<li>` items cite sources as `<a href="/source/...">GF6</a>` for the novels
-  and as bare parenthesials (`(WFT)`, `(BoS4)`, `(CG48)`) otherwise;
-- entry and chapter pages: `<div class="data">Label <span>value</span></div>`
-  info lines (Incantation, Abbreviation, Canonicity, Magic Type links);
-- both page kinds: Related Entries tabs of
-  `<a class="relatedlink related-<group>" href="...">Title</a>`;
+- citation codes live anywhere in the article region: a curated "References
+  from the canon" / "Canon references" section (a `<ul>` of `<li>` or a run of
+  `<p>` blocks), and prose elsewhere; novel citations are
+  `<a href="/source/the-harry-potter-novels/gf/gf6">GF6</a>`, non-novel ones
+  are often bare parenthesials (`(WFT)`, `(BoS4)`, `(CG48)`, `(Pm)`);
+- the article region ends at the first `related_container`: the sidebar fact
+  box and the site-footer chapter navigation (which links every chapter of
+  every book on every page) sit outside it and must not be scanned;
+- `<div class="data">Label <span>value</span></div>` info lines (Incantation,
+  Magic Type links, Abbreviation, Canonicity);
+- Related Entries tabs of `<a class="relatedlink related-<group>" href="...">`
+  form the reverse chapter-to-entry index;
 - chapter url path carries the identity: /source/the-harry-potter-novels/gf/gf6/.
 
 Only structure is extracted: titles, hrefs, codes. Bullet prose is read just
@@ -35,15 +40,20 @@ RELATEDLINK_RE = re.compile(
     re.S,
 )
 DATA_RE = re.compile(r'<div class="data">(?P<body>.*?)</div>', re.S)
-BULLET_RE = re.compile(r"<li>(?P<body>.*?)</li>", re.S)
 PAREN_RE = re.compile(r"\(([^)]{1,40})\)")
 # A parenthesised token that looks like a source code but is not in the table;
 # it goes to the review queue instead of being dropped. Parenthetical prose
-# carries spaces or punctuation and does not match.
-CODEISH_RE = re.compile(r"[A-Za-z_/]{1,9}\d{0,3}(?:/[fg])?(?::Tw)?")
+# ("see below", "ditto") is filtered by the upper/digit requirement.
+CODEISH_RE = re.compile(r"[A-Za-z0-9./]{2,12}(?::Tw)?")
 _TAG_RE = re.compile(r"<[^>]+>")
+REFERENCE_HEADINGS = ("References from the canon", "Canon references")
 
-REFERENCES_HEADING = "References from the canon"
+
+def _is_codeish(token: str) -> bool:
+    """A parenthesised token worth classifying: code-shaped, not prose."""
+    return bool(CODEISH_RE.fullmatch(token)) and any(
+        c.isupper() or c.isdigit() for c in token
+    )
 
 
 @dataclass(frozen=True)
@@ -52,8 +62,7 @@ class Citation:
 
     code: str
     href: str | None
-    origin: str  # references | bare
-    bullet: int
+    origin: str  # href | anchor | bare
 
 
 @dataclass
@@ -67,7 +76,7 @@ class EntryPage:
     citations: list[Citation] = field(default_factory=list)
     related_groups: dict[str, int] = field(default_factory=dict)
     has_references_section: bool = False
-    bare_code_candidates: list[str] = field(default_factory=list)
+    unknown_tokens: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -87,19 +96,46 @@ def _strip_tags(html: str) -> str:
     return _TAG_RE.sub(" ", html)
 
 
-def _first_ul_after(html: str, heading: str) -> str:
-    pos = html.find(heading)
-    if pos == -1:
-        return ""
-    start = html.find("<ul", pos)
-    if start == -1:
-        return ""
-    end = html.find("</ul>", start)
-    return html[start:end] if end != -1 else html[start:]
+def _article_region(html: str) -> str:
+    """Body text from the title to the Related Entries container.
+
+    Everything after `related_container` is sidebar and footer chrome; the
+    footer lists every novel chapter link on every page.
+    """
+    start = html.find("<h1")
+    end = html.find("related_container")
+    if end == -1:
+        end = len(html)
+    return html[start:end] if start != -1 else html[:end]
+
+
+def _references_sections(html: str) -> str:
+    """Concatenate the blocks that follow a references heading, if any."""
+    chunks: list[str] = []
+    for heading in REFERENCE_HEADINGS:
+        pos = 0
+        while True:
+            pos = html.find(heading, pos)
+            if pos == -1:
+                break
+            end = html.find("<h2", pos)
+            chunks.append(html[pos:end if end != -1 else len(html)])
+            pos += len(heading)
+    return "\n".join(chunks)
+
+
+def _derive_code_from_href(href: str) -> str | None:
+    """Novel chapter urls carry the code: .../gf/gf6 -> GF6, .../dh/dhe -> DHE."""
+    m = NOVEL_URL_RE.search(href)
+    if not m:
+        return None
+    if m.group("slug").lower() == "dhe":
+        return "DHE"
+    return f"{m.group('code').upper()}{m.group('chapter')}"
 
 
 def parse_entry_page(html: str, url: str) -> EntryPage:
-    """Harvest identity, references-list citations and info lines."""
+    """Harvest identity, citations and info lines from one entry page."""
     page = EntryPage(url=url)
     m = re.search(r"<h1[^>]*>(.*?)</h1>", html, re.S)
     if m:
@@ -115,42 +151,43 @@ def parse_entry_page(html: str, url: str) -> EntryPage:
                 _strip_tags(a.group("text")).strip() for a in A_RE.finditer(body)
             ]
 
-    refs_ul = _first_ul_after(html, REFERENCES_HEADING)
-    page.has_references_section = bool(refs_ul)
-    for bullet_index, li in enumerate(BULLET_RE.finditer(refs_ul)):
-        body = li.group("body")
-        linked = set()
-        for anchor in A_RE.finditer(body):
-            href = anchor.group("href")
-            if "/source/" not in href:
-                continue
+    refs_html = _references_sections(html)
+    page.has_references_section = bool(refs_html)
+    article = _article_region(html)
+
+    seen: set[str] = set()
+
+    def record(token: str, href: str | None, origin: str) -> None:
+        citation = classify(token)
+        if citation.bucket == "unknown":
+            if citation.code not in page.unknown_tokens:
+                page.unknown_tokens.append(citation.code)
+            return
+        if citation.code in seen:
+            return
+        seen.add(citation.code)
+        page.citations.append(
+            Citation(code=token, href=href, origin=origin)
+        )
+
+    # Novel codes are trustworthy from the href alone, anywhere in the article.
+    for anchor in A_RE.finditer(article):
+        href = anchor.group("href")
+        if "/source/" not in href:
+            continue
+        derived = _derive_code_from_href(href)
+        if derived is not None:
+            record(derived, href, "href")
+        else:
             text = _strip_tags(anchor.group("text")).strip()
-            citation = classify(text)
-            if citation.bucket == "unknown":
-                # An unexpected anchor label: keep it visible, do not guess.
-                page.bare_code_candidates.append(f"anchor:{text}")
-                continue
-            linked.add(citation.code)
-            page.citations.append(
-                Citation(code=text, href=href, origin="references", bullet=bullet_index)
-            )
-        # Bare parenthesials: the site's convention for non-linked codes,
-        # `(WFT)`, `(CG48)`, `(BoS4)`, including multi-code `(DH10, DH26)`.
-        text_only = _strip_tags(body)
-        for group in PAREN_RE.findall(text_only):
-            for token in (part.strip() for part in group.split(",")):
-                if not token or not CODEISH_RE.fullmatch(token):
-                    continue
-                citation = classify(token)
-                if citation.code in linked:
-                    continue
-                if citation.bucket == "unknown":
-                    page.bare_code_candidates.append(citation.code)
-                    continue
-                linked.add(citation.code)
-                page.citations.append(
-                    Citation(code=token, href=None, origin="bare", bullet=bullet_index)
-                )
+            if _is_codeish(text):
+                record(text, href, "anchor")
+
+    # Bare parenthesials inside references sections cover non-novel sources.
+    for group in PAREN_RE.findall(_strip_tags(refs_html)):
+        for token in (part.strip() for part in group.split(",")):
+            if _is_codeish(token):
+                record(token, None, "bare")
 
     groups: dict[str, int] = {}
     for rel in RELATEDLINK_RE.finditer(html):
