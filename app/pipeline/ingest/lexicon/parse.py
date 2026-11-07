@@ -1,20 +1,22 @@
 """Spike parsers for Lexicon entry and chapter pages.
 
 HTML from hp-lexicon.org is regular WordPress markup. The observed anchors
-(docs/lexicon-canon-index.md, Site anatomy; refined by the #125 sample crawl):
+(docs/lexicon-canon-index.md, Spike findings):
 
-- citation codes live anywhere in the article region: a curated "References
-  from the canon" / "Canon references" section (a `<ul>` of `<li>` or a run of
-  `<p>` blocks), and prose elsewhere; novel citations are
+- citation codes live anywhere in the article: a curated "References from the
+  canon" / "Canon references" section (a `<ul>` of `<li>` or a run of `<p>`
+  blocks) and prose outside it; novel citations are
   `<a href="/source/the-harry-potter-novels/gf/gf6">GF6</a>`, non-novel ones
   are often bare parenthesials (`(WFT)`, `(BoS4)`, `(CG48)`, `(Pm)`);
-- the article region ends at the first `related_container`: the sidebar fact
-  box and the site-footer chapter navigation (which links every chapter of
-  every book on every page) sit outside it and must not be scanned;
+- the article region runs from the `<h1>` to the first `related_container`;
+  everything after is the sidebar fact box and the site-footer chapter
+  navigation, which links every chapter of every book on every page, so the
+  boundary is mandatory and a page without it fails loudly;
 - `<div class="data">Label <span>value</span></div>` info lines (Incantation,
   Magic Type links, Abbreviation, Canonicity);
 - Related Entries tabs of `<a class="relatedlink related-<group>" href="...">`
-  form the reverse chapter-to-entry index;
+  form the reverse chapter-to-entry index; group names drift between plural
+  (`characters`) and singular (`magic`) and are normalised;
 - chapter url path carries the identity: /source/the-harry-potter-novels/gf/gf6/.
 
 Only structure is extracted: titles, hrefs, codes. Bullet prose is read just
@@ -26,7 +28,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from app.pipeline.ingest.lexicon.codes import classify
+from app.pipeline.ingest.lexicon.codes import BUCKET_UNKNOWN, classify
 
 NOVEL_URL_RE = re.compile(
     r"/source/the-harry-potter-novels/(?P<code>ps|cs|pa|gf|op|hbp|dh)/"
@@ -41,19 +43,40 @@ RELATEDLINK_RE = re.compile(
 )
 DATA_RE = re.compile(r'<div class="data">(?P<body>.*?)</div>', re.S)
 PAREN_RE = re.compile(r"\(([^)]{1,40})\)")
-# A parenthesised token that looks like a source code but is not in the table;
-# it goes to the review queue instead of being dropped. Parenthetical prose
-# ("see below", "ditto") is filtered by the upper/digit requirement.
-CODEISH_RE = re.compile(r"[A-Za-z0-9./]{2,12}(?::Tw)?")
+# One bullet can cite several sources: `(DH10, DH26)`, `(PS1 and PS2)`.
+_MULTI_SPLIT_RE = re.compile(r",|&|\band\b")
 _TAG_RE = re.compile(r"<[^>]+>")
 REFERENCE_HEADINGS = ("References from the canon", "Canon references")
 
+# Site tab names drift singular/plural; normalise to one canonical family.
+_GROUP_ALIASES = {
+    "characters": "character",
+    "things": "thing",
+    "creatures": "creature",
+    "locations": "location",
+    "places": "place",
+    "essays": "essay",
+    "quotes": "quote",
+    "trivias": "trivia",
+    "magic": "magic",
+}
 
-def _is_codeish(token: str) -> bool:
-    """A parenthesised token worth classifying: code-shaped, not prose."""
-    return bool(CODEISH_RE.fullmatch(token)) and any(
-        c.isupper() or c.isdigit() for c in token
-    )
+
+def normalise_group(raw: str) -> str:
+    return _GROUP_ALIASES.get(raw.lower(), raw.lower())
+
+
+def _looks_like_code(token: str) -> bool:
+    """Shape gate for the review queue: unknown parenthesials that could be
+    source abbreviations (digit-bearing like `SDNY2015`? or shouty like
+    `MACUSA`), not prose like `(see below)` or `(Molly)`. Known table codes
+    bypass this and are always recorded."""
+    if not re.fullmatch(r"[A-Za-z0-9./]{2,12}(?::Tw)?", token):
+        return False
+    letters = [c for c in token if c.isalpha()]
+    if any(c.isdigit() for c in token):
+        return bool(letters)
+    return bool(letters) and token == token.upper()
 
 
 @dataclass(frozen=True)
@@ -62,7 +85,7 @@ class Citation:
 
     code: str
     href: str | None
-    origin: str  # href | anchor | bare
+    origin: str  # href | anchor | bare | references-bare
 
 
 @dataclass
@@ -100,28 +123,21 @@ def _article_region(html: str) -> str:
     """Body text from the title to the Related Entries container.
 
     Everything after `related_container` is sidebar and footer chrome; the
-    footer lists every novel chapter link on every page.
+    footer lists every novel chapter link on every page. A page with no
+    boundary after the title fails loudly instead of silently scanning the
+    footer.
     """
     start = html.find("<h1")
-    end = html.find("related_container")
+    if start == -1:
+        raise ValueError("no <h1 title found")
+    end = html.find("related_container", start)
     if end == -1:
-        end = len(html)
-    return html[start:end] if start != -1 else html[:end]
+        raise ValueError("no related_container boundary before the footer")
+    return html[start:end]
 
 
-def _references_sections(html: str) -> str:
-    """Concatenate the blocks that follow a references heading, if any."""
-    chunks: list[str] = []
-    for heading in REFERENCE_HEADINGS:
-        pos = 0
-        while True:
-            pos = html.find(heading, pos)
-            if pos == -1:
-                break
-            end = html.find("<h2", pos)
-            chunks.append(html[pos:end if end != -1 else len(html)])
-            pos += len(heading)
-    return "\n".join(chunks)
+def _has_references_heading(region: str) -> bool:
+    return any(heading in region for heading in REFERENCE_HEADINGS)
 
 
 def _derive_code_from_href(href: str) -> str | None:
@@ -151,27 +167,24 @@ def parse_entry_page(html: str, url: str) -> EntryPage:
                 _strip_tags(a.group("text")).strip() for a in A_RE.finditer(body)
             ]
 
-    refs_html = _references_sections(html)
-    page.has_references_section = bool(refs_html)
-    article = _article_region(html)
+    region = _article_region(html)
+    page.has_references_section = _has_references_heading(region)
 
     seen: set[str] = set()
 
     def record(token: str, href: str | None, origin: str) -> None:
         citation = classify(token)
-        if citation.bucket == "unknown":
-            if citation.code not in page.unknown_tokens:
+        if citation.bucket == BUCKET_UNKNOWN:
+            if _looks_like_code(citation.code) and citation.code not in page.unknown_tokens:
                 page.unknown_tokens.append(citation.code)
             return
         if citation.code in seen:
             return
         seen.add(citation.code)
-        page.citations.append(
-            Citation(code=token, href=href, origin=origin)
-        )
+        page.citations.append(Citation(code=token, href=href, origin=origin))
 
-    # Novel codes are trustworthy from the href alone, anywhere in the article.
-    for anchor in A_RE.finditer(article):
+    # Novel codes are trustworthy from the href alone, anywhere in the region.
+    for anchor in A_RE.finditer(region):
         href = anchor.group("href")
         if "/source/" not in href:
             continue
@@ -180,18 +193,17 @@ def parse_entry_page(html: str, url: str) -> EntryPage:
             record(derived, href, "href")
         else:
             text = _strip_tags(anchor.group("text")).strip()
-            if _is_codeish(text):
-                record(text, href, "anchor")
+            record(text, href, "anchor")
 
-    # Bare parenthesials inside references sections cover non-novel sources.
-    for group in PAREN_RE.findall(_strip_tags(refs_html)):
-        for token in (part.strip() for part in group.split(",")):
-            if _is_codeish(token):
-                record(token, None, "bare")
+    # Bare parenthesials anywhere in the region: the site's convention for
+    # non-novel sources, including multi-code lists.
+    for group in PAREN_RE.findall(_strip_tags(region)):
+        for token in (t.strip() for t in _MULTI_SPLIT_RE.split(group)):
+            record(token, None, "bare")
 
     groups: dict[str, int] = {}
     for rel in RELATEDLINK_RE.finditer(html):
-        group = rel.group("group")
+        group = normalise_group(rel.group("group"))
         groups[group] = groups.get(group, 0) + 1
     page.related_groups = groups
     return page
@@ -217,6 +229,10 @@ def parse_chapter_page(html: str, url: str) -> ChapterPage:
 
     for rel in RELATEDLINK_RE.finditer(html):
         page.related.append(
-            (rel.group("group"), _strip_tags(rel.group("text")).strip(), rel.group("href"))
+            (
+                normalise_group(rel.group("group")),
+                _strip_tags(rel.group("text")).strip(),
+                rel.group("href"),
+            )
         )
     return page

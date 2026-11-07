@@ -129,6 +129,14 @@ All under `data/lexicon/` (gitignored), JSONL one record per line:
 | chapter_index.jsonl | ChapterLink | book_num, chapter_num, entry_urls with their Related-Entries tab |
 | canon_index.jsonl | CanonEdge | entry_id, book_num, chapter_num, agreement (forward, reverse, both), candidate chunk ids, text hashes |
 
+This is the target contract. The #125 spike emits a subset: the cache stores
+raw HTML only (fetch date and response hash land with #126), `entries.jsonl`
+has no `slug`/`entry_type`/`canonicity` yet (the entry type comes from the URL
+path and the sitemap split in #126), and `citations.jsonl` carries no parse
+confidence (the origin plus the unknown queue play that role until #127 needs
+a score). The `incantation` field holds site sentence text and stays local:
+it must never be echoed into a committed report.
+
 Committed to git: the schema (pydantic models), the code-to-book table, the
 parser, synthetic fixtures, and (once built) a summary coverage report checked
 into docs or the pack build record. The harvested rows themselves stay local,
@@ -153,9 +161,12 @@ Parsing notes, settled by the spike (see Spike findings above):
 
 - codes arrive as hyperlinks or bare parenthesials; novel codes derive from the
   href, non-novel ones from the anchor text or the parens;
-- one sentence can cite several chapters; edges are per code;
-- forward sections and the Sources sidebar can disagree; both are recorded
-  with origin, disagreement lands in the review queue;
+- one sentence can cite several chapters; edges are per code, split on comma,
+  `&` and `and`;
+- the spike dedupes to one edge per (entry, code) and scans only the article
+  region, so the Sources sidebar (a separate `col-md-4` list below the region)
+  is not yet cross-checked against the forward codes; that disagreement
+  signal is deferred to #126/#127, not implemented here;
 - Related Entries tabs are editor-curated and broader than literal mentions:
   they corroborate but never create source refs on their own.
 
@@ -239,40 +250,57 @@ source ref.
 
 The spike crawled 55 hand-picked spell/potion entries around the DADA and
 Charms pilot plus 14 chapter pages (gitignored cache under `data/lexicon/`).
-Result: 322 citations; 274 books-bucket edges, 39 excluded (film/play/screenplay),
-9 secondary-books, 10 unknown tokens queued. Spot-checked mappings agree with
-the book text (for example Summoning Charm cites GF6 and `Accio!` appears in
-chunk `b4-c06-0011`). The parse rules were rebuilt on these observations:
+Final parsed result: 343 citations; 274 books-bucket edges, 54 excluded
+(film/play/screenplay/other canon), 15 secondary-books; 0 out-of-range chapter
+codes; 0 fetch or parse failures; 7 unknown tokens queued (SDNY, FWT, BCE,
+BLC, TLC2 and the tale-level `TBB/BR`, `TBB/WHH`); 1 legitimate zero-citation
+page (Wideye Potion, whose references say only "brewable on Pottermore").
+Reverse-tab corroboration over the 14 sampled chapters: 40 magic-family tab
+edges, 24 agreeing with forward edges, 16 reverse-only (entries outside the
+hand-picked 55, as expected). Spot checks agree with the book text: Summoning
+Charm cites GF6 and `Accio!` appears in chunk `b4-c06-0011` of our corpus. The
+parse rules were rebuilt on these observations:
 
 - citations live anywhere in the article, not only the references list; prose
-  outside the section still carries real citations;
+  outside the section still carries real citations (Corporeal Patronus carries
+  `(Pm)` and `(JKR:Tw)` in narrative with no references heading at all);
 - the references block is a `<ul>` on most pages but plain `<p>` blocks on
   some, and the heading is "References from the canon" or "Canon references";
 - every page's footer nav links every chapter of every book: the article
-  region MUST end at the first `related_container` or the index is destroyed;
+  region runs from the `<h1>` to the first `related_container` and a page
+  without that boundary raises, rather than scanning the footer silently;
+- the sidebar fact box sits inside that region on many pages; it contains no
+  `/source/` links, so it is harmless to the citation scan, but its free text
+  (`incantation`, pronunciation sentences) must never be echoed into a
+  committed report;
 - novel codes are derived from the href (`/gf/gf6` -> `GF6`), which also picks
   up anchors whose text is not the code; non-novel codes stay bare parenthesials;
-- capitalisation drift is real: `Pm` (Pottermore) beside `PM`;
+- capitalisation drift is real: `Pm` (Pottermore) beside `PM`; both are table
+  entries, kept case-distinct deliberately;
 - decimal scene codes exist for the play (`CC2.13`, `CC3.9`): bucket from the
   prefix, chapter left unset;
 - whole-book citations occur (no chapter number): the edge is book-scoped,
   `chapter_num` null;
-- the Deathly Hallows epilogue settles cleanly: the site's page is
-  `/dh/dhe/` (abbreviation `DH/e`, 55 related entries) and the forward code
-  `DHE` resolves to book 7 chapter 36, whose text in our corpus ends with the
-  epilogue after the `NINETEEN YEARS LATER / EPILOGUE` marker inside chunk
-  `b7-c36-0103`. Resolver rule: `DHE` -> chunks of b7-c36 from that marker on;
+- the Deathly Hallows epilogue settles: the site page is `/dh/dhe/`
+  (abbreviation `DH/e`, 55 related entries); the forward code `DHE` resolves
+  to book 7 chapter 36 with an `is_epilogue` flag that keeps it distinct from a
+  plain `DH36` citation; in our corpus the epilogue begins inside chunk
+  `b7-c36-0103` (its heading block sits at the chapter 36 tail), and #127 pins
+  the exact slice boundary as a resolver constant, not a prose string copied
+  into this doc;
 - chapter reverse tabs use mixed group names (plural `characters`/`things`,
-  singular `magic`): normalise; reverse edges corroborate, never create refs;
-- some entries legitimately have no book citations (film-only spells such as
-  Protego Diabolica, Pottermore-only mentions such as Wideye Potion): about 2
-  of 55 in this sample. Zero-edge is a reported state, not an error, but each
-  one is listed for review;
-- the unknown queue caught editorial/news abbreviations (SDNY, MACUSA, BCE,
-  WSch, PmP) - quarantine works - plus four real source codes to add in #126:
-  `FWT`, `BLC`, `TLC2` and per-tale `TBB/xx` codes for Beedle the Bard;
-- parenthesised bare numbers (`2015`) reach the queue: require at least one
-  letter in the #126 token filter.
+  singular `magic`): the parser normalises them; reverse edges corroborate,
+  never create refs;
+- parenthesised tokens are queue-gated by shape (digit-bearing or all-caps):
+  prose like `(Molly)` is not mistaken for a source code, while `SDNY` and
+  `MACUSA`-style news abbreviations surface for review;
+- multi-code lists split on comma, `&` and `and` (`(PS1 and PS2)` -> two edges);
+- edges dedupe per (entry, code) per page; the Sources sidebar sits outside
+  the region and its cross-check with the references list is scoped to #126,
+  where a real DOM boundary replaces the substring rule;
+- #126 must extend the table with the tale-level Beedle codes (`TBB/BR`,
+  `TBB/WHH`, `TBB/FFF`, `TBB/WHP` pattern) and the companion-book prefixes
+  behind `FWT`, `BLC`, `TLC2` after a human confirms what they cite.
 
 The spike module lives in `app/pipeline/ingest/lexicon/` (codes, parse) with
 synthetic-structure tests (`tests/test_lexicon_codes.py`,

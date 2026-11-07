@@ -71,7 +71,7 @@ CHAPTER_HTML = """
     <a class="relatedlink related-magic" href="/magic/summoning-charm/">Summoning Charm</a>
 </div>
 <div class="relatedlink-container relatedlink-character">
-    <a class="relatedlink related-character" href="/character/x/">A Person</a>
+    <a class="relatedlink related-characters" href="/character/x/">A Person</a>
 </div>
 </div>
 </body></html>
@@ -142,6 +142,8 @@ def test_chapter_page_identity_and_reverse_index():
     assert page.canonicity == "Primary Canon"
     charm = ("magic", "Summoning Charm", "/magic/summoning-charm/")
     assert charm in page.related
+    # plural tab names normalise: the crawl shows `related-characters`
+    assert ("character", "A Person", "/character/x/") in page.related
 
 
 def test_epilogue_chapter_page_is_flagged():
@@ -175,3 +177,42 @@ def test_paragraph_style_references_and_heading_variant():
     codes = {c.code: c.origin for c in page.citations}
     assert codes["HBP21"] == "href"
     assert codes["BoS16"] == "bare"
+
+
+def test_bare_citations_outside_any_references_section_are_still_harvested():
+    """Observed in the #125 sample: Corporeal Patronus has no references
+    heading but carries (Pm) and (JKR:Tw) in prose."""
+    html = """
+    <html><body><h1>Corporeal Guardian</h1>
+    <p>Wizard A conjured a corporeal guardian in year five (JKR:Tw),
+    and the form was recorded on the companion website (Pm).
+    The name of the charm was noted (Molly).</p>
+    <div class="related_container"></div>
+    </body></html>
+    """
+    page = parse_entry_page(html, "https://www.hp-lexicon.org/magic/corporeal-patronus/")
+    codes = {c.code for c in page.citations}
+    assert {"JKR:Tw", "Pm"} <= codes
+    # Prose parenthesials are not queued as unknown codes.
+    assert page.unknown_tokens == []
+
+
+def test_multi_code_list_splits_on_and():
+    html = """
+    <html><body><h1>Paired Hex</h1>
+    <p>Seen twice (PS1 and PS2).</p>
+    <div class="related_container"></div>
+    </body></html>
+    """
+    page = parse_entry_page(html, "https://www.hp-lexicon.org/magic/paired-hex/")
+    assert {c.code for c in page.citations} == {"PS1", "PS2"}
+
+
+def test_entry_page_without_the_region_boundary_fails_loudly():
+    html = (
+        "<html><body><h1>No Boundary</h1>"
+        '<a href="/source/the-harry-potter-novels/gf/gf9/">9</a>'
+        "</body></html>"
+    )
+    with pytest.raises(ValueError):
+        parse_entry_page(html, "https://www.hp-lexicon.org/magic/no-boundary/")

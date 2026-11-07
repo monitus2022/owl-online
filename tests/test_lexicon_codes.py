@@ -20,15 +20,25 @@ def test_novel_chapter_code_maps_to_corpus_book_and_chapter():
 
 
 def test_half_blood_prince_code_beats_potential_prefixes():
-    assert classify("HBP8") == classify("HBP8")
     resolved = classify("HBP26")
     assert (resolved.book_num, resolved.chapter_num) == (6, 26)
+    assert classify("HP8").bucket == BUCKET_UNKNOWN
 
 
-def test_epilogue_code_resolves_to_book_seven():
+def test_epilogue_code_resolves_to_book_seven_flagged_as_epilogue():
     resolved = classify("DHE")
     assert resolved.bucket == BUCKET_BOOKS
     assert resolved.book_num == 7
+    assert resolved.is_epilogue
+    # The epilogue edge is distinct from a plain chapter-36 citation.
+    assert not classify("DH36").is_epilogue
+
+
+def test_epilogue_film_suffix_is_excluded():
+    resolved = classify("DHE/f")
+    assert resolved.bucket == BUCKET_EXCLUDED
+    assert resolved.medium == "film"
+    assert not resolved.usable_for_packs
 
 
 def test_whole_book_code_has_no_chapter():

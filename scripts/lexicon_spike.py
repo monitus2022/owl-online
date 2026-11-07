@@ -3,11 +3,12 @@
 Usage:
     uv run python scripts/lexicon_spike.py [--no-fetch]
 
-Fetches the curated spell/potion entries and chapter pages below at one
-request per second into the gitignored cache `data/lexicon/pages/`, parses
-them with the spike parsers and writes the draft artifacts plus a report to
-`data/lexicon/`. Nothing scraped is written into git. The sample is scoped to
-the DADA and Charms pilot areas (docs/lexicon-canon-index.md).
+Fetches the curated spell/potion entries and chapter pages below at about one
+request per second (plus jitter) into the gitignored cache
+`data/lexicon/pages/`, parses them with the spike parsers and writes the draft
+artifacts plus a report to `data/lexicon/`. Nothing scraped is written into
+git. The sample is scoped to the DADA and Charms pilot areas
+(docs/lexicon-canon-index.md).
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
+import random
 import sys
 import time
 import urllib.request
@@ -25,7 +26,11 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from app.pipeline.ingest.lexicon.codes import BUCKET_UNKNOWN, classify  # noqa: E402
+from app.pipeline.ingest.lexicon.codes import (  # noqa: E402
+    BUCKET_UNKNOWN,
+    chapter_is_valid,
+    classify,
+)
 from app.pipeline.ingest.lexicon.parse import (  # noqa: E402
     parse_chapter_page,
     parse_entry_page,
@@ -33,6 +38,7 @@ from app.pipeline.ingest.lexicon.parse import (  # noqa: E402
 
 BASE = "https://www.hp-lexicon.org"
 UA = "owl-online-research/0.1 (subject-pack mapping; contact: repository owner)"
+DATA_DIR = REPO / "data/lexicon"
 
 SPELLS = [
     "summoning-charm", "disarming-charm", "unlocking-charm", "levitation-charm",
@@ -61,14 +67,12 @@ CHAPTERS = [
     "dh/dh36", "dh/dhe",
 ]
 
-_ENTRY_SLUG_RE = re.compile(r"/magic/([a-z0-9-]+)/?")
-
 
 def page_path(cache_dir: Path, url: str) -> Path:
     return cache_dir / (hashlib.sha1(url.encode()).hexdigest()[:16] + ".html")
 
 
-def fetch(url: str, cache_dir: Path, sleep: float = 1.0) -> str:
+def fetch(url: str, cache_dir: Path) -> str:
     path = page_path(cache_dir, url)
     if path.exists():
         return path.read_text(encoding="utf-8", errors="replace")
@@ -76,8 +80,13 @@ def fetch(url: str, cache_dir: Path, sleep: float = 1.0) -> str:
     with urllib.request.urlopen(request, timeout=30) as response:
         html = response.read().decode("utf-8", errors="replace")
     path.write_text(html, encoding="utf-8")
-    time.sleep(sleep)
+    time.sleep(1.0 + random.uniform(0.0, 0.4))
     return html
+
+
+def write_jsonl(path: Path, rows: list[dict]) -> None:
+    body = "\n".join(json.dumps(r) for r in rows)
+    path.write_text(body + "\n" if body else "", encoding="utf-8")
 
 
 def main() -> None:
@@ -87,32 +96,38 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    root = Path("data/lexicon")
-    cache = root / "pages"
+    cache = DATA_DIR / "pages"
     cache.mkdir(parents=True, exist_ok=True)
 
     entry_urls = [f"{BASE}/magic/{slug}/" for slug in SPELLS + POTIONS]
     chapter_urls = [f"{BASE}/source/the-harry-potter-novels/{c}/" for c in CHAPTERS]
 
+    def read(url: str) -> str:
+        if args.no_fetch:
+            return page_path(cache, url).read_text(encoding="utf-8", errors="replace")
+        return fetch(url, cache)
+
     entries_out, citations_out, chapters_out = [], [], []
     bucket_counts: dict[str, int] = {}
     unknown: list[tuple[str, str]] = []
-    no_refs: list[str] = []
-    fetch_html = (
-        (lambda url: page_path(cache, url).read_text(encoding="utf-8", errors="replace"))
-        if args.no_fetch
-        else (lambda url: fetch(url, cache))
-    )
+    invalid_chapter: list[tuple[str, str]] = []
+    fetch_fail: list[str] = []
+    parse_fail: list[str] = []
+    zero_citation: list[str] = []
 
     for url in entry_urls:
         try:
-            html = fetch_html(url)
-        except Exception as error:  # noqa: BLE001 - the spike reports loudly
-            no_refs.append(f"{url} FETCH-FAIL {error}")
+            html = read(url)
+        except Exception as error:  # spike: report, keep going
+            fetch_fail.append(f"{url}: {error}")
             continue
-        page = parse_entry_page(html, url)
+        try:
+            page = parse_entry_page(html, url)
+        except Exception as error:  # spike: report, keep going
+            parse_fail.append(f"{url}: {error}")
+            continue
         if not page.citations:
-            no_refs.append(url)
+            zero_citation.append(url)
         entries_out.append(
             {
                 "url": url,
@@ -122,6 +137,7 @@ def main() -> None:
                 "citations": len(page.citations),
                 "related_groups": page.related_groups,
                 "has_references_section": page.has_references_section,
+                "unknown_tokens": page.unknown_tokens,
             }
         )
         for citation in page.citations:
@@ -129,6 +145,8 @@ def main() -> None:
             bucket_counts[resolved.bucket] = bucket_counts.get(resolved.bucket, 0) + 1
             if resolved.bucket == BUCKET_UNKNOWN:
                 unknown.append((url, citation.code))
+            elif not chapter_is_valid(resolved):
+                invalid_chapter.append((url, citation.code))
             citations_out.append(
                 {
                     "entry_url": url,
@@ -145,10 +163,9 @@ def main() -> None:
     reverse: set[tuple[str, int | None, str]] = set()
     for url in chapter_urls:
         try:
-            html = fetch_html(url)
-            page = parse_chapter_page(html, url)
-        except Exception as error:  # noqa: BLE001
-            no_refs.append(f"{url} PARSE-FAIL {error}")
+            page = parse_chapter_page(read(url), url)
+        except Exception as error:  # spike: report, keep going
+            parse_fail.append(f"PARSE-FAIL {url}: {error}")
             continue
         chapters_out.append(
             {
@@ -161,15 +178,15 @@ def main() -> None:
                 "related": page.related,
             }
         )
+        # The epilogue tab corroborates the DHE forward edge, which the
+        # grammar resolves to chapter 36; key both sides the same way.
+        chapter = 36 if page.is_epilogue else page.chapter_num
         for group, title, href in page.related:
-            # Reverse edges keep the item families; characters and essays are
-            # the site's own tabs, not pack materials at this stage.
-            if group not in {"magic", "things", "creatures", "locations", "place"}:
+            if group not in {"magic", "thing", "creature", "location", "place"}:
                 continue
             if "/magic/" not in href:
                 continue  # the forward sample is spell/potion only
-            slug = href.split("/magic/")[-1].rstrip("/")
-            reverse.add((slug, -1 if page.is_epilogue else page.chapter_num, title))
+            reverse.add((href.split("/magic/")[-1].rstrip("/"), chapter, title))
 
     sample_slugs = {u.split("/magic/")[-1].rstrip("/") for u in entry_urls}
     forward_pairs = {
@@ -183,15 +200,9 @@ def main() -> None:
     forward_only = len(forward_pairs - reverse_pairs)
     reverse_only = len(reverse_pairs - forward_pairs)
 
-    (root / "entries.jsonl").write_text(
-        "\n".join(json.dumps(e) for e in entries_out) + "\n", encoding="utf-8"
-    )
-    (root / "citations.jsonl").write_text(
-        "\n".join(json.dumps(c) for c in citations_out) + "\n", encoding="utf-8"
-    )
-    (root / "chapter_index.jsonl").write_text(
-        "\n".join(json.dumps(c) for c in chapters_out) + "\n", encoding="utf-8"
-    )
+    write_jsonl(DATA_DIR / "entries.jsonl", entries_out)
+    write_jsonl(DATA_DIR / "citations.jsonl", citations_out)
+    write_jsonl(DATA_DIR / "chapter_index.jsonl", chapters_out)
 
     print(
         f"entries: {len(entries_out)}  citations: {len(citations_out)}  "
@@ -201,9 +212,15 @@ def main() -> None:
     print(f"unknown codes ({len(unknown)}):")
     for url, code in unknown[:25]:
         print(f"  {code!r} <- {url}")
-    print(f"no citations ({len(no_refs)}):")
-    for url in no_refs[:25]:
+    print(f"invalid chapters ({len(invalid_chapter)}):")
+    for url, code in invalid_chapter[:25]:
+        print(f"  {code} <- {url}")
+    print(f"zero-citation entries: {len(zero_citation)}")
+    for url in zero_citation[:25]:
         print(f"  {url}")
+    print(f"fetch failures: {len(fetch_fail)}  parse failures: {len(parse_fail)}")
+    for line in (fetch_fail + parse_fail)[:10]:
+        print(f"  {line}")
     print(
         f"reverse edges in sample chapters: {len(reverse_in_sample)}  "
         f"both: {agreements}  forward-only: {forward_only}  reverse-only: {reverse_only}"

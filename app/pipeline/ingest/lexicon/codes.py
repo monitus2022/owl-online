@@ -10,6 +10,9 @@ novel code. Buckets follow the canon tiers in `docs/workplan.md` and
 - `secondary-books`: the Rowling companion books, recorded references only;
 - `excluded`: screenplays, films, games and other canon, recorded and tagged;
 - `unknown`: a code the grammar does not know; the caller queues it for review.
+
+A `/f` or `/g` suffix sends any code to `excluded`, including `DHE`: the film
+medium can never enter the books bucket.
 """
 
 from __future__ import annotations
@@ -38,6 +41,8 @@ EXCLUDED_CODES = {
 NOVEL_CHAPTER_COUNTS = {1: 17, 2: 18, 3: 22, 4: 37, 5: 38, 6: 30, 7: 36}
 
 # The Lexicon cites the Deathly Hallows epilogue as `DHE`, without a number.
+# It is book 7 chapter 36 in our corpus, whose last chunks hold the epilogue;
+# `is_epilogue` keeps the identity distinct from a plain chapter-36 citation.
 EPILOGUE_CODE = "DHE"
 
 BUCKET_BOOKS = "books"
@@ -45,7 +50,8 @@ BUCKET_SECONDARY = "secondary-books"
 BUCKET_EXCLUDED = "excluded"
 BUCKET_UNKNOWN = "unknown"
 
-# Order the alternation longest-first so `HBP` wins over `HP`-style prefixes.
+# Order longest-first, then by name, so `HBP` wins over `HP`-style prefixes
+# and the alternation is byte-stable across processes (deterministic rule).
 _CODES = sorted(
     {
         *NOVEL_BY_CODE,
@@ -53,8 +59,7 @@ _CODES = sorted(
         *EXCLUDED_CODES,
         EPILOGUE_CODE,
     },
-    key=len,
-    reverse=True,
+    key=lambda code: (-len(code), code),
 )
 CITATION_RE = re.compile(
     r"\b(" + "|".join(_CODES) + r")(?::Tw)?(?:\s*(\d+(?:\.\d+)?))?(?:/([fg]))?\b"
@@ -70,6 +75,7 @@ class ResolvedCitation:
     book_num: int | None = None
     chapter_num: int | None = None
     medium: str = "book"  # book | film | game | screenplay | other
+    is_epilogue: bool = False
 
     @property
     def usable_for_packs(self) -> bool:
@@ -91,24 +97,30 @@ def classify(raw: str) -> ResolvedCitation:
         return ResolvedCitation(code=code, bucket=BUCKET_UNKNOWN)
     prefix, chapter_text, medium_suffix = m.groups()
     if chapter_text is None:
-        chapter_num = None
+        chapter_num: int | None = None
     else:
         # Scene-style numbers (`CC3.9`) keep the code but no chapter int.
         try:
             chapter_num = int(chapter_text)
         except ValueError:
             chapter_num = None
-    if prefix == EPILOGUE_CODE:
-        return ResolvedCitation(
-            code=code, bucket=BUCKET_BOOKS, book_num=7, chapter_num=36
-        )
-    if medium_suffix == "f" or medium_suffix == "g":
+    # The medium suffix outranks everything: a film or game citation is never
+    # books, including the epilogue code.
+    if medium_suffix:
         return ResolvedCitation(
             code=code,
             bucket=BUCKET_EXCLUDED,
             book_num=NOVEL_BY_CODE.get(prefix),
             chapter_num=chapter_num,
             medium="film" if medium_suffix == "f" else "game",
+        )
+    if prefix == EPILOGUE_CODE:
+        return ResolvedCitation(
+            code=code,
+            bucket=BUCKET_BOOKS,
+            book_num=7,
+            chapter_num=36,
+            is_epilogue=True,
         )
     if prefix in NOVEL_BY_CODE:
         return ResolvedCitation(
@@ -119,7 +131,10 @@ def classify(raw: str) -> ResolvedCitation:
         )
     if prefix in SECONDARY_BOOK_CODES:
         return ResolvedCitation(
-            code=code, bucket=BUCKET_SECONDARY, chapter_num=chapter_num
+            code=code,
+            bucket=BUCKET_SECONDARY,
+            chapter_num=chapter_num,
+            medium="other",
         )
     return ResolvedCitation(code=code, bucket=BUCKET_EXCLUDED, medium="other")
 
