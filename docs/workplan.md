@@ -46,7 +46,7 @@ page describes what comes next and why.
   hp-lexicon.org, resolved to chunk candidates in our index. The plan of
   record is `docs/lexicon-canon-index.md`. The #125 spike is complete on
   branch `125/lexicon-spike` (draft PR #130). The #126 full harvest is done:
-  4,998 entries plus all 199 novel chapters, 22,801 valid books edges, 3
+  4,993 entries plus all 199 novel chapters, 22,797 valid books edges, 3
   flagged broken-href edges, 3 page failures (all site meta pages); results and
   the chapter-title cross-check are in the plan doc's Harvest results section;
   the branch awaits review. #127 (resolver) consumes the gitignored artifacts.

@@ -97,8 +97,10 @@ def harvest(
         for citation in page.citations:
             resolved = citation.resolved
             buckets[resolved.bucket] = buckets.get(resolved.bucket, 0) + 1
-            valid = resolved.bucket != BUCKET_BOOKS or chapter_is_valid(resolved)
-            if not valid:
+            valid: bool | None = (
+                chapter_is_valid(resolved) if resolved.bucket == BUCKET_BOOKS else None
+            )
+            if valid is False:
                 # A books code the corpus cannot hold (a site-broken href like
                 # dh117): recorded, flagged, and queued - never resolved.
                 invalid_chapter.append({"entry_url": item.url, "code": citation.code})

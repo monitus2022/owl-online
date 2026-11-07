@@ -80,9 +80,9 @@ def normalise_group(raw: str) -> str:
 
 def _looks_like_code(token: str) -> bool:
     """Shape gate for the review queue: unknown parenthesials that could be
-    source abbreviations (digit-bearing like `SDNY2015`? or shouty like
-    `MACUSA`), not prose like `(see below)` or `(Molly)`. Known table codes
-    bypass this and are always recorded."""
+    source abbreviations (digit-bearing like `TLC2`, or all-caps like `MACUSA`),
+    not prose like `(see below)` or `(Molly)`. Known table codes bypass this
+    and are always recorded."""
     if not re.fullmatch(r"[A-Za-z0-9./]{2,12}(?::Tw)?", token):
         return False
     letters = [c for c in token if c.isalpha()]
@@ -152,11 +152,13 @@ def _article_region(html: str) -> str:
     start = html.find("<h1")
     if start == -1:
         raise ValueError("no <h1 title found")
-    stops = [html.find(marker, start) for marker in ARTICLE_STOPS]
-    stops = [s for s in stops if s != -1]
-    if not stops:
-        raise ValueError("no article boundary before the footer")
-    return html[start:min(stops)]
+    # Priority order, not min(): a prose occurrence of a later marker must
+    # not truncate the article before the real structural boundary.
+    for marker in ARTICLE_STOPS:
+        end = html.find(marker, start)
+        if end != -1:
+            return html[start:end]
+    raise ValueError("no article boundary before the footer")
 
 
 def _has_references_heading(region: str) -> bool:

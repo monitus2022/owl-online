@@ -183,7 +183,11 @@ def classify_source_href(href: str) -> ResolvedCitation | None:
     if not m:
         return None
     slug = m.group("slug")
-    if slug.startswith("tbb") and len(slug) > 3:
+    if (
+        slug.startswith("tbb")
+        and 3 < len(slug) <= 7
+        and slug[3:].isalpha()
+    ):
         return ResolvedCitation(
             code=f"TBB/{slug[3:].upper()}", bucket=BUCKET_SECONDARY, medium="other"
         )

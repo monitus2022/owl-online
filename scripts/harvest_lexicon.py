@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -40,6 +41,20 @@ def http_get(url: str) -> bytes:
         return response.read()
 
 
+def polite_sitemap_get(url: str) -> str:
+    """Sitemaps obey the same courtesy as pages: one request per second,
+    one retry with a short backoff."""
+    for attempt in (1, 2):
+        try:
+            return http_get(url).decode("utf-8", errors="replace")
+        except Exception:
+            if attempt == 1:
+                time.sleep(5.0)
+                continue
+            raise
+    raise AssertionError("unreachable")  # pragma: no cover
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--discover-only", action="store_true", help="write the queue and stop")
@@ -47,9 +62,13 @@ def main() -> int:
     parser.add_argument(
         "--reuse-queue", action="store_true", help="skip discovery, read work_queue.jsonl"
     )
+    parser.add_argument(
+        "--out-dir", type=Path, default=DATA_DIR, help="artifact directory (default data/lexicon)"
+    )
     args = parser.parse_args()
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir = args.out_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
     queue_path = DATA_DIR / "work_queue.jsonl"
 
     fetcher = Fetcher(DATA_DIR / "pages", opener=http_get)
@@ -60,8 +79,9 @@ def main() -> int:
     else:
         sitemap_bodies = {}
         for name, url in SITEMAPS.items():
-            sitemap_bodies[name] = http_get(url).decode("utf-8", errors="replace")
+            sitemap_bodies[name] = polite_sitemap_get(url)
             print(f"discovered {name}: {len(parse_locs(sitemap_bodies[name]))} urls")
+            time.sleep(1.2)
         queue = build_queue(sitemap_bodies)
         queue_path.write_text(
             "\n".join(json.dumps(vars(item)) for item in queue) + "\n", encoding="utf-8"
@@ -77,7 +97,7 @@ def main() -> int:
         if done % 50 == 0 or done == total:
             print(f"progress: {done}/{total}", flush=True)
 
-    summary = harvest(queue, DATA_DIR, fetcher, progress=progress)
+    summary = harvest(queue, out_dir, fetcher, progress=progress)
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
 

@@ -52,8 +52,11 @@ def parse_locs(xml: str) -> list[str]:
 
 
 def entry_type_of(url: str) -> str | None:
+    """The five item families, excluding the family hub pages themselves
+    (`/magic/`, `/thing/`, ...), which are archive listings, not entries."""
     for family in ENTRY_TYPES:
-        if url.startswith(f"{BASE}/{family}/"):
+        prefix = f"{BASE}/{family}/"
+        if url.startswith(prefix) and url[len(prefix) :].strip("/"):
             return family
     return None
 

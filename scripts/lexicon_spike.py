@@ -199,9 +199,10 @@ def main() -> None:
     forward_only = len(forward_pairs - reverse_pairs)
     reverse_only = len(reverse_pairs - forward_pairs)
 
-    write_jsonl(DATA_DIR / "entries.jsonl", entries_out)
-    write_jsonl(DATA_DIR / "citations.jsonl", citations_out)
-    write_jsonl(DATA_DIR / "chapter_index.jsonl", chapters_out)
+    (DATA_DIR / "spike").mkdir(parents=True, exist_ok=True)
+    write_jsonl(DATA_DIR / "spike/entries.jsonl", entries_out)
+    write_jsonl(DATA_DIR / "spike/citations.jsonl", citations_out)
+    write_jsonl(DATA_DIR / "spike/chapter_index.jsonl", chapters_out)
 
     print(
         f"entries: {len(entries_out)}  citations: {len(citations_out)}  "
