@@ -5,74 +5,81 @@ import type { StoredAttempt } from "../api/results";
 import type { Subject } from "../data/subjects";
 import { BandStrip, bandTone } from "./BandStrip";
 
-// Per-venue paper history, straight from the ResultsStore. Records are
-// device-local and provisional until school accounts land (#35) - the copy
-// must keep saying so, and an empty or unreadable store says so honestly.
+// Per-venue paper history, straight from the ResultsStore. The best mark is
+// read from the store's own best(), never recomputed here, so this surface
+// cannot disagree with the noticeboard or the store when an HttpResultsStore
+// replaces the local one (#35).
+
 export function HistoryPanel({ subject, active }: { subject: Subject; active: boolean }) {
   const [attempts, setAttempts] = useState<StoredAttempt[] | null>(null);
+  const [best, setBest] = useState<StoredAttempt | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!active) return;
     let live = true;
-    resultsStore
-      .history(subject.slug)
-      .then((all) => {
-        if (live) setAttempts(all);
+    Promise.all([resultsStore.history(subject.slug), resultsStore.best(subject.slug)])
+      .then(([all, top]) => {
+        if (live) {
+          setAttempts(all);
+          setBest(top);
+        }
       })
       .catch(() => {
-        if (live) setAttempts([]);
+        if (live) setFailed(true);
       });
     return () => {
       live = false;
     };
   }, [active, subject.slug]);
 
-  const bestKey =
-    attempts && attempts.length > 0
-      ? attempts.reduce((top, a) =>
-          a.max > 0 && top.max > 0 && a.total * top.max > top.total * a.max ? a : top,
-        )
-      : null;
+  const isBest = (attempt: StoredAttempt): boolean =>
+    best !== null && attempt.id === best.id && attempt.gradedAt === best.gradedAt;
 
   return (
     <section className="history" aria-label="Your papers">
       <h2>Your papers</h2>
       <div className="notice notice-mock">
-        Marks are recorded on this device only. School accounts (#35) will move
-        this history to the Academy.
+        Demonstration marks, recorded on this device only. School accounts
+        (#35) will move this history to the Academy.
       </div>
-      {attempts === null && <p className="history-empty">Fetching the records…</p>}
-      {attempts && attempts.length === 0 && (
-        <p className="history-empty">
-          The drawer is empty: no papers have been marked for this department on
-          this device yet. Sit one in the exam room.
-        </p>
-      )}
-      {attempts && attempts.length > 0 && (
+      <div aria-live="polite">
+        {failed && (
+          <p className="history-empty">
+            The paper records on this device could not be read. Nothing is
+            lost by trying again; if it keeps failing, the drawer stays shut.
+          </p>
+        )}
+        {!failed && attempts === null && (
+          <p className="history-empty">Fetching the records…</p>
+        )}
+        {!failed && attempts !== null && attempts.length === 0 && (
+          <p className="history-empty">
+            The drawer is empty: no papers have been marked for this
+            department on this device yet. Sit one in the exam room.
+          </p>
+        )}
+      </div>
+      {!failed && attempts && attempts.length > 0 && (
         <>
           <BandStrip attempts={attempts} />
-          <ol className="history-list">
-            {attempts.map((attempt, index) => {
-              const sameAsBest =
-                bestKey &&
-                attempt.id === bestKey.id &&
-                attempt.gradedAt === bestKey.gradedAt;
-              return (
-                <li key={attempt.id + attempt.gradedAt} className="history-row">
-                  <span className="history-index">{attempts.length - index}</span>
-                  <span className="history-date">
-                    {new Date(attempt.gradedAt).toLocaleDateString()}
-                  </span>
-                  <span className={`band-chip cell-${bandTone(attempt.band)}`}>
-                    {BAND_LABELS[attempt.band]}
-                  </span>
-                  <span className="history-marks">
-                    {attempt.total}/{attempt.max}
-                  </span>
-                  {sameAsBest && <span className="history-best">best</span>}
-                </li>
-              );
-            })}
+          <ol className="history-list" role="list">
+            {attempts.map((attempt, index) => (
+              <li
+                key={`${attempt.id}:${attempt.gradedAt}`}
+                className="history-row"
+              >
+                <span className="history-index">{attempts.length - index}</span>
+                <span className="history-date">{new Date(attempt.gradedAt).toLocaleDateString()}</span>
+                <span className={`band-chip cell-${bandTone(attempt.band)}`}>
+                  {BAND_LABELS[attempt.band]}
+                </span>
+                <span className="history-marks">
+                  {attempt.total}/{attempt.max}
+                </span>
+                {isBest(attempt) && <span className="history-best">best</span>}
+              </li>
+            ))}
           </ol>
         </>
       )}

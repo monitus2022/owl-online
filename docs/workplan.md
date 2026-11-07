@@ -534,7 +534,7 @@ persists exam attempts and chat history.
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
-| #134 | Venue identity pass: crests, colonnade bands and door faces (SVG only) | V3 - Product |
+| #136 | About page: the academy, the letters, demo versus real | V3 - Product |
 | #87 | Subject packs: schema and validation landed; extraction build and DADA content open | V3 - Product |
 
 ### Next
@@ -543,8 +543,6 @@ persists exam attempts and chat history.
 |---|---|---|
 | #74 | Move `/data` to a dedicated EBS volume | V2 - Deepening |
 | #75 | Replace static AWS keys with GitHub OIDC | V2 - Deepening |
-| #135 | Results surfaces: paper history and band chart from the local store | V3 - Product |
-| #136 | About page: the academy, the papers, demo versus real | V3 - Product |
 
 ### Later
 
@@ -583,7 +581,7 @@ persists exam attempts and chat history.
 | Held-out set | #106 |
 | Multi-book spike | #105 (flag off) |
 | Ingest | #113 |
-| Frontend surfaces | #132, #137, #141, #143, #145 |
+| Frontend surfaces | #132, #134, #135, #137, #141, #143, #145 |
 
 ## Backlog policy
 

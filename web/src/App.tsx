@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { SiteFooter } from "./components/SiteFooter";
+import { AboutPage } from "./pages/AboutPage";
 import { CloisterPage } from "./pages/CloisterPage";
 import { FrontPage } from "./pages/FrontPage";
 import { VenuePage } from "./pages/VenuePage";
@@ -20,6 +21,7 @@ function Shell() {
     <div className="route-fade" key={location.pathname}>
       <Routes location={location}>
         <Route path="/" element={<FrontPage />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route path="/cloister" element={<CloisterPage />} />
         <Route path="/venue/:slug" element={<VenuePage />} />
       </Routes>
