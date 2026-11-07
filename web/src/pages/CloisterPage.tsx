@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { SiteFooter } from "../components/SiteFooter";
 import { Door } from "../components/Door";
 import { SUBJECTS } from "../data/subjects";
 
@@ -24,7 +23,6 @@ export function CloisterPage() {
           <Door key={subject.slug} subject={subject} />
         ))}
       </ul>
-      <SiteFooter />
     </main>
   );
 }

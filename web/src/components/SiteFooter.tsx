@@ -10,9 +10,9 @@ export function SiteFooter() {
         The Harry Potter works, their characters, spells and institutions, are
         the creation of J.K. Rowling and are copyright of their respective
         rights holders. Ashcombe Academy is an original, non-commercial fan
-        study project: it is not affiliated with or endorsed by the rights
-        holders, it distributes no source text, and its academy, professors and
-        papers are original creations.
+        study project about the seven novels: it is not affiliated with or
+        endorsed by the rights holders, it distributes no source text, and its
+        academy, professors and papers are original creations.
       </p>
       <p>
         With thanks to{" "}
@@ -23,9 +23,9 @@ export function SiteFooter() {
         >
           The Harry Potter Lexicon
         </a>{" "}
-        for the background information that shaped this project&rsquo;s canon
-        research; entries are used as attributed references and are not the
-        source of exam content.
+        (opens in a new tab), used as a discovery and cross-checking aid with
+        attribution; it is not the source of this project&rsquo;s canon or of
+        any exam content.
       </p>
     </footer>
   );
