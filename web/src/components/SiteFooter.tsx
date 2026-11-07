@@ -1,8 +1,9 @@
-// The shared footer: rights and attribution, on every page. The wording
-// mirrors the project's source policy (docs/workplan.md): the wizarding world
-// belongs to its creator and publishers, this project distributes no source
-// text, and secondary references such as the Lexicon are attributed links,
-// never copied prose.
+// The shared footer: rights and attribution, on every page, at the document
+// level beside the routed pages. The wording mirrors the project's source
+// policy (docs/workplan.md): the wizarding world belongs to its creator and
+// publishers, this project distributes no source text, and secondary
+// references such as the Lexicon are attributed links, never copied prose.
+import { Link } from "react-router-dom";
 export function SiteFooter() {
   return (
     <footer className="site-footer">
@@ -26,6 +27,9 @@ export function SiteFooter() {
         (opens in a new tab), used as a discovery and cross-checking aid with
         attribution; it is not the source of this project&rsquo;s canon or of
         any exam content.
+      </p>
+      <p className="footer-nav">
+        <Link to="/about">About the Academy</Link>
       </p>
     </footer>
   );
