@@ -18,6 +18,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import asdict
 from pathlib import Path
 
+from app.pipeline.ingest.lexicon.codes import BUCKET_BOOKS, chapter_is_valid
 from app.pipeline.ingest.lexicon.discovery import QueueItem
 from app.pipeline.ingest.lexicon.fetch import Fetcher
 from app.pipeline.ingest.lexicon.parse import parse_chapter_page, parse_entry_page
@@ -41,6 +42,7 @@ def harvest(
     fetch_meta: list[dict] = []
     failures: list[dict] = []
     unknown_counts: dict[str, int] = {}
+    invalid_chapter: list[dict] = []
     buckets: dict[str, int] = {}
     zero_citation = 0
     sidebar_missing: list[str] = []
@@ -95,6 +97,11 @@ def harvest(
         for citation in page.citations:
             resolved = citation.resolved
             buckets[resolved.bucket] = buckets.get(resolved.bucket, 0) + 1
+            valid = resolved.bucket != BUCKET_BOOKS or chapter_is_valid(resolved)
+            if not valid:
+                # A books code the corpus cannot hold (a site-broken href like
+                # dh117): recorded, flagged, and queued - never resolved.
+                invalid_chapter.append({"entry_url": item.url, "code": citation.code})
             citations.append(
                 {
                     "entry_url": item.url,
@@ -103,6 +110,7 @@ def harvest(
                     "code": citation.code,
                     "origin": citation.origin,
                     "href": citation.href,
+                    "valid_chapter": valid,
                     **vars(resolved),
                 }
             )
@@ -115,6 +123,8 @@ def harvest(
     write_jsonl(out_dir / "chapter_index.jsonl", chapters)
     write_jsonl(out_dir / "fetch_index.jsonl", fetch_meta)
     write_jsonl(out_dir / "harvest_failures.jsonl", failures)
+    write_jsonl(out_dir / "invalid_chapters.jsonl", invalid_chapter)
+    write_jsonl(out_dir / "sidebar_missing.jsonl", [{"url": u} for u in sidebar_missing])
 
     return {
         "queued": len(queue),
@@ -123,6 +133,7 @@ def harvest(
         "citations": len(citations),
         "buckets": buckets,
         "zero_citation_entries": zero_citation,
+        "invalid_chapter_edges": len(invalid_chapter),
         "sidebar_missing": len(sidebar_missing),
         "unknown_codes": len(unknown_counts),
         "unknown_top": sorted(unknown_counts.items(), key=lambda kv: -kv[1])[:20],

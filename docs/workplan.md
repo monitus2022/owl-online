@@ -45,8 +45,11 @@ page describes what comes next and why.
   item/concept-to-chapter mapping harvested as structure only from
   hp-lexicon.org, resolved to chunk candidates in our index. The plan of
   record is `docs/lexicon-canon-index.md`. The #125 spike is complete on
-  branch `125/lexicon-spike` (draft PR #130): citation grammar, page parsers
-  and a 55-entry sample crawl; #126 (full harvester) follows the merge.
+  branch `125/lexicon-spike` (draft PR #130). The #126 full harvest is done:
+  4,998 entries plus all 199 novel chapters, 22,801 valid books edges, 3
+  flagged broken-href edges, 3 page failures (all site meta pages); results and
+  the chapter-title cross-check are in the plan doc's Harvest results section;
+  the branch awaits review. #127 (resolver) consumes the gitignored artifacts.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
 
 ## Product shape

@@ -161,6 +161,39 @@ def test_harvest_writes_artifacts_and_summary(tmp_path):
     assert all(m["sha256"] for m in meta)
 
 
+def test_harvest_flags_out_of_range_books_edges(tmp_path):
+    page_html = """
+    <html><body><h1>Scars</h1>
+    <p>A broken link
+    (<a href="/source/the-harry-potter-novels/dh/dh117">DH117</a>)
+    and a real one
+    (<a href="/source/the-harry-potter-novels/dh/dh17">DH17</a>).</p>
+    <div class="related_container"></div>
+    </body></html>
+    """
+
+    def opener(url):
+        return page_html.encode()
+
+    fetcher = Fetcher(tmp_path / "pages", opener=opener, sleep=lambda s: None)
+    summary = harvest(
+        [QueueItem(f"{BASE}/thing/scars/", "entry", "thing")], tmp_path, fetcher
+    )
+    assert summary["invalid_chapter_edges"] == 1
+    rows = [
+        json.loads(x)
+        for x in (tmp_path / "citations.jsonl").read_text().splitlines()
+    ]
+    by = {r["code"]: r for r in rows}
+    assert by["DH117"]["valid_chapter"] is False
+    assert by["DH17"]["valid_chapter"] is True
+    queued = [
+        json.loads(x)
+        for x in (tmp_path / "invalid_chapters.jsonl").read_text().splitlines()
+    ]
+    assert [q["code"] for q in queued] == ["DH117"]
+
+
 def test_harvest_records_failures_by_page(tmp_path):
     def opener(url):
         raise OSError("network down")

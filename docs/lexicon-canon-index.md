@@ -332,6 +332,52 @@ The spike module lives in `app/pipeline/ingest/lexicon/` (codes, parse) with
 synthetic-structure tests (`tests/test_lexicon_codes.py`,
 `tests/test_lexicon_parse.py`) and the sample runner `scripts/lexicon_spike.py`.
 
+## Harvest results (#126, 2026-11-07)
+
+One full polite crawl of the queue (5,200 urls), plus two cache-only re-parses
+while parser bugs were fixed:
+
+| Measure | Value |
+|---|---:|
+| entry pages harvested (magic / thing / creature / place / event) | 4,998 (398 / 2,134 / 274 / 700 / 1,492) |
+| novel chapters harvested | 199 / 199 (incl. the aliased `gf12`, `dh33` via 301, and `dhe`) |
+| citation rows | 29,402 |
+| books-bucket edges (valid) | 22,801 |
+| books edges flagged out-of-range (site-broken hrefs `DH117`, `PS21`, `HBP33`) | 3 |
+| excluded (film, play, other canon) | 4,734 |
+| secondary-books (incl. tale-level Beedle codes) | 1,864 |
+| epilogue (`DHE`) edges | 26 |
+| sidebar-origin corroboration rows | 18,053 |
+| parse failures (site meta events, no `<h1>` article) | 3 of 5,200 (0.06%) |
+| zero-citation entries (mostly film-only and trivia) | 677 (13.5%) |
+| unknown-code queue | 105 distinct tokens, top: QWC 77, NSOED 47, BLC 37, MACUSA 17 |
+
+The two parser bugs the full run exposed, both fixed with regression tests:
+prose parenthesials splitting to empty tokens (`(and the cure)`) crashed
+`classify`, and HTML entities (`&#8220;`) entered the token stream. Out-of-range
+books codes now carry `valid_chapter: false` and land in
+`invalid_chapters.jsonl` instead of counting as clean edges.
+
+Chapter-title cross-check (site abbreviation vs corpus `chapter_name`, all 199
+chapters): 182 exact matches; 17 explained deltas - 7 where our ingest stores
+the fallback "Chapter N" with no title, 5 where ingest captured only the first
+line of a multi-line title (for example "…PLATFORM NINE AND" missing
+"THREE-QUARTERS"), the rest US/UK spelling or wording (Dueling/Duelling,
+Pajamas/Pyjamas, Career/Careers), plus the intentional `dhe` -> c36 mapping.
+The first two groups are findings for the corpus ingest (the #113 line of
+work), not for this pipeline; #127 treats the cross-check as informational.
+
+The unknown queue is dominated by real source abbreviations we have not
+tabled yet (QWC, NSOED, AHD = dictionaries and companion citations; BLC, TLC,
+FWT, MACUSA, ICW = web/other-canon pages) plus prose noise that survived the
+shape gate (`O.W.L.`, `B.O.G.`). None of it entered the books bucket. #127
+triages only the codes that appear on pilot-subject entries.
+
+Artifacts (all gitignored): `entries.jsonl`, `citations.jsonl`,
+`chapter_index.jsonl`, `fetch_index.jsonl` (fetch date + response hash per
+page), `harvest_failures.jsonl`, `invalid_chapters.jsonl`,
+`sidebar_missing.jsonl`, `work_queue.jsonl`.
+
 ## Ticket breakdown
 
 | Ticket | Scope | Done when |
