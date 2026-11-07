@@ -29,10 +29,10 @@ from pathlib import Path
 
 _ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TIERS = frozenset({"book", "product", "secondary"})
-# A setting question must name the school, a founder, the faculty, the
-# curriculum, the Auror pathway or the post-war setting. A book question that
-# merely shares "Defence Against the Dark Arts" must not pull lore into the
-# prompt.
+# A setting question must name Ashcombe, a founder, the faculty, the founders
+# of Ashcombe, the Auror pathway or the post-war/public-history setting. A book
+# question that merely shares "Defence Against the Dark Arts" must not pull lore
+# into the prompt.
 _SETTING_CUE = re.compile(
     r"\b(ashcombe|professor crane|professor vale|professor hale|"
     r"professor raman|professor ashby|the school|this school|the academy|"
@@ -161,7 +161,7 @@ class LoreStore:
             body = _tokens(entry.body)
             # Title and tags are curated, so a hit there is worth more than a
             # body mention. This keeps a founder biography from crowding out the
-            # public-record entry on a question about the Battle of Hogwarts.
+            # public-history entry on a question about the war.
             score = TITLE_TAG_WEIGHT * len(query & title_tags) + len(query & body)
             if score:
                 scored.append((score, entry))

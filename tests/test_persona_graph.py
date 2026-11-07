@@ -171,6 +171,14 @@ def test_book_questions_do_not_steal_the_meta_route():
     assert classify("How did Tonks become an Auror?", persona=True) == "answer"
     assert classify("Who founded Hogwarts?", persona=True) == "answer"
     assert classify("What did the founders value?", persona=True) == "answer"
+    assert (
+        classify("What was the DADA curriculum under Lupin?", persona=True)
+        == "answer"
+    )
+    assert (
+        classify("What is the DADA curriculum at Hogwarts?", persona=True)
+        == "answer"
+    )
 
 
 def test_meta_topics_cover_greeting_syllabus_and_grading():

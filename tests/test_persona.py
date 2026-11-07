@@ -205,7 +205,7 @@ def test_lore_selection_prefers_the_professor_and_the_pathway():
     assert store.select("What is the Auror pathway?", subject="dada")[0].id == "auror-001"
 
 
-def test_lore_selection_prefers_the_public_history_entry():
+def test_lore_selection_includes_the_public_history_entry():
     store = load_lore(FIXTURE)
     selected = {
         entry.id
