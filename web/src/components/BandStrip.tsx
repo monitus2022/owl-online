@@ -1,30 +1,48 @@
 import type { Band } from "../api/exams";
 import type { StoredAttempt } from "../api/results";
 
-// Presentation tone per O-W-L band: pass (O/E/A), warn (P/D), fail (T).
-// The canonical grading rule itself is deterministic and lives server-side
-// when #41 lands; this is only colour mapping.
-export function bandTone(band: Band): "pass" | "warn" | "fail" {
-  if (band === "O" || band === "E" || band === "A") return "pass";
-  if (band === "T") return "fail";
-  return "warn";
+// Presentation tone per O-W-L band. The canon grants exactly two tiers -
+// O/E/A pass, P/D/T fail (docs/workplan.md, HBP5) - so the colour split does
+// too. T stays distinct from P/D through its label, not a softer colour.
+const BAND_TONES: Record<Band, "pass" | "fail"> = {
+  O: "pass",
+  E: "pass",
+  A: "pass",
+  P: "fail",
+  D: "fail",
+  T: "fail",
+};
+
+export function bandTone(band: Band): "pass" | "fail" {
+  return BAND_TONES[band];
 }
 
-// The last results as a strip of band cells, newest first. Decorative-adjacent
-// but readable: each cell carries the marks and date as its accessible name.
+function formatDay(attempt: StoredAttempt): string {
+  return new Date(attempt.gradedAt).toLocaleDateString();
+}
+
+// The last results as a strip of band cells, newest first. Each cell's
+// marks and date are real text for assistive tech (the letter alone is
+// decorative); the list role is restored because list-style removal drops it
+// in Safari/VoiceOver.
 export function BandStrip({ attempts }: { attempts: StoredAttempt[] }) {
   if (attempts.length === 0) return null;
   const shown = attempts.slice(0, 12);
   return (
-    <ol className="band-strip" aria-label="Last papers, newest first">
+    <ol
+      className="band-strip"
+      role="list"
+      aria-label={`Last ${shown.length} of ${attempts.length} papers, newest first`}
+    >
       {shown.map((attempt) => (
         <li
-          key={attempt.id + attempt.gradedAt}
+          key={`${attempt.id}:${attempt.gradedAt}`}
           className={`band-cell cell-${bandTone(attempt.band)}`}
-          title={`${attempt.total}/${attempt.max} - ${new Date(attempt.gradedAt).toLocaleDateString()}`}
-          aria-label={`${attempt.total} of ${attempt.max} on ${new Date(attempt.gradedAt).toLocaleDateString()}, band ${attempt.band}`}
         >
-          {attempt.band}
+          <span aria-hidden="true">{attempt.band}</span>
+          <span className="visually-hidden">
+            {attempt.total} of {attempt.max} on {formatDay(attempt)}
+          </span>
         </li>
       ))}
     </ol>
