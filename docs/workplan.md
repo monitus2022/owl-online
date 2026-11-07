@@ -405,7 +405,9 @@ Canon anchors:
 - `OP31` - the O.W.L. chapter: theory paper plus separate practical for
   applicable subjects, external examiners, anti-cheating charms, one score per
   subject;
-- `HBP5` - results and the O/E/A/P/D/T grades;
+- `HBP5` - results and the O/E/A/P/D/T grades; the letters expand as
+  Outstanding, Exceeds Expectations, Acceptable, Poor, Dreadful and Troll
+  (O-E-A pass, P-D-T fail).
 - `OP12` and `OP29` - why the exams matter and how they affect careers;
 - the Lexicon O.W.L. page and event page as indexes to those chapters.
 

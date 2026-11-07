@@ -13,7 +13,7 @@ export function AboutPage() {
       <nav className="crumbs" aria-label="Breadcrumb">
         <Link to="/">The gate</Link>
         <span aria-hidden="true"> / </span>
-        <span>About the Academy</span>
+        <span aria-current="page">About the Academy</span>
       </nav>
       <h1>About the Academy</h1>
 
@@ -45,9 +45,13 @@ export function AboutPage() {
           In the books, Ordinary Wizarding Level results are graded on a
           letter scale: Outstanding, Exceeds Expectations and Acceptable
           are passes; Poor, Dreadful and Troll are not. It is the scale the
-          wizarding world hires against - the Auror Office asks for
-          Exceeds Expectations or better in five subjects including
-          Defence, Transfiguration, Charms, Potions and Herbology.
+          wizarding world hires against. For Aurors the record is precise:
+          five N.E.W.T.s, nothing below Exceeds Expectations, a high
+          standard in Defence specifically, and Transfiguration, Charms and
+          Potions as the advised companions - canon leaves the fifth
+          subject to the candidate. That Ashcombe teaches the advised set
+          plus Herbology is the academy&rsquo;s own lore, not a claim from
+          the books.
         </p>
         <p>
           This site borrows the scale. Your marks are banded against the
@@ -59,10 +63,10 @@ export function AboutPage() {
       <section aria-labelledby="about-papers">
         <h2 id="about-papers">How our papers differ from the canon</h2>
         <p>
-          The books describe O.W.L.s as theory papers plus a separate
-          practical, sat over roughly two weeks under external examiners.
-          Ashcombe&rsquo;s practice papers are an adaptation, not that
-          examination:
+          The books describe O.W.L.s as theory papers plus, for applicable
+          subjects, a separate practical, sat over roughly two weeks under
+          external examiners. Ashcombe&rsquo;s practice papers are an
+          adaptation, not that examination:
         </p>
         <ul>
           <li>ten questions per paper, one subject at a time;</li>
@@ -73,8 +77,10 @@ export function AboutPage() {
             website can watch you cast;
           </li>
           <li>
-            no deadlines and no clock: the student sets the pace, and a
-            paper is a revision tool, not a verdict.
+            the demo paper keeps no clock - the student sets the pace.
+            Papers from the real exam bank, when it ships, carry fixed
+            marks and a fixed duration: that is the authoritative surface,
+            and a demo paper counts for nothing.
           </li>
         </ul>
         <p>
@@ -89,6 +95,9 @@ export function AboutPage() {
       <section aria-labelledby="about-truth">
         <h2 id="about-truth">What is real, what is demonstration</h2>
         <table className="truth-table">
+          <caption className="visually-hidden">
+            Site surfaces, their status, and what each status means
+          </caption>
           <thead>
             <tr>
               <th scope="col">Surface</th>
@@ -103,8 +112,8 @@ export function AboutPage() {
               <td>
                 Retrieved from the seven novels and cited by chunk id; a
                 citation that does not resolve is stripped, and when
-                nothing supports an answer the system says it cannot
-                confirm rather than guessing.
+                nothing supports an answer, the plain voice says it cannot
+                answer from the books.
               </td>
             </tr>
             <tr>
@@ -129,28 +138,29 @@ export function AboutPage() {
               <td>Paper history and noticeboard</td>
               <td className="truth-demo">Device-local</td>
               <td>
-                Records live in this browser only. School accounts will
-                move them to the Academy, and until then the UI labels
-                them provisional.
+                Records live in this browser only. Server-side history with
+                accounts (#35) will move them to the Academy, and until
+                then the UI labels them provisional.
               </td>
             </tr>
             <tr>
               <td>The professor&rsquo;s voice</td>
               <td className="truth-demo">In rehearsal</td>
               <td>
-                Every room addresses the professor, and the answer you get
-                today comes from the grounded engine in a plain voice. The
-                persona layer is finished but not yet switched on at the
-                served endpoint.
+                Every chat affordance addresses the professor, but the
+                persona layer is a thin slice behind a flag that is off on
+                the served endpoint; the full voice still awaits the real
+                lore pack and the lore eval (#97). Today&rsquo;s replies
+                come from the grounded engine in a plain voice.
               </td>
             </tr>
             <tr>
               <td>Four closed departments</td>
               <td className="truth-not">Not built yet</td>
               <td>
-                Potions, Transfiguration, Charms and Herbology open when
-                their subject packs pass validation - a door is never half
-                taught.
+                Potions, Transfiguration, Charms and Herbology open only
+                when their subject packs pass validation; before that a
+                closed door shows no invented professor and no content.
               </td>
             </tr>
           </tbody>

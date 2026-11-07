@@ -11,6 +11,7 @@
   --line: #ffffff26;
   --gold: #d8b46a;
   --danger: #e2707a;
+  --pass: #82d68f;
   --accent: var(--gold);
   --radius: 10px;
   --serif: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
@@ -232,7 +233,7 @@ main {
 }
 
 .truth-real {
-  color: #82d68f;
+  color: var(--pass);
   white-space: nowrap;
 }
 
@@ -810,7 +811,7 @@ main {
 }
 
 .mark-full {
-  color: #82d68f;
+  color: var(--pass);
 }
 
 .mark-part {
@@ -918,7 +919,7 @@ main {
 }
 
 .cell-pass {
-  color: #82d68f;
+  color: var(--pass);
   border-color: rgba(130, 214, 143, 0.45);
 }
 
