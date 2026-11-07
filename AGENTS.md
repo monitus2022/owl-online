@@ -47,7 +47,7 @@ imports them. The runtime image installs base only (`uv sync
 Layout:
 
 - `app/api/` - FastAPI HTTP surface (`/ask`, `/ask/stream`; static exam endpoints are planned)
-- `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam build is planned; `ingest/lexicon/` holds the hp-lexicon canon-index spike modules
+- `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam build is planned; `ingest/lexicon/` holds the hp-lexicon canon-index harvester (spike grammar and parsers plus the #126 discovery/fetch/harvest modules)
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
 - `app/agent/` - LangGraph chat graph, node functions, state (V2)
 - `app/knowledge/` - planned subject taxonomy, material packs, source refs and pack validation

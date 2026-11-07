@@ -29,7 +29,6 @@ if str(REPO) not in sys.path:
 from app.pipeline.ingest.lexicon.codes import (  # noqa: E402
     BUCKET_UNKNOWN,
     chapter_is_valid,
-    classify,
 )
 from app.pipeline.ingest.lexicon.parse import (  # noqa: E402
     parse_chapter_page,
@@ -141,7 +140,7 @@ def main() -> None:
             }
         )
         for citation in page.citations:
-            resolved = classify(citation.code)
+            resolved = citation.resolved
             bucket_counts[resolved.bucket] = bucket_counts.get(resolved.bucket, 0) + 1
             if resolved.bucket == BUCKET_UNKNOWN:
                 unknown.append((url, citation.code))
@@ -200,9 +199,10 @@ def main() -> None:
     forward_only = len(forward_pairs - reverse_pairs)
     reverse_only = len(reverse_pairs - forward_pairs)
 
-    write_jsonl(DATA_DIR / "entries.jsonl", entries_out)
-    write_jsonl(DATA_DIR / "citations.jsonl", citations_out)
-    write_jsonl(DATA_DIR / "chapter_index.jsonl", chapters_out)
+    (DATA_DIR / "spike").mkdir(parents=True, exist_ok=True)
+    write_jsonl(DATA_DIR / "spike/entries.jsonl", entries_out)
+    write_jsonl(DATA_DIR / "spike/citations.jsonl", citations_out)
+    write_jsonl(DATA_DIR / "spike/chapter_index.jsonl", chapters_out)
 
     print(
         f"entries: {len(entries_out)}  citations: {len(citations_out)}  "

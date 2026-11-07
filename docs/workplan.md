@@ -45,8 +45,11 @@ page describes what comes next and why.
   item/concept-to-chapter mapping harvested as structure only from
   hp-lexicon.org, resolved to chunk candidates in our index. The plan of
   record is `docs/lexicon-canon-index.md`. The #125 spike is complete on
-  branch `125/lexicon-spike` (draft PR #130): citation grammar, page parsers
-  and a 55-entry sample crawl; #126 (full harvester) follows the merge.
+  branch `125/lexicon-spike` (draft PR #130). The #126 full harvest is done:
+  4,993 entries plus all 199 novel chapters, 22,797 valid books edges, 3
+  flagged broken-href edges, 3 page failures (all site meta pages); results and
+  the chapter-title cross-check are in the plan doc's Harvest results section;
+  the branch awaits review. #127 (resolver) consumes the gitignored artifacts.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
 
 ## Product shape
@@ -586,7 +589,8 @@ Next work: #74 and #75 deploy hardening. #16 is merged; the required-check
 setting is the last step. #105 is complete with the flag off and #113 is merged.
 #96 and #106 are closed. #107 is deferred and likely superseded by the per-book
 path. On the pack line: the #125 spike is complete (draft PR #130); #126 starts
-after it merges and after the courtesy note to the Lexicon is sent and recorded.
+on the spike branch head. The Lexicon courtesy note is deferred to project
+completion by maintainer decision, so no contact gate blocks the harvest.
 
 ## Decisions
 

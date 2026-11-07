@@ -40,8 +40,8 @@ Planned exam-bank stages, not built yet:
 
 | Stage | Module | Responsibility |
 |---|---|---|
-| Canon index harvest | `app/pipeline/ingest/lexicon/` | sitemap discovery, polite cached fetch of hp-lexicon.org, entry and chapter parsing to gitignored JSONL (#125 spike landed: codes, parsers, sample; #126 full harvester) |
-| Canon index resolve | `app/knowledge/lexicon.py` | citation-code buckets, forward/reverse join, chunk candidate resolution feeding pack build (#127) |
+| Canon index harvest (built, #125+#126) | `app/pipeline/ingest/lexicon/` | sitemap discovery, polite cached fetch of hp-lexicon.org, entry and chapter parse plus fetch metadata to gitignored JSONL |
+| Canon index resolve (planned, #127) | `app/knowledge/lexicon.py` | citation-code buckets, forward/reverse join, chunk candidate resolution feeding pack build |
 | Subject packs | `app/knowledge/` | subject taxonomy, material records, source refs, pack build and validation |
 | Exam build | `app/pipeline/exam/` | offline plan, retrieve, generate, validate, persist |
 | Exam store | `app/storage/` | SQLite models and repository for exams, questions, attempts |
@@ -644,7 +644,8 @@ Canon-index types (spike shapes landed on #125; the join types land with #127):
 | Type | Module | Purpose |
 |---|---|---|
 | `ResolvedCitation` | `app/pipeline/ingest/lexicon/codes.py` | citation code with bucket, book, chapter, medium and epilogue flag |
-| `Citation` / `EntryPage` / `ChapterPage` | `app/pipeline/ingest/lexicon/parse.py` | page structure: code plus origin, entry identity, chapter reverse tabs |
+| `Citation` / `EntryPage` / `ChapterPage` | `app/pipeline/ingest/lexicon/parse.py` | page structure: code plus origin plus parse-time bucket, entry identity, chapter reverse tabs |
+| `QueueItem` / `FetchResult` | `app/pipeline/ingest/lexicon/{discovery,fetch}.py` | work queue row; fetch record with access date and response hash |
 | `CanonEdge` | `app/knowledge/lexicon.py` | planned: entry, chapter, agreement label, candidate chunk ids and hashes |
 
 Planned exam-bank types, once the offline pipeline lands:

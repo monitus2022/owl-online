@@ -52,25 +52,42 @@ no disallow rules and no content-signal values. The pipeline therefore:
   second with jitter, cache by url with the response hash, and re-fetch only on
   a deliberate rebuild. A full crawl is under 10k pages;
   roughly two hours at that rate;
-- before the first full crawl (#126), send one courtesy note through the
-  Lexicon feedback page (https://www.hp-lexicon.org/feedback/): structure-only
-  extraction, no prose stored, attribution on every reference, private
-  non-commercial study project. Record the outcome here; respect a negative
-  answer and fall back to human-consulted use of the site for the entries the
-  packs need:
-  - sent: (not yet)
-  - reply: (none yet)
+- contact decision (maintainer, 2026-11-07): no courtesy note before the
+  harvest. A credit-and-notification note goes to the Lexicon feedback page
+  (https://www.hp-lexicon.org/feedback/) when the project ships or the pack
+  work concludes. Record it here:
+  - sent: (not yet, at project end)
+  - reply: (none)
 - does not harvest the WordPress REST `character` payload beyond what the HTML
   gives at first; it is a later, optional field-level extension (it exposes
   structured `source_text`, `related_canon` and `first_introduced` fields).
 
-## Site anatomy (observed 2026-11-07)
+## Site anatomy (observed 2026-11-07; refined by the #126 build)
 
 The site is WordPress with Pods. Sitemap index: /sitemap_index.xml. Public
-custom types: character (~1,450), creature, event, magic (~398), place, quote,
-source, thing (~2,140), trivia. REST exposes only `character` and `real_person`
-under `wp/v2`; `pods/v1` requires authentication, so HTML parsing driven by the
-sitemaps is the primary path.
+custom types: character (~1,450), creature (~274), event (~1,495), magic
+(~398), place (~700), quote, source, thing (~2,140), trivia. REST exposes only
+`character` and `real_person` under `wp/v2`; `pods/v1` requires
+authentication, so HTML parsing driven by the sitemaps is the primary path.
+The #126 harvest scope is the five item families plus the novel chapters;
+characters stay out of this pass.
+
+Two sitemap quirks the harvester handles:
+
+- chapter pages: two canonical chapters are absent from the source sitemap
+  because the site aliased their slugs (`gf/gf12-2`, `dh/dh33-the-princes-tale`)
+  behind 301s. The chapter queue is therefore generated from the corpus code
+  table (198 chapters + the `dh/dhe` epilogue), the fetcher follows redirects,
+  and identity comes from the generated canonical url, not the final slug;
+- non-novel source pages are cited by codes the abbreviation table never saw
+  (`BCE`, `PmP`, `WSch`, `FBF`, `JKRTW`); their source-page path resolves the
+  bucket (`classify_source_href`), so they are recorded as excluded canon
+  instead of flooding the unknown queue;
+- thin entries (a sweet mentioned once) carry no Related-Entries container
+  and no references section; the article region then ends at the comments
+  block or the site footer marker, and a page with no marker at all still
+  raises. Every citation carries its bucket from parse time: re-classifying
+  the bare code later would undo the href fallback.
 
 Anatomy that matters for parsing, from the observed pages:
 
@@ -127,23 +144,23 @@ known deltas, both settled by the spike (see Spike findings):
 
 ## Artifacts
 
-All under `data/lexicon/` (gitignored), JSONL one record per line:
+All under `data/lexicon/` (gitignored), JSONL one record per line. Shipped
+shapes as of #126:
 
 | File | Record | Contents |
 |---|---|---|
-| pages/ | fetch cache | raw HTML by url hash, fetch date, response hash |
-| entries.jsonl | LexiconEntry | url, slug, title, entry_type, magic_types, incantation, canonicity note |
-| citations.jsonl | CanonCitation | entry_url, code, bucket, book_num, chapter_num, origin (href, anchor, bare), parse confidence |
-| chapter_index.jsonl | ChapterLink | book_num, chapter_num, entry_urls with their Related-Entries tab |
-| canon_index.jsonl | CanonEdge | entry_id, book_num, chapter_num, agreement (forward, reverse, both), candidate chunk ids, text hashes |
+| pages/ + pages/*.json | fetch cache | raw HTML by url hash plus a sidecar per page (url, access date, response hash) |
+| work_queue.jsonl | QueueItem | url, kind (entry, chapter), family |
+| entries.jsonl | LexiconEntry | url, slug, family, title, magic_types, incantation (local only), citations count, related_groups, has_references_section, sidebar_scanned, unknown_tokens |
+| citations.jsonl | CanonCitation | entry_url, entry_title, family, code, origin (href, anchor, bare, sidebar), href, valid_chapter (books only, null elsewhere), bucket, book_num, chapter_num, medium, is_epilogue |
+| chapter_index.jsonl | ChapterLink | url, code, chapter_num, is_epilogue, abbreviation, canonicity, related tabs as (group, title, href) |
+| fetch_index.jsonl | FetchRecord | url, path, from_cache, fetched_at, sha256 |
+| harvest_failures.jsonl | Failure | url, stage (fetch, parse), reason |
+| invalid_chapters.jsonl | InvalidEdge | entry_url, code - books codes outside the corpus chapter table |
+| sidebar_missing.jsonl | ReviewRow | urls whose page had no detectable Sources widget |
 
-This is the target contract. The #125 spike emits a subset: the cache stores
-raw HTML only (fetch date and response hash land with #126), `entries.jsonl`
-has no `slug`/`entry_type`/`canonicity` yet (the entry type comes from the URL
-path and the sitemap split in #126), and `citations.jsonl` carries no parse
-confidence (the origin plus the unknown queue play that role until #127 needs
-a score). The `incantation` field holds site sentence text and stays local:
-it must never be echoed into a committed report.
+`canon_index.jsonl` (the resolved join with candidate chunk ids and text
+hashes) lands with #127.
 
 Committed to git: the schema (pydantic models), the code-to-book table, the
 parser, synthetic fixtures, and (once built) a summary coverage report checked
@@ -154,16 +171,17 @@ same discipline as the corpus.
 
 | Stage | Module | Responsibility |
 |---|---|---|
-| Discover | app/pipeline/ingest/lexicon/discovery.py | sitemap index to per-type url lists; write a work queue |
-| Fetch | app/pipeline/ingest/lexicon/fetch.py | polite cached fetch (1 rps, UA, retry, resume); never refetch on cache hit |
-| Parse | app/pipeline/ingest/lexicon/parse.py | entry identity, citation codes from anchor text and bare parenthesials, Related Entries tabs; emits entries.jsonl, citations.jsonl, chapter_index.jsonl |
-| Normalize | app/knowledge/lexicon.py | code grammar: bucket, book_num, chapter_num; reject unknown codes loudly |
-| Resolve | app/knowledge/lexicon.py | forward/reverse join with agreement labels; map each book chapter edge to candidate chunks by metadata plus token match (title, incantation, associated terms); attach chunk ids and text hashes |
-| Report | scripts/lexicon_report.py | coverage per entry type and per subject pilot area; disagreement and unresolved-code queues; spot-check sample |
+| Discover | app/pipeline/ingest/lexicon/discovery.py | sitemap urls to the per-family entry queue, plus 199 novel chapters generated from the corpus code table; write the work queue |
+| Fetch | app/pipeline/ingest/lexicon/fetch.py | polite cached fetch (1 rps + stable jitter, project UA, one retry with backoff, resume from cache); record fetch date and response hash per page |
+| Parse | app/pipeline/ingest/lexicon/harvest.py + parse.py | run the spike parsers over the queue; entry identity, citation codes (href-derived novels, anchor text, bare parenthesials, sidebar widget), Related-Entries tabs; emits entries.jsonl, citations.jsonl, chapter_index.jsonl, fetch_index.jsonl, harvest_failures.jsonl |
+| Normalize | app/pipeline/ingest/lexicon/codes.py | citation grammar: code or source-page path to (bucket, book_num, chapter_num); unknown codes queue loudly |
+| Resolve | app/knowledge/lexicon.py (#127) | forward/reverse join with agreement labels; map each books chapter edge to candidate chunks by metadata plus token match (title, incantation, associated terms); attach chunk ids and text hashes |
+| Report | scripts/lexicon_report.py (#127) | coverage per entry type and per subject pilot area; disagreement and unresolved-code queues; spot-check sample |
 
 CLI entry points follow the existing style: `scripts/harvest_lexicon.py`
-(discover, fetch, parse) and `scripts/lexicon_report.py` (resolve, report), both
-thin wrappers over library code, as with `scripts/ingest_corpus.py`.
+(discover, fetch, parse; `--discover-only`, `--limit`, `--reuse-queue`) with
+`scripts/lexicon_report.py` landing in #127, both thin wrappers over library
+code, as with `scripts/ingest_corpus.py`.
 
 Parsing notes, settled by the spike (see Spike findings above):
 
@@ -275,8 +293,10 @@ parse rules were rebuilt on these observations:
 - the references block is a `<ul>` on most pages but plain `<p>` blocks on
   some, and the heading is "References from the canon" or "Canon references";
 - every page's footer nav links every chapter of every book: the article
-  region runs from the `<h1>` to the first `related_container` and a page
-  without that boundary raises, rather than scanning the footer silently;
+  region runs from the `<h1>` to the first structural stop (Related Entries,
+  else the comments block, else the site footer - priority order, so a marker
+  occurring in prose cannot truncate the article) and a page with no stop at
+  all raises, rather than silently scanning the footer;
 - the sidebar fact box sits inside that region on many pages; it contains no
   `/source/` links, so it is harmless to the citation scan, but its free text
   (`incantation`, pronunciation sentences) must never be echoed into a
@@ -303,16 +323,82 @@ parse rules were rebuilt on these observations:
   prose like `(Molly)` is not mistaken for a source code, while `SDNY` and
   `MACUSA`-style news abbreviations surface for review;
 - multi-code lists split on comma, `&` and `and` (`(PS1 and PS2)` -> two edges);
-- edges dedupe per (entry, code) per page; the Sources sidebar sits outside
-  the region and its cross-check with the references list is scoped to #126,
-  where a real DOM boundary replaces the substring rule;
-- #126 must extend the table with the tale-level Beedle codes (`TBB/BR`,
-  `TBB/WHH`, `TBB/FFF`, `TBB/WHP` pattern) and the companion-book prefixes
-  behind `FWT`, `BLC`, `TLC2` after a human confirms what they cite.
+- edges dedupe per (entry, code), with the sidebar origin kept as its own
+  corroboration track; the Sources sidebar sits outside the article region and
+  is scanned as a separate origin, so forward-vs-sidebar agreement is
+  computable in #127;
+- tale-level Beedle codes (`TBB/BR`, `TBB/WHH`, pattern `TBB/<XX>`) are
+  bucketed as secondary books; `FWT`, `BLC`, `TLC2` and similar remain in the
+  unknown queue for a human to place.
 
 The spike module lives in `app/pipeline/ingest/lexicon/` (codes, parse) with
 synthetic-structure tests (`tests/test_lexicon_codes.py`,
 `tests/test_lexicon_parse.py`) and the sample runner `scripts/lexicon_spike.py`.
+
+## Harvest results (#126, 2026-11-07)
+
+Run record, honestly: pass 1 crawled the queue of 5,200 urls and cached 5,197
+(3 chapter fetches failed in transit); pass 2, after fixing a parser crash on
+prose parenthesials, re-parsed from cache and fetched the 3 outstanding
+chapter urls; pass 3 re-parsed cache-only after the fetch-metadata and hub-page
+fixes. Every final artifact number comes from pass 3. "One full crawl"
+therefore means one queue, fully cached, over three resumable cache-first
+passes - the design intent of the cache, exercised immediately.
+
+Failure budget (stated, so the ticket criterion is checkable): parse failures
+at most 0.1% of queued urls and zero for novel chapters; every failure names
+its url. Observed: 3 failures of 5,195 (0.058%), all `/event/` pages that are
+the site's own announcements (podcast launch, posting permissions) with no
+`<h1>` article; chapters 0.
+
+| Measure | Value |
+|---|---:|
+| entry pages harvested (magic / thing / creature / place / event) | 4,993 (397 / 2,133 / 273 / 699 / 1,491) |
+| novel chapters harvested | 199 / 199 (aliased `gf12`, `dh33` resolved via their 301s; `dhe` included) |
+| citation rows | 29,393 |
+| books-bucket edges, valid | 22,797 |
+| books edges flagged out-of-range (site-broken hrefs `DH117`, `PS21`, `HBP33`) | 3 |
+| excluded (film, play, other canon) | 4,733 |
+| secondary-books (incl. tale-level Beedle codes) | 1,860 |
+| epilogue (`DHE`) edges | 26 |
+| sidebar-origin corroboration rows | 18,053 |
+| fetch_index rows with access date and response hash | 5,195 / 5,195 |
+| zero-citation entries (mostly film-only and trivia pages) | 673 (13.5%) |
+| unknown-code queue | 139 distinct tokens, top: QWC, NSOED, BLC, MACUSA, WW, DL |
+
+Five family hub/archive pages (`/magic/`, `/thing/`, ...) were dropped from
+the queue after the first pass showed they parse as archive listings, not
+entries.
+
+Bugs the full run exposed, each fixed with a regression test: prose
+parenthesials splitting to empty tokens crashed `classify`; HTML entities
+(`&#8220;`) entered the token stream; cache-only re-parses lost fetch dates
+(metadata now lives in a sidecar written at fetch time and backfilled from
+file mtime, so `fetch_index.jsonl` keeps the access date #128 attribution
+needs); cache writes are atomic and zero-byte files re-fetch; sitemap fetches
+now obey the same politeness as pages.
+
+Chapter-title cross-check (site abbreviation vs corpus `chapter_name`, all
+199 chapters), reproducible via `scripts/lexicon_title_check.py`: 182 exact
+matches; 17 explained deltas - 7 where our ingest stores the fallback
+"Chapter N" with no title, 6 where it stored only one line of a multi-line
+title (for example "…PLATFORM NINE AND" missing "THREE-QUARTERS"), 3 US/UK
+spelling or wording (Dueling/Duelling, Pajamas/Pyjamas, Career/Careers), and
+the intentional `dhe` -> c36 mapping. The fallback and one-line groups are
+findings for the corpus ingest (#113 line of work), not for this pipeline;
+#127 treats the cross-check as informational.
+
+The unknown queue is dominated by real source abbreviations not yet tabled
+(QWC, NSOED, AHD = dictionaries and companion citations; BLC, TLC, FWT,
+MACUSA, ICW = web/other-canon pages) plus prose that survived the shape gate
+(`O.W.L.`, `B.O.G.`). None of it entered the books bucket. #127 triages only
+the codes appearing on pilot-subject entries.
+
+Artifacts (all gitignored): `entries.jsonl`, `citations.jsonl`,
+`chapter_index.jsonl`, `fetch_index.jsonl` (access date + response hash per
+page, sidecar-backed), `harvest_failures.jsonl`, `invalid_chapters.jsonl`,
+`sidebar_missing.jsonl`, `work_queue.jsonl`; spike artifacts moved to
+`data/lexicon/spike/` so a re-run cannot clobber the harvest.
 
 ## Ticket breakdown
 

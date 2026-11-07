@@ -65,6 +65,15 @@ CITATION_RE = re.compile(
     r"\b(" + "|".join(_CODES) + r")(?::Tw)?(?:\s*(\d+(?:\.\d+)?))?(?:/([fg]))?\b"
 )
 
+# Beedle the Bard is cited per tale: `TBB/BR`, `TBB/WHH` (the canon page lists
+# named tale pages). Tale-level codes are secondary books.
+TALE_CODE_RE = re.compile(r"TBB/([A-Z]{2,4})")
+
+# Source pages carry the same information as the abbreviation table in the
+# url path, so an unlinked or mislabeled anchor can still be bucketed.
+SECONDARY_SOURCE_SLUGS = {"qa", "fb", "tbb"}
+SOURCE_PATH_RE = re.compile(r"/source/(?:[a-z-]+/)*(?P<slug>[a-z0-9-]+)/?$")
+
 
 @dataclass(frozen=True)
 class ResolvedCitation:
@@ -92,6 +101,11 @@ def classify(raw: str) -> ResolvedCitation:
     code = raw.strip()
     if not code:
         raise ValueError("empty citation code")
+    tale = TALE_CODE_RE.fullmatch(code)
+    if tale:
+        return ResolvedCitation(
+            code=code, bucket=BUCKET_SECONDARY, medium="other"
+        )
     m = CITATION_RE.fullmatch(code)
     if m is None:
         return ResolvedCitation(code=code, bucket=BUCKET_UNKNOWN)
@@ -144,3 +158,57 @@ def chapter_is_valid(resolved: ResolvedCitation) -> bool:
     if resolved.book_num is None or resolved.chapter_num is None:
         return True
     return 1 <= resolved.chapter_num <= NOVEL_CHAPTER_COUNTS[resolved.book_num]
+
+
+def known_code(raw: str) -> str | None:
+    """The table spelling for a case-folded slug (`bos` -> `BoS`), if known.
+
+    Prefers the all-caps variant when two table codes fold to the same key.
+    """
+    matches = [c for c in _CODES if c.casefold() == raw.casefold()]
+    if not matches:
+        return None
+    return next((c for c in sorted(matches) if c.isupper()), sorted(matches)[0])
+
+
+def classify_source_href(href: str) -> ResolvedCitation | None:
+    """Bucket a /source/ page url by its path, without the anchor text.
+
+    Novel chapter urls belong to `parse._derive_code_from_href` (they carry a
+    chapter number); this covers the rest: companion books are secondary,
+    anything else the site treats as a source page is excluded canon. Returns
+    None when the href is not a source page.
+    """
+    m = SOURCE_PATH_RE.search(href)
+    if not m:
+        return None
+    slug = m.group("slug")
+    if (
+        slug.startswith("tbb")
+        and 3 < len(slug) <= 7
+        and slug[3:].isalpha()
+    ):
+        return ResolvedCitation(
+            code=f"TBB/{slug[3:].upper()}", bucket=BUCKET_SECONDARY, medium="other"
+        )
+    if slug in SECONDARY_SOURCE_SLUGS:
+        return ResolvedCitation(
+            code=slug.upper(), bucket=BUCKET_SECONDARY, medium="other"
+        )
+    letters = re.match(r"[a-zA-Z]+", slug)
+    if not letters:
+        return None
+    raw = letters.group(0)
+    # Prefer a code the table knows in any casing; an unlisted path slug is
+    # an excluded source under its upper-cased abbreviation.
+    code = known_code(raw)
+    resolved = classify(code) if code else None
+    if resolved is None or resolved.bucket == BUCKET_UNKNOWN:
+        return ResolvedCitation(code=raw.upper(), bucket=BUCKET_EXCLUDED, medium="other")
+    if resolved.bucket == BUCKET_BOOKS:
+        # A bare novel root (/source/the-harry-potter-novels/ps/) is a
+        # book-level edge; chapter stays None.
+        return ResolvedCitation(
+            code=resolved.code, bucket=BUCKET_BOOKS, book_num=resolved.book_num
+        )
+    return resolved

@@ -216,3 +216,102 @@ def test_entry_page_without_the_region_boundary_fails_loudly():
     )
     with pytest.raises(ValueError):
         parse_entry_page(html, "https://www.hp-lexicon.org/magic/no-boundary/")
+
+
+def test_prose_parenthesials_do_not_crash_the_bare_scan():
+    """Observed in the #126 full crawl: `(and the cure)` splits to an empty
+    token, and `("Crucio")` arrives entity-encoded; neither may raise."""
+    html = """
+    <html><body><h1>Curse</h1>
+    <p>Cast (and the cure) said &#8220;Crucio&#8221; (GF34).</p>
+    <div class="related_container"></div>
+    </body></html>
+    """
+    page = parse_entry_page(html, "https://www.hp-lexicon.org/magic/curse/")
+    assert {c.code for c in page.citations} == {"GF34"}
+    assert page.unknown_tokens == []
+
+
+def test_thin_entry_falls_back_to_the_footer_stop():
+    """Observed in the #126 smoke run: thin thing-entries have no Related
+    container; the region then ends at the footer instead of raising."""
+    html = """
+    <html><body><h1>Sweet</h1>
+    <p>A sweet mentioned once (<a href="/source/the-harry-potter-novels/hbp/hbp25">HBP25</a>).</p>
+    <footer><a href="/source/the-harry-potter-novels/gf/gf11/">11</a></footer>
+    </body></html>
+    """
+    page = parse_entry_page(html, "https://www.hp-lexicon.org/thing/sweet/")
+    assert any(c.code == "HBP25" for c in page.citations)
+    assert not any(c.code == "GF11" for c in page.citations)
+
+
+def test_citations_carry_their_parse_time_resolution():
+    """The bucket comes from where the code was found (href fallback), not a
+    later re-classification of the bare code."""
+    html = """
+    <html><body><h1>Beast</h1>
+    <div class="related_container"></div>
+    <span> Sources</span>
+      <a href=".../source/films-and-plays/fbf/">Fantastic Beasts (film series)</a>
+    <div>The Harry Potter Canon</div>
+    </body></html>
+    """
+    page = parse_entry_page(html, "https://www.hp-lexicon.org/creature/murtlap/")
+    row = [c for c in page.citations if c.code == "FBF"]
+    assert len(row) == 1
+    assert row[0].resolved.bucket == "excluded"
+
+
+def test_unlinked_anchor_is_bucketed_from_its_source_url_path():
+    """Observed in the #125 queue: BCE, PmP, WSch label prose links that carry
+    no recognisable abbreviation; the /source/ path resolves them."""
+    html = """
+    <html><body><h1>Transfiguration Note</h1>
+    <p>A leaf from a mandrake is carried for a month
+    (<a href="https://www.hp-lexicon.org/source/other-canon/bce/">this essay</a>).</p>
+    <div class="related_container"></div>
+    </body></html>
+    """
+    page = parse_entry_page(
+        html, "https://www.hp-lexicon.org/magic/animagus-transfiguration/"
+    )
+    codes = {c.code: c.origin for c in page.citations}
+    assert codes == {"BCE": "anchor"}
+
+
+def test_sidebar_sources_are_scanned_and_stay_a_separate_origin():
+    """The page-level Sources widget repeats novel codes; origin=sidebar keeps
+    them apart from article codes so #127 can score the agreement."""
+    html = """
+    <html><body><h1>Summoning Thing</h1>
+    <p>Cited in the article (<a href="/source/the-harry-potter-novels/gf/gf20">GF20</a>).</p>
+    <div class="related_container"></div>
+    <div class="sidebar"><span> Sources</span>
+      <a href="/source/the-harry-potter-novels/gf/gf20">Chapter 20</a>
+      <a href="/source/other-canon/bos/">The Book of Spells</a>
+    </div>
+    <div>The Harry Potter Canon site-wide nav</div>
+    <a href="/source/the-harry-potter-novels/ps/ps1/">1</a>
+    </body></html>
+    """
+    page = parse_entry_page(html, "https://www.hp-lexicon.org/magic/summoning-thing/")
+    assert page.sidebar_scanned
+    sidebar = {(c.code, c.origin) for c in page.citations if c.origin == "sidebar"}
+    assert ("GF20", "sidebar") in sidebar
+    assert ("BoS", "sidebar") in sidebar
+    # The site-wide footer nav after the stop marker is never scanned.
+    assert not any(c.code == "PS1" for c in page.citations)
+
+
+def test_sidebar_is_skipped_without_a_stop_marker():
+    html = """
+    <html><body><h1>Odd Layout</h1>
+    <p>No references here.</p>
+    <div class="related_container"></div>
+    <span> Sources</span><a href="/source/the-harry-potter-novels/gf/gf11/">11</a>
+    </body></html>
+    """
+    page = parse_entry_page(html, "https://www.hp-lexicon.org/magic/odd-layout/")
+    assert not page.sidebar_scanned
+    assert not any(c.code == "GF11" for c in page.citations)
