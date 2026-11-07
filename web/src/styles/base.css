@@ -730,6 +730,11 @@ main {
 /* Motion and small screens --------------------------------------------------- */
 
 .route-fade {
+  /* The translate makes the wrapper a stacking context for these 260 ms.
+     Nothing inside uses fixed/sticky/z-index today; if a toast, modal or
+     sticky header ever lands inside main, switch this rule to opacity-only
+     to avoid mid-animation jumps. Also replays on first mount: a 260 ms
+     hero delay the LCP budget can afford. */
   animation: route-in 260ms ease-out;
 }
 

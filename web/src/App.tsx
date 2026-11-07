@@ -8,6 +8,12 @@ import { VenuePage } from "./pages/VenuePage";
 // so any navigation remounts it and the CSS plays once. In-page state (the
 // venue tabs) never touches the URL, so tab switches do not re-trigger it,
 // and prefers-reduced-motion cancels the animation outright.
+//
+// The key carries a second, load-bearing invariant: venue-to-venue
+// navigation remounts the page, so one department's transcript and in-flight
+// paper cannot render under another's identity. If this animation is ever
+// removed, keep remount-on-pathname explicit (for example a key on the
+// venue element itself).
 function Shell() {
   const location = useLocation();
   return (
