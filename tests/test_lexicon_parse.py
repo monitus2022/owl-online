@@ -218,6 +218,20 @@ def test_entry_page_without_the_region_boundary_fails_loudly():
         parse_entry_page(html, "https://www.hp-lexicon.org/magic/no-boundary/")
 
 
+def test_prose_parenthesials_do_not_crash_the_bare_scan():
+    """Observed in the #126 full crawl: `(and the cure)` splits to an empty
+    token, and `("Crucio")` arrives entity-encoded; neither may raise."""
+    html = """
+    <html><body><h1>Curse</h1>
+    <p>Cast (and the cure) said &#8220;Crucio&#8221; (GF34).</p>
+    <div class="related_container"></div>
+    </body></html>
+    """
+    page = parse_entry_page(html, "https://www.hp-lexicon.org/magic/curse/")
+    assert {c.code for c in page.citations} == {"GF34"}
+    assert page.unknown_tokens == []
+
+
 def test_thin_entry_falls_back_to_the_footer_stop():
     """Observed in the #126 smoke run: thin thing-entries have no Related
     container; the region then ends at the footer instead of raising."""

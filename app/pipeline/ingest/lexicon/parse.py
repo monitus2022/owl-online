@@ -25,6 +25,7 @@ far enough to locate citation codes inside it and is never returned.
 
 from __future__ import annotations
 
+import html as _html
 import re
 from dataclasses import dataclass, field
 
@@ -134,7 +135,9 @@ class ChapterPage:
 
 
 def _strip_tags(html: str) -> str:
-    return _TAG_RE.sub(" ", html)
+    # Decode entities first: the site writes curly quotes as &#8220;, and
+    # encoded prose must not masquerade as tokens.
+    return _TAG_RE.sub(" ", _html.unescape(html))
 
 
 def _article_region(html: str) -> str:
@@ -210,6 +213,11 @@ def parse_entry_page(html: str, url: str) -> EntryPage:
     seen: set[tuple[str, bool]] = set()
 
     def record(token: str, href: str | None, origin: str) -> None:
+        token = token.strip()
+        if not token:
+            # Splitting prose parenthesials (e.g. "(... and ...)") yields empty
+            # tokens; skip them without tripping classify's empty-code guard.
+            return
         from_sidebar = origin == "sidebar"
         citation = classify(token)
         if citation.bucket == BUCKET_UNKNOWN and href:
