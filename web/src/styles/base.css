@@ -344,6 +344,21 @@ main {
   transform: none;
 }
 
+/* The corridor end -------------------------------------------------------- */
+
+.notfound p {
+  color: var(--ink-dim);
+  max-width: 34rem;
+}
+
+.notfound-links {
+  list-style: none;
+  padding: 0;
+  margin: 1.2rem 0 0;
+  display: flex;
+  gap: 1.5rem;
+}
+
 /* The venue ---------------------------------------------------------------- */
 
 .crest {
