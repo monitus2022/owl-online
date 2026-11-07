@@ -88,6 +88,31 @@ def test_unknown_codes_are_queued_not_dropped():
     assert resolved.code == "ZZZ9"
 
 
+def test_tale_level_beedle_codes_are_secondary_books():
+    for code in ["TBB/BR", "TBB/WHH"]:
+        resolved = classify(code)
+        assert resolved.bucket == BUCKET_SECONDARY, code
+        assert not resolved.usable_for_packs
+
+
+def test_source_href_fallback_buckets_unknown_abbreviations_by_path():
+    from app.pipeline.ingest.lexicon.codes import classify_source_href
+
+    # Path slugs resolve codes the abbreviation table may not even know.
+    bce = classify_source_href("https://www.hp-lexicon.org/source/other-canon/bce/")
+    assert bce.bucket == BUCKET_EXCLUDED and bce.code == "BCE"
+    # A companion-book path is secondary, in the table's own casing.
+    bos = classify_source_href("https://www.hp-lexicon.org/source/other-canon/bos/")
+    assert bos.bucket == BUCKET_SECONDARY and bos.code == "BoS"
+    # A bare novel root is a book-level edge with no chapter.
+    gf = classify_source_href("https://www.hp-lexicon.org/source/the-harry-potter-novels/gf/")
+    assert gf.bucket == BUCKET_BOOKS and gf.book_num == 4 and gf.chapter_num is None
+    # A tale page under the TBB tree.
+    tale = classify_source_href("https://www.hp-lexicon.org/source/other-potter-books/tbb/tbbbr")
+    assert tale.bucket == BUCKET_SECONDARY and tale.code == "TBB/BR"
+    assert classify_source_href("https://www.hp-lexicon.org/magic/accio/") is None
+
+
 def test_empty_code_fails_loudly():
     with pytest.raises(ValueError):
         classify("   ")
