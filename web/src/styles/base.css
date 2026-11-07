@@ -170,11 +170,20 @@ main {
   margin-bottom: 2.5rem;
 }
 
-.footnote {
-  font-size: 0.75rem;
+.site-footer {
+  margin: 3rem auto 0;
+  padding: 1.1rem 1rem 2.5rem;
+  border-top: 1px solid var(--line);
+  max-width: 44rem;
+  text-align: center;
+  font-size: 0.78rem;
+  line-height: 1.6;
   color: var(--ink-dim);
-  max-width: 36rem;
-  margin: 2.5rem auto 0;
+}
+
+.site-footer a {
+  color: inherit;
+  text-decoration: underline;
 }
 
 /* The cloister ------------------------------------------------------------ */

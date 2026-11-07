@@ -38,10 +38,6 @@ export function FrontPage() {
       <Link to="/cloister" className="btn-primary enter-btn">
         Enter the grounds
       </Link>
-      <p className="footnote">
-        A study project for the seven novels. Not affiliated with or endorsed by
-        the rights holders; the source text is not distributed here.
-      </p>
     </main>
   );
 }
