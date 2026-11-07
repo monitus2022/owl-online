@@ -811,6 +811,142 @@ main {
   margin: 0;
 }
 
+/* Results surfaces ---------------------------------------------------------- */
+
+.band-strip {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0;
+  margin: 0 0 1.1rem;
+}
+
+.band-cell,
+.band-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  font-family: var(--serif);
+}
+
+.band-cell {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.band-chip {
+  border-radius: 999px;
+  padding: 0.05rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.cell-pass {
+  color: #82d68f;
+  border-color: rgba(130, 214, 143, 0.45);
+}
+
+.cell-warn {
+  color: var(--gold);
+  border-color: rgba(216, 180, 106, 0.45);
+}
+
+.cell-fail {
+  color: var(--danger);
+  border-color: rgba(226, 112, 122, 0.45);
+}
+
+.band-none {
+  color: var(--ink-dim);
+}
+
+.history h2,
+.progress h2 {
+  margin-bottom: 0.6rem;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: 2rem 7rem 1fr auto auto;
+  gap: 0.8rem;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.45rem;
+  font-size: 0.9rem;
+}
+
+.history-index,
+.history-date,
+.history-marks {
+  color: var(--ink-dim);
+}
+
+.history-index,
+.history-marks {
+  font-family: ui-monospace, monospace;
+}
+
+.history-best {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.history-empty {
+  color: var(--ink-dim);
+}
+
+.progress {
+  margin-top: 2.6rem;
+}
+
+.progress-grid {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.progress-row {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr auto;
+  gap: 0.9rem;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.9rem;
+}
+
+.progress-row .band-chip {
+  min-width: 2.1rem;
+}
+
+.progress-name {
+  font-family: var(--serif);
+}
+
+.progress-state {
+  color: var(--ink-dim);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
 /* Motion and small screens --------------------------------------------------- */
 
 .route-fade {
@@ -856,5 +992,23 @@ main {
 
   .backdrop > .arcade {
     height: 96px;
+  }
+
+  .history-row {
+    grid-template-columns: 1.6rem 5.8rem 1fr auto;
+    font-size: 0.84rem;
+  }
+
+  .history-best {
+    grid-column: 2 / -1;
+  }
+
+  .progress-row {
+    grid-template-columns: 2.9rem 1fr;
+  }
+
+  .progress-state {
+    grid-column: 2;
+    text-align: left;
   }
 }
