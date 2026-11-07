@@ -41,6 +41,12 @@ page describes what comes next and why.
   voice still follows the real pack and a fixture-driven lore eval.
 - #16's deterministic CI gate is merged; the required-check setting is the last
   step. #74 and #75 follow. #107 is deferred.
+- The Lexicon canon index (#125-#128) is the planned feed for the B1 packs: an
+  item/concept-to-chapter mapping harvested as structure only from
+  hp-lexicon.org, resolved to chunk candidates in our index. The plan of
+  record is `docs/lexicon-canon-index.md`. The #125 spike is complete on
+  branch `125/lexicon-spike` (draft PR #130): citation grammar, page parsers
+  and a 55-entry sample crawl; #126 (full harvester) follows the merge.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
 
 ## Product shape
@@ -351,6 +357,10 @@ Tickets:
 
 | Ticket | Scope |
 |---|---|
+| #125 | Lexicon canon index spike: citation grammar, page parsers, sample crawl (complete, PR #130) |
+| #126 | Lexicon harvester: discovery, polite cached fetch, parse to gitignored JSONL |
+| #127 | Lexicon resolver: buckets, forward/reverse join, chunk candidates, coverage report |
+| #128 | Wire the canon index into pack concept seeding and source-ref prefill |
 | #87 | Subject taxonomy, material records, source refs, pack build and validation |
 | #38 | Exam data model, question types, rubric, evidence snapshots, attempts |
 
@@ -529,6 +539,7 @@ persists exam attempts and chat history.
 | Ticket | Scope | Milestone |
 |---|---|---|
 | #87 | Subject knowledge packs: taxonomy, materials, source links | V3 - Product |
+| #126, #127, #128 | Lexicon canon index: harvester, resolver, pack wiring | V3 - Product |
 | #38, #39 | Exam data model, offline generation and validation | V3 - Product |
 | #41, #42 | Hybrid grading and exam endpoints | V3 - Product |
 | #40 | Exam and grading evaluation | V3 - Product |
@@ -574,7 +585,8 @@ persists exam attempts and chat history.
 Next work: #74 and #75 deploy hardening. #16 is merged; the required-check
 setting is the last step. #105 is complete with the flag off and #113 is merged.
 #96 and #106 are closed. #107 is deferred and likely superseded by the per-book
-path.
+path. On the pack line: the #125 spike is complete (draft PR #130); #126 starts
+after it merges and after the courtesy note to the Lexicon is sent and recorded.
 
 ## Decisions
 
@@ -583,6 +595,8 @@ path.
 | Multi-book is a time-boxed spike, not the main line | Citation validity, faithfulness and cost miss their bars; one bounded cycle then a documented fallback |
 | A new answer path gets a retrieval-only measurement and a token estimate before generation code | The multi-book path built the expensive half before the cheap diagnostic |
 | Subject packs are the source of truth for exam and lesson generation | Prevents free-model memory and makes coverage auditable |
+| The Lexicon is harvested as structure only, never prose, with attribution | The site's terms forbid verbatim copying and republishing; the citation facts (which chapter cites what) are the useful layer and are safe to keep locally |
+| Subject membership comes from lesson-scene evidence, not from site taxonomy tags | A magictype tag says what kind of magic an item is, not which class teaches it; the books carry the curriculum fact |
 | Every material has source refs | A lesson or question can always be traced to the books |
 | Every generated question or lesson cites a material and source | Unsupported content is rejected before publication |
 | Ten questions per paper | Good for a fun session; full-length papers are too long |

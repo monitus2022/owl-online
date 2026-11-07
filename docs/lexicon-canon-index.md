@@ -52,6 +52,14 @@ no disallow rules and no content-signal values. The pipeline therefore:
   second with jitter, cache by url with the response hash, and re-fetch only on
   a deliberate rebuild. A full crawl is under 10k pages;
   roughly two hours at that rate;
+- before the first full crawl (#126), send one courtesy note through the
+  Lexicon feedback page (https://www.hp-lexicon.org/feedback/): structure-only
+  extraction, no prose stored, attribution on every reference, private
+  non-commercial study project. Record the outcome here; respect a negative
+  answer and fall back to human-consulted use of the site for the entries the
+  packs need:
+  - sent: (not yet)
+  - reply: (none yet)
 - does not harvest the WordPress REST `character` payload beyond what the HTML
   gives at first; it is a later, optional field-level extension (it exposes
   structured `source_text`, `related_canon` and `first_introduced` fields).

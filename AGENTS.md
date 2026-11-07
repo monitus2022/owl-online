@@ -47,7 +47,7 @@ imports them. The runtime image installs base only (`uv sync
 Layout:
 
 - `app/api/` - FastAPI HTTP surface (`/ask`, `/ask/stream`; static exam endpoints are planned)
-- `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam build is planned
+- `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam build is planned; `ingest/lexicon/` holds the hp-lexicon canon-index spike modules
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
 - `app/agent/` - LangGraph chat graph, node functions, state (V2)
 - `app/knowledge/` - planned subject taxonomy, material packs, source refs and pack validation
@@ -59,6 +59,7 @@ Layout:
 - `app/logging.py` - logging setup: one formatter, level from settings, per-request id
 - `docs/architecture.md` - living diagrams (contracts, module deps, chat flows, exam-bank boundary); update when a contract, an adapter, or the top-level flow changes
 - `docs/workplan.md` - phase plan, ticket map, grading and memory decisions
+- `docs/lexicon-canon-index.md` - plan of record for the hp-lexicon canon index (#125-#128); update it when a parse rule, an artifact contract or the source policy changes
 - `docs/runs/` - one committed Markdown record per eval run, plus the template and index
 - `eval/` - harness, gold set, thresholds
 - `web/` - React + Vite academy frontend, deployed separately on Cloudflare Pages (docs/deploy.md); it calls the versioned contract in `docs/api.md` and never imports Python code
@@ -105,7 +106,8 @@ probe before building on it.
 
 ## Do not
 
-- Commit the copyrighted corpus - keep it out of git.
+- Commit the copyrighted corpus - keep it out of git. Same for Lexicon pages
+  and harvested rows (`data/lexicon/`): structure only, no site prose, ever.
 - Render model output as HTML.
 - Put secrets in the image or config; use environment variables.
 
