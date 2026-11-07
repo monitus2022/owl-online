@@ -586,7 +586,8 @@ Next work: #74 and #75 deploy hardening. #16 is merged; the required-check
 setting is the last step. #105 is complete with the flag off and #113 is merged.
 #96 and #106 are closed. #107 is deferred and likely superseded by the per-book
 path. On the pack line: the #125 spike is complete (draft PR #130); #126 starts
-after it merges and after the courtesy note to the Lexicon is sent and recorded.
+on the spike branch head. The Lexicon courtesy note is deferred to project
+completion by maintainer decision, so no contact gate blocks the harvest.
 
 ## Decisions
 
