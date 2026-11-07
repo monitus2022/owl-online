@@ -5,10 +5,10 @@ import type { ChatMode } from "../api/chat";
 import type { Subject } from "../data/subjects";
 import { Silhouette } from "./Silhouette";
 
-// Chat with the professor. The transcript is session-local: the API is
-// stateless until threads land (#30), so earlier turns are context for the
-// reader, not sent to the model. Model output is rendered as plain text only —
-// never HTML — per the project rule.
+// Chat, voiced as the department's personaState allows. The transcript is
+// session-local: the API is stateless until threads land (#30), so earlier
+// turns are context for the reader, not sent to the model. Model output is
+// rendered as plain text only — never HTML — per the project rule.
 
 interface Message {
   id: number;
@@ -29,12 +29,15 @@ const MODE_LABELS: Record<ChatMode, string> = {
 };
 
 export function ChatPanel({ subject }: { subject: Subject }) {
+  const responder = subject.personaState === "live" ? "the professor" : "the owl";
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
       role: "professor",
-      text: "Good. You are here to prepare, and that is the right instinct. Ask me about the Defence, or say the word if you want to be tested on it.",
-      mode: "meta",
+      text:
+        subject.personaState === "live"
+          ? `Welcome to the ${subject.name} revision room. Ask ${subject.professor} about the set texts, or say the word if you want to be tested.`
+          : "Welcome to the revision room. Ask about the set texts — grounded answers cite the books, and if the owl cannot confirm something it will say so plainly. The department's professor voice is still in rehearsal.",
     },
   ]);
   const [question, setQuestion] = useState("");
@@ -63,7 +66,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
     ]);
 
     try {
-      for await (const streamEvent of askStream(text)) {
+      for await (const streamEvent of askStream(text, subject.personaState)) {
         if (streamEvent.name === "mode") {
           const data = streamEvent.data as { mode: ChatMode };
           updateProfessor(professorId, (draft) => ({ ...draft, mode: data.mode }));
@@ -119,7 +122,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
   }
 
   return (
-    <section className="chat" aria-label="Chat with the professor">
+    <section className="chat" aria-label={`Chat with ${responder}`}>
       <ol className="chat-log">
         {messages.map((message, index) => {
           const thinking =
@@ -141,8 +144,9 @@ export function ChatPanel({ subject }: { subject: Subject }) {
               )}
               {message.abstained && (
                 <p className="abstain-note">
-                  The professor could not ground this in the texts, so he will
-                  not guess.
+                  {subject.personaState === "live"
+                    ? "The professor could not ground this in the texts, so he will not guess."
+                    : "The owl could not ground this in the books, and will not guess."}
                 </p>
               )}
             </>
@@ -168,7 +172,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
         <input
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
-          placeholder="Ask the professor…"
+          placeholder={`Ask ${responder}…`}
           maxLength={1000}
           autoComplete="off"
           disabled={busy}

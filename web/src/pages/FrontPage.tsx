@@ -32,7 +32,7 @@ export function FrontPage() {
       <p className="kicker">Est. 2008 · The Cotswolds</p>
       <h1 className="school-name">Ashcombe Academy of Magic</h1>
       <p className="school-tag">
-        O.W.L. Online — the revision rooms. Ask the professors, sit practice
+        O.W.L. Online — the revision rooms. Ask questions, sit practice
         papers, and every answer cites the books.
       </p>
       <Link to="/cloister" className="btn-primary enter-btn">

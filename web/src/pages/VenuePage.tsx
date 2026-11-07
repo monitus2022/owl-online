@@ -65,7 +65,10 @@ export function VenuePage() {
         <Silhouette variant={subject.professorVariant} />
         <div>
           <h1>{subject.name}</h1>
-          <p className="venue-professor">{subject.professor}</p>
+          <p className="venue-professor">
+            {subject.professor}
+            {subject.personaState === "live" ? "" : " — voice in rehearsal"}
+          </p>
         </div>
       </header>
       <div className="tabs" role="tablist" aria-label="Room" onKeyDown={moveTab}>
@@ -78,7 +81,7 @@ export function VenuePage() {
           className={tab === "chat" ? "tab tab-on" : "tab"}
           onClick={() => setTab("chat")}
         >
-          Ask the professor
+          {subject.personaState === "live" ? "Ask the professor" : "Ask the owl"}
         </button>
         <button
           id="tab-exam"

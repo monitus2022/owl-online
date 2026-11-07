@@ -509,6 +509,7 @@ persists exam attempts and chat history.
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
 | #137 | Frontend CI build job; deploy.md, AGENTS.md and decision rows for web/ | V3 - Product |
+| #141 | Frontend voice honesty while OWL_PERSONA stays off | V3 - Product |
 
 ### Next
 
