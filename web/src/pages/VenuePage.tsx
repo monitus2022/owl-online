@@ -5,6 +5,7 @@ import { ArchBackdrop } from "../components/ArchBackdrop";
 import { Crest } from "../components/Crest";
 import { ChatPanel } from "../components/ChatPanel";
 import { ExamPanel } from "../components/ExamPanel";
+import { HistoryPanel } from "../components/HistoryPanel";
 import { Silhouette } from "../components/Silhouette";
 import { getSubject } from "../data/subjects";
 
@@ -12,19 +13,27 @@ import { getSubject } from "../data/subjects";
 // whole page, so every control, focus ring and seal picks up the department
 // colour from the subject data alone.
 
-type Tab = "chat" | "exam";
+type Tab = "chat" | "exam" | "papers";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "chat", label: "Ask the professor" },
+  { id: "exam", label: "Exam room" },
+  { id: "papers", label: "Your papers" },
+];
 
 export function VenuePage() {
   const { slug } = useParams();
   const subject = getSubject(slug);
   const [tab, setTab] = useState<Tab>("chat");
 
-  // WAI-ARIA tabs: arrow keys move activation between the two tabs.
+  // WAI-ARIA tabs: arrow keys move activation around the ring of tabs.
   function moveTab(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    const next: Tab = tab === "chat" ? "exam" : "chat";
-    setTab(next);
-    document.getElementById(next === "chat" ? "tab-chat" : "tab-exam")?.focus();
+    const index = TABS.findIndex((entry) => entry.id === tab);
+    const step = event.key === "ArrowRight" ? 1 : TABS.length - 1;
+    const next = TABS[(index + step) % TABS.length];
+    setTab(next.id);
+    document.getElementById(`tab-${next.id}`)?.focus();
   }
 
   if (!subject) return <Navigate to="/cloister" replace />;
@@ -78,31 +87,24 @@ export function VenuePage() {
       </header>
       <ArchBackdrop crest={subject.crest} />
       <div className="tabs" role="tablist" aria-label="Room" onKeyDown={moveTab}>
-        <button
-          id="tab-chat"
-          role="tab"
-          aria-selected={tab === "chat"}
-          aria-controls="panel-chat"
-          tabIndex={tab === "chat" ? 0 : -1}
-          className={tab === "chat" ? "tab tab-on" : "tab"}
-          onClick={() => setTab("chat")}
-        >
-          Ask the professor
-        </button>
-        <button
-          id="tab-exam"
-          role="tab"
-          aria-selected={tab === "exam"}
-          aria-controls="panel-exam"
-          tabIndex={tab === "exam" ? 0 : -1}
-          className={tab === "exam" ? "tab tab-on" : "tab"}
-          onClick={() => setTab("exam")}
-        >
-          Exam room
-        </button>
+        {TABS.map((entry) => (
+          <button
+            key={entry.id}
+            id={`tab-${entry.id}`}
+            role="tab"
+            aria-selected={tab === entry.id}
+            aria-controls={`panel-${entry.id}`}
+            tabIndex={tab === entry.id ? 0 : -1}
+            className={tab === entry.id ? "tab tab-on" : "tab"}
+            onClick={() => setTab(entry.id)}
+          >
+            {entry.label}
+          </button>
+        ))}
       </div>
-      {/* Both panels stay mounted so the transcript and any in-flight stream
-          survive tab switches; the hidden attribute only hides them. */}
+      {/* All panels stay mounted so the transcript, an in-flight paper and a
+          streaming answer survive tab switches; hidden only hides them. The
+          history panel refetches when it becomes active. */}
       <div
         id="panel-chat"
         role="tabpanel"
@@ -118,6 +120,14 @@ export function VenuePage() {
         hidden={tab !== "exam"}
       >
         <ExamPanel subject={subject} />
+      </div>
+      <div
+        id="panel-papers"
+        role="tabpanel"
+        aria-labelledby="tab-papers"
+        hidden={tab !== "papers"}
+      >
+        <HistoryPanel subject={subject} active={tab === "papers"} />
       </div>
     </main>
   );

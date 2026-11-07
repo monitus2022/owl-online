@@ -1,11 +1,41 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { resultsStore } from "../api/results";
+import type { StoredAttempt } from "../api/results";
 import { Door } from "../components/Door";
+import { ProgressBoard } from "../components/ProgressBoard";
 import { SUBJECTS } from "../data/subjects";
 
-// The cloister: one door per department. Departments open as their subject
-// packs and professors land, so the closed doors are honest placeholders,
-// not half-built pages.
+// The cloister: one door per department, and the noticeboard below with the
+// device-local best mark for each. Departments open as their subject packs
+// and professors land, so the closed doors are honest placeholders, not
+// half-built pages.
 export function CloisterPage() {
+  const [bests, setBests] = useState<Record<string, StoredAttempt | null>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let live = true;
+    Promise.all(
+      SUBJECTS.map(async (subject) => {
+        const best = await resultsStore.best(subject.slug);
+        return [subject.slug, best] as const;
+      }),
+    )
+      .then((entries) => {
+        if (live) {
+          setBests(Object.fromEntries(entries));
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (live) setLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   return (
     <main className="cloister">
       <nav className="crumbs" aria-label="Breadcrumb">
@@ -23,6 +53,7 @@ export function CloisterPage() {
           <Door key={subject.slug} subject={subject} />
         ))}
       </ul>
+      <ProgressBoard bests={bests} loading={loading} />
     </main>
   );
 }
