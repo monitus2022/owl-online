@@ -1,8 +1,11 @@
 import { apiBase } from "./base";
+import type { PersonaState } from "../data/subjects";
 
 // Client for POST /ask/stream, the SSE contract in docs/api.md. The server
 // routes answer/practice/feedback itself, so the UI sends one question and
-// reads the `mode` event to know which one the professor chose.
+// reads the `mode` event to know which one the professor chose. The 503 copy
+// takes the department's personaState so the owl/professor wording follows
+// the single switch; the 429 owl line is a delivery metaphor and stays put.
 
 export type ChatMode = "answer" | "practice" | "feedback" | "meta" | "personal";
 
@@ -28,6 +31,7 @@ export class ChatError extends Error {}
 
 export async function* askStream(
   question: string,
+  personaState: PersonaState,
 ): AsyncGenerator<StreamEvent> {
   let response: Response;
   try {
@@ -41,7 +45,7 @@ export async function* askStream(
     throw new ChatError("Could not reach the Academy. Is the server running?");
   }
   if (!response.ok || !response.body) {
-    throw new ChatError(await problemMessage(response));
+    throw new ChatError(await problemMessage(response, personaState));
   }
 
   const reader = response.body.getReader();
@@ -74,7 +78,10 @@ export async function* askStream(
 
 // Chat degrades before it can exhaust the daily budget (docs/api.md limits),
 // so the UI shows the reason in world terms rather than a bare status code.
-async function problemMessage(response: Response): Promise<string> {
+async function problemMessage(
+  response: Response,
+  personaState: PersonaState,
+): Promise<string> {
   let problem: { error?: string; reason?: string; retry_after?: number; detail?: string };
   try {
     problem = await response.json();
@@ -87,7 +94,9 @@ async function problemMessage(response: Response): Promise<string> {
   }
   if (response.status === 503) {
     const reason = problem.reason ? ` (${problem.reason})` : "";
-    return `The owl is resting tonight — chat is paused for the day${reason}. The exam rooms are unaffected.`;
+    const sleeper =
+      personaState === "live" ? "The professor is resting" : "The owl is resting";
+    return `${sleeper} tonight — chat is briefly paused for the day${reason}. The exam rooms are unaffected.`;
   }
   if (problem.error) return problem.error;
   if (problem.detail) return problem.detail;

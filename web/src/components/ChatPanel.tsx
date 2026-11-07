@@ -5,10 +5,10 @@ import type { ChatMode } from "../api/chat";
 import type { Subject } from "../data/subjects";
 import { Silhouette } from "./Silhouette";
 
-// Chat with the professor. The transcript is session-local: the API is
-// stateless until threads land (#30), so earlier turns are context for the
-// reader, not sent to the model. Model output is rendered as plain text only —
-// never HTML — per the project rule.
+// Chat, voiced as the department's personaState allows. The transcript is
+// session-local: the API is stateless until threads land (#30), so earlier
+// turns are context for the reader, not sent to the model. Model output is
+// rendered as plain text only — never HTML — per the project rule.
 
 interface Message {
   id: number;
@@ -37,7 +37,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
       text:
         subject.personaState === "live"
           ? `Welcome to the ${subject.name} revision room. Ask ${subject.professor} about the set texts, or say the word if you want to be tested.`
-          : `Welcome to the revision room. Ask about the set texts - grounded answers cite the books, and if the owl cannot confirm something it will say so plainly. The department's professor voice is still in rehearsal.`,
+          : "Welcome to the revision room. Ask about the set texts — grounded answers cite the books, and if the owl cannot confirm something it will say so plainly. The department's professor voice is still in rehearsal.",
     },
   ]);
   const [question, setQuestion] = useState("");
@@ -66,7 +66,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
     ]);
 
     try {
-      for await (const streamEvent of askStream(text)) {
+      for await (const streamEvent of askStream(text, subject.personaState)) {
         if (streamEvent.name === "mode") {
           const data = streamEvent.data as { mode: ChatMode };
           updateProfessor(professorId, (draft) => ({ ...draft, mode: data.mode }));
