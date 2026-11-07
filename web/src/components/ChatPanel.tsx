@@ -29,12 +29,15 @@ const MODE_LABELS: Record<ChatMode, string> = {
 };
 
 export function ChatPanel({ subject }: { subject: Subject }) {
+  const responder = subject.personaState === "live" ? "the professor" : "the owl";
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
       role: "professor",
-      text: "Good. You are here to prepare, and that is the right instinct. Ask me about the Defence, or say the word if you want to be tested on it.",
-      mode: "meta",
+      text:
+        subject.personaState === "live"
+          ? `Welcome to the ${subject.name} revision room. Ask ${subject.professor} about the set texts, or say the word if you want to be tested.`
+          : `Welcome to the revision room. Ask about the set texts - grounded answers cite the books, and if the owl cannot confirm something it will say so plainly. The department's professor voice is still in rehearsal.`,
     },
   ]);
   const [question, setQuestion] = useState("");
@@ -119,7 +122,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
   }
 
   return (
-    <section className="chat" aria-label="Chat with the professor">
+    <section className="chat" aria-label={`Chat with ${responder}`}>
       <ol className="chat-log">
         {messages.map((message, index) => {
           const thinking =
@@ -141,8 +144,9 @@ export function ChatPanel({ subject }: { subject: Subject }) {
               )}
               {message.abstained && (
                 <p className="abstain-note">
-                  The professor could not ground this in the texts, so he will
-                  not guess.
+                  {subject.personaState === "live"
+                    ? "The professor could not ground this in the texts, so he will not guess."
+                    : "The owl could not ground this in the books, and will not guess."}
                 </p>
               )}
             </>
@@ -168,7 +172,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
         <input
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
-          placeholder="Ask the professor…"
+          placeholder={`Ask ${responder}…`}
           maxLength={1000}
           autoComplete="off"
           disabled={busy}

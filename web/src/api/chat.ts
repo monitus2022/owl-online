@@ -87,7 +87,7 @@ async function problemMessage(response: Response): Promise<string> {
   }
   if (response.status === 503) {
     const reason = problem.reason ? ` (${problem.reason})` : "";
-    return `The professor is resting tonight — chat is briefly paused for the day${reason}. The exam rooms are unaffected.`;
+    return `The owl is resting tonight — chat is paused for the day${reason}. The exam rooms are unaffected.`;
   }
   if (problem.error) return problem.error;
   if (problem.detail) return problem.detail;
