@@ -62,13 +62,32 @@ no disallow rules and no content-signal values. The pipeline therefore:
   gives at first; it is a later, optional field-level extension (it exposes
   structured `source_text`, `related_canon` and `first_introduced` fields).
 
-## Site anatomy (observed 2026-11-07)
+## Site anatomy (observed 2026-11-07; refined by the #126 build)
 
 The site is WordPress with Pods. Sitemap index: /sitemap_index.xml. Public
-custom types: character (~1,450), creature, event, magic (~398), place, quote,
-source, thing (~2,140), trivia. REST exposes only `character` and `real_person`
-under `wp/v2`; `pods/v1` requires authentication, so HTML parsing driven by the
-sitemaps is the primary path.
+custom types: character (~1,450), creature (~274), event (~1,495), magic
+(~398), place (~700), quote, source, thing (~2,140), trivia. REST exposes only
+`character` and `real_person` under `wp/v2`; `pods/v1` requires
+authentication, so HTML parsing driven by the sitemaps is the primary path.
+The #126 harvest scope is the five item families plus the novel chapters;
+characters stay out of this pass.
+
+Two sitemap quirks the harvester handles:
+
+- chapter pages: two canonical chapters are absent from the source sitemap
+  because the site aliased their slugs (`gf/gf12-2`, `dh/dh33-the-princes-tale`)
+  behind 301s. The chapter queue is therefore generated from the corpus code
+  table (198 chapters + the `dh/dhe` epilogue), the fetcher follows redirects,
+  and identity comes from the generated canonical url, not the final slug;
+- non-novel source pages are cited by codes the abbreviation table never saw
+  (`BCE`, `PmP`, `WSch`, `FBF`, `JKRTW`); their source-page path resolves the
+  bucket (`classify_source_href`), so they are recorded as excluded canon
+  instead of flooding the unknown queue;
+- thin entries (a sweet mentioned once) carry no Related-Entries container
+  and no references section; the article region then ends at the comments
+  block or the site footer marker, and a page with no marker at all still
+  raises. Every citation carries its bucket from parse time: re-classifying
+  the bare code later would undo the href fallback.
 
 Anatomy that matters for parsing, from the observed pages:
 
@@ -152,16 +171,17 @@ same discipline as the corpus.
 
 | Stage | Module | Responsibility |
 |---|---|---|
-| Discover | app/pipeline/ingest/lexicon/discovery.py | sitemap index to per-type url lists; write a work queue |
-| Fetch | app/pipeline/ingest/lexicon/fetch.py | polite cached fetch (1 rps, UA, retry, resume); never refetch on cache hit |
-| Parse | app/pipeline/ingest/lexicon/parse.py | entry identity, citation codes from anchor text and bare parenthesials, Related Entries tabs; emits entries.jsonl, citations.jsonl, chapter_index.jsonl |
-| Normalize | app/knowledge/lexicon.py | code grammar: bucket, book_num, chapter_num; reject unknown codes loudly |
-| Resolve | app/knowledge/lexicon.py | forward/reverse join with agreement labels; map each book chapter edge to candidate chunks by metadata plus token match (title, incantation, associated terms); attach chunk ids and text hashes |
-| Report | scripts/lexicon_report.py | coverage per entry type and per subject pilot area; disagreement and unresolved-code queues; spot-check sample |
+| Discover | app/pipeline/ingest/lexicon/discovery.py | sitemap urls to the per-family entry queue, plus 199 novel chapters generated from the corpus code table; write the work queue |
+| Fetch | app/pipeline/ingest/lexicon/fetch.py | polite cached fetch (1 rps + stable jitter, project UA, one retry with backoff, resume from cache); record fetch date and response hash per page |
+| Parse | app/pipeline/ingest/lexicon/harvest.py + parse.py | run the spike parsers over the queue; entry identity, citation codes (href-derived novels, anchor text, bare parenthesials, sidebar widget), Related-Entries tabs; emits entries.jsonl, citations.jsonl, chapter_index.jsonl, fetch_index.jsonl, harvest_failures.jsonl |
+| Normalize | app/pipeline/ingest/lexicon/codes.py | citation grammar: code or source-page path to (bucket, book_num, chapter_num); unknown codes queue loudly |
+| Resolve | app/knowledge/lexicon.py (#127) | forward/reverse join with agreement labels; map each books chapter edge to candidate chunks by metadata plus token match (title, incantation, associated terms); attach chunk ids and text hashes |
+| Report | scripts/lexicon_report.py (#127) | coverage per entry type and per subject pilot area; disagreement and unresolved-code queues; spot-check sample |
 
 CLI entry points follow the existing style: `scripts/harvest_lexicon.py`
-(discover, fetch, parse) and `scripts/lexicon_report.py` (resolve, report), both
-thin wrappers over library code, as with `scripts/ingest_corpus.py`.
+(discover, fetch, parse; `--discover-only`, `--limit`, `--reuse-queue`) with
+`scripts/lexicon_report.py` landing in #127, both thin wrappers over library
+code, as with `scripts/ingest_corpus.py`.
 
 Parsing notes, settled by the spike (see Spike findings above):
 
