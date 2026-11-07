@@ -257,6 +257,42 @@ references, review status. The workplan publication rule carries over: no
 material publishes without a reviewed basis and at least one books-bucket
 source ref.
 
+## Resolver results (#127, 2026-11-08)
+
+`app/knowledge/lexicon.py` + `scripts/lexicon_report.py` join the harvest to
+itself and to the corpus, emitting `data/lexicon/canon_index.jsonl`:
+
+| Measure | Value |
+|---|---:|
+| canon edges (entry, book, chapter) | 14,452 |
+| agreement both / forward-only / reverse-only | 3,235 / 8,749 / 2,468 |
+| edges with at least one chunk candidate | 5,644 |
+| candidate refs (chunk id + text hash + span) | 15,244 |
+| candidates failing integrity (missing id, hash, span-without-phrase) | 0 |
+| low-precision edges (hits exceed the cap of 8) | 519 |
+| sidebar-only edges (disagreement queue) | 5,677 |
+
+Rules as planned: the incantation beats the title as match phrase (rare
+tokens; plural-tolerant word-boundary spans); book-level citations scan the
+whole book; `DHE` resolves to b7-c36 from chunk ordinal 103 on; reverse-only
+edges are kept as hints; nothing dropped silently. No book text is
+persisted: candidates carry [start, end) spans so the pack builder slices the
+quote from the corpus at build time.
+
+Interpretation for the pilots:
+
+- the unresolved mass is dominated by the site's category/hub pages
+  (`thing/slytherin-house`, `place/hogwarts-school-of-witchcraft-and-wizardry`,
+  `creature/human-like-creatures`): archive listings, not syllabus concepts,
+  whose titles are category labels no chapter contains verbatim. The resolver
+  does not guess; #128 selects entries from each pack's declared topic list,
+  so hub rows never reach a pack;
+- 5,677 sidebar-only edges are the promised article-vs-sidebar disagreement
+  queue - expected at full scale because the Sources widget lists book-level
+  pages; they corroborate, never ground;
+- low-precision entries (519) list the phrase, chapter and hit count for a
+  human to pick the right spans (the "Boot" problem behaving as designed).
+
 ## Validation
 
 - every books-bucket citation resolves to a (book, chapter) inside the table
