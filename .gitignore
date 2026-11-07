@@ -21,6 +21,11 @@ htmlcov/
 build/
 dist/
 
+# Web frontend (Vite/React in web/)
+web/node_modules/
+# The dev-mode env file holds only public local defaults, so it is committed.
+!web/.env.development
+
 # Corpus and derived data: copyrighted source text must stay out of git.
 data/*
 !data/.gitkeep
