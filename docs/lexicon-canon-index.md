@@ -158,9 +158,11 @@ shapes as of #126:
 | harvest_failures.jsonl | Failure | url, stage (fetch, parse), reason |
 | invalid_chapters.jsonl | InvalidEdge | entry_url, code - books codes outside the corpus chapter table |
 | sidebar_missing.jsonl | ReviewRow | urls whose page had no detectable Sources widget |
+| canon_index.jsonl | CanonEdge | #127: entry_key, family, title, book, chapter, epilogue, agreement, sources, low_precision, total_hits, candidates (chunk id, text hash, span, phrase) |
 
-`canon_index.jsonl` (the resolved join with candidate chunk ids and text
-hashes) lands with #127.
+`canon_index.jsonl` carries chunk ids, text hashes and `[start, end)` spans
+only - never book text; the pack builder (#128) reconstructs a quote by
+slicing the corpus, so copyrighted text stays in one gitignored place.
 
 Committed to git: the schema (pydantic models), the code-to-book table, the
 parser, synthetic fixtures, and (once built) a summary coverage report checked
@@ -264,34 +266,43 @@ itself and to the corpus, emitting `data/lexicon/canon_index.jsonl`:
 
 | Measure | Value |
 |---|---:|
-| canon edges (entry, book, chapter) | 14,452 |
-| agreement both / forward-only / reverse-only | 3,235 / 8,749 / 2,468 |
-| edges with at least one chunk candidate | 5,644 |
-| candidate refs (chunk id + text hash + span) | 15,244 |
-| candidates failing integrity (missing id, hash, span-without-phrase) | 0 |
-| low-precision edges (hits exceed the cap of 8) | 519 |
-| sidebar-only edges (disagreement queue) | 5,677 |
+| canon edges (entry, book, chapter, epilogue) | 19,747 |
+| agreement both / forward-only / reverse-only | 5,697 / 10,834 / 3,216 |
+| edges with at least one chunk candidate | 8,328 |
+| candidate refs retained (cap 8) / total hits | 22,611 / 33,144 |
+| integrity failures (id missing, hash mismatch, span-without-phrase) | 0 |
+| unparseable entry urls skipped | 0 |
+| low-precision edges (hits exceed the cap) | 760 |
+| sidebar-only edges (disagreement queue) | 8,559 |
+
+The join is keyed `family/slug`; family is the first path segment that is a
+known family (so nested `place/…/the-burrow` keys correctly) and the slug the
+last segment. An early version keyed the last two segments and silently
+skipped 6,851 nested urls; the fix (segment scan plus an on-build skip counter
+and integrity pass) surfaced the ~5,300 place/creature edges the first cut
+hid, which is exactly what the "recorded, never silently dropped" rule is for.
+
+Every build calls `verify_edges`: each candidate's chunk id must exist, its
+text hash must recompute to the chunk's current text, and its `[start, end)`
+span must contain the match phrase. `--check-only` summarises an existing
+index; `--sample N` prints a deterministic N-per-class review list with a
+per-edge hash verdict.
+
+Spot-check (ticket Done-when): `scripts/lexicon_report.py --sample 25` on the
+real corpus printed 25 both-agreement and 25 forward-only edges; every
+candidate-bearing sample edge reported `hash-ok` (for example
+`creature/acromantula` b5c16 -> `b5-c16-0057`, `magic/polyjuice-potion` b5c31
+-> `b5-c31-0062`) and the rest `no-candidate` (mostly event/place entries whose
+titles are chapter names or formal geography, not verbatim phrases). The
+0-integrity-failures line above is the whole-index form of the same check, so
+the sample is corroborating, not load-bearing.
 
 Rules as planned: the incantation beats the title as match phrase (rare
 tokens; plural-tolerant word-boundary spans); book-level citations scan the
-whole book; `DHE` resolves to b7-c36 from chunk ordinal 103 on; reverse-only
-edges are kept as hints; nothing dropped silently. No book text is
-persisted: candidates carry [start, end) spans so the pack builder slices the
-quote from the corpus at build time.
-
-Interpretation for the pilots:
-
-- the unresolved mass is dominated by the site's category/hub pages
-  (`thing/slytherin-house`, `place/hogwarts-school-of-witchcraft-and-wizardry`,
-  `creature/human-like-creatures`): archive listings, not syllabus concepts,
-  whose titles are category labels no chapter contains verbatim. The resolver
-  does not guess; #128 selects entries from each pack's declared topic list,
-  so hub rows never reach a pack;
-- 5,677 sidebar-only edges are the promised article-vs-sidebar disagreement
-  queue - expected at full scale because the Sources widget lists book-level
-  pages; they corroborate, never ground;
-- low-precision entries (519) list the phrase, chapter and hit count for a
-  human to pick the right spans (the "Boot" problem behaving as designed).
+whole book; `DHE` resolves to b7-c36 from chunk ordinal 103 on and stays a
+distinct edge from plain `DH36`; reverse-only edges are kept as hints; nothing
+dropped silently. No book text is persisted: candidates carry spans only, so
+the pack builder slices the quote from the corpus at build time.
 
 ## Validation
 

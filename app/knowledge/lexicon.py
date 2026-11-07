@@ -24,7 +24,15 @@ one place - the gitignored corpus - not in this derived index.
 
 The epilogue rule is pinned here: a `DHE` citation and the `/dh/dhe/` tab
 both resolve to book 7 chapter 36 from chunk `b7-c36-0103` on (settled by
-the #125 spike).
+the #125 spike). Note the chunk-granular asymmetry: a plain `DH36` citation
+sees all of chapter 36 including the epilogue tail, while `DHE` starts at
+the marker chunk. #128's review should know the difference is one-directional.
+
+Known span limitation: the sentence extension cuts at the first [.!?] and
+falls back to +40 characters, so abbreviations or ellipses can end a span
+early and the fallback can stop mid-word. The hash pins the chunk text, so a
+span is always safe to slice; only the quote's cosmetics suffer, and a pack
+author adjusts while reviewing.
 
 Deterministic: no model calls, no randomness, stable ordering everywhere.
 """
@@ -69,7 +77,6 @@ _FAMILY_CANON = {
     "event": "event",
     "events": "event",
 }
-_HREF_RE = re.compile(r"/([a-z-]+)/([a-z0-9-]+)/?$")
 
 
 @dataclass(frozen=True)
@@ -131,6 +138,7 @@ class CanonEdge:
     sources: tuple[str, ...]  # article, sidebar, tab
     candidates: tuple[Candidate, ...] = ()
     low_precision: bool = False  # more matches than the cap carries
+    total_hits: int = 0  # all hits for the winning phrase, before the cap
 
     @property
     def resolved(self) -> bool:
@@ -141,47 +149,79 @@ def chunk_text_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
+_CANONICAL_FAMILIES = (
+    "magic",
+    "thing",
+    "things",
+    "creature",
+    "creatures",
+    "place",
+    "places",
+    "locations",
+    "location",
+    "event",
+    "events",
+)
+
+
 def entry_key_from_href(href: str) -> str | None:
-    """Map an entry href (article link or Related-Entries tab) to the
-    canonical family/slug key; None for families the index does not carry."""
-    m = _HREF_RE.search(href)
-    if not m:
+    """Map an entry href (article or sidebar url, or a Related-Entries tab)
+    to the canonical family/slug key; None for families the index does not
+    carry (characters, essays) or urls with no family segment.
+
+    Place and creature urls nest under geography (`/place/.../the-burrow/`),
+    so the family is the first path segment that is a known family, and the
+    slug is the final segment - never a guessed last-two pair.
+    """
+    segments = [s for s in href.split("/") if s]
+    family = None
+    for segment in segments:
+        if segment in _CANONICAL_FAMILIES:
+            family = _FAMILY_CANON.get(segment)
+            break
+    if family is None or not segments:
         return None
-    family = _FAMILY_CANON.get(m.group(1))
-    if family is None:
+    slug = segments[-1]
+    if not re.fullmatch(r"[a-z0-9_-]+", slug):
         return None
-    return f"{family}/{m.group(2)}"
+    return f"{family}/{slug}"
 
 
 def entry_key_from_url(url: str) -> str | None:
     return entry_key_from_href(url)
 
 
-def load_entries(path: Path) -> dict[str, LexiconEntry]:
+def load_entries(path: Path, skipped: list[str] | None = None) -> dict[str, LexiconEntry]:
     entries: dict[str, LexiconEntry] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
-        key = entry_key_from_url(row["url"])
-        if key is None:
+        family = _FAMILY_CANON.get(row["family"])
+        slug = row["url"].rstrip("/").rsplit("/", 1)[-1]
+        key = f"{family}/{slug}" if family and slug else ""
+        if not key:
+            if skipped is not None:
+                skipped.append(row["url"])
             continue
         entries[key] = LexiconEntry(
             key=key,
             family=row["family"],
-            slug=row["slug"],
+            slug=slug,
             title=row["title"],
             incantation=row.get("incantation", ""),
         )
     return entries
 
 
-def forward_edges(citations_path: Path) -> dict[EdgeKey, set[str]]:
+def forward_edges(
+    citations_path: Path, skipped: list[str] | None = None
+) -> dict[EdgeKey, set[str]]:
     """Books-bucket, valid-chapter citations keyed by edge.
 
     Returns {EdgeKey: {article|sidebar}}; `bare`/`anchor`/`href` origins are
-    all article-level. Unknown entry keys and whole-book-only rows with no
-    book number are skipped (they are secondary or excluded rows).
+    all article-level. Rows whose entry url does not parse into a harvested
+    family are counted into `skipped` (never silently dropped).
     """
     out: dict[EdgeKey, set[str]] = defaultdict(set)
     for line in citations_path.read_text(encoding="utf-8").splitlines():
@@ -194,6 +234,8 @@ def forward_edges(citations_path: Path) -> dict[EdgeKey, set[str]]:
             continue
         entry_key = entry_key_from_url(row["entry_url"])
         if entry_key is None:
+            if skipped is not None:
+                skipped.append(row["entry_url"])
             continue
         edge = EdgeKey(
             entry_key=entry_key,
@@ -246,8 +288,14 @@ def group_chunks(chunks: list[Chunk]) -> dict[tuple[int, int], list[Chunk]]:
     return grouped
 
 
+def index_chunks(chunks: list[Chunk]) -> dict[str, Chunk]:
+    """Chunk id -> chunk, for verification and quote reconstruction."""
+    return {chunk.id: chunk for chunk in chunks}
+
+
 def _chunk_ordinal(chunk_id: str) -> int:
-    return int(chunk_id.rsplit("-", 1)[-1])
+    tail = chunk_id.rsplit("-", 1)[-1]
+    return int(tail) if tail.isdigit() else -1  # a foreign id is never "after"
 
 
 def _match_spans(text: str, phrase: str) -> list[tuple[int, int]]:
@@ -270,15 +318,21 @@ def resolve_candidates(
     entry: LexiconEntry,
     edge: EdgeKey,
     grouped: dict[tuple[int, int], list[Chunk]],
-) -> tuple[tuple[Candidate, ...], bool]:
+) -> tuple[tuple[Candidate, ...], bool, int]:
     """Match the entry's phrases against the edge's chapter (or whole book).
 
     Phrase priority: the first phrase with any hit wins; earlier phrases
     (incantation) are preferred over later ones (title). Returns (candidates,
-    low_precision); low_precision is True when total hits exceed the cap.
+    low_precision, total_hits); low_precision is True when total hits exceed
+    the cap, and candidates are truncated to the cap.
     """
     if edge.chapter is None:
-        pool = [c for (b, _), cs in grouped.items() if b == edge.book for c in cs]
+        # Sort by (chapter, id) so truncation order survives a re-ingest that
+        # presents chapters differently.
+        pool = sorted(
+            (c for (b, _), cs in grouped.items() if b == edge.book for c in cs),
+            key=lambda c: (c.metadata.chapter_num, c.id),
+        )
     elif edge.epilogue:
         pool = [
             c
@@ -299,11 +353,10 @@ def resolve_candidates(
                         phrase=phrase,
                     )
                 )
-                if len(hits) > MAX_CANDIDATES_PER_EDGE:
-                    return tuple(hits[:MAX_CANDIDATES_PER_EDGE]), True
         if hits:
-            return tuple(hits), False
-    return (), False
+            retained = tuple(hits[:MAX_CANDIDATES_PER_EDGE])
+            return retained, len(hits) > MAX_CANDIDATES_PER_EDGE, len(hits)
+    return (), False, 0
 
 
 def build_canon_index(
@@ -337,8 +390,9 @@ def build_canon_index(
             agreement = "reverse-only"
         candidates: tuple[Candidate, ...] = ()
         low = False
+        total = 0
         if entry is not None:
-            candidates, low = resolve_candidates(entry, key, grouped)
+            candidates, low, total = resolve_candidates(entry, key, grouped)
         edges.append(
             CanonEdge(
                 key=key,
@@ -348,9 +402,35 @@ def build_canon_index(
                 sources=sources,
                 candidates=candidates,
                 low_precision=low,
+                total_hits=total,
             )
         )
     return edges
+
+
+def verify_edges(edges: list[CanonEdge], chunks: dict[str, Chunk]) -> list[str]:
+    """Re-check every candidate against the corpus: the chunk exists, its text
+    hashes to the stored hash, and the span contains the phrase. Returns
+    problem strings (empty means the index is sound). Cheap enough to run on
+    every build - #128 consumes this artifact, so its claims must be checked,
+    not asserted."""
+    problems: list[str] = []
+    for edge in edges:
+        at = f"{edge.key.entry_key} {edge.key.book}/{edge.key.chapter}"
+        for cand in edge.candidates:
+            chunk = chunks.get(cand.chunk_id)
+            if chunk is None:
+                problems.append(f"{at} {cand.chunk_id}: chunk not in corpus")
+                continue
+            if chunk_text_hash(chunk.text) != cand.text_hash:
+                problems.append(f"{at} {cand.chunk_id}: text hash no longer matches")
+                continue
+            start, end = cand.span
+            fragment = chunk.text[start:end]
+            phrase_re = re.compile(rf"\b{re.escape(cand.phrase)}(?:e?s)?\b", re.IGNORECASE)
+            if not phrase_re.search(fragment):
+                problems.append(f"{at} {cand.chunk_id}: span no longer contains phrase")
+    return problems
 
 
 def canon_row(edge: CanonEdge) -> dict:
@@ -365,6 +445,7 @@ def canon_row(edge: CanonEdge) -> dict:
         "agreement": edge.agreement,
         "sources": list(edge.sources),
         "low_precision": edge.low_precision,
+        "total_hits": edge.total_hits,
         "candidates": [
             {
                 "chunk_id": c.chunk_id,
@@ -384,9 +465,13 @@ def summarize(edges: list[CanonEdge]) -> dict:
     resolved = 0
     low_precision = 0
     sidebar_only = 0
+    candidates_total = 0
+    total_hit_sum = 0
     for edge in edges:
         by_agreement[edge.agreement] += 1
         by_family[edge.family] += 1
+        candidates_total += len(edge.candidates)
+        total_hit_sum += edge.total_hits
         if edge.resolved:
             resolved += 1
         if edge.low_precision:
@@ -399,9 +484,30 @@ def summarize(edges: list[CanonEdge]) -> dict:
         "by_agreement": by_agreement,
         "by_family": dict(sorted(by_family.items())),
         "resolved": resolved,
+        "candidates_retained": candidates_total,
+        "candidates_all_hits": total_hit_sum,
         "low_precision": low_precision,
         "sidebar_only": sidebar_only,
     }
+
+
+def sample_edges(edges: list[CanonEdge], n: int) -> dict[str, list[CanonEdge]]:
+    """Deterministic review sample: stride through each agreement class in
+    sorted order. The human spot-check (ticket Done-when) runs on this list;
+    `--sample` also prints it with its per-edge integrity result."""
+    out: dict[str, list[CanonEdge]] = {}
+    for agreement in ("both", "forward-only"):
+        pool = sorted(
+            (e for e in edges if e.agreement == agreement),
+            key=lambda e: (e.key.entry_key, e.key.book, e.key.epilogue, e.key.chapter or 0),
+        )
+        if not pool or n <= 0:
+            out[agreement] = []
+            continue
+        stride = max(1, len(pool) // n)
+        picked = pool[::stride]
+        out[agreement] = picked[:n] if len(picked) >= n else picked
+    return out
 
 
 __all__ = [
@@ -416,8 +522,11 @@ __all__ = [
     "entry_key_from_href",
     "forward_edges",
     "group_chunks",
+    "index_chunks",
     "load_entries",
     "resolve_candidates",
     "reverse_edges",
+    "sample_edges",
     "summarize",
+    "verify_edges",
 ]
