@@ -1,8 +1,12 @@
 # API
 
 The served surface is FastAPI. The current contract is unversioned; the planned
-`/v1` aliases are listed below and will become the stable surface before the
-frontend splits into its own repository.
+`/v1` aliases are listed below. The academy frontend has already split into
+its own static build (`web/`, served on Cloudflare Pages) and calls these
+unversioned routes today, relying on the CORS origin regex and the session
+cookie; the versioned aliases gate the next steps - the per-subject chat
+field, the exam endpoints, and any custom domain that must pin its CORS
+origin.
 
 Base URL: the deployment origin, for example `https://api.monitus.org`.
 
@@ -130,7 +134,7 @@ the subject and pack version.
 - Keep chat intents internal. `mode` is a request hint, not a route.
 - Split by transport: JSON one-shot and SSE stream.
 - Give exams and grading their own limits and auth. They are not chat.
-- Version before the frontend moves to its own repository. Keep `/ask` as an
+- Version before per-subject chat and exam attempts ship. Keep `/ask` as an
   alias for one release, then deprecate it.
 
 ## Versioning and migration
@@ -138,4 +142,4 @@ the subject and pack version.
 1. Add `/v1/chat` and `/v1/chat/stream` as aliases of the current handlers.
 2. Add the `subject` field with a `"dada"` default.
 3. Announce `/ask` and `/ask/stream` as deprecated.
-4. Remove the unversioned routes after the frontend has moved.
+4. Remove the unversioned routes after the academy frontend points at `/v1`.

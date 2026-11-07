@@ -207,7 +207,29 @@ The served contract is documented in `docs/api.md`: the current `/health`,
 planned `/v1` surface for chat, persona, subjects, exams and grading. The split
 is by purpose, not by subject: a subject is request data, chat intents stay
 internal, and the exam bank and grading are separate resources. The versioned
-aliases land before the frontend moves to its own repository.
+aliases gate per-subject chat and the exam surface; the frontend already ships
+as its own static build.
+
+## Frontend surface
+
+`web/` is a React + Vite single-page app, built to static assets and served on
+Cloudflare Pages, separate from the API container (docs/deploy.md). The gate,
+the cloister and the venues call `POST /ask/stream`; the build imports no
+Python, renders no model output as HTML, and runs no request-time generation.
+Two interfaces keep the demonstration boundary between the UI and the services
+that do not exist yet:
+
+| Interface | Lives in | Today | Swap when |
+|---|---|---|---|
+| `ExamClient` | `web/src/api/exams.ts` | `MockExamClient` runs a demo bank and grades on the device, in the shape of the planned `/v1/exams` contract | #42 adds `HttpExamClient` |
+| `ResultsStore` | `web/src/api/results.ts` | device-local localStorage records, labelled provisional | #35 moves history server-side |
+
+The voice rule lives in `web/src/data/subjects.ts`: while `OWL_PERSONA` is off
+at the served host the UI addresses the professor but claims no authorship;
+flipping `personaState` is the single switch. The `web` CI job runs the Pages
+build on every pull request, and deploy-preview origins are covered by the
+API's CORS origin regex. `web/README.md` carries the component map and the
+honesty rules.
 
 ## Request flow: POST /ask
 
@@ -667,6 +689,9 @@ Planned exam-bank types, once the offline pipeline lands:
 - Update the sequence diagrams when the `/ask` or `/ask/stream` flow changes.
 - Update the SSE event contract in this page when `app/main.py` changes an event
   name or payload field.
+- Update the Frontend surface section when `web/` gains a server component,
+  changes an interface boundary (`ExamClient`, `ResultsStore`) or the voice
+  rule.
 - `pyreverse -o puml -d /tmp app` (pylint) can bootstrap the class view from source;
   the hand-kept diagrams stay small on purpose, so they describe seams rather than
   every method.
