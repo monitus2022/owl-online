@@ -3,7 +3,7 @@ import type { PersonaState } from "../data/subjects";
 
 // Client for POST /ask/stream, the SSE contract in docs/api.md. The server
 // routes answer/practice/feedback itself, so the UI sends one question and
-// reads the `mode` event to know which one the professor chose. Status copy
+// reads the `mode` event to learn which route it took. Status copy
 // addresses the professor as the addressee in every state; only the 503
 // consults personaState before using professor wording (voice live or not).
 
@@ -77,9 +77,7 @@ export async function* askStream(
 }
 
 // Chat degrades before it can exhaust the daily budget (docs/api.md limits),
-// so the UI shows the reason in world terms rather than a bare status code.
-// The 503 follows the department's personaState (professor wording only when
-// the voice is live); the 429 is office-queue flavour in both states.
+// so failures read as in-world status lines, never as bare status codes.
 async function problemMessage(
   response: Response,
   personaState: PersonaState,

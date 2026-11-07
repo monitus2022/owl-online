@@ -2,13 +2,14 @@ import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { askStream, ChatError } from "../api/chat";
 import type { ChatMode } from "../api/chat";
-import type { Subject } from "../data/subjects";
+import type { PersonaState, Subject } from "../data/subjects";
 import { Silhouette } from "./Silhouette";
 
-// Chat, voiced as the department's personaState allows. The transcript is
-// session-local: the API is stateless until threads land (#30), so earlier
-// turns are context for the reader, not sent to the model. Model output is
-// rendered as plain text only — never HTML — per the project rule.
+// Chat. Every affordance addresses the professor; the greeting, abstention
+// note and status copy follow the department's personaState. The transcript
+// is session-local: the API is stateless until threads land (#30), so
+// earlier turns are context for the reader, not sent to the model. Model
+// output is rendered as plain text only — never HTML — per the project rule.
 
 interface Message {
   id: number;
@@ -24,9 +25,20 @@ const MODE_LABELS: Record<ChatMode, string> = {
   answer: "Answer",
   practice: "Practice",
   feedback: "Feedback",
-  meta: "Professor",
-  personal: "Professor",
+  meta: "Office note",
+  personal: "Office note",
 };
+
+// The server emits meta and personal only when OWL_PERSONA is on. The badge
+// reads "Professor" when the department's voice is actually live; should the
+// flag turn on before this local switch is flipped, the badge stays on the
+// neutral wording rather than asserting authorship.
+function modeLabel(mode: ChatMode, personaState: PersonaState): string {
+  if ((mode === "meta" || mode === "personal") && personaState === "live") {
+    return "Professor";
+  }
+  return MODE_LABELS[mode];
+}
 
 export function ChatPanel({ subject }: { subject: Subject }) {
   const [messages, setMessages] = useState<Message[]>([
@@ -36,7 +48,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
       text:
         subject.personaState === "live"
           ? `Welcome to the ${subject.name} revision room. Ask ${subject.professor} about the set texts, or say the word if you want to be tested.`
-          : "Welcome to the revision room. Ask the professor about the set texts — grounded answers cite the books, and anything the texts cannot confirm will be said plainly. The professor's voice is still in rehearsal.",
+          : "Welcome to the revision room. Ask the professor about the set texts — grounded answers cite the books, and nothing beyond them is guessed. The professor's voice is still in rehearsal.",
     },
   ]);
   const [question, setQuestion] = useState("");
@@ -129,7 +141,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
           const body = (
             <>
               {message.role === "professor" && message.mode && (
-                <span className="mode-badge">{MODE_LABELS[message.mode]}</span>
+                <span className="mode-badge">{modeLabel(message.mode, subject.personaState)}</span>
               )}
               <p className={message.failed ? "chat-text chat-failed" : "chat-text"}>
                 {message.text || (message.role === "professor" ? "…" : "")}
