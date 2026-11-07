@@ -149,10 +149,14 @@ class LoreStore:
         for entry in self.entries:
             if subject is not None and entry.subject not in (subject, "all"):
                 continue
-            haystack = _tokens(
-                " ".join((entry.title, entry.body, " ".join(entry.tags)))
+            title_tags = _tokens(
+                " ".join((entry.title, " ".join(entry.tags)))
             )
-            score = len(query & haystack)
+            body = _tokens(entry.body)
+            # Title and tags are curated, so a hit there is worth more than a
+            # body mention. This keeps a founder biography from crowding out the
+            # public-record entry on a question about the Battle of Hogwarts.
+            score = 2 * len(query & title_tags) + len(query & body)
             if score:
                 scored.append((score, entry))
         scored.sort(key=lambda item: (-item[0], item[1].id))

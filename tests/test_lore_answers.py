@@ -122,6 +122,22 @@ async def test_prompt_includes_setting_notes_and_the_lore_citation_rule():
     assert "grounded only in the excerpts" not in llm.systems[0]
 
 
+async def test_public_record_question_uses_the_record_entry():
+    llm = _Llm(
+        "The Battle of Hogwarts is public history [lore:public-record-war]."
+    )
+    result = await ask(
+        "What happened at the Battle of Hogwarts?",
+        retriever=_WeakRetriever(),
+        llm=llm,
+        lore=STORE,
+    )
+    assert not result.abstained
+    assert result.lore_citations == ["public-record-war"]
+    assert "[lore:public-record-war]" in llm.prompts[0]
+    assert "The public record of the war" in llm.prompts[0]
+
+
 async def test_grouped_lore_citations_are_parsed():
     llm = _Llm(
         "Ashcombe was founded in 2008 "

@@ -25,7 +25,7 @@ META_TOPICS = (
     "boundaries",
     "greeting",
 )
-REQUIRED_BOUNDARIES = ("facts", "advice", "canon", "exam")
+REQUIRED_BOUNDARIES = ("facts", "advice", "canon", "exam", "record")
 
 
 @dataclass(frozen=True)
@@ -73,7 +73,7 @@ class Persona:
             "excerpts; never rename or relocate it. "
             "Keep the citation and abstention rules above exactly. "
             f"{self.boundaries['facts']} {self.boundaries['advice']} "
-            f"{self.boundaries['exam']}"
+            f"{self.boundaries['record']} {self.boundaries['exam']}"
         )
 
     def meta_response(self, topic: str, *, choice: int | None = None) -> str | None:

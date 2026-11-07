@@ -120,6 +120,7 @@ def test_answer_suffix_keeps_the_grounding_rules():
     assert "exactly as it appears" in suffix
     assert "Ashcombe" not in suffix
     assert "lore" not in suffix.casefold()
+    assert "public record of the war" in suffix
     assert "Do not disclose the school examination format" in suffix
 
 
@@ -191,11 +192,20 @@ def test_persona_card_missing_topic_fails(tmp_path):
 
 def test_lore_fixture_loads_and_selects_the_professor():
     store = load_lore(FIXTURE)
-    assert len(store.entries) == 11
+    assert len(store.entries) == 15
     assert store.get("school-001") is not None
     assert store.get("crane-001") is not None
+    assert store.get("public-record-war") is not None
     assert store.select("who is Professor Crane", subject="dada")[0].id == "crane-001"
     assert store.select("What is the Auror pathway?", subject="dada")[0].id == "auror-001"
+    selected = {
+        entry.id
+        for entry in store.select(
+            "What happened at the Battle of Hogwarts?", subject="dada"
+        )
+    }
+    assert "public-record-war" in selected
+    assert "timeline-1998" in selected
     founders = {"crane-001", "vale-001", "hale-001", "raman-001", "ashby-001"}
     assert founders <= store.ids()
     assert {"timeline-1998", "timeline-2008", "timeline-2026"} <= store.ids()
@@ -297,6 +307,7 @@ def _minimal_card(meta_identity: str = "I am X.", boundaries: dict | None = None
         "advice": "none",
         "canon": "none",
         "exam": "none",
+        "record": "none",
     }).items():
         lines.append(f'{key} = "{value}"')
     topics = (
