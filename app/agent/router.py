@@ -48,9 +48,11 @@ _PRACTICE_PHRASE = re.compile(
 # question. The guard keeps "What is the DADA curriculum at Hogwarts?" on the
 # answer path while "What is the DADA curriculum?" routes to the syllabus.
 _BOOK_CONTEXT = re.compile(
-    r"\b(hogwarts|book \d|book one|book two|book three|book four|book five|"
-    r"book six|book seven|quirrell|lockhart|lupin|moody|umbridge|snape|"
-    r"carrow)\b",
+    r"\b(hogwarts|books?|novels?|book \d|book one|book two|book three|"
+    r"book four|book five|book six|book seven|first year|second year|"
+    r"third year|fourth year|fifth year|sixth year|seventh year|"
+    r"year (?:one|two|three|four|five|six|seven)|quirrell|lockhart|lupin|"
+    r"moody|umbridge|snape|carrow|crouch)\b",
     re.IGNORECASE,
 )
 # Persona meta cues. Keep them narrow: "who teaches Defense" is an answer

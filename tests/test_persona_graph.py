@@ -179,6 +179,18 @@ def test_book_questions_do_not_steal_the_meta_route():
         classify("What is the DADA curriculum at Hogwarts?", persona=True)
         == "answer"
     )
+    assert (
+        classify("What is the DADA curriculum in the books?", persona=True)
+        == "answer"
+    )
+    assert (
+        classify("What was the DADA curriculum under Crouch?", persona=True)
+        == "answer"
+    )
+    assert (
+        classify("What is the DADA curriculum in the fourth year?", persona=True)
+        == "answer"
+    )
 
 
 def test_meta_topics_cover_greeting_syllabus_and_grading():
