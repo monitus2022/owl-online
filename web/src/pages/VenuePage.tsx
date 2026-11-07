@@ -4,6 +4,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { ChatPanel } from "../components/ChatPanel";
 import { ExamPanel } from "../components/ExamPanel";
 import { Silhouette } from "../components/Silhouette";
+import { SiteFooter } from "../components/SiteFooter";
 import { getSubject } from "../data/subjects";
 
 // The study venue. The subject accent is injected as a CSS variable for the
@@ -45,6 +46,7 @@ export function VenuePage() {
             validated and its professor takes the post.
           </p>
         </div>
+        <SiteFooter />
       </main>
     );
   }
@@ -110,6 +112,7 @@ export function VenuePage() {
       >
         <ExamPanel subject={subject} />
       </div>
+      <SiteFooter />
     </main>
   );
 }
