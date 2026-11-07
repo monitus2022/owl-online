@@ -3,6 +3,7 @@ import { SiteFooter } from "./components/SiteFooter";
 import { AboutPage } from "./pages/AboutPage";
 import { CloisterPage } from "./pages/CloisterPage";
 import { FrontPage } from "./pages/FrontPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { VenuePage } from "./pages/VenuePage";
 
 // One entering animation per route change: the wrapper is keyed on the path,
@@ -24,6 +25,7 @@ function Shell() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/cloister" element={<CloisterPage />} />
         <Route path="/venue/:slug" element={<VenuePage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </div>
   );

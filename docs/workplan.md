@@ -1,6 +1,6 @@
 # Workplan
 
-Last updated: 2026-11-07.
+Last updated: 2026-11-08.
 
 This page is the plan of record for the V2-V4 work. Update it when a phase,
 boundary or ticket changes. The architecture page describes what is built; this
@@ -39,6 +39,16 @@ page describes what comes next and why.
   scripted meta topic, the personal reply and the abstention line several
   reviewed phrasings. The real pack and the lore eval follow. The full persona
   voice still follows the real pack and a fixture-driven lore eval.
+- The academy frontend surface has shipped: `web/` deployed on Cloudflare
+  Pages - the gate, the cloister with five identified venues, live chat
+  against `/ask/stream` with citation chips and in-world limit copy, the
+  demonstration exam room, device-local paper history and the cloister
+  noticeboard, an about page stating real versus demonstration versus not
+  built, and the wizard-hat identity. The voice-honesty rule and its single
+  switch are recorded in the Frontend surface section of
+  `docs/architecture.md`. Frontend follow-ups are contract-gated: the four
+  doors open with the #87 taxonomy slugs and `GET /v1/subjects`; the exam
+  client swap needs #38/#42; server-side records need #35.
 - #16's deterministic CI gate is merged; the required-check setting is the last
   step. #74 and #75 follow. #107 is deferred.
 - The Lexicon canon index (#125-#128) is the planned feed for the B1 packs: an
@@ -232,6 +242,14 @@ bank and hybrid grader on top of them.
 
 ### B1: Subject knowledge packs
 
+Status: schema and validation landed on #87 (`app/knowledge/taxonomy.py`,
+`materials.py`, `packs.py`, `OWL_SUBJECTS_PATH`, 23 tests): the 12-subject
+taxonomy, Topic/Concept/Material/SourceRef/ReferenceLink records, the
+`data/subjects/<subject>/` layout, the deterministic corpus-join validator and
+the rebuild fingerprint. Remaining on #87: the extraction build pipeline (uses
+the #127 canon-index resolution to draft candidate source refs), the DADA
+content pass, and the coverage report as a script.
+
 A pack is the single source of truth for one O.W.L. subject. Exam generation and
 lesson mode read from packs, not from free model memory.
 
@@ -332,9 +350,9 @@ Example material record:
 ```json
 {
   "material_id": "dada.counter-jinx.01",
-  "subject": "defence-against-the-dark-arts",
-  "topic": "counter-jinxes",
-  "concept": "counter-jinx",
+  "subject": "dada",
+  "topic": "dada.counter-jinxes",
+  "concept": "dada.counter-jinx",
   "kind": "spell",
   "text": "original grounded explanation shown to the generator",
   "canon_tier": "primary",
@@ -533,7 +551,7 @@ persists exam attempts and chat history.
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
-| #136 | About page: the academy, the letters, demo versus real | V3 - Product |
+| #87 | Subject packs: schema and validation landed; extraction build and DADA content open | V3 - Product |
 
 ### Next
 
@@ -546,7 +564,6 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #87 | Subject knowledge packs: taxonomy, materials, source links | V3 - Product |
 | #126, #127, #128 | Lexicon canon index: harvester, resolver, pack wiring | V3 - Product |
 | #38, #39 | Exam data model, offline generation and validation | V3 - Product |
 | #41, #42 | Hybrid grading and exam endpoints | V3 - Product |
@@ -579,7 +596,7 @@ persists exam attempts and chat history.
 | Held-out set | #106 |
 | Multi-book spike | #105 (flag off) |
 | Ingest | #113 |
-| Frontend surfaces | #132, #134, #135, #137, #141, #143, #145 |
+| Frontend surfaces | #132, #134, #135, #136, #137, #141, #143, #145, #157 |
 
 ## Backlog policy
 

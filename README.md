@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: V1 shipped. The V2 chat foundation is delivered: guardrails, LangGraph chat, cost controls, the local eval gate and the deterministic PR CI gate (#16). The retrieval foundation (#96) and the held-out set (#106) are complete. The multi-book answer path (#105) is merged but flag-off; it is a time-boxed spike. Current focus is the thin professor slice (#97) and the required-check setting. V2.5 is the exam bank with hybrid grading. Grounded RAG is live at https://api.monitus.org. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md) and the milestones.
+> Status: V1 shipped. The V2 chat foundation is delivered: guardrails, LangGraph chat, cost controls, the local eval gate and the deterministic PR CI gate (#16). The retrieval foundation (#96) and the held-out set (#106) are complete. The multi-book answer path (#105) is merged but flag-off; it is a time-boxed spike. Current focus is the thin professor slice (#97) and the required-check setting. V2.5 is the exam bank with hybrid grading. The academy frontend ships from `web/` on Cloudflare Pages. Grounded RAG is live at https://api.monitus.org. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
 
 ---
 
@@ -190,7 +190,7 @@ Execution is phased:
 
 ## Tech
 
-`Python` - `FastAPI` - `LangGraph` - hybrid retrieval (vector + BM25 + RRF) + rerank - LLM adapters - eval harness and local gate; deterministic PR CI gate
+`Python` - `FastAPI` - `LangGraph` - hybrid retrieval (vector + BM25 + RRF) + rerank - LLM adapters - eval harness and local gate; deterministic PR CI gate - `React + Vite` static frontend (`web/`) on Cloudflare Pages
 
 ---
 
@@ -208,7 +208,7 @@ This repository is developed with AI coding agents under human review.
 
 This project is developed with AI coding agents under human review, and that usage is recorded per ticket.
 
-- AI drafted most implementation code and tests: provider adapters and probes, retrieval and reranking, generation and verification, the API and SSE surface, the agent graph and router, the persona and lore layer, ingest and index, the eval harness and CI gate, and the deploy files.
+- AI drafted most implementation code and tests: provider adapters and probes, retrieval and reranking, generation and verification, the API and SSE surface, the agent graph and router, the persona and lore layer, ingest and index, the eval harness and CI gate, the deploy files, and the entire frontend (`web/`, tickets #132, #134-#137, #141, #143, #145), including a read-only reviewer agent that checked each frontend ticket against its acceptance criteria before merge.
 - The human set the contracts, provider abstraction, eval discipline and scope boundaries; chose the defaults, degradation policies and flag states; froze the held-out sets; and reviewed and owns every line.
 - AI assisted with documentation, issue text and run records; the human reviewed the published text.
 
