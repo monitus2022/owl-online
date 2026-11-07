@@ -216,6 +216,22 @@ Per-ticket records live in the commit history (`(#N)` suffixes) and pull request
 
 ---
 
+## Sources
+
+- Corpus: the seven Harry Potter novels. The source text is not included (see
+  Disclaimer) and stays the only canonical source for answers, packs and exams.
+- Canon index: [The Harry Potter Lexicon](https://www.hp-lexicon.org/) is used
+  as a secondary, attributed reference to map key items - spells, potions,
+  creatures, objects, places, characters and events - to the novel chapters the
+  books cite them in (for example `GF6` = Goblet of Fire chapter 6). The
+  project harvests citation codes and links only; no Lexicon prose is copied
+  into the corpus, the packs or the index, and every pack reference credits the
+  Lexicon with a link and an access date. Film citations (for example `CG48` or
+  any `/f` code) are recorded and tagged out of scope. The pipeline plan is in
+  [`docs/lexicon-canon-index.md`](docs/lexicon-canon-index.md).
+
+---
+
 ## Disclaimer
 
 The source corpus is copyrighted and is not included in this repository. Only original code, questions, and metrics are published. This is a personal, non-commercial study project.

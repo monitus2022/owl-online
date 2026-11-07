@@ -354,6 +354,11 @@ Tickets:
 | #87 | Subject taxonomy, material records, source refs, pack build and validation |
 | #38 | Exam data model, question types, rubric, evidence snapshots, attempts |
 
+The item/concept-to-book index that seeds and grounds the packs is built from
+The Harry Potter Lexicon. The harvest, parse and resolve pipeline is planned in
+`docs/lexicon-canon-index.md` and ticketed as #125 (spike), #126 (harvester),
+#127 (resolver) and #128 (pack wiring).
+
 B1 exit criteria:
 
 - the taxonomy covers all 12 O.W.L. subjects and both tiers;
