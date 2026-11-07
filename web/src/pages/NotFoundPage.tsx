@@ -10,7 +10,7 @@ export function NotFoundPage() {
         There is no room at this address. The gate, the cloister and the about
         page all lead back to ground you know.
       </p>
-      <ul className="notfound-links">
+      <ul className="notfound-links" role="list">
         <li>
           <Link to="/">The gate</Link>
         </li>

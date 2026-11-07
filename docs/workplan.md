@@ -583,7 +583,7 @@ persists exam attempts and chat history.
 | Held-out set | #106 |
 | Multi-book spike | #105 (flag off) |
 | Ingest | #113 |
-| Frontend surfaces | #132, #134, #135, #136, #137, #141, #143, #145 |
+| Frontend surfaces | #132, #134, #135, #136, #137, #141, #143, #145, #157 |
 
 ## Backlog policy
 
