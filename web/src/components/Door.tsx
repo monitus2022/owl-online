@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { Subject } from "../data/subjects";
+import { CrestInline } from "./Crest";
 
 // A department door drawn in SVG so it stays theme-able with the subject
 // accent, crisp at any size, and operable by keyboard as a plain link.
@@ -28,8 +29,9 @@ export function Door({ subject }: { subject: Subject }) {
             d="M16 196 V60 Q16 18 60 12 Q104 18 104 60 V196 Z"
           />
           <line className="door-plank" x1="60" y1="14" x2="60" y2="196" />
-          <rect className="door-plaque" x="38" y="70" width="44" height="26" rx="4" />
-          <text className="door-plaque-text" x="60" y="88" textAnchor="middle">
+          <CrestInline crest={subject.crest} />
+          <rect className="door-plaque" x="38" y="150" width="44" height="26" rx="4" />
+          <text className="door-plaque-text" x="60" y="168" textAnchor="middle">
             {subject.plaque}
           </text>
           <circle className="door-handle" cx="88" cy="128" r="5" />

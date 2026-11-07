@@ -11,6 +11,11 @@ export type SubjectStatus = "open" | "soon";
 // invented identity; the status page is what keeps it honest.
 export type ProfessorVariant = "crane" | "witch-hat" | "flask" | "wide-hat" | "scarf";
 
+// Department emblems drawn in components/Crest.tsx. The motifs are objects
+// and creatures from each field (shield, flask, butterfly, spark star,
+// seedling), not invented heraldry: they decorate, they teach nothing.
+export type CrestName = "shield" | "flask" | "butterfly" | "star" | "sprout";
+
 // Whether the department's professor voice is live in the API. The persona
 // layer ships behind OWL_PERSONA and the flag is off on the served host
 // while #97 completes, so everything is in rehearsal; flipping this field
@@ -27,6 +32,7 @@ export interface Subject {
   /** Accent colour for the venue theme. Keep the five distinguishable. */
   accent: string;
   professorVariant: ProfessorVariant;
+  crest: CrestName;
   personaState: PersonaState;
   status: SubjectStatus;
   blurb: string;
@@ -40,6 +46,7 @@ export const SUBJECTS: Subject[] = [
     professor: "Professor Alistair Crane",
     accent: "#7b93ff",
     professorVariant: "crane",
+    crest: "shield",
     personaState: "rehearsal",
     status: "open",
     blurb: "Counter-jinxes, dark creatures and defensive theory.",
@@ -51,6 +58,7 @@ export const SUBJECTS: Subject[] = [
     professor: "Department not yet open",
     accent: "#3fc9b0",
     professorVariant: "flask",
+    crest: "flask",
     personaState: "rehearsal",
     status: "soon",
     blurb: "Brewing, antidotes and the standard cautions.",
@@ -62,6 +70,7 @@ export const SUBJECTS: Subject[] = [
     professor: "Department not yet open",
     accent: "#b58cff",
     professorVariant: "witch-hat",
+    crest: "butterfly",
     personaState: "rehearsal",
     status: "soon",
     blurb: "Switches, anomalies and the laws of Gamp.",
@@ -73,6 +82,7 @@ export const SUBJECTS: Subject[] = [
     professor: "Department not yet open",
     accent: "#e8c46a",
     professorVariant: "wide-hat",
+    crest: "star",
     personaState: "rehearsal",
     status: "soon",
     blurb: "Everyday charms and precise wandwork.",
@@ -84,6 +94,7 @@ export const SUBJECTS: Subject[] = [
     professor: "Department not yet open",
     accent: "#7ed06a",
     professorVariant: "scarf",
+    crest: "sprout",
     personaState: "rehearsal",
     status: "soon",
     blurb: "Magical plants and greenhouse practice.",

@@ -508,9 +508,7 @@ persists exam attempts and chat history.
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
-| #137 | Frontend CI build job; deploy.md, AGENTS.md and decision rows for web/ | V3 - Product |
-| #141 | Frontend voice honesty while OWL_PERSONA stays off | V3 - Product |
-| #143 | Site icon and route-enter transition | V3 - Product |
+| #134 | Venue identity pass: crests, colonnade bands and door faces (SVG only) | V3 - Product |
 
 ### Next
 
@@ -518,7 +516,6 @@ persists exam attempts and chat history.
 |---|---|---|
 | #74 | Move `/data` to a dedicated EBS volume | V2 - Deepening |
 | #75 | Replace static AWS keys with GitHub OIDC | V2 - Deepening |
-| #134 | Venue identity pass: art, crests and room character for five departments | V3 - Product |
 | #135 | Results surfaces: paper history and band chart from the local store | V3 - Product |
 | #136 | About page: the academy, the papers, demo versus real | V3 - Product |
 
@@ -558,6 +555,7 @@ persists exam attempts and chat history.
 | Held-out set | #106 |
 | Multi-book spike | #105 (flag off) |
 | Ingest | #113 |
+| Frontend surfaces | #132, #137, #141, #143, #145 |
 
 ## Backlog policy
 
@@ -603,6 +601,7 @@ path.
 | Academy papers are mcq plus short answer | Frontend review (2026-11-07, #132): the student-facing paper drops long answers; rubric judging stays available if a future paper needs it. Revisit in #41 |
 | Short answers grade in one batch call against the stored key | Ten answers fit one context window; the batch response keeps per-question structured records so retry and regrade semantics survive. Revisit in #41 |
 | Result records are device-local until auth | The frontend shows best-so-far from localStorage before #35; the server becomes the authority when attempts land and the UI keeps labelling local records provisional. Revisit in #35 |
+| Venue art is inline SVG geometry, never raster and never academic content | The raster pipeline was blocked twice by the image provider's terms of service (#134); SVG themes with the accent tokens, costs kilobytes, stays crisp and accessible, and keeps closed departments decorative rather than invented. Raster heroes return only as owner-supplied assets |
 
 ## Evaluation
 

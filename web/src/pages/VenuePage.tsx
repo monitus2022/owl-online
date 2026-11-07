@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { ArchBackdrop } from "../components/ArchBackdrop";
+import { Crest } from "../components/Crest";
 import { ChatPanel } from "../components/ChatPanel";
 import { ExamPanel } from "../components/ExamPanel";
 import { Silhouette } from "../components/Silhouette";
@@ -38,7 +40,9 @@ export function VenuePage() {
           <span>{subject.name}</span>
         </nav>
         <h1>{subject.name}</h1>
+        <ArchBackdrop crest={subject.crest} dim />
         <div className="soon-card">
+          <Crest crest={subject.crest} className="soon-crest" />
           <h2>The classroom is being furnished</h2>
           <p>
             {subject.blurb} This department opens when its subject pack is
@@ -70,7 +74,9 @@ export function VenuePage() {
             {subject.personaState === "live" ? "" : " — voice in rehearsal"}
           </p>
         </div>
+        <Crest crest={subject.crest} className="venue-crest" />
       </header>
+      <ArchBackdrop crest={subject.crest} />
       <div className="tabs" role="tablist" aria-label="Room" onKeyDown={moveTab}>
         <button
           id="tab-chat"
