@@ -3,9 +3,9 @@ import type { PersonaState } from "../data/subjects";
 
 // Client for POST /ask/stream, the SSE contract in docs/api.md. The server
 // routes answer/practice/feedback itself, so the UI sends one question and
-// reads the `mode` event to know which one the professor chose. The 503 copy
-// takes the department's personaState so the owl/professor wording follows
-// the single switch; the 429 owl line is a delivery metaphor and stays put.
+// reads the `mode` event to learn which route it took. Status copy
+// addresses the professor as the addressee in every state; only the 503
+// consults personaState before using professor wording (voice live or not).
 
 export type ChatMode = "answer" | "practice" | "feedback" | "meta" | "personal";
 
@@ -77,7 +77,7 @@ export async function* askStream(
 }
 
 // Chat degrades before it can exhaust the daily budget (docs/api.md limits),
-// so the UI shows the reason in world terms rather than a bare status code.
+// so failures read as in-world status lines, never as bare status codes.
 async function problemMessage(
   response: Response,
   personaState: PersonaState,
@@ -90,13 +90,13 @@ async function problemMessage(
   }
   if (response.status === 429) {
     const wait = problem.retry_after ?? 60;
-    return `Too many questions for now. The owl needs ${wait} seconds between deliveries.`;
+    return `Too many questions at once — the queue outside the office clears in ${wait} seconds.`;
   }
   if (response.status === 503) {
     const reason = problem.reason ? ` (${problem.reason})` : "";
-    const sleeper =
-      personaState === "live" ? "The professor is resting" : "The owl is resting";
-    return `${sleeper} tonight — chat is briefly paused for the day${reason}. The exam rooms are unaffected.`;
+    const quiet =
+      personaState === "live" ? "The professor is resting" : "The study rooms are quiet";
+    return `${quiet} tonight — chat is briefly paused for the day${reason}. The exam rooms are unaffected.`;
   }
   if (problem.error) return problem.error;
   if (problem.detail) return problem.detail;
