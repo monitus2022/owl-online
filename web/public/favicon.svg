@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Ashcombe wizard hat: site tokens only (dark ground, gold palette).
+       Bold enough to read at 16px; no thin detail that dies when scaled. -->
+  <rect x="1" y="1" width="62" height="62" rx="14" fill="#17131f"/>
+  <path d="M38 9 C31 16 28 27 22 41 H48 C44 29 42 17 38 9 Z" fill="#d8b46a"/>
+  <path d="M10 42 Q32 36 54 42 Q54 51 32 53 Q10 51 10 42 Z" fill="#a9853f"/>
+  <path d="M50 13 l1.5 2.8 2.8 1.5 -2.8 1.5 -1.5 2.8 -1.5 -2.8 -2.8 -1.5 2.8 -1.5 Z" fill="#f0dfae"/>
+  <path d="M17 24 l1.1 2 2 1.1 -2 1.1 -1.1 2 -1.1 -2 -2 -1.1 2 -1.1 Z" fill="#f0dfae" opacity="0.85"/>
+</svg>

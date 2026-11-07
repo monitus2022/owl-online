@@ -729,6 +729,17 @@ main {
 
 /* Motion and small screens --------------------------------------------------- */
 
+.route-fade {
+  animation: route-in 260ms ease-out;
+}
+
+@keyframes route-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
