@@ -78,11 +78,16 @@ REVIEW_SET = frozenset(REVIEW_STATUSES)
 
 @dataclass(frozen=True)
 class Subject:
-    """One of the twelve O.W.L. subjects."""
+    """One of the twelve O.W.L. subjects.
+
+    Per the workplan, the taxonomy covers all twelve at both O.W.L. and
+    N.E.W.T. tiers; a pack narrows one tier (`PackManifest.tier`), and topics
+    carry their own tier so a coverage report can split them.
+    """
 
     key: str
     name: str
-    tiers: tuple[str, ...] = ("owl",)
+    tiers: tuple[str, ...] = TIERS
 
 
 def known_subject(key: str) -> Subject | None:

@@ -29,7 +29,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.knowledge.materials import Material, chunk_text_hash
 from app.knowledge.taxonomy import KIND_SET, SUBJECT_KEYS, TIER_SET, known_subject
@@ -40,7 +40,14 @@ _ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 PACK_STATUS = ("draft", "validated", "published")
 
 
-class Topic(BaseModel):
+class _StrictModel(BaseModel):
+    """Unknown fields raise: a pack that grows a prose field must fail
+    loudly, the same discipline as `app.knowledge.materials`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class Topic(_StrictModel):
     """A subject topic, optionally under a parent topic."""
 
     topic_id: str
@@ -71,7 +78,7 @@ class Topic(BaseModel):
         return value
 
 
-class Concept(BaseModel):
+class Concept(_StrictModel):
     """An item the syllabus names: spell, potion, creature, event, and so on."""
 
     concept_id: str
@@ -102,7 +109,7 @@ class Concept(BaseModel):
         return value.strip()
 
 
-class PackManifest(BaseModel):
+class PackManifest(_StrictModel):
     """pack.toml contents."""
 
     subject: str
@@ -141,7 +148,7 @@ class PackManifest(BaseModel):
         return value
 
 
-class SubjectPack(BaseModel):
+class SubjectPack(_StrictModel):
     """One subject's full pack."""
 
     manifest: PackManifest
@@ -166,11 +173,11 @@ def _read_jsonl[ModelT: BaseModel](path: Path, model: type[ModelT]) -> list[Mode
         try:
             row = json.loads(line)
         except json.JSONDecodeError as error:
-            raise ValueError(f"{path.name} line {line_number}: invalid JSON: {error}") from error
+            raise ValueError(f"{path} line {line_number}: invalid JSON: {error}") from error
         try:
             rows.append(model.model_validate(row))
         except Exception as error:
-            raise ValueError(f"{path.name} line {line_number}: {error}") from error
+            raise ValueError(f"{path} line {line_number}: {error}") from error
     return rows
 
 
@@ -265,8 +272,45 @@ def validate_pack(
     """
     result = PackValidation()
     coverage = Coverage(total_materials=len(pack.materials))
+    # Every topic appears in the report, even with zero materials: thin must
+    # be distinguishable from empty.
+    for topic in pack.topics:
+        coverage.per_topic.setdefault(topic.topic_id, 0)
+        if topic.subject != pack.manifest.subject:
+            result.errors.append(f"topic {topic.topic_id}: subject differs from the pack manifest")
+        if topic.parent is not None and topic.parent not in {t.topic_id for t in pack.topics}:
+            result.errors.append(f"topic {topic.topic_id}: unknown parent {topic.parent!r}")
+    topic_ids = {t.topic_id for t in pack.topics}
+    concept_ids = {c.concept_id for c in pack.concepts}
+    concept_kinds = {c.concept_id: c.kind for c in pack.concepts}
+    for concept in pack.concepts:
+        if concept.subject != pack.manifest.subject:
+            result.errors.append(
+                f"concept {concept.concept_id}: subject differs from the pack manifest"
+            )
     for material in pack.materials:
+        if material.subject != pack.manifest.subject:
+            result.errors.append(
+                f"{material.material_id}: subject differs from the pack manifest"
+            )
+        if material.topic not in topic_ids:
+            result.errors.append(f"{material.material_id}: cites unknown topic {material.topic!r}")
+        if material.concept not in concept_ids:
+            result.errors.append(
+                f"{material.material_id}: cites unknown concept {material.concept!r}"
+            )
+        elif concept_kinds[material.concept] != material.kind:
+            result.errors.append(
+                f"{material.material_id}: kind {material.kind!r} != concept kind "
+                f"{concept_kinds[material.concept]!r}"
+            )
         coverage.per_topic[material.topic] = coverage.per_topic.get(material.topic, 0) + 1
+        if material.source_refs and material.canon_tier != "primary":
+            # The anti-padding guard: only the seven novels ground a material.
+            result.errors.append(
+                f"{material.material_id}: canon_tier={material.canon_tier!r} may not carry "
+                "source refs; only primary material is exam-gradable"
+            )
         if not material.source_refs:
             result.errors.append(f"{material.material_id}: no source refs")
             continue
@@ -295,6 +339,10 @@ def validate_pack(
                 message = "; ".join(problems)
                 result.errors.append(f"{material.material_id} {ref.chunk_id}: {message}")
             else:
+                if len(ref.quote.split()) < 3:
+                    result.warnings.append(
+                        f"{material.material_id} {ref.chunk_id}: quote under three words"
+                    )
                 refs_ok += 1
         if refs_ok:
             coverage.per_topic_with_source[material.topic] = (
@@ -325,15 +373,25 @@ def pack_fingerprint(pack: SubjectPack) -> str:
 
     A pack rebuild is reproducible when the fingerprint is stable for equal
     content; `built_at`, `version` and `status` are excluded so regeneration
-    does not change the fingerprint by itself.
+    does not change the fingerprint by itself. `mode="json"` so date-valued
+    reference fields serialise (Python-mode dumps of a ReferenceLink would
+    otherwise hand `json.dumps` a raw date and raise).
     """
     payload = json.dumps(
         {
-            "manifest": pack.manifest.model_dump(exclude={"built_at", "version", "status"}),
-            "topics": [t.model_dump() for t in sorted(pack.topics, key=lambda t: t.topic_id)],
-            "concepts": [c.model_dump() for c in sorted(pack.concepts, key=lambda c: c.concept_id)],
+            "manifest": pack.manifest.model_dump(
+                exclude={"built_at", "version", "status"}, mode="json"
+            ),
+            "topics": [
+                t.model_dump(mode="json") for t in sorted(pack.topics, key=lambda t: t.topic_id)
+            ],
+            "concepts": [
+                c.model_dump(mode="json")
+                for c in sorted(pack.concepts, key=lambda c: c.concept_id)
+            ],
             "materials": [
-                m.model_dump() for m in sorted(pack.materials, key=lambda m: m.material_id)
+                m.model_dump(mode="json")
+                for m in sorted(pack.materials, key=lambda m: m.material_id)
             ],
         },
         sort_keys=True,
@@ -345,20 +403,18 @@ def write_subject_pack(pack: SubjectPack, directory: Path) -> None:
     """Serialize a pack to its directory (JSONL + pack.toml), order-stable."""
     directory.mkdir(parents=True, exist_ok=True)
     manifest = pack.manifest
-    (directory / "pack.toml").write_text(
-        "\n".join(
-            (
-                f"subject = {json.dumps(manifest.subject)}",
-                f"tier = {json.dumps(manifest.tier)}",
-                f"version = {json.dumps(manifest.version)}",
-                f"status = {json.dumps(manifest.status)}",
-                f"built_at = {json.dumps(manifest.built_at)}",
-                f"index_text_hash = {json.dumps(manifest.index_text_hash)}",
-                "",
-            )
-        ),
-        encoding="utf-8",
+    toml_lines = "\n".join(
+        f"{field_name} = {json.dumps(value, ensure_ascii=False)}"
+        for field_name, value in (
+            ("subject", manifest.subject),
+            ("tier", manifest.tier),
+            ("version", manifest.version),
+            ("status", manifest.status),
+            ("built_at", manifest.built_at),
+            ("index_text_hash", manifest.index_text_hash),
+        )
     )
+    (directory / "pack.toml").write_text(toml_lines + "\n", encoding="utf-8")
     _dump_jsonl(directory / "topics.jsonl", pack.topics)
     _dump_jsonl(directory / "concepts.jsonl", pack.concepts)
     _dump_jsonl(directory / "materials.jsonl", pack.materials)

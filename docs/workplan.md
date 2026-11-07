@@ -335,9 +335,9 @@ Example material record:
 ```json
 {
   "material_id": "dada.counter-jinx.01",
-  "subject": "defence-against-the-dark-arts",
-  "topic": "counter-jinxes",
-  "concept": "counter-jinx",
+  "subject": "dada",
+  "topic": "dada.counter-jinxes",
+  "concept": "dada.counter-jinx",
   "kind": "spell",
   "text": "original grounded explanation shown to the generator",
   "canon_tier": "primary",

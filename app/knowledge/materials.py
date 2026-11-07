@@ -25,7 +25,7 @@ import hashlib
 import re
 from datetime import date
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.knowledge.taxonomy import (
     CANON_SCOPE_SET,
@@ -45,7 +45,18 @@ def chunk_text_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
-class SourceRef(BaseModel):
+class _StrictModel(BaseModel):
+    """Unknown fields raise instead of being silently dropped.
+
+    The source policy is load-bearing: a build step that smuggles prose (a
+    `text` key on a ReferenceLink, for instance) must fail loudly, not have
+    the extra quietly ignored.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class SourceRef(_StrictModel):
     """One grounding pointer into the book corpus."""
 
     chunk_id: str
@@ -74,16 +85,18 @@ class SourceRef(BaseModel):
     def _not_blank(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("source ref fields must not be blank")
-        return value
+        return value.strip()
 
     @property
-    def is_epilogue(self) -> bool:
-        """True when the chunk id belongs to book 7 chapter 36, the chapter
-        whose tail carries the epilogue (docs/lexicon-canon-index.md)."""
+    def in_epilogue_chapter(self) -> bool:
+        """True when the chunk is in book 7 chapter 36 - the chapter whose
+        tail carries the epilogue. The epilogue starts inside `b7-c36-0103`,
+        so this is a chapter hint, not an epilogue proof; #127 slices on the
+        marker (docs/lexicon-canon-index.md)."""
         return self.chunk_id.startswith("b7-c36-")
 
 
-class ReferenceLink(BaseModel):
+class ReferenceLink(_StrictModel):
     """An optional secondary source: a Lexicon entry or similar, attributed."""
 
     title: str
@@ -106,7 +119,7 @@ class ReferenceLink(BaseModel):
         return value
 
 
-class Material(BaseModel):
+class Material(_StrictModel):
     """One grounded piece of subject content shown to the generator."""
 
     material_id: str

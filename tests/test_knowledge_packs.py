@@ -318,6 +318,135 @@ def test_stale_index_hash_flags_whole_pack():
     assert any("index hash" in e for e in result.errors)
 
 
+def test_fingerprint_serializes_references():
+    """The blocker regression: a date-valued ReferenceLink must serialize in
+    the fingerprint instead of raising TypeError."""
+    from app.knowledge.materials import ReferenceLink
+
+    chunk = _chunk("b3-c08-0001", "laughter banishes it", 3, 8)
+    pack = _pack([chunk])
+    linked = pack.model_copy(
+        update={
+            "materials": [
+                pack.materials[0].model_copy(
+                    update={
+                        "references": [
+                            ReferenceLink(
+                                title="Boggart Banishing Spell",
+                                url="https://www.hp-lexicon.org/magic/boggart-banishing-spell/",
+                                publisher="The Harry Potter Lexicon",
+                                accessed="2026-11-08",
+                            )
+                        ]
+                    }
+                )
+            ]
+        }
+    )
+    assert len(pack_fingerprint(linked)) == 16
+
+
+def test_references_round_trip_through_storage(tmp_path):
+    from app.knowledge.materials import ReferenceLink
+
+    chunk = _chunk("b3-c08-0001", "laughter banishes it", 3, 8)
+    pack = _pack([chunk])
+    link = ReferenceLink(
+        title="Entry",
+        url="https://www.hp-lexicon.org/magic/entry/",
+        publisher="The Harry Potter Lexicon",
+        accessed="2026-11-08",
+    )
+    with_link = pack.model_copy(
+        update={"materials": [pack.materials[0].model_copy(update={"references": [link]})]}
+    )
+    directory = tmp_path / "dada"
+    write_subject_pack(with_link, directory)
+    loaded = load_subject_pack(directory)
+    assert loaded.materials[0].references[0].accessed.isoformat() == "2026-11-08"
+    assert pack_fingerprint(loaded) == pack_fingerprint(with_link)
+
+
+def test_non_primary_material_may_not_carry_source_refs():
+    chunk = _chunk("b3-c08-0001", "laughter banishes it", 3, 8)
+    pack = _pack([chunk])
+    secondary = pack.materials[0].model_copy(
+        update={"canon_tier": "secondary", "canon_scope": "films"}
+    )
+    padded = pack.model_copy(update={"materials": [secondary]})
+    result = validate_pack(padded, index_chunks([chunk]), INDEX_HASH)
+    assert any("may not carry source refs" in e for e in result.errors)
+
+
+def test_extra_fields_are_rejected_not_dropped():
+    """Policy hardening: prose smuggled onto a ReferenceLink fails loudly."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        ReferenceLink(
+            title="Entry",
+            url="https://www.hp-lexicon.org/magic/entry/",
+            publisher="The Harry Potter Lexicon",
+            accessed="2026-11-08",
+            text="copied lexicon prose",
+        )
+
+
+def test_kind_mismatch_between_material_and_concept_is_an_error():
+    chunk = _chunk("b3-c08-0001", "laughter banishes it", 3, 8)
+    pack = _pack([chunk])
+    wrong = pack.model_copy(
+        update={
+            "concepts": [pack.concepts[0].model_copy(update={"kind": "creature"})],
+            "materials": [pack.materials[0].model_copy(update={"kind": "creature"})],
+        }
+    )
+    # kinds now agree (creature/creature): still valid.
+    assert validate_pack(wrong, index_chunks([chunk]), INDEX_HASH).ok
+    mismatched = pack.model_copy(
+        update={"concepts": [pack.concepts[0].model_copy(update={"kind": "creature"})]}
+    )
+    result = validate_pack(mismatched, index_chunks([chunk]), INDEX_HASH)
+    assert any("kind" in e for e in result.errors)
+
+
+def test_empty_topic_appears_in_coverage():
+    chunk = _chunk("b3-c08-0001", "laughter banishes it", 3, 8)
+    pack = _pack([chunk])
+    extra_topic = pack.topics[0].model_copy(
+        update={"topic_id": "dada.shielding", "title": "Shielding"}
+    )
+    widened = pack.model_copy(update={"topics": [*pack.topics, extra_topic]})
+    result = validate_pack(widened, index_chunks([chunk]), INDEX_HASH)
+    assert result.ok
+    assert result.coverage.per_topic["dada.shielding"] == 0
+    assert result.coverage.per_topic_with_source.get("dada.shielding") is None
+
+
+def test_short_quote_warns():
+    chunk = _chunk("b3-c08-0001", "laughter banishes it", 3, 8)
+    pack = _pack([chunk])
+    tiny = pack.materials[0].source_refs[0].model_copy(update={"quote": "it"})
+    shortened = pack.model_copy(
+        update={"materials": [pack.materials[0].model_copy(update={"source_refs": [tiny]})]}
+    )
+    result = validate_pack(shortened, index_chunks([chunk]), INDEX_HASH)
+    assert result.ok
+    assert any("quote under three words" in w for w in result.warnings)
+
+
+def test_epilogue_chapter_hint_and_non_ascii_manifest_round_trip(tmp_path):
+    ref = _ref_for(_chunk("b7-c36-0103", "the scar had not pained him", 7, 36), "scar")
+    assert ref.in_epilogue_chapter
+    assert not ref.model_copy(update={"chunk_id": "b7-c35-0002"}).in_epilogue_chapter
+    pack = _pack([_chunk("b3-c08-0001", "laughter", 3, 8)])
+    unicode_manifest = pack.manifest.model_copy(update={"version": "v1 — prénom"})
+    packed = pack.model_copy(update={"manifest": unicode_manifest})
+    write_subject_pack(packed, tmp_path / "dada")
+    loaded = load_subject_pack(tmp_path / "dada")
+    assert loaded.manifest.version == "v1 — prénom"
+
+
 def test_published_pack_requires_reviewed_material():
     chunk = _chunk("b3-c08-0001", "laughter", 3, 8)
     pack = _pack([chunk])
