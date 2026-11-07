@@ -1,0 +1,47 @@
+# Frontend build gate for pull requests (#137).
+#
+# The `eval` workflow covers the Python surface. Nothing gates the React app
+# in web/: a broken build or a type error could merge quietly and only show up
+# when Cloudflare Pages tries to deploy it. This job installs from the
+# lockfile and runs the Pages build command, `npm run build`, which type
+# checks first.
+#
+# Required check: `build` from the `web` workflow, next to `lint-and-tests`
+# in the branch protection for main.
+
+name: web
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Type check and build
+        run: npm run build

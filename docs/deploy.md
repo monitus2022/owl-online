@@ -292,10 +292,37 @@ The pipeline ships only the image. Do these once on the instance:
    `api.monitus.org` (proxied) in Full (strict) mode. Config lives at
    `/etc/nginx/conf.d/owl.conf`, certs at `/etc/nginx/owl/`.
 
-## Cloudflare Pages for the chat page
+## Cloudflare Pages
 
-The chat page is a single file, `app/api/static/index.html`, with no build step.
-Host it on Cloudflare Pages and point it at the API by setting the meta tag:
+### The academy frontend (web/)
+
+`web/` is a React + Vite app deployed as its own static site. Create a Pages
+project connected to the repository and set:
+
+| Field | Value |
+|---|---|
+| Root directory | `web` |
+| Build command | `npm run build` |
+| Output directory | `dist` |
+| `NODE_VERSION` (build environment) | `22` |
+| `VITE_OWL_API_BASE` (build environment, production and preview) | the API origin, for example `https://api.monitus.org` |
+
+`VITE_OWL_API_BASE` is read at build time, not at runtime: an unset variable
+bakes in the same-origin default and chat then calls Pages instead of the
+API. Set it in both environments, or previews fail chat in ways production
+will not reveal. `public/_redirects` serves `index.html` for deep links, so
+`/venue/...` routes load on refresh. The `web` workflow
+(`.github/workflows/web.yml`) runs the same build on every pull request.
+
+CORS already allows `https://*.pages.dev` - deploy previews included - through
+`OWL_CORS_ORIGIN_REGEX`. For a custom domain, add the exact origin to
+`OWL_CORS_ORIGINS` on the host and restart the API.
+
+### The single-file test page
+
+The chat page is a single file, `app/api/static/index.html`, with no build
+step. Host it on Cloudflare Pages and point it at the API by setting the meta
+tag:
 
 ```html
 <meta name="owl-api-base" content="https://your-api-host" />

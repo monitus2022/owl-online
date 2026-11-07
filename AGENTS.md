@@ -15,6 +15,8 @@ Provisional until the code layout exists; update these as the project takes shap
 
 - Install: `uv sync` (installs the dev and ingest groups; LangGraph and SSE are base dependencies)
 - Run API: `uvicorn app.main:app --reload`
+- Frontend install: `npm --prefix web ci`
+- Frontend build: `npm --prefix web run build` (type-checks too; matches the Pages build and the `web` CI job)
 - Tests: `pytest`
 - Eval harness tests: `pytest eval/`
 - Eval gate: `uv run python scripts/run_eval.py --check`
@@ -27,7 +29,7 @@ imports them. The runtime image installs base only (`uv sync
 ## Verification (required)
 
 - Run the eval gate before considering a change done.
-- CI runs `uv run ruff check .`, `uv run pytest tests` and `uv run pytest eval/` on every pull request (`.github/workflows/eval.yml`). The live gate runs on the host before merge because the corpus is not in git.
+- CI runs `uv run ruff check .`, `uv run pytest tests` and `uv run pytest eval/` on every pull request (`.github/workflows/eval.yml`). The `web` workflow runs `npm ci` and `npm run build` in `web/` on every pull request; pick its `build` check as required alongside `lint-and-tests` after the first green run. The live gate runs on the host before merge because the corpus is not in git.
 - After any run of `scripts/run_eval.py`, write a run record in `docs/runs/` before the change is done.
 - Do not regress retrieval or faithfulness beyond the noise band.
 - Do not merge a change that fails the eval gate.
@@ -59,6 +61,7 @@ Layout:
 - `docs/workplan.md` - phase plan, ticket map, grading and memory decisions
 - `docs/runs/` - one committed Markdown record per eval run, plus the template and index
 - `eval/` - harness, gold set, thresholds
+- `web/` - React + Vite academy frontend, deployed separately on Cloudflare Pages (docs/deploy.md); it calls the versioned contract in `docs/api.md` and never imports Python code
 
 Every model call goes through an adapter; the provider is a config value.
 
