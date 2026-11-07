@@ -42,6 +42,7 @@ export function VenuePage() {
         <h1>{subject.name}</h1>
         <ArchBackdrop crest={subject.crest} dim />
         <div className="soon-card">
+          <Crest crest={subject.crest} className="soon-crest" />
           <h2>The classroom is being furnished</h2>
           <p>
             {subject.blurb} This department opens when its subject pack is

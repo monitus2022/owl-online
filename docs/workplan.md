@@ -601,6 +601,7 @@ path.
 | Academy papers are mcq plus short answer | Frontend review (2026-11-07, #132): the student-facing paper drops long answers; rubric judging stays available if a future paper needs it. Revisit in #41 |
 | Short answers grade in one batch call against the stored key | Ten answers fit one context window; the batch response keeps per-question structured records so retry and regrade semantics survive. Revisit in #41 |
 | Result records are device-local until auth | The frontend shows best-so-far from localStorage before #35; the server becomes the authority when attempts land and the UI keeps labelling local records provisional. Revisit in #35 |
+| Venue art is inline SVG geometry, never raster and never academic content | The raster pipeline was blocked twice by the image provider's terms of service (#134); SVG themes with the accent tokens, costs kilobytes, stays crisp and accessible, and keeps closed departments decorative rather than invented. Raster heroes return only as owner-supplied assets |
 
 ## Evaluation
 

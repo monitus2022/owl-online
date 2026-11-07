@@ -2,7 +2,8 @@ import type { CrestName } from "../data/subjects";
 
 // Departmental emblems. Pure geometry - shield, flask, butterfly, spark
 // star, seedling - drawn in currentColor so the subject accent themes them
-// from CSS. Decorative by definition: hidden from the a11y tree by callers.
+// from CSS. Every instance is decorative: the component hides itself from
+// the accessibility tree.
 
 const STROKE = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" } as const;
 
@@ -66,11 +67,13 @@ export function Crest({ crest, className }: { crest: CrestName; className?: stri
 }
 
 // The same emblem as a group, for embedding inside another SVG (the doors).
+// Coupling: the translate and radius are sized for Door.tsx's 120x200
+// viewBox; change the door geometry and change this with it.
 export function CrestInline({ crest }: { crest: CrestName }) {
   return (
     <g className="crest-inline" transform="translate(36 20)">
       <circle className="crest-plate" cx="24" cy="24" r="21" />
-      <circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" strokeOpacity="0.55" strokeWidth="2" />
+      <circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" strokeOpacity="0.8" strokeWidth="2" />
       <Motif crest={crest} />
     </g>
   );
