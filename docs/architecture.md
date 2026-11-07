@@ -13,7 +13,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal nodes |
-| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; planned subject taxonomy, material packs, source refs and pack validation |
+| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage and validation (#87); the extraction build pipeline and DADA content are in progress |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -651,17 +651,19 @@ generate) for the per-call detail.
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 
-Planned subject knowledge types, once the packs land:
+Subject-knowledge types (schema landed on #87; the extraction build lands after the
+canon index resolves to chunk candidates, #127):
 
 | Type | Module | Purpose |
 |---|---|---|
 | `Subject` | `app/knowledge/taxonomy.py` | one of the 12 O.W.L. subjects |
-| `Topic` | `app/knowledge/taxonomy.py` | subject topic and parent topic |
-| `Concept` | `app/knowledge/taxonomy.py` | spell, character, event, definition or procedure |
+| `Topic` | `app/knowledge/packs.py` | subject topic and parent topic |
+| `Concept` | `app/knowledge/packs.py` | spell, character, event, definition or procedure, with aliases |
 | `Material` | `app/knowledge/materials.py` | grounded explanation or passage with kind, canon tier, canon scope, review status and canonical text |
 | `SourceRef` | `app/knowledge/materials.py` | chunk id, book, chapter, quote, text hash, index hash |
 | `ReferenceLink` | `app/knowledge/materials.py` | optional secondary source with title, URL, publisher and access date |
-| `SubjectPack` | `app/knowledge/packs.py` | version, status, coverage and manifest |
+| `SubjectPack` | `app/knowledge/packs.py` | manifest, records, load and write |
+| `PackValidation` / `Coverage` | `app/knowledge/packs.py` | deterministic corpus join and thin-subject report |
 
 Canon-index types (spike shapes landed on #125; the join types land with #127):
 

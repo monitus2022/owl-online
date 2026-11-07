@@ -84,7 +84,7 @@ class Settings(BaseSettings):
                 )
         return self
 
-    @field_validator("trace_file", "lore_path", mode="before")
+    @field_validator("trace_file", "lore_path", "subjects_path", mode="before")
     @classmethod
     def _blank_path(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
@@ -110,6 +110,10 @@ class Settings(BaseSettings):
     # Canonical subject key for lore selection. The persona card's display name
     # is "Defense Against the Dark Arts"; the pack key is "dada".
     lore_subject: str = "dada"
+    # Subject knowledge packs (#87). A parent directory of per-subject pack
+    # directories (data/subjects/<subject>/). Empty means no packs present:
+    # exam generation and lesson mode stay disabled until a pack validates.
+    subjects_path: Path | None = Path("data/subjects")
     cors_origins: str = "http://localhost:5500,http://127.0.0.1:5500"
     cors_origin_regex: str = r"https://.*\.pages\.dev"
 

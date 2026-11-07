@@ -237,6 +237,14 @@ bank and hybrid grader on top of them.
 
 ### B1: Subject knowledge packs
 
+Status: schema and validation landed on #87 (`app/knowledge/taxonomy.py`,
+`materials.py`, `packs.py`, `OWL_SUBJECTS_PATH`, 23 tests): the 12-subject
+taxonomy, Topic/Concept/Material/SourceRef/ReferenceLink records, the
+`data/subjects/<subject>/` layout, the deterministic corpus-join validator and
+the rebuild fingerprint. Remaining on #87: the extraction build pipeline (uses
+the #127 canon-index resolution to draft candidate source refs), the DADA
+content pass, and the coverage report as a script.
+
 A pack is the single source of truth for one O.W.L. subject. Exam generation and
 lesson mode read from packs, not from free model memory.
 
@@ -337,9 +345,9 @@ Example material record:
 ```json
 {
   "material_id": "dada.counter-jinx.01",
-  "subject": "defence-against-the-dark-arts",
-  "topic": "counter-jinxes",
-  "concept": "counter-jinx",
+  "subject": "dada",
+  "topic": "dada.counter-jinxes",
+  "concept": "dada.counter-jinx",
   "kind": "spell",
   "text": "original grounded explanation shown to the generator",
   "canon_tier": "primary",
@@ -538,6 +546,7 @@ persists exam attempts and chat history.
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
+| #87 | Subject packs: schema and validation landed; extraction build and DADA content open | V3 - Product |
 
 ### Next
 
@@ -550,7 +559,6 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #87 | Subject knowledge packs: taxonomy, materials, source links | V3 - Product |
 | #126, #127, #128 | Lexicon canon index: harvester, resolver, pack wiring | V3 - Product |
 | #38, #39 | Exam data model, offline generation and validation | V3 - Product |
 | #41, #42 | Hybrid grading and exam endpoints | V3 - Product |
