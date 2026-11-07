@@ -227,6 +227,14 @@ bank and hybrid grader on top of them.
 
 ### B1: Subject knowledge packs
 
+Status: schema and validation landed on #87 (`app/knowledge/taxonomy.py`,
+`materials.py`, `packs.py`, `OWL_SUBJECTS_PATH`, 23 tests): the 12-subject
+taxonomy, Topic/Concept/Material/SourceRef/ReferenceLink records, the
+`data/subjects/<subject>/` layout, the deterministic corpus-join validator and
+the rebuild fingerprint. Remaining on #87: the extraction build pipeline (uses
+the #127 canon-index resolution to draft candidate source refs), the DADA
+content pass, and the coverage report as a script.
+
 A pack is the single source of truth for one O.W.L. subject. Exam generation and
 lesson mode read from packs, not from free model memory.
 
@@ -527,6 +535,7 @@ persists exam attempts and chat history.
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
 | #134 | Venue identity pass: crests, colonnade bands and door faces (SVG only) | V3 - Product |
+| #87 | Subject packs: schema and validation landed; extraction build and DADA content open | V3 - Product |
 
 ### Next
 
