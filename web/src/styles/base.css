@@ -1,0 +1,739 @@
+/* O.W.L. Online — Ashcombe Academy theme.
+   Dark, warm base; gold chrome; one --accent per subject from data. */
+
+:root {
+  color-scheme: dark;
+  --bg: #0e0c15;
+  --bg-raised: #171325;
+  --bg-sunken: #0a0810;
+  --ink: #ece7f2;
+  --ink-dim: #a89fbb;
+  --line: #ffffff26;
+  --gold: #d8b46a;
+  --danger: #e2707a;
+  --accent: var(--gold);
+  --radius: 10px;
+  --serif: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 500px at 50% -10%, #241d3a 0%, transparent 60%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+.school-name {
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+h1 {
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  margin: 0.4rem 0 0.6rem;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+main {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.crumbs {
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+  margin-bottom: 1.2rem;
+}
+
+.kicker {
+  color: var(--gold);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.section-lead,
+.venue-professor,
+.paper-meta,
+.results-card,
+.grading-note {
+  color: var(--ink-dim);
+}
+
+/* Buttons ---------------------------------------------------------------- */
+
+.btn-primary {
+  display: inline-block;
+  font-family: var(--serif);
+  font-size: 1rem;
+  color: #14101f;
+  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 75%, #000));
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, #fff 10%);
+  border-radius: 999px;
+  padding: 0.55rem 1.4rem;
+  cursor: pointer;
+  transition: filter 150ms ease, transform 150ms ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.btn-quiet {
+  background: none;
+  color: var(--ink-dim);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.55rem 1.2rem;
+  cursor: pointer;
+}
+
+.btn-quiet:hover {
+  color: var(--ink);
+  border-color: var(--ink-dim);
+}
+
+/* Front gate -------------------------------------------------------------- */
+
+.front {
+  text-align: center;
+  padding-top: 3rem;
+}
+
+.facade {
+  width: min(100%, 42rem);
+  height: auto;
+}
+
+.facade-line {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.facade-line.gate {
+  stroke: color-mix(in srgb, var(--gold) 70%, #fff);
+}
+
+.star {
+  fill: var(--gold);
+  opacity: 0.7;
+}
+
+.school-tag {
+  max-width: 34rem;
+  margin: 0.8rem auto 1.6rem;
+  color: var(--ink-dim);
+}
+
+.enter-btn {
+  margin-bottom: 2.5rem;
+}
+
+.footnote {
+  font-size: 0.75rem;
+  color: var(--ink-dim);
+  max-width: 36rem;
+  margin: 2.5rem auto 0;
+}
+
+/* The cloister ------------------------------------------------------------ */
+
+.door-row {
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1.2rem;
+}
+
+.door-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.door-link {
+  display: block;
+  width: 100%;
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
+}
+
+.door-art {
+  width: 100%;
+  max-width: 130px;
+  height: auto;
+  filter: drop-shadow(0 0 0 transparent);
+  transition: filter 200ms ease, transform 200ms ease;
+}
+
+.door-link:hover .door-art,
+.door-link:focus-visible .door-art {
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 55%, transparent));
+  transform: translateY(-3px);
+}
+
+.door-frame {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.door-panel {
+  fill: color-mix(in srgb, var(--accent) 12%, #12101c);
+  stroke: color-mix(in srgb, var(--accent) 45%, transparent);
+  stroke-width: 1.5;
+}
+
+.door-plank {
+  stroke: color-mix(in srgb, var(--accent) 40%, transparent);
+  stroke-width: 1.5;
+}
+
+.door-plaque {
+  fill: color-mix(in srgb, var(--accent) 22%, #0c0a14);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.door-plaque-text {
+  fill: var(--ink);
+  font-family: var(--serif);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.door-handle {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.door-name {
+  font-size: 0.95rem;
+  margin: 0.2rem 0 0;
+}
+
+.door-status {
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+  margin: 0;
+}
+
+.door-closed .door-art {
+  opacity: 0.4;
+}
+
+.door-closed .door-link:hover .door-art,
+.door-closed .door-link:focus-visible .door-art {
+  filter: none;
+  transform: none;
+}
+
+/* The venue ---------------------------------------------------------------- */
+
+.venue-head {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.8rem;
+  margin-bottom: 1.2rem;
+}
+
+.venue-head .silhouette {
+  width: 64px;
+  margin-top: 0;
+}
+
+.venue-head h1 {
+  color: var(--accent);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1.4rem;
+}
+
+.tab {
+  font-family: var(--serif);
+  font-size: 1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-dim);
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+}
+
+.tab-on {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.soon-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.6rem;
+}
+
+.soon-card h2 {
+  margin-top: 0;
+  color: var(--accent);
+}
+
+/* Chat ---------------------------------------------------------------------- */
+
+.silhouette {
+  width: 44px;
+  flex: none;
+  align-self: flex-start;
+  margin-top: 0.2rem;
+}
+
+.silhouette svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.sil-bg {
+  /* The light is in the roundel, the figure is dark: a real silhouette. */
+  fill: color-mix(in srgb, var(--accent) 20%, #0c0a14);
+  stroke: color-mix(in srgb, var(--accent) 45%, transparent);
+  stroke-width: 1.5;
+}
+
+.sil-figure path,
+.sil-figure circle,
+.sil-figure rect,
+.sil-figure polygon,
+.sil-figure ellipse {
+  fill: #08060f;
+}
+
+.sil-figure .sil-band {
+  fill: none;
+  stroke: #08060f;
+}
+
+.sil-figure .sil-wand {
+  fill: none;
+  stroke: #08060f;
+  stroke-width: 3;
+}
+
+.sil-figure .sil-wand-tip {
+  fill: var(--accent);
+}
+
+.sil-figure .sil-bubble {
+  fill: color-mix(in srgb, var(--accent) 55%, #0b0913);
+}
+
+.sil-rim {
+  stroke: none;
+}
+
+.sil-halo {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  opacity: 0.2;
+}
+
+.sil-thinking .sil-halo {
+  animation: halo-pulse 1.8s ease-in-out infinite;
+}
+
+.sil-thinking .sil-wand-tip {
+  animation: tip-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes halo-pulse {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes tip-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chat-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.chat-turn {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  max-width: 92%;
+}
+
+.chat-student {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-raised));
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.chat-professor {
+  align-self: flex-start;
+}
+
+.professor-line {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.turn-body {
+  min-width: 0;
+}
+
+.chat-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-failed {
+  color: var(--danger);
+}
+
+.mode-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+  margin-bottom: 0.5rem;
+}
+
+.citation-chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0.7rem 0 0;
+}
+
+.citation-chips li {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.8rem;
+  font-family: ui-monospace, monospace;
+  color: var(--ink-dim);
+}
+
+.abstain-note {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  font-style: italic;
+  margin: 0.5rem 0 0;
+}
+
+.chat-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat-form input {
+  flex: 1;
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+  background: var(--bg-sunken);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.chat-form input:focus-visible {
+  border-color: var(--accent);
+}
+
+/* Exam ---------------------------------------------------------------------- */
+
+.notice {
+  border-radius: var(--radius);
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  margin: 0 0 1rem;
+}
+
+.notice-mock {
+  background: color-mix(in srgb, var(--gold) 12%, var(--bg-raised));
+  border: 1px dashed color-mix(in srgb, var(--gold) 60%, transparent);
+  color: var(--ink);
+}
+
+.exam-error {
+  color: var(--danger);
+}
+
+.paper-title {
+  color: var(--accent);
+  margin-bottom: 0.2rem;
+}
+
+.question {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  padding: 0.9rem 1rem 1.1rem;
+  margin: 0 0 1rem;
+}
+
+.question legend {
+  font-weight: 600;
+  padding: 0 0.4rem;
+}
+
+.question-marks {
+  color: var(--ink-dim);
+  font-weight: 400;
+  font-size: 0.85rem;
+  margin-left: 0.5rem;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+}
+
+.option {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+}
+
+.option:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.question textarea {
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.6rem;
+  font: inherit;
+  background: var(--bg-sunken);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.exam-actions {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.grading-note {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.result-head {
+  display: flex;
+  gap: 1.4rem;
+  align-items: center;
+  margin-bottom: 1.2rem;
+}
+
+.mark-scheme {
+  list-style: none;
+  margin: 0 0 1.2rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mark-row {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  gap: 0.6rem;
+  align-items: baseline;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.mark-row-index {
+  color: var(--ink-dim);
+  font-family: ui-monospace, monospace;
+}
+
+.mark-row-answer {
+  grid-column: 2 / -1;
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+}
+
+.mark-row-marks {
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+.mark-full {
+  color: #82d68f;
+}
+
+.mark-part {
+  color: var(--gold);
+}
+
+.mark-none {
+  color: var(--danger);
+}
+
+.results-card {
+  font-size: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+  margin: 0 0 1rem;
+}
+
+/* The seal ------------------------------------------------------------------ */
+
+.seal {
+  text-align: center;
+  width: 120px;
+  flex: none;
+}
+
+.seal svg {
+  width: 96px;
+  height: 96px;
+}
+
+.seal-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.seal-inner {
+  fill: color-mix(in srgb, var(--accent) 15%, var(--bg-raised));
+  stroke: color-mix(in srgb, var(--accent) 50%, transparent);
+  stroke-width: 1;
+}
+
+.seal-letter {
+  fill: var(--accent);
+  font-family: var(--serif);
+  font-size: 34px;
+}
+
+.seal-label {
+  font-size: 0.72rem;
+  margin: 0.3rem 0 0;
+}
+
+.seal-percent {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  margin: 0;
+}
+
+/* Motion and small screens --------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .result-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mark-row {
+    grid-template-columns: 1.6rem 1fr auto;
+  }
+}
