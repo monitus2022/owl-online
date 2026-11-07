@@ -44,6 +44,17 @@ _PRACTICE_PHRASE = re.compile(
     r"\b(quiz|test) (me|my knowledge)\b",
     re.IGNORECASE,
 )
+# A curriculum question with a book context is a book question, not a syllabus
+# question. The guard keeps "What is the DADA curriculum at Hogwarts?" on the
+# answer path while "What is the DADA curriculum?" routes to the syllabus.
+_BOOK_CONTEXT = re.compile(
+    r"\b(hogwarts|books?|novels?|book \d|book one|book two|book three|"
+    r"book four|book five|book six|book seven|first year|second year|"
+    r"third year|fourth year|fifth year|sixth year|seventh year|"
+    r"year (?:one|two|three|four|five|six|seven)|quirrell|lockhart|lupin|"
+    r"moody|umbridge|snape|carrow|crouch)\b",
+    re.IGNORECASE,
+)
 # Persona meta cues. Keep them narrow: "who teaches Defense" is an answer
 # question, not an identity question.
 _META_CUES: dict[str, re.Pattern[str]] = {
@@ -61,7 +72,7 @@ _META_CUES: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "syllabus": re.compile(
-        r"\b(what is the syllabus|course outline|what will we cover|"
+        r"\b(what is the syllabus|course outline|curriculum|what will we cover|"
         r"what does the course cover)\b",
         re.IGNORECASE,
     ),
@@ -132,7 +143,10 @@ def classify(
     if _PRACTICE_REQUEST.search(question) or _PRACTICE_PHRASE.search(question):
         return "practice"
     if persona:
-        if meta_topic(question) is not None:
+        topic = meta_topic(question)
+        if topic is not None and not (
+            topic == "syllabus" and _BOOK_CONTEXT.search(question)
+        ):
             return "meta"
         if _PERSONAL.search(question):
             return "personal"

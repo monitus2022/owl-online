@@ -169,6 +169,28 @@ def test_book_questions_do_not_steal_the_meta_route():
 
     assert classify("What school did Harry attend?", persona=True) == "answer"
     assert classify("How did Tonks become an Auror?", persona=True) == "answer"
+    assert classify("Who founded Hogwarts?", persona=True) == "answer"
+    assert classify("What did the founders value?", persona=True) == "answer"
+    assert (
+        classify("What was the DADA curriculum under Lupin?", persona=True)
+        == "answer"
+    )
+    assert (
+        classify("What is the DADA curriculum at Hogwarts?", persona=True)
+        == "answer"
+    )
+    assert (
+        classify("What is the DADA curriculum in the books?", persona=True)
+        == "answer"
+    )
+    assert (
+        classify("What was the DADA curriculum under Crouch?", persona=True)
+        == "answer"
+    )
+    assert (
+        classify("What is the DADA curriculum in the fourth year?", persona=True)
+        == "answer"
+    )
 
 
 def test_meta_topics_cover_greeting_syllabus_and_grading():
@@ -177,6 +199,7 @@ def test_meta_topics_cover_greeting_syllabus_and_grading():
     assert classify("Hello", persona=True) == "meta"
     assert classify("Good morning.", persona=True) == "meta"
     assert classify("What is the syllabus?", persona=True) == "meta"
+    assert classify("What is the DADA curriculum?", persona=True) == "meta"
     assert classify("How is the exam graded?", persona=True) == "meta"
 
 

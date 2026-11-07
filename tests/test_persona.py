@@ -120,6 +120,7 @@ def test_answer_suffix_keeps_the_grounding_rules():
     assert "exactly as it appears" in suffix
     assert "Ashcombe" not in suffix
     assert "lore" not in suffix.casefold()
+    assert "public history of the war" in suffix
     assert "Do not disclose the school examination format" in suffix
 
 
@@ -189,16 +190,41 @@ def test_persona_card_missing_topic_fails(tmp_path):
         load_persona(path)
 
 
-def test_lore_fixture_loads_and_selects_the_professor():
+def test_lore_fixture_has_the_expected_entries():
     store = load_lore(FIXTURE)
-    assert len(store.entries) == 11
-    assert store.get("school-001") is not None
-    assert store.get("crane-001") is not None
-    assert store.select("who is Professor Crane", subject="dada")[0].id == "crane-001"
-    assert store.select("What is the Auror pathway?", subject="dada")[0].id == "auror-001"
+    assert len(store.entries) == 15
     founders = {"crane-001", "vale-001", "hale-001", "raman-001", "ashby-001"}
     assert founders <= store.ids()
     assert {"timeline-1998", "timeline-2008", "timeline-2026"} <= store.ids()
+    assert store.get("public-record-war") is not None
+
+
+def test_lore_selection_prefers_the_professor_and_the_pathway():
+    store = load_lore(FIXTURE)
+    assert store.select("who is Professor Crane", subject="dada")[0].id == "crane-001"
+    assert store.select("What is the Auror pathway?", subject="dada")[0].id == "auror-001"
+
+
+def test_lore_selection_includes_the_public_history_entry():
+    store = load_lore(FIXTURE)
+    selected = {
+        entry.id
+        for entry in store.select(
+            "What does Professor Crane know about the war?", subject="dada"
+        )
+    }
+    assert "public-record-war" in selected
+
+
+def test_book_questions_do_not_select_lore():
+    store = load_lore(FIXTURE)
+    for question in (
+        "Who founded Hogwarts?",
+        "What did the founders value?",
+        "What happened at the Battle of Hogwarts?",
+        "What is the DADA curriculum?",
+    ):
+        assert store.select(question, subject="dada") == [], question
 
 
 def test_lore_rejects_an_unknown_tier(tmp_path):
@@ -297,6 +323,7 @@ def _minimal_card(meta_identity: str = "I am X.", boundaries: dict | None = None
         "advice": "none",
         "canon": "none",
         "exam": "none",
+        "record": "none",
     }).items():
         lines.append(f'{key} = "{value}"')
     topics = (
@@ -333,6 +360,23 @@ def test_persona_card_missing_boundary_fails(tmp_path):
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match="missing boundaries"):
+        load_persona(path)
+
+
+def test_persona_card_missing_record_boundary_fails(tmp_path):
+    path = tmp_path / "persona.toml"
+    path.write_text(
+        _minimal_card(
+            boundaries={
+                "facts": "none",
+                "advice": "none",
+                "canon": "none",
+                "exam": "none",
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="record"):
         load_persona(path)
 
 

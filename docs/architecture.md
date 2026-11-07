@@ -437,7 +437,10 @@ answer; scripted meta replies state reviewed setting facts from the card. Script
 meta and personal replies are not generated, so the professor cannot invent a
 date, a rule or a fact while introducing himself. When a grounded answer
 abstains, the persona-on path replaces only the user-facing line with the card's
-in-world refusal; the `abstained` flag and empty citations are unchanged.
+in-world refusal; the `abstained` flag and empty citations are unchanged. The
+card also carries a public-history boundary: the professor knows the war and
+post-war outline as public history, but a detail still cites the book chunks and
+he does not claim private knowledge of the people named in the book chunks.
 
 The persona is DADA-only. The lore pack already carries the five founders and
 departments, but the chatbot speaks only for Defense; other subject personas are
@@ -580,12 +583,12 @@ restart resets the windows; auth later moves them to a user id.
 
 Corpus-only answers pass through an in-process exact cache keyed by prompt
 version, index text hash, retrieval settings, embedder and reranker config,
-model, normalised question, the persona flag and a hash of the persona suffix.
-Practice, feedback, meta and personal never read or write it: feedback is
-personalised by the student answer, practice is meant to vary, and meta/personal
-are scripted. Usage is logged for each processed request, cache hits included; a
-429, 502, 503 or 504 does not produce a line. The line carries estimated
-input/output tokens,
+model, normalised question, the persona flag, a hash of the persona suffix, the
+lore pack version and the lore selection version. Practice, feedback, meta and
+personal never read or write it: feedback is personalised by the student answer,
+practice is meant to vary, and meta/personal are scripted. Usage is logged for
+each processed request, cache hits included; a 429, 502, 503 or 504 does not
+produce a line. The line carries estimated input/output tokens,
 model, intent, cache hit, cost and latency; a client that disconnects before the
 stream ends may not produce a line. Prices are configuration, not constants.
 

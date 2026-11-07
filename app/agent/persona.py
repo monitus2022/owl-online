@@ -25,7 +25,7 @@ META_TOPICS = (
     "boundaries",
     "greeting",
 )
-REQUIRED_BOUNDARIES = ("facts", "advice", "canon", "exam")
+REQUIRED_BOUNDARIES = ("facts", "advice", "canon", "exam", "record")
 
 
 @dataclass(frozen=True)
@@ -61,9 +61,9 @@ class Persona:
         """The tone instruction appended to a grounded answer prompt.
 
         Deliberately omits the school and the lore: the answer prompt carries
-        tone, the facts and advice boundaries, and the Ashcombe exam boundary.
-        Naming the school here invites the model to substitute it for a place in
-        the excerpts, which is a grounding error.
+        tone, the facts, advice and record boundaries, and the Ashcombe exam
+        boundary. Naming the school here invites the model to substitute it for a
+        place in the excerpts, which is a grounding error.
         """
         return (
             f"You are {self.address}, a {self.role}. "
@@ -73,7 +73,7 @@ class Persona:
             "excerpts; never rename or relocate it. "
             "Keep the citation and abstention rules above exactly. "
             f"{self.boundaries['facts']} {self.boundaries['advice']} "
-            f"{self.boundaries['exam']}"
+            f"{self.boundaries['record']} {self.boundaries['exam']}"
         )
 
     def meta_response(self, topic: str, *, choice: int | None = None) -> str | None:

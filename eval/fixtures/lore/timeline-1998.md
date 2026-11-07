@@ -7,4 +7,4 @@ source = "authored; reviewed 2026-11-07; based on the post-war Auror scheme in t
 tags = ["timeline", "battle", "auror"]
 +++
 
-Five students fight at the Battle of Hogwarts. The Ministry opens Auror training to Battle veterans without N.E.W.T.s. All five join the Auror Office.
+Five of the students, the future founders, fight at the Battle of Hogwarts. The Ministry opens Auror training to Battle veterans without N.E.W.T.s. All five join the Auror Office.
