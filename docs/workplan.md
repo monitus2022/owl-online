@@ -44,13 +44,11 @@ page describes what comes next and why.
   against `/ask/stream` with citation chips and in-world limit copy, the
   demonstration exam room, device-local paper history and the cloister
   noticeboard, an about page stating real versus demonstration versus not
-  built, and the wizard-hat identity. The voice rule: every affordance
-  addresses the professor while `OWL_PERSONA` is off at the served host;
-  `personaState` in `web/src/data/subjects.ts` is the single switch that
-  restores the professor voice wording when the flag ships. Frontend
-  follow-ups are contract-gated: the four doors open with the #87 taxonomy
-  slugs and `GET /v1/subjects`; the exam client swap needs #42; server-side
-  records need #35.
+  built, and the wizard-hat identity. The voice-honesty rule and its single
+  switch are recorded in the Frontend surface section of
+  `docs/architecture.md`. Frontend follow-ups are contract-gated: the four
+  doors open with the #87 taxonomy slugs and `GET /v1/subjects`; the exam
+  client swap needs #38/#42; server-side records need #35.
 - #16's deterministic CI gate is merged; the required-check setting is the last
   step. #74 and #75 follow. #107 is deferred.
 - The Lexicon canon index (#125-#128) is the planned feed for the B1 packs: an

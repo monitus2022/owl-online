@@ -109,7 +109,8 @@ bounded, because a legitimate stream can outlive the deadline.
 
 ## Planned versioned surface
 
-These routes are not built yet. The shape is the contract for the frontend split.
+These routes are not built yet. The shape is the contract for the next frontend steps: the doors, the exam
+room and the records.
 
 | Method | Path | Status | Purpose |
 |---|---|---|---|
