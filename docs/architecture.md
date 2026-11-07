@@ -40,6 +40,8 @@ Planned exam-bank stages, not built yet:
 
 | Stage | Module | Responsibility |
 |---|---|---|
+| Canon index harvest | `app/pipeline/ingest/lexicon/` | sitemap discovery, polite cached fetch of hp-lexicon.org, entry and chapter parsing to gitignored JSONL (#125 spike landed: codes, parsers, sample; #126 full harvester) |
+| Canon index resolve | `app/knowledge/lexicon.py` | citation-code buckets, forward/reverse join, chunk candidate resolution feeding pack build (#127) |
 | Subject packs | `app/knowledge/` | subject taxonomy, material records, source refs, pack build and validation |
 | Exam build | `app/pipeline/exam/` | offline plan, retrieve, generate, validate, persist |
 | Exam store | `app/storage/` | SQLite models and repository for exams, questions, attempts |
@@ -475,7 +477,9 @@ versioned subject knowledge packs, not from free model memory:
 
 ```mermaid
 flowchart LR
+  SITE[hp-lexicon.org] -. structure only .-> LEX[(Canon index rows)]
   CORP[(Corpus + index)] --> PACK[Subject knowledge pack]
+  LEX -. seeds concepts and source-ref candidates .-> PACK
   PACK --> EXAM[Exam builder]
   PACK --> LESSON[Lesson builder]
   EXAM --> DB[(Exam store)]
@@ -488,7 +492,9 @@ Every generated question or lesson section must cite a material id and source
 ref; the validator rejects anything else before publication. Secondary
 references such as a Lexicon entry may be stored as links for discovery and
 attribution, but they are not the canonical source and are never copied into
-the pack.
+the pack. The item/concept-to-chapter index that seeds those links is built
+from structure only (citation codes and links, never site prose); its plan of
+record is `docs/lexicon-canon-index.md`.
 
 Canon tiers are explicit:
 
@@ -632,6 +638,14 @@ Planned subject knowledge types, once the packs land:
 | `SourceRef` | `app/knowledge/materials.py` | chunk id, book, chapter, quote, text hash, index hash |
 | `ReferenceLink` | `app/knowledge/materials.py` | optional secondary source with title, URL, publisher and access date |
 | `SubjectPack` | `app/knowledge/packs.py` | version, status, coverage and manifest |
+
+Canon-index types (spike shapes landed on #125; the join types land with #127):
+
+| Type | Module | Purpose |
+|---|---|---|
+| `ResolvedCitation` | `app/pipeline/ingest/lexicon/codes.py` | citation code with bucket, book, chapter, medium and epilogue flag |
+| `Citation` / `EntryPage` / `ChapterPage` | `app/pipeline/ingest/lexicon/parse.py` | page structure: code plus origin, entry identity, chapter reverse tabs |
+| `CanonEdge` | `app/knowledge/lexicon.py` | planned: entry, chapter, agreement label, candidate chunk ids and hashes |
 
 Planned exam-bank types, once the offline pipeline lands:
 
