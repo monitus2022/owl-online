@@ -366,7 +366,10 @@ B1 exit criteria:
 ### B2: Exam bank
 
 A paper is 10 questions. That is long enough to feel like a paper and short
-enough to finish for fun. A paper may mix three question types:
+enough to finish for fun. A paper may mix three question types: (the
+student-facing academy papers shipped with the frontend are mcq and short
+answer only - see Decisions, #132; whether long answers return is a #41
+call.)
 
 | Type | Scored by |
 |---|---|
@@ -505,6 +508,7 @@ persists exam attempts and chat history.
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
+| #137 | Frontend CI build job; deploy.md, AGENTS.md and decision rows for web/ | V3 - Product |
 
 ### Next
 
@@ -512,6 +516,9 @@ persists exam attempts and chat history.
 |---|---|---|
 | #74 | Move `/data` to a dedicated EBS volume | V2 - Deepening |
 | #75 | Replace static AWS keys with GitHub OIDC | V2 - Deepening |
+| #134 | Venue identity pass: art, crests and room character for five departments | V3 - Product |
+| #135 | Results surfaces: paper history and band chart from the local store | V3 - Product |
+| #136 | About page: the academy, the papers, demo versus real | V3 - Product |
 
 ### Later
 
@@ -591,6 +598,9 @@ path.
 | Router ships pre-retrieval first | The cue set is measured on the fixture; the coverage check belongs with the per-book path, which caps at seven map calls with a bounded fan-out |
 | Per-book retrieval is measured before wiring | At equal k=7 the prototype raises coverage 0.58 to 0.79 and keeps near-misses single-hop; chat stays one-pass until extraction and synthesis land |
 | The professor is an original character, not a canon one | Limits IP exposure and avoids invented quotations; the persona is tone plus reviewed meta facts, and never adds facts to a grounded answer |
+| Academy papers are mcq plus short answer | Frontend review (2026-11-07, #132): the student-facing paper drops long answers; rubric judging stays available if a future paper needs it. Revisit in #41 |
+| Short answers grade in one batch call against the stored key | Ten answers fit one context window; the batch response keeps per-question structured records so retry and regrade semantics survive. Revisit in #41 |
+| Result records are device-local until auth | The frontend shows best-so-far from localStorage before #35; the server becomes the authority when attempts land and the UI keeps labelling local records provisional. Revisit in #35 |
 
 ## Evaluation
 
