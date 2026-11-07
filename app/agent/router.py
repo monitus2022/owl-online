@@ -61,7 +61,7 @@ _META_CUES: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "syllabus": re.compile(
-        r"\b(what is the syllabus|course outline|what will we cover|"
+        r"\b(what is the syllabus|course outline|curriculum|what will we cover|"
         r"what does the course cover)\b",
         re.IGNORECASE,
     ),

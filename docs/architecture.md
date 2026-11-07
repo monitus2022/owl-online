@@ -438,9 +438,9 @@ meta and personal replies are not generated, so the professor cannot invent a
 date, a rule or a fact while introducing himself. When a grounded answer
 abstains, the persona-on path replaces only the user-facing line with the card's
 in-world refusal; the `abstained` flag and empty citations are unchanged. The
-card also carries a public-record boundary: the professor knows the war and
+card also carries a public-history boundary: the professor knows the war and
 post-war outline as public history, but a detail still cites the book chunks and
-he does not claim private knowledge of the people in the record.
+he does not claim private knowledge of the people in the book chunks.
 
 The persona is DADA-only. The lore pack already carries the five founders and
 departments, but the chatbot speaks only for Defense; other subject personas are

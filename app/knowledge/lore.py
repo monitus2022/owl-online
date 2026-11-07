@@ -36,12 +36,16 @@ TIERS = frozenset({"book", "product", "secondary"})
 _SETTING_CUE = re.compile(
     r"\b(ashcombe|professor crane|professor vale|professor hale|"
     r"professor raman|professor ashby|the school|this school|the academy|"
-    r"the faculty|the founders?|founded|founding|curriculum|"
-    r"auror pathway|auror office|auror subjects?|post-war|"
-    r"battle of hogwarts)\b",
+    r"the faculty|five founders|ashcombe founders|founders of ashcombe|"
+    r"the school'?s founders|the academy'?s founders|"
+    r"auror pathway|auror office|auror subjects?|post-war|public history)\b",
     re.IGNORECASE,
 )
 DEFAULT_LORE_TOP_K = 3
+# Bump when the selection algorithm changes: the answer cache scope includes
+# this so a weight-only change cannot be served from an old selection.
+LORE_SELECTION_VERSION = "weighted-title-tags-v1"
+TITLE_TAG_WEIGHT = 2
 _WORD = re.compile(r"[a-z0-9]+")
 _STOP = frozenset(
     {
@@ -138,7 +142,9 @@ class LoreStore:
 
         With `require_cue`, a question must name the setting before any entry is
         returned. That keeps a book question about Defence Against the Dark Arts
-        from pulling the school's setting notes into its prompt.
+        from pulling the school's setting notes into its prompt. Title and tag
+        hits are weighted `TITLE_TAG_WEIGHT` times a body hit, because the title
+        and tags are curated.
         """
         if require_cue and _SETTING_CUE.search(question) is None:
             return []
@@ -156,7 +162,7 @@ class LoreStore:
             # Title and tags are curated, so a hit there is worth more than a
             # body mention. This keeps a founder biography from crowding out the
             # public-record entry on a question about the Battle of Hogwarts.
-            score = 2 * len(query & title_tags) + len(query & body)
+            score = TITLE_TAG_WEIGHT * len(query & title_tags) + len(query & body)
             if score:
                 scored.append((score, entry))
         scored.sort(key=lambda item: (-item[0], item[1].id))

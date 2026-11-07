@@ -30,6 +30,7 @@ from app.api.limits import ChatLimiter, Decision
 from app.api.runtime import Runtime, build_runtime
 from app.api.schemas import AskRequest, AskResponse, StreamRequest
 from app.config import Settings, settings
+from app.knowledge import LORE_SELECTION_VERSION
 from app.logging import configure_logging, get_request_id, set_request_id
 from app.pipeline.generate import DEFAULT_TOP_K, SYSTEM_PROMPT, AskResult, ask
 from app.providers.contracts import Llm, Retriever
@@ -219,6 +220,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 str(app_settings.multi_book),
                 persona_scope,
                 runtime.lore.version() if runtime.lore is not None else "none",
+                LORE_SELECTION_VERSION,
                 app_settings.lore_subject,
                 model,
             ]
