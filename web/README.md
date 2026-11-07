@@ -13,7 +13,7 @@ the raw test page and is not part of this build.
 | `src/api/chat.ts` | Live client for `POST /ask/stream` (SSE: mode/token/reset/final/error). |
 | `src/api/exams.ts` | `ExamClient` interface mirroring the planned `/v1/exams` contract, plus `MockExamClient` with a demo DADA bank. |
 | `src/api/results.ts` | `ResultsStore` interface; the localStorage implementation is provisional until server-side attempt history exists. |
-| `src/pages/` | Front gate, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |
+| `src/pages/` | Front gate, about page, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |
 | `src/components/` | Door, chat panel, professor silhouette, crest, colonnade backdrop, exam panel, band seal, results card, band strip, history panel, noticeboard, site footer. |
 | `src/styles/base.css` | The theme: dark warm base, gold chrome, `--accent` per subject. |
 
