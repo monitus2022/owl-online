@@ -510,6 +510,7 @@ persists exam attempts and chat history.
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
 | #137 | Frontend CI build job; deploy.md, AGENTS.md and decision rows for web/ | V3 - Product |
 | #141 | Frontend voice honesty while OWL_PERSONA stays off | V3 - Product |
+| #143 | Site icon and route-enter transition | V3 - Product |
 
 ### Next
 
