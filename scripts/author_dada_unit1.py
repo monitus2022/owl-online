@@ -66,7 +66,7 @@ CITED = [
 
 
 def widen(text: str, start: int, end: int) -> str:
-    """Grow the recorded span to a whole-word quote of at least three words."""
+    """Whole-word, sentence-shaped verbatim slice around the recorded span."""
     n = len(text)
     s, e = max(0, min(start, n)), max(0, min(end, n))
     while s > 0 and not text[s - 1].isspace():
@@ -83,6 +83,22 @@ def widen(text: str, start: int, end: int) -> str:
             e = n if k < 0 else k + 1
         if (s, e) == before:
             break
+    # snap to the containing sentence when it stays review-sized
+    sent_end = {".", "!", "?", ":", "”"}
+    left = s
+    while left > 0 and text[left - 1] not in sent_end:
+        left -= 1
+    while left < s and text[left].isspace():
+        left += 1
+    right = e
+    limit = min(n, e + 180)
+    while right < limit and text[right - 1] not in sent_end:
+        right += 1
+    while right > e and text[right - 1].isspace():
+        right -= 1
+    candidate = text[left:right]
+    if 3 <= len(candidate.split()) <= 60 and len(candidate) <= 260:
+        return candidate
     return text[s:e]
 
 
