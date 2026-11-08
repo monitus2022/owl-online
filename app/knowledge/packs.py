@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import tomllib
 from collections.abc import Iterable
@@ -36,6 +37,8 @@ from app.knowledge.taxonomy import KIND_SET, SUBJECT_KEYS, TIER_SET, known_subje
 from app.schemas import Chunk
 
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+
+logger = logging.getLogger(__name__)
 
 PACK_STATUS = ("draft", "validated", "published")
 
@@ -366,6 +369,73 @@ def validate_pack(
             result.errors.append(f"published pack has unreviewed material: {unreviewed}")
     result.coverage = coverage
     return result
+
+
+class PackSummary(_StrictModel):
+    """The served summary of one published pack."""
+
+    subject: str
+    title: str
+    tier: str
+    version: str
+    status: str
+    built_at: str
+    fingerprint: str
+    topics: tuple[str, ...] = ()
+    concepts: int = 0
+    materials: int = 0
+
+
+def load_pack_summaries(
+    subjects_path: Path | None,
+    chunks: dict[str, Chunk],
+    index_text_hash: str,
+) -> list[PackSummary]:
+    """Summaries of the published, valid packs under `subjects_path`.
+
+    A draft or invalid pack is skipped, not served: the same discipline as
+    the pack loader, softened at the API boundary so one broken pack cannot
+    take the subject index down.
+    """
+    if subjects_path is None or not subjects_path.is_dir():
+        return []
+    summaries: list[PackSummary] = []
+    for directory in sorted(path for path in subjects_path.iterdir() if path.is_dir()):
+        if not (directory / "pack.toml").exists():
+            continue
+        try:
+            pack = load_subject_pack(directory)
+        except Exception as error:
+            logger.warning(
+                "subject pack %s failed to load: %s", directory, error
+            )
+            continue
+        if pack.manifest.status != "published":
+            continue
+        result = validate_pack(pack, chunks, index_text_hash)
+        if not result.ok:
+            logger.warning(
+                "subject pack %s failed validation; skipping: %s",
+                directory,
+                "; ".join(result.errors[:3]),
+            )
+            continue
+        subject = known_subject(pack.manifest.subject)
+        summaries.append(
+            PackSummary(
+                subject=pack.manifest.subject,
+                title=subject.name if subject else pack.manifest.subject,
+                tier=pack.manifest.tier,
+                version=pack.manifest.version,
+                status=pack.manifest.status,
+                built_at=pack.manifest.built_at,
+                fingerprint=pack_fingerprint(pack),
+                topics=tuple(sorted(topic.topic_id for topic in pack.topics)),
+                concepts=len(pack.concepts),
+                materials=len(pack.materials),
+            )
+        )
+    return summaries
 
 
 def pack_fingerprint(pack: SubjectPack) -> str:

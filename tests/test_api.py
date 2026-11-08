@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.api.runtime import Runtime
 from app.config import Settings
+from app.knowledge.packs import PackSummary
 from app.logging import get_request_id
 from app.main import create_app
 from app.pipeline.generate import ABSTAIN_MESSAGE
@@ -519,3 +520,44 @@ def test_ask_stream_carries_lore_citations():
     events = _parse_sse(body)
     finals = [data for name, data in events if name == "final"]
     assert finals[0]["lore_citations"] == ["school-001"]
+
+
+def test_subjects_lists_published_packs():
+    summary = PackSummary(
+        subject="dada",
+        title="Defence Against the Dark Arts",
+        tier="owl",
+        version="1.0.0",
+        status="published",
+        built_at="2026-11-08T00:00:00Z",
+        fingerprint="0123456789abcdef",
+        topics=("dark-creatures", "defensive-magic"),
+        concepts=21,
+        materials=25,
+    )
+    runtime = Runtime(retriever=_Retriever(), llm=_Llm(), packs=(summary,))
+    with _client(runtime) as client:
+        response = client.get("/v1/subjects")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["subjects"] == [
+        {
+            "subject": "dada",
+            "title": "Defence Against the Dark Arts",
+            "tier": "owl",
+            "version": "1.0.0",
+            "status": "published",
+            "built_at": "2026-11-08T00:00:00Z",
+            "fingerprint": "0123456789abcdef",
+            "topics": ["dark-creatures", "defensive-magic"],
+            "concepts": 21,
+            "materials": 25,
+        }
+    ]
+
+
+def test_subjects_empty_without_packs():
+    with _client() as client:
+        response = client.get("/v1/subjects")
+    assert response.status_code == 200
+    assert response.json() == {"subjects": []}

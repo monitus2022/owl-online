@@ -84,7 +84,7 @@ def _embedding_text(chunk: Chunk) -> str:
     return f"{context}\n\n{chunk.text}" if context else chunk.text
 
 
-def _text_hash(chunks: list[Chunk]) -> str:
+def text_hash(chunks: list[Chunk]) -> str:
     """Hash of ids and indexed text, so a context change forces a rebuild."""
     payload = "\n".join(f"{c.id}\t{_embedding_text(c)}" for c in chunks)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
@@ -136,15 +136,15 @@ async def build_index(
     if not chunks:
         raise ValueError("cannot build an index from zero chunks")
     client = chromadb.PersistentClient(path=str(out_dir))
-    text_hash = _text_hash(chunks)
-    current = _matching_collection(client, len(chunks), embedder.name, text_hash)
+    text_hash_value = text_hash(chunks)
+    current = _matching_collection(client, len(chunks), embedder.name, text_hash_value)
     if current is not None:
         meta = current.metadata or {}
         return BuiltIndex(
             collection=current,
             rebuilt=False,
             dims=meta.get("dims", 0),
-            text_hash=meta.get("text_hash", text_hash),
+            text_hash=meta.get("text_hash", text_hash_value),
         )
 
     try:
@@ -165,7 +165,7 @@ async def build_index(
                     "hnsw:space": "cosine",
                     "embedder": embedder.name,
                     "dims": len(embeddings[0]),
-                    "text_hash": text_hash,
+                    "text_hash": text_hash_value,
                 },
             )
         _add_batch(collection, batch, embeddings)
@@ -178,7 +178,7 @@ async def build_index(
         collection=collection,
         rebuilt=True,
         dims=meta.get("dims", 0),
-        text_hash=text_hash,
+        text_hash=text_hash_value,
     )
 
 

@@ -5,7 +5,7 @@ script, the API startup, and the eval harness.
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.pipeline.index import build_index, build_lexical_index, load_chunks
@@ -24,6 +24,7 @@ class RetrievalSetup:
     dims: int
     text_hash: str
     rebuilt: bool
+    chunks_by_id: dict[str, Chunk] = field(default_factory=dict)
 
 
 async def compose_retriever(
@@ -61,4 +62,5 @@ async def compose_retriever(
         dims=built.dims,
         text_hash=built.text_hash,
         rebuilt=built.rebuilt,
+        chunks_by_id=by_id,
     )

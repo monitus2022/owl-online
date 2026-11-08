@@ -235,6 +235,31 @@ and only practised in another. The table is validated against our own corpus: a
 lesson chapter must show teacher-plus-classroom cues in the chunk text. Lexicon
 chapter pages help find the scenes; the book text is the proof.
 
+Decision (2026-11-08): practical-defense contexts outside a sanctioned
+classroom - Dumbledore's Army chapters and dueling-club scenes - are kept in
+the draft table under explicit `da-army` / `duel-club` labels and map to the
+author-pick basis with the reason recorded. Dropping them was rejected: DADA
+classroom evidence is scarce, and the D.A. chapters document which defensive
+spells the books treat as the practical core. The labels keep the precedence
+honest - practice tiers inform membership, they never define it.
+
+Approval (2026-11-08): the maintainer reviewed the seeded, key-concepts form
+and approved the full draft list at the time - 51 DADA and 11 Charms rows - on
+the grounds that the per-chapter context is rich and classroom evidence is
+scarce. The approved table is compiled, structure-only, to
+`config/lessons/dada.jsonl` and `config/lessons/charms.jsonl` with basis,
+reason, evidence chunk ids, seed counts and approval metadata per row. The
+DADA table was corrected to 53 rows during the materials audit on 2026-11-08:
+three non-DADA rows were struck (`b1 c8`, `b2 c12`, `b2 c13`), five DADA
+rows were added (`b3 c18`, `b5 c22`, `b5 c31`, `b6 c02`, `b7 c06`), and
+non-classroom rows were re-based to `author-pick` with their actual teaching
+context instead of inheriting the year's DADA teacher. The Charms table was
+corrected to 9 rows in the same audit: five non-lesson rows were struck and
+three real Charms scenes were added (`b1 c16`, `b4 c26`, `b6 c24`). The
+coverage report remains the feedback loop: an approved row that seeds
+nothing when the materials are authored is struck then, with the record
+updated.
+
 Scope-first keeps the problem tractable. A pack declares its topics (the workplan
 already fixes the DADA scope list), so we only ever assign items relevant to
 those topics. We never classify all ~400 magic and ~2,000 thing entries into
@@ -459,11 +484,12 @@ page, sidecar-backed), `harvest_failures.jsonl`, `invalid_chapters.jsonl`,
 | #125 spike | hand-pick ~25 spell and ~25 potion entries around the DADA and Charms pilot; save their HTML locally only; prototype the parse rules; settle DHE, bare parenthesials, multi-code bullets and the reverse-tab semantics; write synthetic fixtures from structure (markup skeleton, no site prose) | fixtures parse in tests; the hand sample shows a books/chapters mapping a reviewer agrees with; open questions closed in this doc |
 | #126 harvester | discovery, fetch, parse modules plus scripts/harvest_lexicon.py; cache, rate limit, resume; unit tests on synthetic fixtures | full polite crawl runs in one pass; entries, citations and chapter_index written; parse failure report under a stated budget |
 | #127 resolver | code grammar, buckets, forward/reverse join, chunk candidate resolution, canon_index.jsonl, coverage report | validation rules above hold; disagreement queue non-empty and human-readable; spot-checks pass |
-| #128 pack wiring (depends on #87 schema landing) | pack build reads canon_index for concept seeding and reference/source-ref prefill; DADA and Charms pilots authored from it; attribution recorded | a reviewed DADA material cites both a Lexicon reference and a books-bucket source_ref that hash-validates |
+| #128 pack wiring (depends on #87 schema landing) | pack build reads canon_index for concept seeding and reference/source-ref prefill; DADA authored and published, Charms seeded; attribution recorded | a reviewed DADA material cites both a Lexicon reference and a books-bucket source_ref that hash-validates |
 
 #125 (PR #130), #126 (PR #148) and #127 (PR #159) are merged and closed.
-#128 is open under the V3 - Product milestone and is the active subject-pack
-step.
+#128 is open under the V3 - Product milestone. The DADA pack is published at
+1.0.0 and the seeding queues are landed; the remaining work is the Charms
+content pass and the coverage report.
 
 ## Risks
 

@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.knowledge.packs import PackSummary
+
 
 class AskRequest(BaseModel):
     """A single revision question."""
@@ -47,3 +49,9 @@ class AskResponse(BaseModel):
     citations: list[str]
     abstained: bool
     lore_citations: list[str] = Field(default_factory=list)
+
+
+class SubjectsResponse(BaseModel):
+    """The published subject packs the API can serve."""
+
+    subjects: list[PackSummary]

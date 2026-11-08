@@ -254,11 +254,16 @@ Status: schema and validation merged on #87 (PR #153:
 `app/knowledge/taxonomy.py`, `materials.py`, `packs.py`, `OWL_SUBJECTS_PATH`,
 23 tests): the 12-subject taxonomy, Topic/Concept/Material/SourceRef/
 ReferenceLink records, the `data/subjects/<subject>/` layout, the
-deterministic corpus-join validator and the rebuild fingerprint. Remaining
-on #87: the extraction build pipeline (uses the #127 canon-index resolution
-to draft candidate source refs - ticketed as #128, active), the DADA content
-pass (pending the maintainer's DADA scope and material titles) and the
-coverage report as a script.
+deterministic corpus-join validator and the rebuild fingerprint. The
+chapter-to-subject lesson table for the DADA and Charms pilots is approved
+and compiled at `config/lessons/` (2026-11-08). The DADA pilot pack is
+authored, reviewed and published: 25 materials, 21 concepts, 4 topics,
+version 1.0.0, fingerprint `e7139cbcc23eaa5c`, and `GET /v1/subjects`
+serves published packs. The pack validation record is
+`docs/packs/dada-1.0.0.md`. Remaining on #87: the extraction build pipeline
+(uses the #127 canon-index resolution to draft candidate source refs -
+ticketed as #128, active), the Charms content pass and the coverage report
+as a script.
 
 A pack is the single source of truth for one O.W.L. subject. Exam generation and
 lesson mode read from packs, not from free model memory.
@@ -561,8 +566,8 @@ persists exam attempts and chat history.
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
-| #87 | Subject packs: schema and validation landed; extraction build and DADA content open | V3 - Product |
-| #128 | Lexicon canon index: pack wiring, concept seeding, DADA and Charms pilots | V3 - Product |
+| #87 | Subject packs: DADA 1.0.0 published; extraction build and Charms content open | V3 - Product |
+| #128 | Lexicon canon index: pack wiring and seeding queues; DADA authored, Charms seeded, Charms content open | V3 - Product |
 
 ### Next
 

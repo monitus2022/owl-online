@@ -12,6 +12,7 @@ from app.agent import build_graph
 from app.agent.persona import PERSONA
 from app.config import Settings
 from app.knowledge import LoreStore, load_lore
+from app.knowledge.packs import PackSummary, load_pack_summaries
 from app.pipeline.retrieve import compose_retriever
 from app.providers.contracts import Llm, Retriever
 from app.providers.factory import make_embedder, make_llm, make_reranker
@@ -29,6 +30,7 @@ class Runtime:
     index_hash: str = "unknown-index"
     small_llm: Llm | None = None
     lore: LoreStore | None = None
+    packs: tuple[PackSummary, ...] = ()
 
     async def aclose(self) -> None:
         """Release provider clients on shutdown (embedder pool, model client)."""
@@ -73,6 +75,22 @@ async def build_runtime(settings: Settings) -> Runtime:
         logger.info(
             "lore pack absent at %s; answers stay book-only", settings.lore_path
         )
+    packs: tuple[PackSummary, ...] = ()
+    if settings.subjects_path is not None and settings.subjects_path.is_dir():
+        packs = tuple(
+            load_pack_summaries(
+                settings.subjects_path, setup.chunks_by_id, setup.text_hash
+            )
+        )
+        logger.info(
+            "subject packs loaded: %s",
+            [f"{pack.subject} {pack.version}" for pack in packs] or "none",
+        )
+    else:
+        logger.info(
+            "subject packs absent at %s; the subject index stays empty",
+            settings.subjects_path,
+        )
     llm = make_llm(settings.provider)
     small_llm = (
         make_llm(settings.small_provider, model=settings.small_model)
@@ -95,4 +113,5 @@ async def build_runtime(settings: Settings) -> Runtime:
             small_llm=small_llm,
         ),
         small_llm=small_llm,
+        packs=packs,
     )

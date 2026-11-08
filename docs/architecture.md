@@ -13,7 +13,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal nodes |
-| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage and validation (#87); the extraction build pipeline and DADA content are in progress |
+| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the DADA pack is published, the extraction build pipeline (#128) and Charms content are in progress |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -203,12 +203,12 @@ flowchart TD
 ## API surface
 
 The served contract is documented in `docs/api.md`: the current `/health`,
-`/ask` and `/ask/stream` routes, the SSE event schema, the error shapes, and the
-planned `/v1` surface for chat, persona, subjects, exams and grading. The split
-is by purpose, not by subject: a subject is request data, chat intents stay
-internal, and the exam bank and grading are separate resources. The versioned
-aliases gate per-subject chat and the exam surface; the frontend already ships
-as its own static build.
+`/ask`, `/ask/stream` and `/v1/subjects` routes, the SSE event schema, the
+error shapes, and the planned `/v1` surface for chat, persona, exams and
+grading. The split is by purpose, not by subject: a subject is request data,
+chat intents stay internal, and the exam bank and grading are separate
+resources. The versioned aliases gate per-subject chat and the exam surface;
+the frontend already ships as its own static build.
 
 ## Frontend surface
 
@@ -647,12 +647,12 @@ generate) for the per-call detail.
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
 | `Persona` | `app/agent/persona.py` | dataclass | reviewed identity, register, boundaries, variant banks for meta, personal and abstain replies, in-world abstention |
 | `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
-| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash |
+| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash, published pack summaries |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 
-Subject-knowledge types (schema landed on #87; the extraction build lands after the
-canon index resolves to chunk candidates, #127):
+Subject-knowledge types (schema landed on #87; the extraction build and DADA
+pack publication landed with #128):
 
 | Type | Module | Purpose |
 |---|---|---|
@@ -660,9 +660,11 @@ canon index resolves to chunk candidates, #127):
 | `Topic` | `app/knowledge/packs.py` | subject topic and parent topic |
 | `Concept` | `app/knowledge/packs.py` | spell, character, event, definition or procedure, with aliases |
 | `Material` | `app/knowledge/materials.py` | grounded explanation or passage with kind, canon tier, canon scope, review status and canonical text |
-| `SourceRef` | `app/knowledge/materials.py` | chunk id, book, chapter, quote, text hash, index hash |
+| `SourceRef` | `app/knowledge/materials.py` | chunk id, book, chapter, quote, text hash, index hash, citation bucket (books only) |
 | `ReferenceLink` | `app/knowledge/materials.py` | optional secondary source with title, URL, publisher and access date |
 | `SubjectPack` | `app/knowledge/packs.py` | manifest, records, load and write |
+| `PackSummary` | `app/knowledge/packs.py` | served summary of one published pack: subject, version, fingerprint, topic ids, counts |
+| `load_pack_summaries` | `app/knowledge/packs.py` | published, valid packs under `OWL_SUBJECTS_PATH`; drafts and broken packs are skipped |
 | `PackValidation` / `Coverage` | `app/knowledge/packs.py` | deterministic corpus join and thin-subject report |
 
 Canon-index types (spike shapes and resolver landed on #125/#127):
