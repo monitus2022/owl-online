@@ -1,9 +1,12 @@
-"""Focused DADA + Charms lesson-table review file with teacher attribution.
+"""Focused DADA + Charms lesson-table review file, tiered by plan precedence.
 
-Passes over the corpus chunks, scores lesson-cue sentences per chapter,
-infers the most-likely teacher per chapter from cue-sentence mentions, and
-writes a review file with up to 3 evidence quotes per row. The crawl in
-progress is not needed: this is books-chunks-only (#128).
+Tiers per docs/lexicon-canon-index.md (Subject assignment):
+class = taught-in-class scene sentence (teacher or subject + lesson cue);
+exam  = used-in-exam-context (subject + O.W.L./exam/practical/test, same
+        sentence); da = DA training / dueling-club practice (DADA only).
+Row tier = strongest signal present (class > exam > da). Deterministic
+sentence-scope matching, no model calls. Outputs are local data/ (quotes);
+the approved table committed later is structure-only.
 """
 
 import json
@@ -13,12 +16,11 @@ from collections import Counter, defaultdict
 CHUNKS = "/Users/tc/Documents/Github/owl-online/data/chunks.jsonl"
 OUT = "/Users/tc/Documents/Github/owl-128/data/lessons_review_dada_charms.md"
 
-# (teacher, subject, extra cue) - DADA teachers rotate per book year.
 DADA_TEACHERS = {
     1: "Quirrell", 2: "Lockhart", 3: "Lupin (Snape subs c9-c10)",
     4: "Crouch (Bartemius, as Mad-Eye Moody)", 5: "Umbridge",
-    6: "Dumbledore (private lessons; classroom DADA unnamed)",
-    7: "none (on the run; Snape/Alecto era untaught)",
+    6: "Dumbledore (private lessons; Slughorn year classroom DADA unnamed)",
+    7: "none (on the run; Carrow era not examinable)",
 }
 TEACHER_CUE = re.compile(
     r"\b(Quirrell|Lockhart|Lupin|Moody|Mad-Eye|Umbridge|Snape|Dumbledore|"
@@ -27,10 +29,20 @@ TEACHER_CUE = re.compile(
 )
 LESSON = re.compile(
     r"lesson|\bclass\b|classroom|in class|after class|\btaught\b|detention|"
-    r"our (?:new )?teacher|Defen[cs]e Against the Dark Arts|Charms", re.I,
+    r"our (?:new )?teacher", re.I,
 )
-DADA_TEXT = re.compile(r"Defen[cs]e Against the Dark Arts|\bdark arts\b|\bD\.?A\.?\b", re.I)
+DADA_TEXT = re.compile(r"Defen[cs]e Against the Dark Arts|\bdark arts\b", re.I)
 CHARMS_TEXT = re.compile(r"\bCharms\b")
+DADA_TEACHER_NAMES = {"Quirrell", "Lockhart", "Lupin", "Moody", "Mad-Eye",
+                      "Umbridge"}
+EXAM_CUE = re.compile(
+    r"O\.W\.Ls?|N\.E\.W\.Ts?|\bexamin|\bexam\b|\btest(s|ing)?\b|practical",
+    re.I,
+)
+DA_CUE = re.compile(
+    r"Dumbledore.{0,3}s Army|\bthe D\.A\.|practice dueling|practis(?:ing|e) "
+    r"dueling|dueling club|duelling club|\bdueling lessons?", re.I,
+)
 SENT_SPLIT = re.compile(r"(?<=[.!?])\s")
 
 
@@ -39,8 +51,10 @@ def sentences(text):
 
 
 def main():
-    # subject -> (book, chapter) -> {"n": int, "teachers": Counter, "ex": []}
-    acc = defaultdict(lambda: defaultdict(lambda: {"n": 0, "t": Counter(), "ex": []}))
+    # subject -> (book, chapter) -> row dict
+    acc = defaultdict(lambda: defaultdict(
+        lambda: {"class_n": 0, "exam_n": 0, "da_n": 0,
+                 "t": Counter(), "ex": []}))
     for line in open(CHUNKS, encoding="utf-8"):
         c = json.loads(line)
         m = re.match(r"b(\d+)-c(\d+)-", c["id"])
@@ -48,57 +62,87 @@ def main():
             continue
         b, ch = int(m.group(1)), int(m.group(2))
         for sent in sentences(c["text"]):
-            if not LESSON.search(sent):
-                continue
             teachers = set(TEACHER_CUE.findall(sent))
-            if DADA_TEXT.search(sent):
+            da_subject = bool(DADA_TEXT.search(sent))
+            char_subject = bool(CHARMS_TEXT.search(sent))
+            lesson = bool(LESSON.search(sent))
+            exam = bool(EXAM_CUE.search(sent))
+            da = bool(DA_CUE.search(sent))
+            if lesson and (da_subject or (teachers & DADA_TEACHER_NAMES)):
                 row = acc["DADA"][(b, ch)]
-                row["n"] += 1
+                row["class_n"] += 1
                 for t in teachers:
                     row["t"][t] += 1
-                if len(row["ex"]) < 3:
-                    row["ex"].append((c["id"], sent.strip()[:170]))
-            if CHARMS_TEXT.search(sent) or "Flitwick" in teachers:
+                if len(row["ex"]) < 4:
+                    row["ex"].append(("class", c["id"], sent.strip()))
+            elif da_subject and exam:
+                row = acc["DADA"][(b, ch)]
+                row["exam_n"] += 1
+                if len(row["ex"]) < 4:
+                    row["ex"].append(("exam", c["id"], sent.strip()))
+            elif da_subject and da:
+                row = acc["DADA"][(b, ch)]
+                row["da_n"] += 1
+                if len(row["ex"]) < 4:
+                    row["ex"].append(("da", c["id"], sent.strip()))
+            elif da and not (da_subject and lesson):
+                row = acc["DADA"][(b, ch)]
+                row["da_n"] += 1
+                if len(row["ex"]) < 4:
+                    row["ex"].append(("da", c["id"], sent.strip()))
+            if lesson and (char_subject or "Flitwick" in teachers):
                 row = acc["Charms"][(b, ch)]
-                row["n"] += 1
+                row["class_n"] += 1
                 for t in teachers:
                     row["t"][t] += 1
-                if len(row["ex"]) < 3:
-                    row["ex"].append((c["id"], sent.strip()[:170]))
+                if len(row["ex"]) < 4:
+                    row["ex"].append(("class", c["id"], sent.strip()))
+            elif char_subject and exam:
+                row = acc["Charms"][(b, ch)]
+                row["exam_n"] += 1
+                if len(row["ex"]) < 4:
+                    row["ex"].append(("exam", c["id"], sent.strip()))
+
+    def best_tier(row):
+        if row["class_n"] >= 2:
+            return "class", row["class_n"]
+        if row["exam_n"] >= 2:
+            return "exam", row["exam_n"]
+        if row["da_n"] >= 1:
+            return "da", row["da_n"]
+        return None, 0
 
     with open(OUT, "w", encoding="utf-8") as out:
+        out.write("# DADA + Charms lesson-table review (machine proposal)\n\n")
+        out.write("tier: class = taught-in-class (decisive); exam = used-in-"
+                  "exam-\ncontext (strong); da = DA/dueling practice (exam-"
+                  "adjacent).\nKeep or strike each row; teacher X = cue-name "
+                  "winner, year\nroster is the DADA cross-check.\n\n")
         for subj in ("DADA", "Charms"):
-            out.write(f"# {subj} lesson-table review (machine proposal)\n\n")
-            out.write("Approve each row or strike it. Teacher column: X = "
-                      "cue-mention\nwinner, and for DADA the book-year roster "
-                      "is the check.\n\n")
-            out.write("| keep | chapter | n | teacher (inferred) | year roster "
-                      "| evidence |\n")
-            out.write("|---|---|---:|---|---|---|\n")
-            items = sorted(acc[subj].items(), key=lambda x: (x[0][0], -x[1]["n"]))
+            out.write(f"\n## {subj}\n\n")
+            out.write("| keep | chapter | tier | n | teacher (inferred) | "
+                      "year roster | evidence |\n")
+            out.write("|---|---|---|---:|---|---|---|\n")
+            items = sorted(acc[subj].items(), key=lambda x: (x[0][0], x[0][1]))
             quotes = []
             for (b, ch), row in items:
-                if row["n"] < 2:
+                tier, n = best_tier(row)
+                if tier is None:
                     continue
-                top_t = row["t"].most_common(1)[0] if row["t"] else ("?", 0)
-                roster = DADA_TEACHERS.get(b, "") if subj == "DADA" else "Flitwick"
+                top_t = row["t"].most_common(1)[0][0] if row["t"] else "?"
+                roster = DADA_TEACHERS.get(b, "") if subj == "DADA" else \
+                    "Flitwick"
                 refs = " ".join(f"`{i+1}.{cid}`"
-                                for i, (cid, _) in enumerate(row["ex"]))
-                out.write(
-                    f"| [ ] | b{b} c{ch} | {row['n']} | {top_t[0]} ({top_t[1]}) "
-                    f"| {roster} | {refs} |\n"
-                )
-                for i, (cid, q) in enumerate(row["ex"]):
-                    flat = " ".join(q.split())[:150]
-                    quotes.append((b, ch, i, cid, flat))
-            out.write("\n## Evidence quotes\n\n")
-            for b, ch, i, cid, q in quotes:
-                out.write(f"- b{b} c{ch} {i+1} `{cid}`: \"{q}\"\n")
-            out.write("\n## Dropped from view (n<2 cue sentences)\n\n")
-            low = [f"b{b}c{ch}({r['n']})" for (b, ch), r in items if r["n"] < 2]
-            out.write(", ".join(low) + "\n\n")
-    print(f"rows written: DADA={sum(1 for r in acc['DADA'].values() if r['n'] >= 2)} "
-          f"Charms={sum(1 for r in acc['Charms'].values() if r['n'] >= 2)}")
+                                for i, (_, cid, _) in enumerate(row["ex"]))
+                out.write(f"| [ ] | b{b} c{ch} | {tier} | {n} | {top_t} "
+                          f"| {roster} | {refs} |\n")
+                for i, (tname, cid, q) in enumerate(row["ex"]):
+                    flat = " ".join(q.split())[:140]
+                    quotes.append((b, ch, i, tname, cid, flat))
+            out.write("\n### Evidence quotes\n\n")
+            for b, ch, i, tname, cid, q in quotes:
+                out.write(f"- b{b} c{ch} {i+1} [{tname}] `{cid}`: \"{q}\"\n")
+            print(f"{subj}: {sum(1 for _, r in items if best_tier(r)[0])} rows")
     print(f"wrote {OUT}")
 
 
