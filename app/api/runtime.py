@@ -13,7 +13,6 @@ from app.agent.persona import PERSONA
 from app.config import Settings
 from app.knowledge import LoreStore, load_lore
 from app.knowledge.packs import PackSummary, load_pack_summaries
-from app.pipeline.index.builder import load_chunks
 from app.pipeline.retrieve import compose_retriever
 from app.providers.contracts import Llm, Retriever
 from app.providers.factory import make_embedder, make_llm, make_reranker
@@ -78,9 +77,10 @@ async def build_runtime(settings: Settings) -> Runtime:
         )
     packs: tuple[PackSummary, ...] = ()
     if settings.subjects_path is not None and settings.subjects_path.is_dir():
-        chunks = {chunk.id: chunk for chunk in load_chunks(settings.chunks_path)}
         packs = tuple(
-            load_pack_summaries(settings.subjects_path, chunks, setup.text_hash)
+            load_pack_summaries(
+                settings.subjects_path, setup.chunks_by_id, setup.text_hash
+            )
         )
         logger.info(
             "subject packs loaded: %s",

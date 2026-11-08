@@ -38,6 +38,7 @@ BASIS_PRECEDENCE = (
     "taxonomy-prior",
     "author-pick",
 )
+MAX_CHAPTERS = {1: 17, 2: 18, 3: 22, 4: 37, 5: 38, 6: 30, 7: 36}
 FAMILIES = frozenset({"magic", "thing", "creature", "place", "event"})
 _POTIONISH = re.compile(r"draught|essence|potion|elixir|balm|solution|antidote", re.I)
 _UNSAFE_ID = re.compile(r"[^a-z0-9._-]+")
@@ -72,6 +73,8 @@ def load_lesson_table(path: Path) -> tuple[LessonRow, ...]:
             raise ValueError(f"lesson row {key[0]}-{key[1]}: unknown subject")
         if key[0] not in NOVEL_BOOKS or key[1] < 1:
             raise ValueError(f"lesson row {key[0]}-{key[1]}: bad chapter")
+        if key[1] > MAX_CHAPTERS[key[0]]:
+            raise ValueError(f"lesson row {key[0]}-{key[1]}: chapter out of range")
         if r.get("basis") not in BASIS_PRECEDENCE:
             raise ValueError(f"lesson row {key[0]}-{key[1]}: unknown basis")
         teacher = str(r.get("teacher", ""))
@@ -260,6 +263,10 @@ def build_seeds(
         a["chapters"].add((book, chapter))
         a["bases"].append(lesson)
         for cand in row.get("candidates", ()):
+            # The #127 resolver writes books-bucket candidates only. Carry the
+            # bucket when present so an upstream change cannot silently widen
+            # the pack's source policy; absent means the resolver's books-only
+            # default.
             ref = SourceRef(
                 chunk_id=cand["chunk_id"], book=book, chapter=chapter,
                 quote=cand["phrase"], text_hash=cand["text_hash"],

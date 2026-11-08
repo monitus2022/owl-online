@@ -11,7 +11,9 @@ async def test_build_runtime_passes_the_retrieval_settings(monkeypatch, tmp_path
 
     async def fake_compose(*args, **kwargs):
         captured["subquery_quota"] = kwargs["subquery_quota"]
-        return SimpleNamespace(retriever=object(), dims=1024, text_hash="hash")
+        return SimpleNamespace(
+            retriever=object(), dims=1024, text_hash="hash", chunks_by_id={}
+        )
 
     def fake_build_graph(retriever, llm, **kwargs):
         captured["max_retries"] = kwargs["max_retries"]
@@ -56,14 +58,15 @@ async def test_build_runtime_loads_published_pack_summaries(monkeypatch, tmp_pat
     )
 
     async def fake_compose(*args, **kwargs):
-        return SimpleNamespace(retriever=object(), dims=1024, text_hash="hash")
+        return SimpleNamespace(
+            retriever=object(), dims=1024, text_hash="hash", chunks_by_id={}
+        )
 
     monkeypatch.setattr(runtime_module, "compose_retriever", fake_compose)
     monkeypatch.setattr(runtime_module, "make_embedder", lambda *a, **k: object())
     monkeypatch.setattr(runtime_module, "make_reranker", lambda *a, **k: object())
     monkeypatch.setattr(runtime_module, "make_llm", lambda *a, **k: object())
     monkeypatch.setattr(runtime_module, "build_graph", lambda *a, **k: object())
-    monkeypatch.setattr(runtime_module, "load_chunks", lambda *a, **k: [])
     monkeypatch.setattr(
         runtime_module, "load_pack_summaries", lambda *a, **k: [summary]
     )

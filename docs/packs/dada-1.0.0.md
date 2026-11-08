@@ -67,3 +67,7 @@ uv run python scripts/build_seeds.py --subject dada --index-hash auto
 uv run python scripts/author_dada_units.py   # refuses a published pack without --force
 uv run python scripts/run_eval.py --check
 ```
+
+A rebuild with `--force` writes a reviewed draft, not the published 1.0.0
+artifact. Publication is the separate maintainer step recorded in
+`data/subjects/dada/PUBLISH.md` (local, gitignored, in the data backup).

@@ -99,19 +99,20 @@ def test_lesson_table_rejects_duplicate_and_bad_basis(tmp_path: Path):
         load_lesson_table(p)
 
 
-def test_committed_dada_table_is_consistent():
-    table = Path(__file__).resolve().parents[1] / "config" / "lessons" / "dada.jsonl"
-    rows = load_lesson_table(table)
-    keys = [(row.book, row.chapter) for row in rows]
-    assert len(keys) == len(set(keys))
-    for row in rows:
-        if row.basis == "author-pick":
-            assert row.reason.strip(), f"b{row.book}c{row.chapter} needs a reason"
-        if row.basis == "taught-in-class":
-            assert not row.teacher.startswith("none"), f"b{row.book}c{row.chapter}"
-            assert "unassigned" not in row.teacher, f"b{row.book}c{row.chapter}"
-        if row.book == 6:
-            assert "Dumbledore's Army" not in row.reason
+def test_committed_lesson_tables_are_consistent():
+    root = Path(__file__).resolve().parents[1] / "config" / "lessons"
+    for name in ("dada", "charms"):
+        rows = load_lesson_table(root / f"{name}.jsonl")
+        keys = [(row.book, row.chapter) for row in rows]
+        assert len(keys) == len(set(keys)), name
+        for row in rows:
+            if row.basis == "author-pick":
+                assert row.reason.strip(), f"{name} b{row.book}c{row.chapter} needs a reason"
+            if row.basis == "taught-in-class":
+                assert not row.teacher.startswith("none"), f"{name} b{row.book}c{row.chapter}"
+                assert "unassigned" not in row.teacher, f"{name} b{row.book}c{row.chapter}"
+            if row.book == 6:
+                assert "Dumbledore's Army" not in row.reason
 
 
 def test_seeds_follow_approved_chapters(tmp_path: Path):
