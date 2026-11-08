@@ -297,9 +297,10 @@ b5c31 -> `b5-c31-0062`) and the rest `no-candidate` (mostly event/place
 entries whose titles are chapter names or formal geography, not verbatim
 phrases). The full-index `verify_edges` pass (0 problems) is the same check
 over everything, not just the sample. The human part - reading the sampled
-quotes against the books, per pilot subject - is pending on the PR review:
-until it is recorded here, this criterion is automated-met / human-pending,
-and #127 stays open.
+quotes against the books, per pilot subject - was not recorded before PR #159
+merged, so this criterion stands as automated-met / human-pending and the read
+is carried into the #128 DADA and Charms authoring review; when it happens it
+will be recorded here.
 
 Rules as planned: the incantation beats the title as match phrase (rare
 tokens; plural-tolerant word-boundary spans); book-level citations scan the
@@ -460,7 +461,9 @@ page, sidecar-backed), `harvest_failures.jsonl`, `invalid_chapters.jsonl`,
 | #127 resolver | code grammar, buckets, forward/reverse join, chunk candidate resolution, canon_index.jsonl, coverage report | validation rules above hold; disagreement queue non-empty and human-readable; spot-checks pass |
 | #128 pack wiring (depends on #87 schema landing) | pack build reads canon_index for concept seeding and reference/source-ref prefill; DADA and Charms pilots authored from it; attribution recorded | a reviewed DADA material cites both a Lexicon reference and a books-bucket source_ref that hash-validates |
 
-Tickets #125-#128 are open on GitHub under the V3 - Product milestone.
+#125 (PR #130), #126 (PR #148) and #127 (PR #159) are merged and closed.
+#128 is open under the V3 - Product milestone and is the active subject-pack
+step.
 
 ## Risks
 

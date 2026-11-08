@@ -51,20 +51,24 @@ page describes what comes next and why.
   client swap needs #38/#42; server-side records need #35.
 - #16's deterministic CI gate is merged; the required-check setting is the last
   step. #74 and #75 follow. #107 is deferred.
-- The Lexicon canon index (#125-#128) is the planned feed for the B1 packs: an
+- The Lexicon canon index (#125-#128) is the feed for the B1 packs: an
   item/concept-to-chapter mapping harvested as structure only from
   hp-lexicon.org, resolved to chunk candidates in our index. The plan of
-  record is `docs/lexicon-canon-index.md`. The #125 spike is complete on
-  branch `125/lexicon-spike` (draft PR #130). The #126 full harvest is done:
-  4,993 entries plus all 199 novel chapters, 22,797 valid books edges, 3
-  flagged broken-href edges, 3 page failures (all site meta pages); results and
-  the chapter-title cross-check are in the plan doc's Harvest results section;
-  the branch awaits review. #127 (resolver) is delivered on branch
-  `127/lexicon-resolver`: 19,747 canon edges joined and resolved to 22,611
-  retained chunk candidates (id + text hash + span, in-pool, 0 integrity
-  failures enforced by the build itself, 0 skipped urls), agreement labels
-  and the sidebar disagreement queue recorded, deterministic review sample
-  with the human read pending on the PR. #128 (pack wiring) is next.
+  record is `docs/lexicon-canon-index.md`. The chain has landed: the #125
+  spike merged as PR #130, the #126 full harvest as PR #148 (4,993 entries
+  plus all 199 novel chapters, 22,797 valid books edges, 3 flagged broken-href
+  edges, 3 page failures, all site meta pages; results and the chapter-title
+  cross-check are in the plan doc's Harvest results) and the #127 resolver as
+  PR #159 (19,747 canon edges joined and resolved to 22,611 retained chunk
+  candidates - id + text hash + span, in-pool, 0 integrity failures enforced
+  by the build itself, 0 skipped urls - with agreement labels and the sidebar
+  disagreement queue recorded; see the Resolver results section). The
+  resolver's spot-check is machine-checked and recorded; the human read of the
+  sampled quotes was not recorded before that merge, so the criterion stays
+  automated-met / human-pending and is carried into the #128 DADA and Charms
+  authoring review. #128 (pack wiring: concept seeding, reference and
+  source-ref prefill, chapter-to-subject lesson table) is the active subject
+  pack step; the #87 pack schema and validator landed with PR #153.
 - V2.5 subject packs and the exam bank follow the answer path and #97.
 
 ## Product shape
@@ -242,13 +246,15 @@ bank and hybrid grader on top of them.
 
 ### B1: Subject knowledge packs
 
-Status: schema and validation landed on #87 (`app/knowledge/taxonomy.py`,
-`materials.py`, `packs.py`, `OWL_SUBJECTS_PATH`, 23 tests): the 12-subject
-taxonomy, Topic/Concept/Material/SourceRef/ReferenceLink records, the
-`data/subjects/<subject>/` layout, the deterministic corpus-join validator and
-the rebuild fingerprint. Remaining on #87: the extraction build pipeline (uses
-the #127 canon-index resolution to draft candidate source refs), the DADA
-content pass, and the coverage report as a script.
+Status: schema and validation merged on #87 (PR #153:
+`app/knowledge/taxonomy.py`, `materials.py`, `packs.py`, `OWL_SUBJECTS_PATH`,
+23 tests): the 12-subject taxonomy, Topic/Concept/Material/SourceRef/
+ReferenceLink records, the `data/subjects/<subject>/` layout, the
+deterministic corpus-join validator and the rebuild fingerprint. Remaining
+on #87: the extraction build pipeline (uses the #127 canon-index resolution
+to draft candidate source refs - ticketed as #128, active), the DADA content
+pass (pending the maintainer's DADA scope and material titles) and the
+coverage report as a script.
 
 A pack is the single source of truth for one O.W.L. subject. Exam generation and
 lesson mode read from packs, not from free model memory.
@@ -552,6 +558,7 @@ persists exam attempts and chat history.
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
 | #87 | Subject packs: schema and validation landed; extraction build and DADA content open | V3 - Product |
+| #128 | Lexicon canon index: pack wiring, concept seeding, DADA and Charms pilots | V3 - Product |
 
 ### Next
 
