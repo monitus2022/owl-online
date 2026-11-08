@@ -250,7 +250,9 @@ Status: schema and validation merged on #87 (PR #153:
 `app/knowledge/taxonomy.py`, `materials.py`, `packs.py`, `OWL_SUBJECTS_PATH`,
 23 tests): the 12-subject taxonomy, Topic/Concept/Material/SourceRef/
 ReferenceLink records, the `data/subjects/<subject>/` layout, the
-deterministic corpus-join validator and the rebuild fingerprint. Remaining
+deterministic corpus-join validator and the rebuild fingerprint. The
+chapter-to-subject lesson table for the DADA and Charms pilots is approved
+and compiled at `config/lessons/` (2026-11-08). Remaining
 on #87: the extraction build pipeline (uses the #127 canon-index resolution
 to draft candidate source refs - ticketed as #128, active), the DADA content
 pass (pending the maintainer's DADA scope and material titles) and the

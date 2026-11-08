@@ -15,6 +15,7 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
+REPO = Path(__file__).resolve().parents[1]
 CHUNKS = "/Users/tc/Documents/Github/owl-online/data/chunks.jsonl"
 OUT = "/Users/tc/Documents/Github/owl-128/data/lessons_review_dada_charms.md"
 
@@ -158,6 +159,51 @@ def main():
         return out
 
     seeded = lex_seeded()
+
+    table_paths = {
+        "DADA": REPO / "config" / "lessons" / "dada.jsonl",
+        "Charms": REPO / "config" / "lessons" / "charms.jsonl",
+    }
+    basis_map = {
+        "class": ("taught-in-class", ""),
+        "exam": ("used-in-exam-context", ""),
+        "da-army": ("author-pick", "Dumbledore's Army practical chapters; "
+                    "kept on scarcity grounds (2026-11-08 maintainer decision)"),
+        "duel-club": ("author-pick", "dueling-club scene; extracurricular "
+                      "defensive practice, kept on scarcity grounds"),
+    }
+    dada_teacher = {1: "Quirrell", 2: "Lockhart", 3: "Lupin",
+                    4: "Moody (Bartemius Crouch Jr.)", 5: "Umbridge",
+                    6: "unassigned classroom (Dumbledore private lessons "
+                       "separately)", 7: "none (wartime)"}
+    for subj in ("DADA", "Charms"):
+        rows_out = []
+        for (b, ch), row in acc[subj].items():
+            tier, n = best_tier(row)
+            if tier is None:
+                continue
+            basis, reason = basis_map[tier]
+            s_all, s_ver, s_top = seeded.get((b, ch), (0, 0, []))
+            rec = {
+                "book": b, "chapter": ch, "subject": subj.lower(),
+                "teacher": (dada_teacher.get(b) or "Flitwick")
+                           if subj == "DADA" else "Flitwick",
+                "basis": basis, "reason": reason, "cue_sentences": n,
+                "evidence_chunk_ids": [cid for _, cid, _ in row["ex"]],
+                "seeded_entries": s_all, "seeded_verified": s_ver,
+                "key_concepts": s_top,
+                "status": "approved", "approved_by": "maintainer",
+                "approved_on": "2026-11-08",
+            }
+            if subj == "DADA" and b == 3 and ch in (9, 10):
+                rec["teacher_note"] = "Snape substituting for Lupin (ill)"
+            rows_out.append(rec)
+        path = table_paths[subj]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8") as fh:
+            for rec in sorted(rows_out, key=lambda r: (r["book"], r["chapter"])):
+                fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        print(f"lesson table: {path} rows={len(rows_out)}")
 
     with open(OUT, "w", encoding="utf-8") as out:
         out.write("# DADA + Charms lesson-table review (machine proposal)\n\n")

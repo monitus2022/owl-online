@@ -243,6 +243,16 @@ classroom evidence is scarce, and the D.A. chapters document which defensive
 spells the books treat as the practical core. The labels keep the precedence
 honest - practice tiers inform membership, they never define it.
 
+Approval (2026-11-08): the maintainer reviewed the seeded, key-concepts form
+and approved the full draft list - 51 DADA and 11 Charms rows - on the
+grounds that the per-chapter context is rich and classroom evidence is
+scarce. The approved table is compiled, structure-only, to
+`config/lessons/dada.jsonl` and `config/lessons/charms.jsonl` with basis,
+reason, evidence chunk ids, seed counts and approval metadata per row. The
+coverage report remains the feedback loop: an approved row that seeds
+nothing when the materials are authored is struck then, with the record
+updated.
+
 Scope-first keeps the problem tractable. A pack declares its topics (the workplan
 already fixes the DADA scope list), so we only ever assign items relevant to
 those topics. We never classify all ~400 magic and ~2,000 thing entries into
