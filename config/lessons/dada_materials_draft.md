@@ -8,12 +8,13 @@ config/lessons/dada.jsonl.
 
 ## Authoring status (2026-11-08)
 
-Pack 0.3.0 in `data/subjects/dada/` now holds Units 1-8 as three materials
-each (Unit 5 has four): 25 materials, 21 concepts, 4 topics. All validate
-`ok=True`; the only warnings are `review_status=draft`, which the maintainer
-clears by prose review. The full review sheets are `UNIT1_REVIEW.md` and
+Pack 1.0.0 in `data/subjects/dada/` is published: Units 1-8 as three
+materials each (Unit 5 has four), 25 materials, 21 concepts, 4 topics.
+Validation is `ok=True` with zero warnings; the maintainer approved the prose
+on 2026-11-08. The pack fingerprint is `90f0c95550196b77` and
+`GET /v1/subjects` serves it. The full review sheets are `UNIT1_REVIEW.md` and
 `UNITS_REVIEW.md` in the pack directory (gitignored, included in the data
-backup).
+backup); `PUBLISH.md` records the publication.
 
 | Unit | Materials | Concepts |
 |---|---|---|
@@ -31,11 +32,13 @@ chunk):
 
 - Unit 3's pixie lesson is `b2 c06`, not `b2 c10`; `b2 c10` is Lockhart's
   werewolf theatre and belongs to Unit 4.
-- Unit 4 covers recognition, law and fear. Restraint needs `b3 c18`
-  (Wolfsbane, full moon) and `b5 c22` (the bite has no cure); neither is an
-  approved row, so no containment claim is made.
-- Unit 5 does not use `b6 c15` for the Unbreakable Vow: the explanation is in
-  `b6 c02`, which is not an approved row.
+- Unit 4 covers recognition, law and fear. The restraint rows `b3 c18`
+  (Wolfsbane, full moon) and `b5 c22` (the bite has no cure) were approved and
+  added to the lesson table on 2026-11-08; the restraint material is ready
+  for the next authoring batch.
+- Unit 5 does not use `b6 c15` for the Unbreakable Vow: the ceremony is in
+  `b6 c02`, now approved, but the consequence ("you die") is in `b6 c16`,
+  which still needs a row before the material can be complete.
 - The `b6 c09` strike candidate is overturned: `b6-c09-0029` is Snape's
   defence doctrine and `b6-c09-0036` is a Shield Charm, both DADA.
 - The b6 rows' shared reason ("Dumbledore's Army practical chapters") is
@@ -96,7 +99,8 @@ Alternatives considered and their evidence status:
   his teaching as failure; the chapters stay in the table for coverage, no
   standalone unit. The troll incident supports Unit 3.
 
-Maintainer action: review the prose in `UNITS_REVIEW.md`, rule on the gap
-rows (b3 c18 and b5 c22 unlock Unit 4's containment material; b5 c31
-unlocks Unit 7's exam practical; b6 c02 unlocks the Unbreakable Vow), then
-flip the materials to `reviewed` and publish the pack.
+Maintainer action: the prose is approved and the pack is published. The next
+authoring batch can add the three gap materials now that the rows exist:
+Unit 4 restraint (`b3 c18`, `b5 c22`), Unit 7's O.W.L. practical (`b5 c31`)
+and Unit 5's Unbreakable Vow (needs `b6 c16` for the consequence). Each will
+start as `draft` and go through the same review gate.

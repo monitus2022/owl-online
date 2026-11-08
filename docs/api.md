@@ -1,12 +1,12 @@
 # API
 
-The served surface is FastAPI. The current contract is unversioned; the planned
-`/v1` aliases are listed below. The academy frontend has already split into
-its own static build (`web/`, served on Cloudflare Pages) and calls these
-unversioned routes today, relying on the CORS origin regex and the session
-cookie; the versioned aliases gate the next steps - the per-subject chat
-field, the exam endpoints, and any custom domain that must pin its CORS
-origin.
+The served surface is FastAPI. The current contract is unversioned except for
+`GET /v1/subjects`; the remaining planned `/v1` aliases are listed below. The
+academy frontend has already split into its own static build (`web/`, served on
+Cloudflare Pages) and calls the unversioned chat routes today, relying on the
+CORS origin regex and the session cookie; the versioned aliases gate the next
+steps - the per-subject chat field, the exam endpoints, and any custom domain
+that must pin its CORS origin.
 
 Base URL: the deployment origin, for example `https://api.monitus.org`.
 
@@ -16,6 +16,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 |---|---|---|
 | `GET` | `/health` | liveness; returns `{"status": "ok"}` |
 | `GET` | `/` | the static chat page |
+| `GET` | `/v1/subjects` | published subject packs |
 | `POST` | `/ask` | one-shot grounded answer |
 | `POST` | `/ask/stream` | chat over server-sent events |
 
@@ -77,6 +78,34 @@ The response is `text/event-stream`. Events:
 `reset` and render `final` when it arrives. Once the stream has started, a
 provider failure is an `error` event, not an HTTP status.
 
+### `GET /v1/subjects`
+
+Returns the published subject packs the server can serve. A draft, broken or
+unreadable pack is skipped, never served; a host with no packs returns an empty
+list. The server loads and validates packs once at startup, so this route is a
+read of the in-process summary and does not touch the corpus.
+
+Response `200`:
+
+```json
+{
+  "subjects": [
+    {
+      "subject": "dada",
+      "title": "Defence Against the Dark Arts",
+      "tier": "owl",
+      "version": "1.0.0",
+      "status": "published",
+      "built_at": "2026-11-08T14:48:30Z",
+      "fingerprint": "90f0c95550196b77",
+      "topics": ["dark-arts", "dark-creatures", "defensive-magic", "dueling"],
+      "concepts": 21,
+      "materials": 25
+    }
+  ]
+}
+```
+
 ## Errors
 
 | Status | Shape | When |
@@ -115,7 +144,6 @@ room and the records.
 | Method | Path | Status | Purpose |
 |---|---|---|---|
 | `GET` | `/v1/persona` | planned | persona summary: name, subject, school, boundaries |
-| `GET` | `/v1/subjects` | planned | available subjects and packs |
 | `POST` | `/v1/chat` | planned alias of `/ask` | one-shot grounded answer |
 | `POST` | `/v1/chat/stream` | planned alias of `/ask/stream` | SSE chat |
 | `GET` | `/v1/exams` | planned | papers, filtered by subject and version |

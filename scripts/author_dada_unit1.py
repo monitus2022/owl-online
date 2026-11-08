@@ -26,6 +26,7 @@ from app.knowledge.packs import (  # noqa: E402
     PackManifest,
     SubjectPack,
     Topic,
+    load_subject_pack,
     validate_pack,
     write_subject_pack,
 )
@@ -220,6 +221,14 @@ def main() -> int:
     if not result.ok:
         return 1
     out = REPO / "data/subjects/dada"
+    if (out / "pack.toml").exists():
+        existing = load_subject_pack(out)
+        if existing.manifest.status == "published" and "--force" not in sys.argv:
+            print(
+                f"{out} holds a published pack; pass --force to rebuild it as a draft",
+                file=sys.stderr,
+            )
+            return 1
     write_subject_pack(pack, out)
     print(f"pack written to {out}")
 

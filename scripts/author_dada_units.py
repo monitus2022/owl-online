@@ -797,6 +797,12 @@ def reference_from_seed(seed: dict) -> ReferenceLink | None:
 def main() -> int:
     out = REPO / "data/subjects/dada"
     pack = load_subject_pack(out)
+    if pack.manifest.status == "published" and "--force" not in sys.argv:
+        print(
+            f"{out} holds a published pack; pass --force to rebuild it as a draft",
+            file=sys.stderr,
+        )
+        return 1
     seeds = {
         s["concept_id"]: s
         for s in (

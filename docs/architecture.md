@@ -203,12 +203,12 @@ flowchart TD
 ## API surface
 
 The served contract is documented in `docs/api.md`: the current `/health`,
-`/ask` and `/ask/stream` routes, the SSE event schema, the error shapes, and the
-planned `/v1` surface for chat, persona, subjects, exams and grading. The split
-is by purpose, not by subject: a subject is request data, chat intents stay
-internal, and the exam bank and grading are separate resources. The versioned
-aliases gate per-subject chat and the exam surface; the frontend already ships
-as its own static build.
+`/ask`, `/ask/stream` and `/v1/subjects` routes, the SSE event schema, the
+error shapes, and the planned `/v1` surface for chat, persona, exams and
+grading. The split is by purpose, not by subject: a subject is request data,
+chat intents stay internal, and the exam bank and grading are separate
+resources. The versioned aliases gate per-subject chat and the exam surface;
+the frontend already ships as its own static build.
 
 ## Frontend surface
 

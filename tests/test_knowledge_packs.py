@@ -14,9 +14,11 @@ from app.knowledge.materials import Material, ReferenceLink, SourceRef, chunk_te
 from app.knowledge.packs import (
     Concept,
     PackManifest,
+    PackSummary,
     SubjectPack,
     Topic,
     index_chunks,
+    load_pack_summaries,
     load_subject_pack,
     pack_fingerprint,
     validate_pack,
@@ -464,3 +466,64 @@ def test_published_pack_requires_reviewed_material():
         }
     )
     assert validate_pack(reviewed, index_chunks([chunk]), INDEX_HASH).ok
+
+
+def _published_pack(chunks: list[Chunk], version: str = "1.0.0") -> SubjectPack:
+    pack = _pack(chunks)
+    return pack.model_copy(
+        update={
+            "manifest": pack.manifest.model_copy(
+                update={
+                    "version": version,
+                    "status": "published",
+                    "built_at": "2026-11-08T00:00:00Z",
+                }
+            ),
+            "materials": [
+                material.model_copy(update={"review_status": "reviewed"})
+                for material in pack.materials
+            ],
+        }
+    )
+
+
+def test_load_pack_summaries_serves_published_only(tmp_path):
+    chunks = [_chunk("b1-c01-0000", "Rowan whispers laughter.", 1, 1)]
+    subjects = tmp_path / "subjects"
+    write_subject_pack(_published_pack(chunks), subjects / "dada")
+    draft = _pack(chunks)
+    write_subject_pack(draft, subjects / "charms")
+
+    summaries = load_pack_summaries(subjects, index_chunks(chunks), INDEX_HASH)
+    assert [summary.subject for summary in summaries] == ["dada"]
+    summary = summaries[0]
+    assert isinstance(summary, PackSummary)
+    assert summary.title == "Defence Against the Dark Arts"
+    assert summary.version == "1.0.0"
+    assert summary.status == "published"
+    assert summary.concepts == 1
+    assert summary.materials == 1
+    assert summary.topics == ("dada.levitation",)
+    assert summary.fingerprint == pack_fingerprint(_published_pack(chunks))
+
+
+def test_load_pack_summaries_skips_invalid_pack(tmp_path):
+    chunks = [_chunk("b1-c01-0000", "Rowan whispers laughter.", 1, 1)]
+    subjects = tmp_path / "subjects"
+    broken = _published_pack(chunks)
+    bad_ref = broken.materials[0].source_refs[0].model_copy(
+        update={"quote": "not in the chunk"}
+    )
+    broken = broken.model_copy(
+        update={
+            "materials": [
+                broken.materials[0].model_copy(update={"source_refs": [bad_ref]})
+            ]
+        }
+    )
+    write_subject_pack(broken, subjects / "dada")
+    assert load_pack_summaries(subjects, index_chunks(chunks), INDEX_HASH) == []
+
+
+def test_load_pack_summaries_absent_path():
+    assert load_pack_summaries(None, {}, INDEX_HASH) == []

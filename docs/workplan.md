@@ -252,11 +252,13 @@ Status: schema and validation merged on #87 (PR #153:
 ReferenceLink records, the `data/subjects/<subject>/` layout, the
 deterministic corpus-join validator and the rebuild fingerprint. The
 chapter-to-subject lesson table for the DADA and Charms pilots is approved
-and compiled at `config/lessons/` (2026-11-08). Remaining
-on #87: the extraction build pipeline (uses the #127 canon-index resolution
-to draft candidate source refs - ticketed as #128, active), the DADA content
-pass (pending the maintainer's DADA scope and material titles) and the
-coverage report as a script.
+and compiled at `config/lessons/` (2026-11-08). The DADA pilot pack is
+authored, reviewed and published: 25 materials, 21 concepts, 4 topics,
+version 1.0.0, fingerprint `90f0c95550196b77`, and `GET /v1/subjects`
+serves published packs. Remaining on #87: the extraction build pipeline
+(uses the #127 canon-index resolution to draft candidate source refs -
+ticketed as #128, active), the Charms content pass and the coverage report
+as a script.
 
 A pack is the single source of truth for one O.W.L. subject. Exam generation and
 lesson mode read from packs, not from free model memory.
