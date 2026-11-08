@@ -12,6 +12,7 @@ the approved table committed later is structure-only.
 import json
 import re
 from collections import Counter, defaultdict
+from pathlib import Path
 
 CHUNKS = "/Users/tc/Documents/Github/owl-online/data/chunks.jsonl"
 OUT = "/Users/tc/Documents/Github/owl-128/data/lessons_review_dada_charms.md"
@@ -112,17 +113,40 @@ def main():
             return "da", row["da_n"]
         return None, 0
 
+    def lex_seeded() -> dict[tuple[int, int], tuple[int, int]]:
+        """(entries with edges, entries with verified candidates) per chapter."""
+        path = Path("/Users/tc/Documents/Github/owl-128/data/lexicon/"
+                    "canon_index.jsonl")
+        if not path.exists():
+            return {}
+        seen: dict[tuple[int, int], tuple[set, set]] = {}
+        for line in path.open(encoding="utf-8"):
+            e = json.loads(line)
+            if e.get("chapter") is None:
+                continue
+            key = (e["book"], e["chapter"])
+            allk, ver = seen.setdefault(key, (set(), set()))
+            allk.add(e["entry_key"])
+            if e.get("candidates"):
+                ver.add(e["entry_key"])
+        return {k: (len(v[0]), len(v[1])) for k, v in seen.items()}
+
+    seeded = lex_seeded()
+
     with open(OUT, "w", encoding="utf-8") as out:
         out.write("# DADA + Charms lesson-table review (machine proposal)\n\n")
         out.write("tier: class = taught-in-class (decisive); exam = used-in-"
                   "exam-\ncontext (strong); da = DA/dueling practice (exam-"
                   "adjacent).\nKeep or strike each row; teacher X = cue-name "
-                  "winner, year\nroster is the DADA cross-check.\n\n")
+                  "winner, year\nroster is the DADA cross-check. `seeded` = "
+                  "Lexicon entries with\nedges to the chapter / entries with "
+                  "hash-verified chunk\ncandidates (0/0 rows still stand on "
+                  "book evidence alone).\n\n")
         for subj in ("DADA", "Charms"):
             out.write(f"\n## {subj}\n\n")
             out.write("| keep | chapter | tier | n | teacher (inferred) | "
-                      "year roster | evidence |\n")
-            out.write("|---|---|---|---:|---|---|---|\n")
+                      "year roster | seeded | evidence |\n")
+            out.write("|---|---|---|---:|---|---|---|---|\n")
             items = sorted(acc[subj].items(), key=lambda x: (x[0][0], x[0][1]))
             quotes = []
             for (b, ch), row in items:
@@ -134,8 +158,9 @@ def main():
                     "Flitwick"
                 refs = " ".join(f"`{i+1}.{cid}`"
                                 for i, (_, cid, _) in enumerate(row["ex"]))
+                s_all, s_ver = seeded.get((b, ch), (0, 0))
                 out.write(f"| [ ] | b{b} c{ch} | {tier} | {n} | {top_t} "
-                          f"| {roster} | {refs} |\n")
+                          f"| {roster} | {s_all}/{s_ver} | {refs} |\n")
                 for i, (tname, cid, q) in enumerate(row["ex"]):
                     flat = " ".join(q.split())[:140]
                     quotes.append((b, ch, i, tname, cid, flat))
