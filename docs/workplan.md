@@ -566,8 +566,8 @@ persists exam attempts and chat history.
 | #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
 | #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
-| #87 | Subject packs: schema and validation landed; extraction build and DADA content open | V3 - Product |
-| #128 | Lexicon canon index: pack wiring, concept seeding, DADA and Charms pilots | V3 - Product |
+| #87 | Subject packs: DADA 1.0.0 published; extraction build and Charms content open | V3 - Product |
+| #128 | Lexicon canon index: pack wiring and seeding queues; DADA authored, Charms seeded, Charms content open | V3 - Product |
 
 ### Next
 

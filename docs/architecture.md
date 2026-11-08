@@ -651,8 +651,8 @@ generate) for the per-call detail.
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 
-Subject-knowledge types (schema landed on #87; the extraction build lands after the
-canon index resolves to chunk candidates, #127):
+Subject-knowledge types (schema landed on #87; the extraction build and DADA
+pack publication landed with #128):
 
 | Type | Module | Purpose |
 |---|---|---|

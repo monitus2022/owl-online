@@ -484,11 +484,12 @@ page, sidecar-backed), `harvest_failures.jsonl`, `invalid_chapters.jsonl`,
 | #125 spike | hand-pick ~25 spell and ~25 potion entries around the DADA and Charms pilot; save their HTML locally only; prototype the parse rules; settle DHE, bare parenthesials, multi-code bullets and the reverse-tab semantics; write synthetic fixtures from structure (markup skeleton, no site prose) | fixtures parse in tests; the hand sample shows a books/chapters mapping a reviewer agrees with; open questions closed in this doc |
 | #126 harvester | discovery, fetch, parse modules plus scripts/harvest_lexicon.py; cache, rate limit, resume; unit tests on synthetic fixtures | full polite crawl runs in one pass; entries, citations and chapter_index written; parse failure report under a stated budget |
 | #127 resolver | code grammar, buckets, forward/reverse join, chunk candidate resolution, canon_index.jsonl, coverage report | validation rules above hold; disagreement queue non-empty and human-readable; spot-checks pass |
-| #128 pack wiring (depends on #87 schema landing) | pack build reads canon_index for concept seeding and reference/source-ref prefill; DADA and Charms pilots authored from it; attribution recorded | a reviewed DADA material cites both a Lexicon reference and a books-bucket source_ref that hash-validates |
+| #128 pack wiring (depends on #87 schema landing) | pack build reads canon_index for concept seeding and reference/source-ref prefill; DADA authored and published, Charms seeded; attribution recorded | a reviewed DADA material cites both a Lexicon reference and a books-bucket source_ref that hash-validates |
 
 #125 (PR #130), #126 (PR #148) and #127 (PR #159) are merged and closed.
-#128 is open under the V3 - Product milestone and is the active subject-pack
-step.
+#128 is open under the V3 - Product milestone. The DADA pack is published at
+1.0.0 and the seeding queues are landed; the remaining work is the Charms
+content pass and the coverage report.
 
 ## Risks
 
