@@ -1,10 +1,10 @@
-"""Author DADA Unit 1 (Boggarts and the Banishing Spell) as a pack material.
+"""Author DADA Unit 1 (Boggarts and the Banishing Spell) as a material batch.
 
-Sample for maintainer review (#87/#128). The material text is Ashcombe's own
-prose; every claim carries an inline [chunk-id] and a matching SourceRef
-built from the resolver's verified candidates (hash + span already checked
-against the corpus). Review notes with the full passages land in the pack
-directory (gitignored; backed up via the owl-data bundle).
+Maintainer decisions 2026-11-08: materials are batched generously (several per
+unit, one centre each) and lesson mode assembles from them (see LESSON note in
+the review sheet). The material texts are Ashcombe's own prose; every claim
+carries an inline [chunk-id] with a matching SourceRef whose quote is
+reconstructed verbatim from the corpus at the resolver's recorded span.
 
   uv run python scripts/author_dada_unit1.py
 """
@@ -32,30 +32,73 @@ from app.knowledge.packs import (  # noqa: E402
 from app.pipeline.index.builder import load_chunks  # noqa: E402
 
 INDEX_HASH = "aca4c57462d449f5"
+ENTRIES = ("creature/boggart", "magic/boggart-banishing-spell")
 
-TEXT = (
-    "Boggarts favour dark, enclosed spaces: wardrobes, the gap beneath beds, "
-    "the cupboards under sinks [b3-c07-0036]. They are shape-shifters, taking "
-    "the form of whatever they think will frighten us most [b3-c07-0037], and "
-    "nobody knows what a boggart looks like when it is alone [b3-c07-0038] - "
-    "so the boggart teaches us about ourselves before it teaches us anything "
-    "else. The counter is the Banishing Charm, Riddikulus. The word alone is "
-    "not enough [b3-c07-0041]: you must picture the joke first, as Neville "
-    "did, dressing his tormentor in grandmother's vulture-topped hat and "
-    "handbag [b3-c07-0044], [b3-c07-0045]. We practise the word without wands, "
-    "then face the wardrobe one student at a time, wand raised; when one "
-    "succeeds, the boggart turns to the next [b3-c07-0050], [b3-c07-0051], "
-    "[b3-c07-0052], [b3-c07-0054]. Two warnings. Freezing is the common "
-    "failure: mouth the word silently and the shape keeps bearing down "
-    "[b3-c07-0050]. And the classroom is only rehearsal - the charm held in "
-    "real danger, dispelling a boggart wearing a dementor's shape "
-    "[b4-c31-0068], and even the most precise student can be undone when the "
-    "fear is a promised failure [b3-c16-0020]. The D.A. later used a boggart "
-    "as the fastest road to a Patronus [b5-c27-0034]; treat that as advanced "
-    "work, not the unit. A boggart closed Professor Lupin's practical "
-    "examinations for good reason [b3-c16-0018]: it tests everything this "
-    "unit is - recognition, nerve, and a clear image under pressure."
-)
+UNITS = [
+    {
+        "material_id": "dada-dark-creatures-boggarts-nature",
+        "concept": "dada-creature-boggart",
+        "kind": "creature",
+        "text": (
+            "A boggart is a shape-shifter: it takes the form of whatever it "
+            "thinks will frighten us most [b3-c07-0037], and nobody knows "
+            "what a boggart looks like when it is alone [b3-c07-0038]. It "
+            "favours dark, enclosed spaces - wardrobes, the gap beneath beds, "
+            "the cupboards under sinks; one once lodged in a grandfather "
+            "clock [b3-c07-0036]. Two consequences for the careful student. "
+            "First, the boggart's form is your own fear made visible; it "
+            "teaches you about yourself before it teaches you anything else "
+            "[b3-c07-0038]. Second, an unseen boggart has not yet chosen "
+            "what it will be - the danger is decided at the moment you meet "
+            "it [b3-c07-0038]."
+        ),
+    },
+    {
+        "material_id": "dada-dark-creatures-boggarts-counter",
+        "concept": "dada-magic-boggart-banishing-spell",
+        "kind": "spell",
+        "text": (
+            "The counter is the Banishing Charm, Riddikulus. The word alone "
+            "is not enough [b3-c07-0041]: the caster must concentrate on "
+            "making the feared form ridiculous - Neville was taught to raise "
+            "his wand and picture his grandmother's clothes on his "
+            "tormentor, vulture-topped hat and crimson handbag included "
+            "[b3-c07-0044], [b3-c07-0045]. Rehearsal order matters. "
+            "Professor Lupin drilled the class on the incantation before "
+            "wands were raised at all [b3-c07-0041], then one student at a "
+            "time faced the wardrobe; when a caster succeeds, the boggart "
+            "turns to the next [b3-c07-0045]. Well-executed counters "
+            "transform rather than destroy: the professor became a figure in "
+            "lace and a towering hat swinging a handbag [b3-c07-0050], the "
+            "mummy tangled in its own bandages [b3-c07-0051], the banshee "
+            "lost its voice [b3-c07-0052], the hand was caught in a "
+            "mousetrap [b3-c07-0054]."
+        ),
+    },
+    {
+        "material_id": "dada-dark-creatures-boggarts-field",
+        "concept": "dada-creature-boggart",
+        "kind": "creature",
+        "text": (
+            "Field doctrine and failure modes. Freezing is the common "
+            "failure: Neville backed away mouthing the word silently while "
+            "the shape kept bearing down, and only forced it out at last "
+            "[b3-c07-0050]. Precision does not immunise anyone - the "
+            "best-prepared student in the year was undone when the boggart "
+            "wore the form of a promised failure, and it took time to calm "
+            "her [b3-c16-0020]. The charm holds outside the classroom: in "
+            "real danger it dispersed a boggart wearing a dementor's shape "
+            "into a wisp of smoke [b4-c31-0068], and in the D.A. a boggart "
+            "impersonating a dementor served as the fastest road to a "
+            "working Patronus - advanced work, noted for the record "
+            "[b5-c27-0034]. There is a reason Lupin set a fresh boggart at "
+            "the end of the year's practical examination [b3-c16-0018]: the "
+            "creature tests recognition, nerve and a clear image under "
+            "pressure - which is the whole of defensive practice in one "
+            "wardrobe."
+        ),
+    },
+]
 
 CITED = [
     "b3-c07-0036", "b3-c07-0037", "b3-c07-0038", "b3-c07-0041",
@@ -83,7 +126,6 @@ def widen(text: str, start: int, end: int) -> str:
             e = n if k < 0 else k + 1
         if (s, e) == before:
             break
-    # snap to the containing sentence when it stays review-sized
     sent_end = {".", "!", "?", ":", "”"}
     left = s
     while left > 0 and text[left - 1] not in sent_end:
@@ -107,17 +149,16 @@ def main() -> int:
     for line in (REPO / "data/lexicon/canon_index.jsonl").read_text(
             encoding="utf-8").splitlines():
         e = json.loads(line)
-        if e["entry_key"] in ("creature/boggart", "magic/boggart-banishing-spell"):
+        if e["entry_key"] in ENTRIES:
             for c in e.get("candidates", ()):
                 prev = spans.get(c["chunk_id"])
                 if prev is None or (c["span"][1] - c["span"][0]) > (prev[1] - prev[0]):
                     spans[c["chunk_id"]] = tuple(c["span"])
-    chunks = {c.id: c for c in load_chunks(REPO / "data/chunks.jsonl")}
-    CHUNK_TEXTS = {cid: chunks[cid].text for cid in CITED if cid in chunks}
 
+    chunks = {c.id: c for c in load_chunks(REPO / "data/chunks.jsonl")}
     seeds = {}
     for line in (REPO / "data/subjects/dada/seeds.jsonl").read_text(
-        encoding="utf-8").splitlines():
+            encoding="utf-8").splitlines():
         s = json.loads(line)
         seeds[s["concept_id"]] = s
     boggart = seeds["dada-creature-boggart"]
@@ -126,57 +167,51 @@ def main() -> int:
     by_chunk: dict[str, dict] = {}
     for src in list(boggart["source_refs"]) + list(spell["source_refs"]):
         by_chunk.setdefault(src["chunk_id"], src)
-    missing = [c for c in CITED if c not in by_chunk]
+    missing = [c for c in CITED if c not in by_chunk or c not in chunks]
     if missing:
-        print(f"cited chunks with no seeded ref: {missing}", file=sys.stderr)
+        print(f"cited chunks missing from seeds/corpus: {missing}", file=sys.stderr)
         return 1
-    refs = []
+
+    all_refs = []
     for cid in CITED:
         seed = by_chunk[cid]
-        # quote is reconstructed from the corpus at the recorded span (the
-        # #127 contract), widened to whole words; never the lowercase match
-        # phrase, which is not verbatim and trips the pack quote rule.
-        text = CHUNK_TEXTS[cid]
-        span = spans.get(cid)
-        if span is None:
-            print(f"no span for {cid}", file=sys.stderr)
-            return 1
-        quote = widen(text, span[0], span[1])
-        refs.append(SourceRef(
+        quote = widen(chunks[cid].text, *spans[cid])
+        all_refs.append(SourceRef(
             chunk_id=cid, book=seed["book"], chapter=seed["chapter"],
             quote=quote, text_hash=seed["text_hash"],
             index_text_hash=seed["index_text_hash"],
         ))
-    refs = tuple(refs)
+    refs_by_id = {r.chunk_id: r for r in all_refs}
+    references = [ReferenceLink(**boggart["reference"]),
+                  ReferenceLink(**spell["reference"])]
 
-    references = [
-        ReferenceLink(**boggart["reference"]),
-        ReferenceLink(**spell["reference"]),
-    ]
+    materials = []
+    for u in UNITS:
+        cited = [c for c in CITED if f"[{c}]" in u["text"]]
+        materials.append(Material(
+            material_id=u["material_id"], subject="dada",
+            topic="dark-creatures", concept=u["concept"], kind=u["kind"],
+            text=u["text"], source_refs=[refs_by_id[c] for c in cited],
+            references=list(references), review_status="draft",
+        ))
 
-    material = Material(
-        material_id="dada-dark-creatures-boggarts-001",
-        subject="dada",
-        topic="dark-creatures",
-        concept="dada-creature-boggart",
-        kind="creature",
-        text=TEXT,
-        source_refs=list(refs),
-        references=references,
-        review_status="draft",
-    )
     pack = SubjectPack(
         manifest=PackManifest(
-            subject="dada", tier="owl", version="0.1.0", status="draft",
+            subject="dada", tier="owl", version="0.2.0", status="draft",
             built_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             index_text_hash=INDEX_HASH,
         ),
         topics=[Topic(topic_id="dark-creatures", subject="dada",
                       title="Dark Creatures")],
-        concepts=[Concept(**{k: v for k, v in boggart.items()
-                             if k in ("concept_id", "subject", "kind",
-                                      "title", "aliases")})],
-        materials=[material],
+        concepts=[
+            Concept(**{k: v for k, v in boggart.items()
+                       if k in ("concept_id", "subject", "kind", "title",
+                                "aliases")}),
+            Concept(**{k: v for k, v in spell.items()
+                       if k in ("concept_id", "subject", "kind", "title",
+                                "aliases")}),
+        ],
+        materials=materials,
     )
 
     result = validate_pack(pack, chunks, INDEX_HASH)
@@ -189,44 +224,72 @@ def main() -> int:
     print(f"pack written to {out}")
 
     lines = [
-        "# Unit 1 review: Boggarts and the Banishing Spell",
+        "# Unit 1 review: Boggarts and the Banishing Spell (material batch)",
         "",
-        "Material: `dada-dark-creatures-boggarts-001` (kind creature,",
-        "concept boggart; review_status draft). The spell concept",
-        "(`dada-magic-boggart-banishing-spell`, alias Riddikulus) is cited",
-        "inside the unit; the single-concept material schema keeps it out of",
-        "`concepts.jsonl` for now - a known schema question to settle before",
-        "the remaining units (option: one material per concept, or a",
-        "`concepts` list on Material).",
+        "Three materials, one centre each - nature / counter / field.",
+        "Both concepts (creature and spell, alias Riddikulus) are now real",
+        "pack concepts, each with its own material - the batching decision",
+        "resolved the single-concept constraint without a schema change.",
         "",
-        "## Text",
-        "",
-        TEXT,
-        "",
-        "## Evidence passages (what each cited chunk actually says)",
+        "## Materials",
         "",
     ]
-    for cid in CITED:
-        for ref in material.source_refs:
-            if ref.chunk_id == cid:
-                q = " ".join(ref.quote.split())
-                lines.append(f"- `{cid}`: \"{q[:200]}\"")
-                break
+    for m in materials:
+        lines.append(f"### {m.material_id}")
+        lines.append(f"concept: `{m.concept}` | {len(m.source_refs)} refs")
+        lines.append("")
+        lines.append(m.text)
+        lines.append("")
+    lines += [
+        "## Evidence passages (verbatim corpus quotes, all hash-checked)",
+        "",
+    ]
+    for r in all_refs:
+        q = " ".join(r.quote.split())
+        lines.append(f"- `{r.chunk_id}`: \"{q[:200]}\"")
     lines += [
         "",
         "## References (attribution only, never load-bearing)",
         "",
     ]
-    for r in references:
-        lines.append(f"- {r.title} - {r.url} ({r.publisher}, accessed "
-                     f"{r.accessed})")
+    for ref in references:
+        lines.append(f"- {ref.title} - {ref.url} ({ref.publisher}, accessed "
+                     f"{ref.accessed})")
     lines += [
+        "",
+        "## From materials to a lesson (#43 preview)",
+        "",
+        "A lesson adds no new facts; it assembles reviewed materials in a",
+        "teaching order with connectors in the professor's register. Unit 1",
+        "assembles as:",
+        "",
+        "1. Hook - why boggarts matter to an Auror-track student: nature",
+        "   material, opening lines cited [mat:dada-dark-creatures-",
+        "boggarts-nature].",
+        "2. Mechanism - the fear-shape and the unknown true form (nature,",
+        "   section 2).",
+        "3. Counter - word, then image, then wand; rehearsal order (counter",
+        "   material).",
+        "4. Guided practice - the class rotation becomes the practice intent",
+        "   against the same material context (a bespoke question: 'what does",
+        "   Riddikulus require that other charms do not?').",
+        "5. Failure cases and cautions - freezing, precision-not-immunity",
+        "   (field material).",
+        "6. Why it is examined - Lupin's practical as closing rationale",
+        "   (field material) - stated as canon history, never as a promise",
+        "   about Ashcombe's own examination format (non-disclosure holds).",
+        "7. Reflection + further reading - the two attributed Lexicon",
+        "   references.",
+        "",
+        "Every section cites a material id and through it its chunk refs -",
+        "the same rule as exam questions. v1 lessons can be assembled",
+        "offline and deterministically from this map; #43 runtime only adds",
+        "connective voice and answers follow-up questions.",
         "",
         "## Checks",
         "",
-        f"- validate_pack: ok={result.ok}, {len(refs)} source refs, every "
-        "text hash recomputed against the corpus, every quote present, every "
-        "book/chapter matched to chunk metadata",
+        f"- validate_pack: ok={result.ok}; every text hash recomputed against",
+        "  the corpus; every quote verbatim; book/chapter matched to chunk",
         f"- index text hash: {INDEX_HASH}",
         "",
     ]
