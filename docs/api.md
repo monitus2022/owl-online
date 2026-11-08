@@ -37,15 +37,18 @@ Response `200`:
   "answer": "Alastor Moody ... [b4-c25-0075]",
   "citations": ["b4-c25-0075"],
   "abstained": false,
-  "lore_citations": []
+  "lore_citations": [],
+  "material_citations": []
 }
 ```
 
 `citations` are book chunk ids. `lore_citations` are setting-entry ids in the
-`[lore:<id>]` space. The two spaces are validated separately; an unknown id of
-either kind is stripped from the text. `abstained` is true when there is no book
-or lore evidence, the draft cites nothing, or the model refuses. The answer text
-is always returned; an abstention is a `200`, not an error.
+`[lore:<id>]` space. `material_citations` are lesson-material ids; it is always
+empty on `/ask`, which stays corpus-only, and lesson answers are stream-only.
+The citation spaces are validated separately; an unknown id of any kind is
+stripped from the text. `abstained` is true when there is no book or lore
+evidence, the draft cites nothing, or the model refuses. The answer text is
+always returned; an abstention is a `200`, not an error.
 
 ### `POST /ask/stream`
 
@@ -87,17 +90,18 @@ excerpts:
 
 ```json
 {
-  "answer": "Moody showed the curses two years early ... [mat:dada-dark-arts-unforgivables-law]",
-  "citations": ["b4-c14-0031", "b4-c14-0009"],
+  "answer": "Moody showed the curses two years early ... [mat:dada-countering-countercurse-doctrine]",
+  "citations": ["b4-c14-0006", "b4-c14-0009"],
   "lore_citations": [],
-  "material_citations": ["dada-dark-arts-unforgivables-law"],
+  "material_citations": ["dada-countering-countercurse-doctrine"],
   "abstained": false
 }
 ```
 
-`material_citations` are `[mat:<material_id>]` ids, validated against the loaded
-pack. `citations` are the book chunk ids those materials resolve to through
-their `source_refs`, so the lesson answer still points at canon. The selector is
+`material_citations` are `[mat:<material_id>]` ids, validated against the
+materials selected for that answer. `citations` are the book chunk ids those
+materials resolve to through their `source_refs`, so the lesson answer still
+points at canon. The selector is
 derived at startup by embedding the material texts in memory; no second index is
 built or stored. The subject is `OWL_LORE_SUBJECT` until the request `subject`
 field ships. Lesson answers are never cached.
@@ -112,7 +116,8 @@ request abstains with the usual in-world line.
 Returns the published subject packs the server can serve. A draft, broken or
 unreadable pack is skipped, never served; a host with no packs returns an empty
 list. The server loads and validates packs once at startup, so this route is a
-read of the in-process summary and does not touch the corpus.
+read of the in-process summary and does not touch the corpus. Subjects are
+returned sorted by subject key.
 
 Response `200`:
 

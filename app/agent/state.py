@@ -27,3 +27,4 @@ class AgentState(TypedDict, total=False):
     abstain_reason: str | None
     retry_reason: str | None
     llm_model: str
+    prompt_chars: int

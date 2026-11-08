@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.knowledge.materials import Material
 from app.knowledge.packs import PackStore, SubjectPack
@@ -42,7 +42,7 @@ def _embedding_text(pack: SubjectPack, material: Material) -> str:
 
 
 def _cosine(left: tuple[float, ...], right: tuple[float, ...]) -> float:
-    dot = sum(a * b for a, b in zip(left, right, strict=False))
+    dot = sum(a * b for a, b in zip(left, right, strict=True))
     left_norm = math.sqrt(sum(a * a for a in left))
     right_norm = math.sqrt(sum(b * b for b in right))
     if not left_norm or not right_norm:
@@ -66,6 +66,13 @@ class LessonSelector:
     store: PackStore
     embedder: Embedder
     vectors: dict[str, SubjectVectors]
+    # One-entry-per-question cache, bounded; lesson questions repeat far less
+    # than corpus questions, but the convention is the same: cache embeddings
+    # by model and input. The selector is tied to one embedder at build time.
+    query_cache: dict[str, tuple[float, ...]] = field(
+        default_factory=dict, compare=False
+    )
+    cache_size: int = 256
 
     @classmethod
     async def build(
@@ -84,6 +91,9 @@ class LessonSelector:
                     f"embedder returned {len(embedded)} vectors for "
                     f"{len(documents)} materials in {subject}"
                 )
+            dims = len(embedded[0])
+            if dims == 0 or any(len(vector) != dims for vector in embedded):
+                raise ValueError(f"inconsistent material vector dims in {subject}")
             vectors[subject] = SubjectVectors(
                 subject=subject,
                 material_ids=tuple(m.material_id for m in pack.materials),
@@ -116,11 +126,25 @@ class LessonSelector:
         pack = self.store.get(subject)
         if vectors is None or pack is None:
             return []
-        query = (await self.embedder.embed([question]))[0]
-        query_vector = tuple(query)
+        query_vector = self.query_cache.get(question)
+        if query_vector is None:
+            embedded = await self.embedder.embed([question])
+            if not embedded:
+                raise ValueError("embedder returned no vector for the question")
+            query_vector = tuple(embedded[0])
+            if vectors.vectors and len(query_vector) != len(vectors.vectors[0]):
+                raise ValueError(
+                    f"query vector has {len(query_vector)} dims, "
+                    f"materials have {len(vectors.vectors[0])} for {subject}"
+                )
+            if len(self.query_cache) >= self.cache_size:
+                self.query_cache.pop(next(iter(self.query_cache)))
+            self.query_cache[question] = query_vector
         scored = [
             (_cosine(query_vector, vector), material_id)
-            for vector, material_id in zip(vectors.vectors, vectors.material_ids, strict=False)
+            for vector, material_id in zip(
+                vectors.vectors, vectors.material_ids, strict=True
+            )
         ]
         scored.sort(key=lambda item: (-item[0], item[1]))
         # The floor applies to the best match, not to each item: a strong top

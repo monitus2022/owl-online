@@ -49,6 +49,7 @@ class AskResponse(BaseModel):
     citations: list[str]
     abstained: bool
     lore_citations: list[str] = Field(default_factory=list)
+    material_citations: list[str] = Field(default_factory=list)
 
 
 class SubjectsResponse(BaseModel):

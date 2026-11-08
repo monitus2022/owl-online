@@ -150,6 +150,9 @@ class AskResult:
     # Lesson mode cites reviewed pack materials; `citations` then carries the
     # book chunk ids those materials resolve to.
     material_citations: list[str] = field(default_factory=list)
+    # Exact prompt size when the path knows it (lesson mode). The corpus path
+    # stays 0 so usage accounting keeps its existing estimate.
+    prompt_chars: int = 0
 
 
 def retrieval_floor(

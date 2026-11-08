@@ -251,3 +251,124 @@ async def test_ask_lesson_abstains_when_the_selector_returns_nothing():
     assert result.abstained is True
     assert result.abstain_reason == "no_evidence"
     assert result.attempts == 0
+
+
+class SequencedLlm:
+    """Returns one draft per call and records the system prompt."""
+
+    name = "fake/sequenced"
+
+    def __init__(self, drafts: list[str]) -> None:
+        self.drafts = list(drafts)
+        self.systems: list[str] = []
+
+    async def generate(self, system, prompt, context=None):
+        self.systems.append(system)
+        return self.drafts.pop(0)
+
+    def stream(self, system, prompt, context=None):
+        self.systems.append(system)
+        draft = self.drafts.pop(0)
+
+        async def gen():
+            yield draft
+
+        return gen()
+
+
+class CountingEmbedder(KeywordEmbedder):
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def embed(self, texts):
+        self.calls += 1
+        return await super().embed(texts)
+
+
+class BadQueryEmbedder:
+    name = "fake/bad"
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def embed(self, texts):
+        self.calls += 1
+        if self.calls == 1:
+            return [[1.0, 0.0, 0.0] for _ in texts]
+        return [[1.0, 0.0, 0.0, 0.0] for _ in texts]
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_retries_an_uncited_draft():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = SequencedLlm(
+        [
+            "A boggart is a shape-shifter.",
+            "A boggart takes your fear's shape "
+            "[mat:dada-dark-creatures-boggarts-nature].",
+        ]
+    )
+    resets: list[int] = []
+
+    result = await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        on_reset=lambda: resets.append(1),
+        max_retries=1,
+    )
+
+    assert result.attempts == 2
+    assert result.material_citations == ["dada-dark-creatures-boggarts-nature"]
+    assert resets == [1]
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_appends_the_persona_suffix():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = SequencedLlm(
+        ["A boggart takes your fear's shape [mat:dada-dark-creatures-boggarts-nature]."]
+    )
+
+    await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        persona_suffix="PERSONA-SUFFIX",
+    )
+
+    assert "PERSONA-SUFFIX" in llm.systems[0]
+
+
+@pytest.mark.asyncio
+async def test_selector_rejects_a_query_with_the_wrong_dimensions():
+    selector = await LessonSelector.build(_store(), BadQueryEmbedder())
+
+    with pytest.raises(ValueError, match="dims"):
+        await selector.select("boggart", subject="dada")
+
+
+@pytest.mark.asyncio
+async def test_selector_caches_query_embeddings():
+    embedder = CountingEmbedder()
+    selector = await LessonSelector.build(_store(), embedder)
+
+    await selector.select("boggart", subject="dada")
+    await selector.select("boggart", subject="dada")
+
+    # One call for the material documents at build time, one for the question.
+    assert embedder.calls == 2
+
+
+def test_pack_store_serves_summaries_and_scope():
+    store = _store()
+
+    assert store.subjects() == ("dada",)
+    assert store.scope() == "dada:fp"
+    summary = store.summaries()[0]
+    assert summary.subject == "dada"
+    assert summary.fingerprint == "fp"
+    assert summary.materials == 2
+    assert summary.concepts == 2

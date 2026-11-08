@@ -1,4 +1,7 @@
-"""Compiled LangGraph chat graph: router -> answer | practice | feedback | meta | personal."""
+"""Compiled LangGraph chat graph.
+
+Router: answer | practice | feedback | meta | personal | lesson.
+"""
 
 from functools import partial
 

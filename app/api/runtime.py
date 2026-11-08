@@ -92,11 +92,18 @@ async def build_runtime(settings: Settings) -> Runtime:
             [f"{pack.subject} {pack.version}" for pack in packs] or "none",
         )
         if settings.lesson_mode and packs:
-            lesson = await LessonSelector.build(pack_store, embedder)
-            logger.info(
-                "lesson mode enabled: %s",
-                list(lesson.subjects()) or "no subject vectors",
-            )
+            try:
+                lesson = await LessonSelector.build(pack_store, embedder)
+            except Exception as error:
+                # Lesson mode is additive. A failed startup embedding must not
+                # take the corpus chat path down with it; the API gate then
+                # answers 400 for lesson requests.
+                logger.warning("lesson mode disabled: selector build failed: %s", error)
+            else:
+                logger.info(
+                    "lesson mode enabled: %s",
+                    list(lesson.subjects()) or "no subject vectors",
+                )
     else:
         logger.info(
             "subject packs absent at %s; the subject index stays empty",

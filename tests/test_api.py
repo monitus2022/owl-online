@@ -126,7 +126,13 @@ def test_ask_rejects_a_blank_question():
 def test_ask_response_matches_the_typed_schema():
     with _client() as client:
         body = client.post("/ask", json={"question": "Who?"}).json()
-    assert set(body) == {"answer", "citations", "abstained", "lore_citations"}
+    assert set(body) == {
+        "answer",
+        "citations",
+        "abstained",
+        "lore_citations",
+        "material_citations",
+    }
 
 
 def test_response_carries_a_request_id():
@@ -656,3 +662,75 @@ def test_lesson_mode_returns_material_and_source_citations():
     assert finals[0]["material_citations"] == ["dada-test-material"]
     assert finals[0]["citations"] == ["b1-c01-0000"]
     assert finals[0]["abstained"] is False
+
+
+class _EmptyLessonSelector:
+    async def select(self, question, *, subject, top_k=3, min_score=0.0):
+        return []
+
+
+def _empty_lesson_runtime() -> Runtime:
+    selector = _EmptyLessonSelector()
+    graph = build_graph(
+        _Retriever(),
+        _LessonLlm(),
+        lesson=selector,
+        lesson_subject="dada",
+        lesson_top_k=3,
+    )
+    return Runtime(
+        retriever=_Retriever(),
+        llm=_LessonLlm(),
+        agent=graph,
+        lesson=selector,
+    )
+
+
+def test_lesson_mode_is_rejected_when_no_selector_is_loaded():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True),
+        runtime=Runtime(retriever=_Retriever(), llm=_Llm()),
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/ask/stream", json={"question": "Teach me", "mode": "lesson"}
+        )
+    assert response.status_code == 400
+
+
+def test_lesson_mode_rejects_a_student_answer():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True),
+        runtime=_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/ask/stream",
+            json={
+                "question": "Teach me",
+                "mode": "lesson",
+                "student_answer": "An answer",
+            },
+        )
+    assert response.status_code == 422
+
+
+def test_lesson_mode_abstains_when_no_material_matches():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True),
+        runtime=_empty_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "How do I brew a potion?", "mode": "lesson"},
+        ) as response:
+            assert response.status_code == 200
+            body = "".join(response.iter_text())
+
+    events = _parse_sse(body)
+    finals = [data for name, data in events if name == "final"]
+    assert finals[0]["abstained"] is True
+    assert finals[0]["material_citations"] == []
+    assert finals[0]["citations"] == []

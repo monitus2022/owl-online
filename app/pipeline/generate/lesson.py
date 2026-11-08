@@ -177,4 +177,5 @@ async def ask_lesson(
         attempts=attempt,
         retry_reason=retry_reason,
         model_calls=attempt,
+        prompt_chars=len(system) + len(prompt),
     )
