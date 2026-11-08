@@ -72,21 +72,28 @@ def main():
             out.write("Approve each row or strike it. Teacher column: X = "
                       "cue-mention\nwinner, and for DADA the book-year roster "
                       "is the check.\n\n")
-            out.write("| keep | chapter | n | teacher (inferred) | year "
-                      "roster | top evidence |\n")
+            out.write("| keep | chapter | n | teacher (inferred) | year roster "
+                      "| evidence |\n")
             out.write("|---|---|---:|---|---|---|\n")
             items = sorted(acc[subj].items(), key=lambda x: (x[0][0], -x[1]["n"]))
+            quotes = []
             for (b, ch), row in items:
                 if row["n"] < 2:
                     continue
                 top_t = row["t"].most_common(1)[0] if row["t"] else ("?", 0)
                 roster = DADA_TEACHERS.get(b, "") if subj == "DADA" else "Flitwick"
-                ev = row["ex"][0][0] if row["ex"] else "-"
-                q = row["ex"][0][1] if row["ex"] else ""
+                refs = " ".join(f"`{i+1}.{cid}`"
+                                for i, (cid, _) in enumerate(row["ex"]))
                 out.write(
                     f"| [ ] | b{b} c{ch} | {row['n']} | {top_t[0]} ({top_t[1]}) "
-                    f"| {roster} | `{ev}` {q} |\n"
+                    f"| {roster} | {refs} |\n"
                 )
+                for i, (cid, q) in enumerate(row["ex"]):
+                    flat = " ".join(q.split())[:150]
+                    quotes.append((b, ch, i, cid, flat))
+            out.write("\n## Evidence quotes\n\n")
+            for b, ch, i, cid, q in quotes:
+                out.write(f"- b{b} c{ch} {i+1} `{cid}`: \"{q}\"\n")
             out.write("\n## Dropped from view (n<2 cue sentences)\n\n")
             low = [f"b{b}c{ch}({r['n']})" for (b, ch), r in items if r["n"] < 2]
             out.write(", ".join(low) + "\n\n")
