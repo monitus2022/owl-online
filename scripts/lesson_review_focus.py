@@ -124,23 +124,38 @@ def main():
             return "duel-club", row["club_n"]
         return None, 0
 
-    def lex_seeded() -> dict[tuple[int, int], tuple[int, int]]:
-        """(entries with edges, entries with verified candidates) per chapter."""
+    def lex_seeded():
+        """(entries with edges, entries with verified candidates, top titles)."""
         path = Path("/Users/tc/Documents/Github/owl-128/data/lexicon/"
                     "canon_index.jsonl")
         if not path.exists():
             return {}
-        seen: dict[tuple[int, int], tuple[set, set]] = {}
+        agg: dict = {}
         for line in path.open(encoding="utf-8"):
             e = json.loads(line)
             if e.get("chapter") is None:
                 continue
             key = (e["book"], e["chapter"])
-            allk, ver = seen.setdefault(key, (set(), set()))
-            allk.add(e["entry_key"])
+            a = agg.setdefault(key, {"all": set(), "cands": {}, "meta": {}})
+            a["all"].add(e["entry_key"])
             if e.get("candidates"):
-                ver.add(e["entry_key"])
-        return {k: (len(v[0]), len(v[1])) for k, v in seen.items()}
+                cands = a["cands"]
+                cands[e["entry_key"]] = max(
+                    cands.get(e["entry_key"], 0), len(e["candidates"])
+                )
+                a["meta"][e["entry_key"]] = (e.get("family", ""),
+                                             e.get("title", ""))
+        order = {"magic": 0, "creature": 1}
+        out = {}
+        for key, a in agg.items():
+            top = sorted(
+                a["cands"],
+                key=lambda k: (order.get(a["meta"][k][0], 2),
+                               -a["cands"][k], a["meta"][k][1].lower()),
+            )[:5]
+            out[key] = (len(a["all"]), len(a["cands"]),
+                        [a["meta"][t][1][:24] for t in top])
+        return out
 
     seeded = lex_seeded()
 
@@ -155,12 +170,14 @@ def main():
                   "teacher X = cue-name winner, year\nroster is the DADA "
                   "cross-check. `seeded` = Lexicon entries with\nedges to the "
                   "chapter / entries with hash-verified chunk\ncandidates "
-                  "(0/0 rows still stand on book evidence alone).\n\n")
+                  "(0/0 rows still stand on book evidence alone).\n`key "
+                  "concepts` = top verified entries in the chapter, spells "
+                  "and\ncreatures first, by candidate count.\n\n")
         for subj in ("DADA", "Charms"):
             out.write(f"\n## {subj}\n\n")
             out.write("| keep | chapter | tier | n | teacher (inferred) | "
-                      "year roster | seeded | evidence |\n")
-            out.write("|---|---|---|---:|---|---|---|---|\n")
+                      "year roster | seeded | key concepts | evidence |\n")
+            out.write("|---|---|---|---:|---|---|---|---|---|\n")
             items = sorted(acc[subj].items(), key=lambda x: (x[0][0], x[0][1]))
             quotes = []
             for (b, ch), row in items:
@@ -172,9 +189,10 @@ def main():
                     "Flitwick"
                 refs = " ".join(f"`{i+1}.{cid}`"
                                 for i, (_, cid, _) in enumerate(row["ex"]))
-                s_all, s_ver = seeded.get((b, ch), (0, 0))
+                s_all, s_ver, s_top = seeded.get((b, ch), (0, 0, []))
+                names = ", ".join(s_top) if s_top else "—"
                 out.write(f"| [ ] | b{b} c{ch} | {tier} | {n} | {top_t} "
-                          f"| {roster} | {s_all}/{s_ver} | {refs} |\n")
+                          f"| {roster} | {s_all}/{s_ver} | {names} | {refs} |\n")
                 for i, (tname, cid, q) in enumerate(row["ex"]):
                     flat = " ".join(q.split())[:140]
                     quotes.append((b, ch, i, tname, cid, flat))
