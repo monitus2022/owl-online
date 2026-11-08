@@ -29,10 +29,15 @@ from datetime import date
 from pathlib import Path
 
 from app.knowledge.materials import ReferenceLink, SourceRef
-from app.knowledge.taxonomy import NOVEL_BOOKS
+from app.knowledge.taxonomy import NOVEL_BOOKS, SUBJECT_KEYS
 
 LEXICON_PUBLISHER = "The Harry Potter Lexicon"
-BASIS_PRECEDENCE = ("taught-in-class", "used-in-exam-context", "author-pick")
+BASIS_PRECEDENCE = (
+    "taught-in-class",
+    "used-in-exam-context",
+    "taxonomy-prior",
+    "author-pick",
+)
 FAMILIES = frozenset({"magic", "thing", "creature", "place", "event"})
 _POTIONISH = re.compile(r"draught|essence|potion|elixir|balm|solution|antidote", re.I)
 _UNSAFE_ID = re.compile(r"[^a-z0-9._-]+")
@@ -52,16 +57,30 @@ class LessonRow:
 
 def load_lesson_table(path: Path) -> tuple[LessonRow, ...]:
     rows = []
+    seen: set[tuple[int, int]] = set()
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         r = json.loads(line)
+        key = (int(r["book"]), int(r["chapter"]))
         if r.get("status") != "approved":
-            raise ValueError(f"lesson row {r['book']}-{r['chapter']} not approved")
+            raise ValueError(f"lesson row {key[0]}-{key[1]} not approved")
+        if key in seen:
+            raise ValueError(f"duplicate lesson row {key[0]}-{key[1]}")
+        seen.add(key)
+        if r.get("subject") not in SUBJECT_KEYS:
+            raise ValueError(f"lesson row {key[0]}-{key[1]}: unknown subject")
+        if key[0] not in NOVEL_BOOKS or key[1] < 1:
+            raise ValueError(f"lesson row {key[0]}-{key[1]}: bad chapter")
+        if r.get("basis") not in BASIS_PRECEDENCE:
+            raise ValueError(f"lesson row {key[0]}-{key[1]}: unknown basis")
+        teacher = str(r.get("teacher", ""))
+        if not teacher.strip():
+            raise ValueError(f"lesson row {key[0]}-{key[1]}: blank teacher")
         rows.append(
             LessonRow(
-                book=int(r["book"]), chapter=int(r["chapter"]),
-                subject=str(r["subject"]), teacher=str(r["teacher"]),
+                book=key[0], chapter=key[1],
+                subject=str(r["subject"]), teacher=teacher,
                 basis=str(r["basis"]), reason=str(r.get("reason", "")),
             )
         )
@@ -118,6 +137,7 @@ class ConceptSeed:
                     "chunk_id": s.chunk_id, "book": s.book, "chapter": s.chapter,
                     "quote": s.quote, "text_hash": s.text_hash,
                     "index_text_hash": s.index_text_hash,
+                    "citation_bucket": s.citation_bucket,
                 } for s in self.source_refs
             ],
         }
@@ -131,6 +151,8 @@ class SeedBundle:
     book_level_skipped: int
     edges_seen: int
     lesson_chapters: int
+    disagreement: tuple[dict, ...] = ()
+    book_level: tuple[dict, ...] = ()
 
     def stats(self) -> dict:
         by_kind = Counter(c.kind for c in self.concepts)
@@ -140,7 +162,9 @@ class SeedBundle:
             "concepts": len(self.concepts),
             "resolved_with_evidence": resolved,
             "by_kind": dict(by_kind),
-            "unassigned_top": len(self.unassigned),
+            "unassigned": len(self.unassigned),
+            "disagreement": len(self.disagreement),
+            "book_level": len(self.book_level),
             "book_level_skipped": self.book_level_skipped,
             "edges_seen": self.edges_seen,
             "lesson_chapters": self.lesson_chapters,
@@ -176,7 +200,6 @@ def build_seeds(
     entries: Path,
     fetch_index: Path,
     index_text_hash: str,
-    unassigned_top: int = 40,
 ) -> SeedBundle:
     table = {
         (row.book, row.chapter): row for row in load_lesson_table(lesson_table)
@@ -200,6 +223,8 @@ def build_seeds(
 
     agg: dict[str, dict] = {}
     unassigned_hits: dict[str, dict] = {}
+    book_level_rows: list[dict] = []
+    disagreement: list[dict] = []
     book_level_skipped = 0
     edges_seen = 0
     for row in _load_jsonl(canon_index):
@@ -210,6 +235,11 @@ def build_seeds(
             continue
         if chapter is None:
             book_level_skipped += 1
+            book_level_rows.append({
+                "entry_key": key, "title": row.get("title", ""),
+                "book": book, "agreement": row.get("agreement", "?"),
+                "candidates": len(row.get("candidates", ())),
+            })
             continue
         lesson = table.get((book, chapter))
         if lesson is None:
@@ -234,11 +264,18 @@ def build_seeds(
                 chunk_id=cand["chunk_id"], book=book, chapter=chapter,
                 quote=cand["phrase"], text_hash=cand["text_hash"],
                 index_text_hash=index_text_hash,
+                citation_bucket=cand.get("bucket", "books"),
             )
             a["refs"].append(ref)
 
     concepts = []
     for key, a in sorted(agg.items()):
+        if set(a["agreement"]) - {"both"}:
+            disagreement.append({
+                "entry_key": key, "title": a["title"],
+                "agreement": dict(a["agreement"]),
+                "chapters": sorted(a["chapters"]),
+            })
         lesson_best = min(
             a["bases"], key=lambda r: BASIS_PRECEDENCE.index(r.basis)
             if r.basis in BASIS_PRECEDENCE else 99
@@ -273,13 +310,13 @@ def build_seeds(
          "chapters": sorted(v["chapters"])}
         for v in sorted(unassigned_hits.values(),
                         key=lambda v: (-v["verified"], v["entry_key"]))
-        if v["verified"] > 0
-    )[:unassigned_top]
+    )
 
     return SeedBundle(
         subject=subject, concepts=tuple(concepts), unassigned=unassigned,
         book_level_skipped=book_level_skipped, edges_seen=edges_seen,
-        lesson_chapters=len(table),
+        lesson_chapters=len(table), disagreement=tuple(disagreement),
+        book_level=tuple(book_level_rows),
     )
 
 
@@ -293,4 +330,20 @@ def write_bundle(bundle: SeedBundle, out_dir: Path) -> Path:
     with queue_path.open("w", encoding="utf-8") as handle:
         for row in bundle.unassigned:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    for name, rows in (
+        ("queue_disagreement.jsonl", bundle.disagreement),
+        ("queue_book_level.jsonl", bundle.book_level),
+    ):
+        with (out_dir / name).open("w", encoding="utf-8") as handle:
+            for row in rows:
+                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    summary = {
+        "unassigned": len(bundle.unassigned),
+        "disagreement": len(bundle.disagreement),
+        "book_level": len(bundle.book_level),
+        "edges_seen": bundle.edges_seen,
+    }
+    (out_dir / "queue_summary.json").write_text(
+        json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+    )
     return path

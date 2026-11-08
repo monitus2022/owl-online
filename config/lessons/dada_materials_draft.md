@@ -11,7 +11,7 @@ config/lessons/dada.jsonl.
 Pack 1.0.0 in `data/subjects/dada/` is published: Units 1-8 as three
 materials each (Unit 5 has four), 25 materials, 21 concepts, 4 topics.
 Validation is `ok=True` with zero warnings; the maintainer approved the prose
-on 2026-11-08. The pack fingerprint is `90f0c95550196b77` and
+on 2026-11-08. The pack fingerprint is `e7139cbcc23eaa5c` and
 `GET /v1/subjects` serves it. The full review sheets are `UNIT1_REVIEW.md` and
 `UNITS_REVIEW.md` in the pack directory (gitignored, included in the data
 backup); `PUBLISH.md` records the publication.

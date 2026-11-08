@@ -121,6 +121,11 @@ def test_source_ref_shape_rules():
         SourceRef(
             chunk_id="b8-c01-0000", book=8, chapter=1, quote="q", text_hash="h", index_text_hash="i"
         )
+    with pytest.raises(ValidationError, match="books bucket"):
+        SourceRef(
+            chunk_id="b1-c01-0000", book=1, chapter=1, quote="q", text_hash="h",
+            index_text_hash="i", citation_bucket="films",
+        )
     with pytest.raises(ValidationError):
         SourceRef(
             chunk_id="b1-c01-0000",

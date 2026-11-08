@@ -65,12 +65,20 @@ class SourceRef(_StrictModel):
     quote: str
     text_hash: str
     index_text_hash: str
+    citation_bucket: str = "books"
 
     @field_validator("chunk_id")
     @classmethod
     def _chunk_id_shape(cls, value: str) -> str:
         if not re.match(r"^b[1-7]-c\d{2}-\d{4}$", value):
             raise ValueError(f"chunk_id must look like bN-cNN-NNNN, got {value!r}")
+        return value
+
+    @field_validator("citation_bucket")
+    @classmethod
+    def _books_only(cls, value: str) -> str:
+        if value != "books":
+            raise ValueError("source refs must cite the books bucket")
         return value
 
     @field_validator("book")

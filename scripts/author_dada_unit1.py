@@ -30,84 +30,25 @@ from app.knowledge.packs import (  # noqa: E402
     validate_pack,
     write_subject_pack,
 )
-from app.pipeline.index.builder import load_chunks  # noqa: E402
+from app.pipeline.index.builder import load_chunks, text_hash  # noqa: E402
 
-INDEX_HASH = "aca4c57462d449f5"
+AUTHORING = REPO / "data" / "subjects" / "dada" / "authoring" / "unit1.json"
+
+
+def _load_authoring() -> dict:
+    if not AUTHORING.exists():
+        raise SystemExit(
+            f"authoring prose not found at {AUTHORING}; it is gitignored and "
+            "restored from the owl-data backup"
+        )
+    return json.loads(AUTHORING.read_text(encoding="utf-8"))
+
+
+_AUTHORING = _load_authoring()
+UNITS: list[dict] = _AUTHORING["materials"]
+CITED: list[str] = _AUTHORING["cited"]
+
 ENTRIES = ("creature/boggart", "magic/boggart-banishing-spell")
-
-UNITS = [
-    {
-        "material_id": "dada-dark-creatures-boggarts-nature",
-        "concept": "dada-creature-boggart",
-        "kind": "creature",
-        "text": (
-            "A boggart is a shape-shifter: it takes the form of whatever it "
-            "thinks will frighten us most [b3-c07-0037], and nobody knows "
-            "what a boggart looks like when it is alone [b3-c07-0038]. It "
-            "favours dark, enclosed spaces - wardrobes, the gap beneath beds, "
-            "the cupboards under sinks; one once lodged in a grandfather "
-            "clock [b3-c07-0036]. Two consequences for the careful student. "
-            "First, the boggart's form is your own fear made visible; it "
-            "teaches you about yourself before it teaches you anything else "
-            "[b3-c07-0038]. Second, an unseen boggart has not yet chosen "
-            "what it will be - the danger is decided at the moment you meet "
-            "it [b3-c07-0038]."
-        ),
-    },
-    {
-        "material_id": "dada-dark-creatures-boggarts-counter",
-        "concept": "dada-magic-boggart-banishing-spell",
-        "kind": "spell",
-        "text": (
-            "The counter is the Banishing Charm, Riddikulus. The word alone "
-            "is not enough [b3-c07-0041]: the caster must concentrate on "
-            "making the feared form ridiculous - Neville was taught to raise "
-            "his wand and picture his grandmother's clothes on his "
-            "tormentor, vulture-topped hat and crimson handbag included "
-            "[b3-c07-0044], [b3-c07-0045]. Rehearsal order matters. "
-            "Professor Lupin drilled the class on the incantation before "
-            "wands were raised at all [b3-c07-0041], then one student at a "
-            "time faced the wardrobe; when a caster succeeds, the boggart "
-            "turns to the next [b3-c07-0045]. Well-executed counters "
-            "transform rather than destroy: the professor became a figure in "
-            "lace and a towering hat swinging a handbag [b3-c07-0050], the "
-            "mummy tangled in its own bandages [b3-c07-0051], the banshee "
-            "lost its voice [b3-c07-0052], the hand was caught in a "
-            "mousetrap [b3-c07-0054]."
-        ),
-    },
-    {
-        "material_id": "dada-dark-creatures-boggarts-field",
-        "concept": "dada-creature-boggart",
-        "kind": "creature",
-        "text": (
-            "Field doctrine and failure modes. Freezing is the common "
-            "failure: Neville backed away mouthing the word silently while "
-            "the shape kept bearing down, and only forced it out at last "
-            "[b3-c07-0050]. Precision does not immunise anyone - the "
-            "best-prepared student in the year was undone when the boggart "
-            "wore the form of a promised failure, and it took time to calm "
-            "her [b3-c16-0020]. The charm holds outside the classroom: in "
-            "real danger it dispersed a boggart wearing a dementor's shape "
-            "into a wisp of smoke [b4-c31-0068], and in the D.A. a boggart "
-            "impersonating a dementor served as the fastest road to a "
-            "working Patronus - advanced work, noted for the record "
-            "[b5-c27-0034]. There is a reason Lupin set a fresh boggart at "
-            "the end of the year's practical examination [b3-c16-0018]: the "
-            "creature tests recognition, nerve and a clear image under "
-            "pressure - which is the whole of defensive practice in one "
-            "wardrobe."
-        ),
-    },
-]
-
-CITED = [
-    "b3-c07-0036", "b3-c07-0037", "b3-c07-0038", "b3-c07-0041",
-    "b3-c07-0044", "b3-c07-0045", "b3-c07-0050", "b3-c07-0051",
-    "b3-c07-0052", "b3-c07-0054", "b4-c31-0068", "b3-c16-0018",
-    "b3-c16-0020", "b5-c27-0034",
-]
-
 
 def widen(text: str, start: int, end: int) -> str:
     """Whole-word, sentence-shaped verbatim slice around the recorded span."""
@@ -157,6 +98,14 @@ def main() -> int:
                     spans[c["chunk_id"]] = tuple(c["span"])
 
     chunks = {c.id: c for c in load_chunks(REPO / "data/chunks.jsonl")}
+    index_hash = text_hash(list(chunks.values()))
+    recorded = _AUTHORING.get("index_text_hash")
+    if recorded and recorded != index_hash:
+        print(
+            f"index drift: authoring recorded {recorded}, corpus is {index_hash}",
+            file=sys.stderr,
+        )
+        return 1
     seeds = {}
     for line in (REPO / "data/subjects/dada/seeds.jsonl").read_text(
             encoding="utf-8").splitlines():
@@ -200,7 +149,7 @@ def main() -> int:
         manifest=PackManifest(
             subject="dada", tier="owl", version="0.2.0", status="draft",
             built_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            index_text_hash=INDEX_HASH,
+            index_text_hash=index_hash,
         ),
         topics=[Topic(topic_id="dark-creatures", subject="dada",
                       title="Dark Creatures")],
@@ -215,7 +164,7 @@ def main() -> int:
         materials=materials,
     )
 
-    result = validate_pack(pack, chunks, INDEX_HASH)
+    result = validate_pack(pack, chunks, index_hash)
     print(f"validate: ok={result.ok} errors={result.errors} "
           f"warnings={result.warnings}")
     if not result.ok:
@@ -299,7 +248,7 @@ def main() -> int:
         "",
         f"- validate_pack: ok={result.ok}; every text hash recomputed against",
         "  the corpus; every quote verbatim; book/chapter matched to chunk",
-        f"- index text hash: {INDEX_HASH}",
+        f"- index text hash: {index_hash}",
         "",
     ]
     (out / "UNIT1_REVIEW.md").write_text("\n".join(lines), encoding="utf-8")

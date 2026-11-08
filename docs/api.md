@@ -97,7 +97,7 @@ Response `200`:
       "version": "1.0.0",
       "status": "published",
       "built_at": "2026-11-08T14:48:30Z",
-      "fingerprint": "90f0c95550196b77",
+      "fingerprint": "e7139cbcc23eaa5c",
       "topics": ["dark-arts", "dark-creatures", "defensive-magic", "dueling"],
       "concepts": 21,
       "materials": 25

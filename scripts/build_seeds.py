@@ -19,14 +19,12 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from app.knowledge.seeding import build_seeds, write_bundle  # noqa: E402
-from app.pipeline.index.builder import load_chunks  # noqa: E402
+from app.pipeline.index.builder import load_chunks, text_hash  # noqa: E402
 
 
 def _index_hash(chunks_path: Path) -> str:
     # the same corpus hash the index builder records in the manifest
-    from app.pipeline.index import builder
-
-    return builder._text_hash(load_chunks(chunks_path))
+    return text_hash(load_chunks(chunks_path))
 
 
 def main() -> int:

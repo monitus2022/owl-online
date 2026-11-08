@@ -249,9 +249,13 @@ grounds that the per-chapter context is rich and classroom evidence is
 scarce. The approved table is compiled, structure-only, to
 `config/lessons/dada.jsonl` and `config/lessons/charms.jsonl` with basis,
 reason, evidence chunk ids, seed counts and approval metadata per row. The
-coverage report remains the feedback loop: an approved row that seeds
-nothing when the materials are authored is struck then, with the record
-updated.
+DADA table was corrected to 53 rows during the materials audit on 2026-11-08:
+three non-DADA rows were struck (`b1 c8`, `b2 c12`, `b2 c13`), five DADA
+rows were added (`b3 c18`, `b5 c22`, `b5 c31`, `b6 c02`, `b7 c06`), and
+non-classroom rows were re-based to `author-pick` with their actual teaching
+context instead of inheriting the year's DADA teacher. The coverage report
+remains the feedback loop: an approved row that seeds nothing when the
+materials are authored is struck then, with the record updated.
 
 Scope-first keeps the problem tractable. A pack declares its topics (the workplan
 already fixes the DADA scope list), so we only ever assign items relevant to

@@ -405,9 +405,9 @@ def load_pack_summaries(
             continue
         try:
             pack = load_subject_pack(directory)
-        except Exception:
+        except Exception as error:
             logger.warning(
-                "subject pack %s failed to load; skipping", directory, exc_info=True
+                "subject pack %s failed to load: %s", directory, error
             )
             continue
         if pack.manifest.status != "published":

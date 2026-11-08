@@ -87,6 +87,33 @@ def test_lesson_table_rejects_unapproved(tmp_path: Path):
         load_lesson_table(p)
 
 
+def test_lesson_table_rejects_duplicate_and_bad_basis(tmp_path: Path):
+    p = tmp_path / "t.jsonl"
+    row = {"book": 3, "chapter": 7, "subject": "dada", "teacher": "Lupin",
+           "basis": "taught-in-class", "status": "approved"}
+    _wl(p, [row, row])
+    with pytest.raises(ValueError, match="duplicate"):
+        load_lesson_table(p)
+    _wl(p, [{**row, "basis": "made-up"}])
+    with pytest.raises(ValueError, match="unknown basis"):
+        load_lesson_table(p)
+
+
+def test_committed_dada_table_is_consistent():
+    table = Path(__file__).resolve().parents[1] / "config" / "lessons" / "dada.jsonl"
+    rows = load_lesson_table(table)
+    keys = [(row.book, row.chapter) for row in rows]
+    assert len(keys) == len(set(keys))
+    for row in rows:
+        if row.basis == "author-pick":
+            assert row.reason.strip(), f"b{row.book}c{row.chapter} needs a reason"
+        if row.basis == "taught-in-class":
+            assert not row.teacher.startswith("none"), f"b{row.book}c{row.chapter}"
+            assert "unassigned" not in row.teacher, f"b{row.book}c{row.chapter}"
+        if row.book == 6:
+            assert "Dumbledore's Army" not in row.reason
+
+
 def test_seeds_follow_approved_chapters(tmp_path: Path):
     bundle = _build(tmp_path)
     titles = {c.title for c in bundle.concepts}
@@ -109,6 +136,7 @@ def test_concept_prefill_and_precedence(tmp_path: Path):
     assert {r.chunk_id for r in boggart.source_refs} == {
         "b3-c07-0056", "b5-c18-0001"}
     assert all(r.index_text_hash == "aca4c57462d449f5" for r in boggart.source_refs)
+    assert all(r.citation_bucket == "books" for r in boggart.source_refs)
     assert boggart.agreement["both"] == 1
     assert boggart.reference is not None
     assert boggart.reference.publisher == "The Harry Potter Lexicon"
@@ -132,6 +160,15 @@ def test_write_bundle_round_trips(tmp_path: Path):
     assert rows[0]["subject"] == "dada"
     queue = (tmp_path / "seeds" / "queue_unassigned.jsonl").read_text()
     assert "creature/dementors" in queue
+    disagreement = (tmp_path / "seeds" / "queue_disagreement.jsonl").read_text()
+    assert "magic/boggart-banishing-spell" in disagreement
+    assert "magic/accio" in disagreement
+    book_level = (tmp_path / "seeds" / "queue_book_level.jsonl").read_text()
+    assert "magic/draught-of-peace" in book_level
+    summary = json.loads((tmp_path / "seeds" / "queue_summary.json").read_text())
+    assert summary == {
+        "unassigned": 1, "disagreement": 2, "book_level": 1, "edges_seen": 5
+    }
 
 
 def test_stats(tmp_path: Path):
@@ -139,3 +176,6 @@ def test_stats(tmp_path: Path):
     assert stats["concepts"] == 2
     assert stats["resolved_with_evidence"] == 1
     assert stats["edges_seen"] == 5
+    assert stats["unassigned"] == 1
+    assert stats["disagreement"] == 2
+    assert stats["book_level"] == 1

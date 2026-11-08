@@ -155,7 +155,7 @@ def main():
                                -a["cands"][k], a["meta"][k][1].lower()),
             )[:5]
             out[key] = (len(a["all"]), len(a["cands"]),
-                        [a["meta"][t][1][:24] for t in top])
+                        [a["meta"][t][1] for t in top])
         return out
 
     seeded = lex_seeded()
