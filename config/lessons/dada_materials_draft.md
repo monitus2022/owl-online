@@ -10,13 +10,13 @@ not yet in the table for a maintainer decision.
 | # | Title | One-line scope | Anchors (verified seeds) | Approved chapters cited |
 |---|---|---|---|---|
 | 1 | Boggarts and the Banishing Spell | Recognizing a boggart, Riddikulus mechanics, classroom protocol | Boggart, Boggart Banishing Spell | b3 c07 (Lupin, taught) |
-| 2 | Dementors and the Patronus Charm | Dementor behaviour, the Patronus precondition, why fifth years only theorise it | Dementors, Patronus Charm, Corporeal Patronus | b3 c10, c12 (taught), b5 c23-c24 (D.A.) |
+| 2 | Dementors and the Patronus Charm | Dementor behaviour, the Patronus precondition, why fifth years only theorise it | Dementors, Patronus Charm, Corporeal Patronus | b3 c10, c12 (taught; verified chunks b3-c10-0016, b3-c12-0025), b5 c18 (taught, D.A. year) |
 | 3 | Dark-Creature Fieldcraft | Lake and corridor hazards, thestrals, pixie-and-basilisk classroom failures; Ministry classification | Grindylow, Pixies, Thestrals, Murtlap, Basilisk | b3 c16 (exam), b2 c10 (taught), b5 c21, c28 (taught) |
 | 4 | Werewolves: Lore, Restraint and Prejudice | Wolfsbane, the Grim, containment, and how the wizarding world treats werewolves | Werewolves, Grim | b3 c09 (taught, Snape note), b3 c12 (taught), b2 c10 (werewolf-boggart class) |
-| 5 | The Unforgivable Curses | Legal status, documented effects, defense doctrine; the debate over school demonstration | Imperius Curse, Killing Curse, Cruciatus Curse | b4 c14-c15 (Moody, taught), b6 c15 (author-pick) |
-| 6 | Dueling Discipline: Shielding and Disarming | Disarming, Stunning, shielding, footwork - the practical core the D.A. supplied | Disarming Charm, Stunning Spell, Shield Charm | b5 c18-c19 (taught, D.A. year), b4 c31, c34 (author-pick dueling), b2 c11-c13 (counter-example) |
+| 5 | The Unforgivable Curses | Legal status, documented effects, defense doctrine; the debate over school demonstration | Imperius Curse, Killing Curse, Cruciatus Curse | b4 c14-c15 (taught; demonstration chunks b4-c15-0008/0009, Crucio b4-c14-0020), b6 c15 (author-pick, Unbreakable Vow) |
+| 6 | Dueling Discipline: Shielding and Disarming | Disarming, Stunning, shielding, footwork - the practical core the D.A. supplied | Disarming Charm, Stunning Spell, Shield Charm | b5 c18 (taught; Disarming b5-c18-0081, Protego b5-c26-0094), b4 c31, c34 (author-pick dueling), b2 c11-c13 (counter-example) |
 | 7 | Countering Curses, Detection and Concealment | Hex and curse recognition, counter-enchantment, detecting concealed creatures | Anti-Curses, Hexes, Curses | b4 c14, c20, c22, c28 (Moody-year defense, taught) |
-| 8 | Protective Magic Under Pressure | Personal and household defence, secrecy, anti-tracking in wartime | Shield Charm, Patronus | b5 c27, c30, c33 (author-pick), b7 c29, c30, c32, c36 (author-pick) |
+| 8 | Protective Magic Under Pressure | Personal and household defence, secrecy, anti-tracking in wartime | Shield Charm, Patronus | b5 c27, c30, c33 (author-pick), b7 c29, c30, c32, c36 (author-pick; shielding b7-c32-0001) |
 
 Candidate chapters NOT yet in the approved table (add via a follow-up draft
 run or manual rows; content notes only where a quote verified it this session):
