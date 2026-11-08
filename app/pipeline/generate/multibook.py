@@ -16,9 +16,9 @@ from dataclasses import dataclass
 from app.pipeline.generate.generate import (
     ABSTAIN_MESSAGE,
     AskResult,
-    _is_refusal,
-    _one_draft,
     ground_answer,
+    is_refusal,
+    one_draft,
     sanitize_evidence,
 )
 from app.pipeline.retrieve.multibook import BookRetriever, retrieve_multi_book
@@ -498,7 +498,7 @@ async def ask_multi_book(
     if on_stage is not None:
         on_stage("generate")
     generate_span = tracer.start("synthesize") if tracer else None
-    raw = await _one_draft(MULTI_BOOK_SYSTEM, prompt, llm, on_token)
+    raw = await one_draft(MULTI_BOOK_SYSTEM, prompt, llm, on_token)
     if tracer is not None and generate_span is not None:
         tracer.finish(
             generate_span,
@@ -506,7 +506,7 @@ async def ask_multi_book(
             books=sorted(extracted_books),
             **prompt_fingerprint(MULTI_BOOK_SYSTEM, prompt),
         )
-    refused = _is_refusal(raw, cited=bool(_CITATION.search(raw)))
+    refused = is_refusal(raw, cited=bool(_CITATION.search(raw)))
     draft = _filter_supported_lines(raw, evidence_chunks)
     result = ground_answer(draft, evidence_chunks)
     # Coverage follows the lines that survived binding, not the raw extracts:

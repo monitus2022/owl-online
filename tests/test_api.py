@@ -7,8 +7,10 @@ import time
 
 from fastapi.testclient import TestClient
 
+from app.agent import build_graph
 from app.api.runtime import Runtime
 from app.config import Settings
+from app.knowledge.materials import Material, SourceRef
 from app.knowledge.packs import PackSummary
 from app.logging import get_request_id
 from app.main import create_app
@@ -561,3 +563,96 @@ def test_subjects_empty_without_packs():
         response = client.get("/v1/subjects")
     assert response.status_code == 200
     assert response.json() == {"subjects": []}
+
+
+# Lesson mode: pack-grounded answers use an explicit mode, gated by settings.
+
+_LESSON_MATERIAL = Material(
+    material_id="dada-test-material",
+    subject="dada",
+    topic="dark-arts",
+    concept="dada-test-concept",
+    kind="spell",
+    text="Rowan trims the wick with a counter-jinx.",
+    review_status="reviewed",
+    source_refs=[
+        SourceRef(
+            chunk_id="b1-c01-0000",
+            book=1,
+            chapter=1,
+            quote="Rowan trims the wick",
+            text_hash="0123456789abcdef",
+            index_text_hash="fedcba9876543210",
+        )
+    ],
+)
+
+
+class _LessonSelector:
+    async def select(self, question, *, subject, top_k=3, min_score=0.0):
+        return [_LESSON_MATERIAL]
+
+
+class _LessonLlm(_Llm):
+    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        return "Rowan trims the wick with a counter-jinx [mat:dada-test-material]."
+
+    async def stream(self, system: str, prompt: str, *, context=None):
+        for piece in (
+            "Rowan trims the wick ",
+            "[mat:dada-test-material].",
+        ):
+            yield piece
+
+
+def _lesson_runtime() -> Runtime:
+    selector = _LessonSelector()
+    graph = build_graph(
+        _Retriever(),
+        _LessonLlm(),
+        lesson=selector,
+        lesson_subject="dada",
+        lesson_top_k=3,
+    )
+    return Runtime(
+        retriever=_Retriever(),
+        llm=_LessonLlm(),
+        agent=graph,
+        lesson=selector,
+    )
+
+
+def test_lesson_mode_is_rejected_when_disabled():
+    app = create_app(
+        app_settings=Settings(lesson_mode=False),
+        runtime=Runtime(retriever=_Retriever(), llm=_Llm()),
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/ask/stream", json={"question": "Teach me", "mode": "lesson"}
+        )
+    assert response.status_code == 400
+    assert "lesson mode" in response.json()["detail"]
+
+
+def test_lesson_mode_returns_material_and_source_citations():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True),
+        runtime=_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "How does the counter-jinx work?", "mode": "lesson"},
+        ) as response:
+            assert response.status_code == 200
+            body = "".join(response.iter_text())
+
+    events = _parse_sse(body)
+    modes = [data for name, data in events if name == "mode"]
+    finals = [data for name, data in events if name == "final"]
+    assert modes[0]["mode"] == "lesson"
+    assert finals[0]["material_citations"] == ["dada-test-material"]
+    assert finals[0]["citations"] == ["b1-c01-0000"]
+    assert finals[0]["abstained"] is False

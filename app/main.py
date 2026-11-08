@@ -205,6 +205,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             if app_settings.persona
             else "off"
         )
+        lesson_scope = (
+            f"{runtime.pack_store.scope()}|{app_settings.lesson_top_k}"
+            if app_settings.lesson_mode and runtime.pack_store is not None
+            else "off"
+        )
         return "|".join(
             [
                 runtime.index_hash,
@@ -219,6 +224,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 str(app_settings.retry_budget),
                 str(app_settings.multi_book),
                 persona_scope,
+                lesson_scope,
                 runtime.lore.version() if runtime.lore is not None else "none",
                 LORE_SELECTION_VERSION,
                 app_settings.lore_subject,
@@ -427,6 +433,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         agent = runtime.agent
         if agent is None:
             raise RuntimeError("agent graph was not built")
+        if body.mode == "lesson" and (
+            not app_settings.lesson_mode or runtime.lesson is None
+        ):
+            raise HTTPException(status_code=400, detail="lesson mode is not enabled")
         session = request.state.session_id
         limiter: ChatLimiter = app.state.limiter
         llm = runtime.llm
@@ -495,6 +505,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                                 "answer": cached.answer,
                                 "citations": cached.citations,
                                 "lore_citations": cached.lore_citations,
+                                "material_citations": cached.material_citations,
                                 "abstained": cached.abstained,
                                 "needs_input": False,
                                 "attempts": cached.attempts,
@@ -568,6 +579,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 answer=str(final.get("answer", "")),
                 citations=list(final.get("citations", [])),
                 lore_citations=list(final.get("lore_citations", [])),
+                material_citations=list(final.get("material_citations", [])),
                 lore_chars=int(final.get("lore_chars") or 0),
                 abstained=bool(final.get("abstained", False)),
                 chunks=list(final.get("chunks", [])),
@@ -597,6 +609,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         "answer": final.get("answer", ""),
                         "citations": final.get("citations", []),
                         "lore_citations": final.get("lore_citations", []),
+                        "material_citations": final.get("material_citations", []),
                         "abstained": final.get("abstained", False),
                         "needs_input": final.get("needs_input", False),
                         "attempts": final.get("attempts", 1),

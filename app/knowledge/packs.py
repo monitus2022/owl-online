@@ -26,7 +26,7 @@ import json
 import logging
 import re
 import tomllib
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -386,29 +386,26 @@ class PackSummary(_StrictModel):
     materials: int = 0
 
 
-def load_pack_summaries(
+def _published_packs(
     subjects_path: Path | None,
     chunks: dict[str, Chunk],
     index_text_hash: str,
-) -> list[PackSummary]:
-    """Summaries of the published, valid packs under `subjects_path`.
+) -> Iterator[SubjectPack]:
+    """Every published pack that loads and validates, in directory order.
 
     A draft or invalid pack is skipped, not served: the same discipline as
     the pack loader, softened at the API boundary so one broken pack cannot
     take the subject index down.
     """
     if subjects_path is None or not subjects_path.is_dir():
-        return []
-    summaries: list[PackSummary] = []
+        return
     for directory in sorted(path for path in subjects_path.iterdir() if path.is_dir()):
         if not (directory / "pack.toml").exists():
             continue
         try:
             pack = load_subject_pack(directory)
         except Exception as error:
-            logger.warning(
-                "subject pack %s failed to load: %s", directory, error
-            )
+            logger.warning("subject pack %s failed to load: %s", directory, error)
             continue
         if pack.manifest.status != "published":
             continue
@@ -420,22 +417,87 @@ def load_pack_summaries(
                 "; ".join(result.errors[:3]),
             )
             continue
-        subject = known_subject(pack.manifest.subject)
-        summaries.append(
-            PackSummary(
-                subject=pack.manifest.subject,
-                title=subject.name if subject else pack.manifest.subject,
-                tier=pack.manifest.tier,
-                version=pack.manifest.version,
-                status=pack.manifest.status,
-                built_at=pack.manifest.built_at,
-                fingerprint=pack_fingerprint(pack),
-                topics=tuple(sorted(topic.topic_id for topic in pack.topics)),
-                concepts=len(pack.concepts),
-                materials=len(pack.materials),
-            )
+        yield pack
+
+
+def load_pack_summaries(
+    subjects_path: Path | None,
+    chunks: dict[str, Chunk],
+    index_text_hash: str,
+) -> list[PackSummary]:
+    """Summaries of the published, valid packs under `subjects_path`."""
+    return load_pack_store(subjects_path, chunks, index_text_hash).summaries()
+
+
+@dataclass(frozen=True)
+class PackStore:
+    """Full published packs keyed by subject, plus their fingerprints.
+
+    The summaries endpoint needs counts; lesson mode needs the materials. One
+    load pass builds both from the same validated set, so a pack can never be
+    summarized but not teachable.
+    """
+
+    packs: dict[str, SubjectPack]
+    fingerprints: dict[str, str]
+
+    def subjects(self) -> tuple[str, ...]:
+        return tuple(sorted(self.packs))
+
+    def get(self, subject: str) -> SubjectPack | None:
+        return self.packs.get(subject)
+
+    def fingerprint(self, subject: str) -> str | None:
+        return self.fingerprints.get(subject)
+
+    def material(self, subject: str, material_id: str) -> Material | None:
+        pack = self.packs.get(subject)
+        return pack.find_material(material_id) if pack is not None else None
+
+    def scope(self) -> str:
+        """Stable cache scope over the loaded pack versions."""
+        return ",".join(
+            f"{subject}:{self.fingerprints[subject]}"
+            for subject in self.subjects()
+            if subject in self.fingerprints
         )
-    return summaries
+
+    def summaries(self) -> list[PackSummary]:
+        """The `/v1/subjects` view of the same validated packs."""
+        summaries: list[PackSummary] = []
+        for subject in self.subjects():
+            pack = self.packs[subject]
+            known = known_subject(subject)
+            summaries.append(
+                PackSummary(
+                    subject=subject,
+                    title=known.name if known else subject,
+                    tier=pack.manifest.tier,
+                    version=pack.manifest.version,
+                    status=pack.manifest.status,
+                    built_at=pack.manifest.built_at,
+                    fingerprint=self.fingerprints[subject],
+                    topics=tuple(sorted(topic.topic_id for topic in pack.topics)),
+                    concepts=len(pack.concepts),
+                    materials=len(pack.materials),
+                )
+            )
+        return summaries
+
+
+def load_pack_store(
+    subjects_path: Path | None,
+    chunks: dict[str, Chunk],
+    index_text_hash: str,
+) -> PackStore:
+    """Load the published, valid packs once for both summaries and lesson mode."""
+    packs: dict[str, SubjectPack] = {}
+    fingerprints: dict[str, str] = {}
+    for pack in _published_packs(subjects_path, chunks, index_text_hash):
+        subject = pack.manifest.subject
+        packs[subject] = pack
+        fingerprints[subject] = pack_fingerprint(pack)
+    return PackStore(packs=packs, fingerprints=fingerprints)
 
 
 def pack_fingerprint(pack: SubjectPack) -> str:

@@ -24,7 +24,7 @@ class AskRequest(BaseModel):
 class StreamRequest(AskRequest):
     """A question plus an optional chat-intent override and answer to review."""
 
-    mode: Literal["auto", "answer", "practice", "feedback"] = "auto"
+    mode: Literal["auto", "answer", "practice", "feedback", "lesson"] = "auto"
     student_answer: str | None = Field(default=None, max_length=6000)
 
     @field_validator("student_answer")
@@ -37,7 +37,7 @@ class StreamRequest(AskRequest):
 
     @model_validator(mode="after")
     def _check_student_answer_mode(self) -> "StreamRequest":
-        if self.student_answer and self.mode in ("answer", "practice"):
+        if self.student_answer and self.mode in ("answer", "practice", "lesson"):
             raise ValueError("student_answer is only valid with auto or feedback mode")
         return self
 

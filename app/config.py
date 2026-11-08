@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     # Persona layer: the reviewed professor tone, scripted meta and personal
     # replies. Off keeps the plain grounded assistant.
     persona: bool = False
+    # Lesson mode: teach from reviewed subject-pack materials instead of the
+    # raw corpus. Off keeps the measured corpus answer path unchanged.
+    lesson_mode: bool = False
+    lesson_top_k: int = Field(default=3, ge=1, le=10)
+    # Cosine floor on the best material match. Calibrated for
+    # qwen3-embedding:0.6b on the DADA pack (related 0.598-0.791, off-topic
+    # 0.160-0.549); recalibrate when the embedder changes.
+    lesson_min_score: float = 0.58
 
     # Deadline for one /ask request (retrieve plus generate). /ask/stream is not
     # bounded because a legitimate stream can outlive it.

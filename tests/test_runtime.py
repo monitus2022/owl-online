@@ -68,7 +68,9 @@ async def test_build_runtime_loads_published_pack_summaries(monkeypatch, tmp_pat
     monkeypatch.setattr(runtime_module, "make_llm", lambda *a, **k: object())
     monkeypatch.setattr(runtime_module, "build_graph", lambda *a, **k: object())
     monkeypatch.setattr(
-        runtime_module, "load_pack_summaries", lambda *a, **k: [summary]
+        runtime_module,
+        "load_pack_store",
+        lambda *a, **k: SimpleNamespace(summaries=lambda: [summary]),
     )
 
     built = await runtime_module.build_runtime(

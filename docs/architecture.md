@@ -12,8 +12,8 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | Layer | Path | Responsibility |
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
-| Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal nodes |
-| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the DADA pack is published, the extraction build pipeline (#128) and Charms content are in progress |
+| Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
+| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166); the DADA pack is published, the extraction build pipeline (#128) and Charms content are in progress |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -27,7 +27,7 @@ Pipeline stages, in order:
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
-| Generate | `app/pipeline/generate/` | `ask`, `build_prompt`, `ground_answer`, `verify_draft` |
+| Generate | `app/pipeline/generate/` | `ask`, `ask_lesson`, `build_prompt`, `ground_answer`, `verify_draft` |
 | Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node` |
 
 `parse_chapters` drops the front matter before book 1 and trims the previous
@@ -450,6 +450,14 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
 | `meta` | persona on; identity, subject scope, exam (non-disclosure), syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
+| `lesson` | explicit `mode=lesson`, `OWL_LESSON_MODE` on | teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs | no | no |
+
+Lesson mode is the one intent grounded in a subject pack rather than the corpus.
+The selector is derived at startup by embedding material texts in memory and
+scoring a question by cosine; the corpus join through `source_refs` remains the
+grounding check, not the selector. A lesson answer cites material ids in
+`material_citations` and their book chunks in `citations`. With the flag off the
+request is rejected and the measured corpus path is unchanged.
 
 ## Persona layer
 
