@@ -38,7 +38,11 @@ page describes what comes next and why.
   citations, validated against the pack. The variant bank (#120) gives every
   scripted meta topic, the personal reply and the abstention line several
   reviewed phrasings. The real pack and the lore eval follow. The full persona
-  voice still follows the real pack and a fixture-driven lore eval.
+  voice still follows the real pack and a fixture-driven lore eval. Scope
+  decision 2026-11-08: persona expression is tiered 0-2 - voiced grounded
+  answers, then generative-within-the-record bounded by the lore pack - with
+  tier 3 (invented non-canon flavor) explicitly out of scope; tiers and the
+  five-professor card model are recorded in `docs/persona.md`.
 - The academy frontend surface has shipped: `web/` deployed on Cloudflare
   Pages - the gate, the cloister with five identified venues, live chat
   against `/ask/stream` with citation chips and in-world limit copy, the

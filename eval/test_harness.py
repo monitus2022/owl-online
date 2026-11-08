@@ -13,6 +13,7 @@ from eval.harness import (
     JudgeVerdict,
     abstention_metrics,
     abstention_metrics_by_slice,
+    abstention_scores,
     corpus_vocabulary,
     exact_match,
     judge_sample,
@@ -196,7 +197,10 @@ async def test_abstention_metrics_by_slice():
 async def test_abstention_forwards_the_retry_budget(monkeypatch):
     seen: dict[str, int] = {}
 
-    async def fake_ask(question, *, retriever, llm, top_k, max_retries):
+    async def fake_ask(
+        question, *, retriever, llm, top_k, max_retries, persona_suffix=None,
+        lore=None, subject="dada",
+    ):
         seen["max_retries"] = max_retries
         return AskResult(
             ABSTAIN_MESSAGE,
@@ -216,7 +220,10 @@ async def test_abstention_forwards_the_retry_budget(monkeypatch):
 async def test_judge_sample_forwards_the_retry_budget(monkeypatch):
     seen: dict[str, int] = {}
 
-    async def fake_ask(question, *, retriever, llm, top_k, max_retries):
+    async def fake_ask(
+        question, *, retriever, llm, top_k, max_retries, persona_suffix=None,
+        lore=None, subject="dada",
+    ):
         seen["max_retries"] = max_retries
         return AskResult("an answer [c1]", ["c1"], chunks=[_chunk("c1")])
 
@@ -230,6 +237,59 @@ async def test_judge_sample_forwards_the_retry_budget(monkeypatch):
         _Retriever({"q": ["c1"]}), _Llm(), _Judge(), items, sample=1, max_retries=0
     )
     assert seen["max_retries"] == 0
+
+
+async def test_judge_sample_forwards_persona_and_lore(monkeypatch):
+    seen: dict[str, object] = {}
+
+    async def fake_ask(
+        question, *, retriever, llm, top_k, max_retries, persona_suffix, lore, subject
+    ):
+        seen["persona_suffix"] = persona_suffix
+        seen["lore"] = lore
+        seen["subject"] = subject
+        return AskResult("an answer [c1]", ["c1"], chunks=[_chunk("c1")])
+
+    class _Judge:
+        async def generate(self, system: str, prompt: str, *, context=None) -> str:
+            return '{"correctness": "correct", "grounded": true}'
+
+    monkeypatch.setattr("eval.harness.judging.ask", fake_ask)
+    items = [GoldItem("q1", "q", True, ["c1"], ("simple",))]
+    store = object()
+    await judge_sample(
+        _Retriever({"q": ["c1"]}),
+        _Llm(),
+        _Judge(),
+        items,
+        sample=1,
+        persona_suffix="SUFFIX",
+        lore=store,
+        subject="dada",
+    )
+    assert seen == {"persona_suffix": "SUFFIX", "lore": store, "subject": "dada"}
+
+
+async def test_abstention_scores_forwards_persona_and_lore(monkeypatch):
+    seen: dict[str, object] = {}
+
+    async def fake_ask(
+        question, *, retriever, llm, top_k, max_retries, persona_suffix, lore, subject
+    ):
+        seen["persona_suffix"] = persona_suffix
+        seen["lore"] = lore
+        return AskResult("", [], abstained=True)
+
+    monkeypatch.setattr("eval.harness.abstention.ask", fake_ask)
+    await abstention_scores(
+        _Retriever({}),
+        _Llm(),
+        [GoldItem("u1", "z", False, [])],
+        persona_suffix="SUFFIX",
+        lore=object(),
+    )
+    assert seen["persona_suffix"] == "SUFFIX"
+    assert seen["lore"] is not None
 
 
 def test_parse_verdict_tolerates_prose():

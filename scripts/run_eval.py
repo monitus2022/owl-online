@@ -44,6 +44,11 @@ def main() -> int:
         help="override the local/Bedrock embedder model slug",
     )
     parser.add_argument("--write-baseline", action="store_true")
+    parser.add_argument(
+        "--persona",
+        action="store_true",
+        help="apply the shipped persona answer suffix and lore store to ask()",
+    )
     parser.add_argument("--check", action="store_true")
     parser.add_argument(
         "--latest",
@@ -56,6 +61,8 @@ def main() -> int:
         parser.error("--check and --write-baseline are mutually exclusive")
     if args.latest is not None and not args.check:
         parser.error("--latest is only used with --check")
+    if args.persona and args.write_baseline:
+        parser.error("the baseline stays the persona-off pinned stack; --persona cannot pin")
     if args.embedder_model and args.index == REPO / "data" / "index" / "chroma":
         parser.error("--embedder-model requires a separate --index")
     pinned_setup = (
@@ -84,6 +91,18 @@ def main() -> int:
         print(render_check(report))
         return 0 if report.passed else 1
 
+    persona_suffix: str | None = None
+    lore = None
+    subject = "dada"
+    if args.persona:
+        from app.agent.persona import PERSONA
+        from app.config import settings
+        from app.knowledge.lore import load_lore
+
+        persona_suffix = PERSONA.answer_suffix()
+        subject = settings.lore_subject
+        if settings.lore_path is not None and settings.lore_path.exists():
+            lore = load_lore(settings.lore_path)
     run_report = asyncio.run(
         run(
             gold_path=args.gold,
@@ -96,6 +115,9 @@ def main() -> int:
             sample=args.sample,
             pin_baseline=args.write_baseline,
             embedder_model=args.embedder_model,
+            persona_suffix=persona_suffix,
+            lore=lore,
+            subject=subject,
         )
     )
     print(render_run(run_report))

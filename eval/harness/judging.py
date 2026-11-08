@@ -7,6 +7,7 @@ import re
 import tomllib
 from pathlib import Path
 
+from app.knowledge.lore import LoreStore
 from app.pipeline.generate import (
     DEFAULT_MAX_RETRIES,
     DEFAULT_TOP_K,
@@ -117,6 +118,9 @@ async def judge_sample(
     sample: int = 15,
     top_k: int = DEFAULT_TOP_K,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    persona_suffix: str | None = None,
+    lore: LoreStore | None = None,
+    subject: str = "dada",
 ) -> list[JudgeVerdict]:
     """Generate answers for a slice-balanced sample and judge them.
 
@@ -134,6 +138,9 @@ async def judge_sample(
             llm=llm,
             top_k=top_k,
             max_retries=max_retries,
+            persona_suffix=persona_suffix,
+            lore=lore,
+            subject=subject,
         )
         reference = item.reference_answer
         if result.abstained:

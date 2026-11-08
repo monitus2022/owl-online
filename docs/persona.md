@@ -139,6 +139,41 @@ The TOML holds the reviewed text; this table is the same list for review.
 - "There is no clock here. We work until the idea is clear."
 - "That is not something I can confirm. I will not guess at it."
 
+## Response tiers
+
+Scope decision, 2026-11-08: persona expression is planned as tiers 0 through
+2. Tier 3 is out of scope for this project.
+
+| Tier | Expression capability | Fact source | Gate |
+|---|---|---|---|
+| 0 | scripted variants, pinned answer prose (shipped today) | book chunks and the lore pack | current behavior behind `OWL_PERSONA` |
+| 1 | answers composed in the professor's register; content strictly from retrieved context | as tier 0 | faithfulness floor plus a citation-retention check; lands with the real lore pack |
+| 2 | free composition inside the persona card and the lore pack: Ashcombe anecdotes, teaching philosophy, founders' history | lore pack entries only, with `[lore:]` citations | new persona-conformance fixture in the eval harness, same Wilson discipline |
+| 3 | invented setting flavor that asserts nothing as canon | n/a | out of scope: beyond a portfolio project's goals; never on the answer, practice or feedback paths |
+
+Rules invariant across tiers:
+
+- style has freedom, facts do not. A tiered-up persona may rephrase, never
+  add;
+- policy lives in code (router guard, validator, disclosure checks),
+  personality lives in config and the lore pack;
+- exam format and syllabus stay undisclosed; the record boundary and the
+  no-private-knowledge rule never bend with the register;
+- citation binding must survive restyling. The multi-book holdout showed
+  quoted-fact drift is a real failure mode;
+
+## Multiple professors
+
+The five founders share one spine. Each department gets a persona card keyed
+by subject (planned: `config/personas/<subject>.toml`, with Crane as the DADA
+seed): register description, its own variant-bank section, and boundaries
+imported from the common spine. The router selects the active professor from
+the subject in play and hands cross-subject questions over with an explicit
+line ("that is Professor Hale's province"). Tier 2 composition stays bounded
+by the lore pack entries for that professor's subject; persona facts about the
+school and founders live in the shared lore entries, not in five prompt files
+that can drift apart.
+
 ## Changelog
 
 | Date | Change |
@@ -147,3 +182,4 @@ The TOML holds the reviewed text; this table is the same list for review.
 | 2026-11-07 | Lore foundation: Battle veteran, post-war Auror scheme, five founders, Ashcombe founded 2008; exam, syllabus and grading are non-disclosure; in-world abstention and the exam boundary in the answer prompt |
 | 2026-11-07 | Variant bank: every meta topic, the personal reply and the abstention line carry reviewed phrasings; facts and the `abstained` flag stay identical |
 | 2026-11-07 | Public-history layer: the professor knows the war and post-war outline as public history; memory is context, not evidence; detail cites the book chunks |
+| 2026-11-08 | Response tiers 0-2 recorded as the persona scope; tier 3 (invented non-canon flavor) declared out of scope; multi-professor card model noted |
