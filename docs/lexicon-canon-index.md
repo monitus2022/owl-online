@@ -235,6 +235,14 @@ and only practised in another. The table is validated against our own corpus: a
 lesson chapter must show teacher-plus-classroom cues in the chunk text. Lexicon
 chapter pages help find the scenes; the book text is the proof.
 
+Decision (2026-11-08): practical-defense contexts outside a sanctioned
+classroom - Dumbledore's Army chapters and dueling-club scenes - are kept in
+the draft table under explicit `da-army` / `duel-club` labels and map to the
+author-pick basis with the reason recorded. Dropping them was rejected: DADA
+classroom evidence is scarce, and the D.A. chapters document which defensive
+spells the books treat as the practical core. The labels keep the precedence
+honest - practice tiers inform membership, they never define it.
+
 Scope-first keeps the problem tractable. A pack declares its topics (the workplan
 already fixes the DADA scope list), so we only ever assign items relevant to
 those topics. We never classify all ~400 magic and ~2,000 thing entries into

@@ -3,8 +3,9 @@
 Tiers per docs/lexicon-canon-index.md (Subject assignment):
 class = taught-in-class scene sentence (teacher or subject + lesson cue);
 exam  = used-in-exam-context (subject + O.W.L./exam/practical/test, same
-        sentence); da = DA training / dueling-club practice (DADA only).
-Row tier = strongest signal present (class > exam > da). Deterministic
+        sentence); da-army = Dumbledore's Army chapters; duel-club =
+        dueling-club scenes (both DADA, both author-pick basis).
+Row tier = strongest signal present (class > exam > da-army > duel-club). Deterministic
 sentence-scope matching, no model calls. Outputs are local data/ (quotes);
 the approved table committed later is structure-only.
 """
@@ -41,8 +42,11 @@ EXAM_CUE = re.compile(
     re.I,
 )
 DA_CUE = re.compile(
-    r"Dumbledore.{0,3}s Army|\bthe D\.A\.|practice dueling|practis(?:ing|e) "
-    r"dueling|dueling club|duelling club|\bdueling lessons?", re.I,
+    r"Dumbledore.{0,3}s Army|\bthe D\.A\.", re.I,
+)
+DUEL_CUE = re.compile(
+    r"practice dueling|practis(?:ing|e) dueling|dueling club|duelling club|"
+    r"\bdueling lessons?", re.I,
 )
 SENT_SPLIT = re.compile(r"(?<=[.!?])\s")
 
@@ -54,7 +58,7 @@ def sentences(text):
 def main():
     # subject -> (book, chapter) -> row dict
     acc = defaultdict(lambda: defaultdict(
-        lambda: {"class_n": 0, "exam_n": 0, "da_n": 0,
+        lambda: {"class_n": 0, "exam_n": 0, "da_n": 0, "club_n": 0,
                  "t": Counter(), "ex": []}))
     for line in open(CHUNKS, encoding="utf-8"):
         c = json.loads(line)
@@ -85,12 +89,17 @@ def main():
                 row = acc["DADA"][(b, ch)]
                 row["da_n"] += 1
                 if len(row["ex"]) < 4:
-                    row["ex"].append(("da", c["id"], sent.strip()))
+                    row["ex"].append(("da-army", c["id"], sent.strip()))
             elif da and not (da_subject and lesson):
                 row = acc["DADA"][(b, ch)]
                 row["da_n"] += 1
                 if len(row["ex"]) < 4:
-                    row["ex"].append(("da", c["id"], sent.strip()))
+                    row["ex"].append(("da-army", c["id"], sent.strip()))
+            elif DUEL_CUE.search(sent):
+                row = acc["DADA"][(b, ch)]
+                row["club_n"] += 1
+                if len(row["ex"]) < 4:
+                    row["ex"].append(("duel-club", c["id"], sent.strip()))
             if lesson and (char_subject or "Flitwick" in teachers):
                 row = acc["Charms"][(b, ch)]
                 row["class_n"] += 1
@@ -110,7 +119,9 @@ def main():
         if row["exam_n"] >= 2:
             return "exam", row["exam_n"]
         if row["da_n"] >= 1:
-            return "da", row["da_n"]
+            return "da-army", row["da_n"]
+        if row["club_n"] >= 1:
+            return "duel-club", row["club_n"]
         return None, 0
 
     def lex_seeded() -> dict[tuple[int, int], tuple[int, int]]:
@@ -136,12 +147,15 @@ def main():
     with open(OUT, "w", encoding="utf-8") as out:
         out.write("# DADA + Charms lesson-table review (machine proposal)\n\n")
         out.write("tier: class = taught-in-class (decisive); exam = used-in-"
-                  "exam-\ncontext (strong); da = DA/dueling practice (exam-"
-                  "adjacent).\nKeep or strike each row; teacher X = cue-name "
-                  "winner, year\nroster is the DADA cross-check. `seeded` = "
-                  "Lexicon entries with\nedges to the chapter / entries with "
-                  "hash-verified chunk\ncandidates (0/0 rows still stand on "
-                  "book evidence alone).\n\n")
+                  "exam-\ncontext (strong); da-army = Dumbledore's Army "
+                  "practice; duel-\nclub = Lockhart's dueling club. The two "
+                  "practice tiers are recorded\nas author-pick basis (kept on "
+                  "scarcity grounds, 2026-11-08\ndecision) - they inform, they "
+                  "never define the syllabus.\nKeep or strike each row; "
+                  "teacher X = cue-name winner, year\nroster is the DADA "
+                  "cross-check. `seeded` = Lexicon entries with\nedges to the "
+                  "chapter / entries with hash-verified chunk\ncandidates "
+                  "(0/0 rows still stand on book evidence alone).\n\n")
         for subj in ("DADA", "Charms"):
             out.write(f"\n## {subj}\n\n")
             out.write("| keep | chapter | tier | n | teacher (inferred) | "
