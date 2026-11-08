@@ -72,6 +72,8 @@ so on.
 | 2026-11-07 | #105 | `20261106T224853Z` | `aggregation` (k x selection ablation) | n/a | n/a | n/a | [Multi-book ablation](2026-11-07-105-multibook-ablation.md) |
 | 2026-11-07 | #105 | `20261106T233126Z` | `aggregation_holdout` (multi-book k=3) | n/a | n/a | 11/15 | [Multi-book holdout k=3](2026-11-07-105-multibook-holdout-k3.md) |
 | 2026-11-08 | #87 | `20261107T184204Z` | `pinned` | 0.76 | 0.31 | 13/15 | [Subject-pack gate](2026-11-08-87-subject-packs-gate.md) |
+| 2026-11-08 | #97 | `20261108T080558Z` | `pinned` (persona off, reproduction) | 0.76 | 0.31 | 13/15 | [Persona eval wiring](2026-11-08-97-persona-eval-wiring.md) |
+| 2026-11-08 | #97 | `20261108T080720Z` | `pinned-persona` | 0.76 | 0.29 | 12/14 | [Persona eval wiring](2026-11-08-97-persona-eval-wiring.md) |
 
 ## Template
 
