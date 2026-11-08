@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.knowledge.lore import LoreStore
 from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K, ask
 from app.providers.contracts import Llm, Retriever
 from eval.harness.gold import GoldItem
@@ -35,6 +36,9 @@ async def abstention_scores(
     items: list[GoldItem],
     top_k: int = DEFAULT_TOP_K,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    persona_suffix: str | None = None,
+    lore: LoreStore | None = None,
+    subject: str = "dada",
 ) -> list[AbstentionScore]:
     """Run every unanswerable item through ask() once and record the refusal."""
     scores: list[AbstentionScore] = []
@@ -47,6 +51,9 @@ async def abstention_scores(
             llm=llm,
             top_k=top_k,
             max_retries=max_retries,
+            persona_suffix=persona_suffix,
+            lore=lore,
+            subject=subject,
         )
         scores.append(AbstentionScore(item.id, result.abstained))
     return scores
@@ -63,9 +70,21 @@ async def abstention_metrics_all(
     items: list[GoldItem],
     top_k: int = DEFAULT_TOP_K,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    persona_suffix: str | None = None,
+    lore: LoreStore | None = None,
+    subject: str = "dada",
 ) -> tuple[AbstentionMetrics, dict[str, AbstentionMetrics]]:
     """Overall and per-slice abstention metrics from one ask() pass."""
-    scores = await abstention_scores(retriever, llm, items, top_k, max_retries)
+    scores = await abstention_scores(
+        retriever,
+        llm,
+        items,
+        top_k,
+        max_retries,
+        persona_suffix,
+        lore,
+        subject,
+    )
     by_id = {item.id: item for item in items}
     groups: dict[str, list[AbstentionScore]] = {}
     for score in scores:

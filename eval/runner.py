@@ -6,6 +6,7 @@ import hashlib
 from pathlib import Path
 
 from app.config import settings
+from app.knowledge.lore import LoreStore
 from app.pipeline.index.builder import load_chunks
 from app.pipeline.retrieve import compose_retriever
 from app.providers.factory import make_embedder, make_llm, make_reranker
@@ -52,6 +53,9 @@ async def run(
     sample: int,
     pin_baseline: bool,
     embedder_model: str | None = None,
+    persona_suffix: str | None = None,
+    lore: LoreStore | None = None,
+    subject: str = "dada",
 ) -> RunReport:
     """Score the pinned stack, write one result CSV, and optionally pin it."""
     reranker = (
@@ -91,10 +95,26 @@ async def run(
         setup.retriever, gold, k
     )
     abstention, abstention_by_slice = await abstention_metrics_all(
-        setup.retriever, generator, gold, k, retry_budget
+        setup.retriever,
+        generator,
+        gold,
+        k,
+        retry_budget,
+        persona_suffix,
+        lore,
+        subject,
     )
     verdicts = await judge_sample(
-        setup.retriever, generator, judge, gold, sample, k, retry_budget
+        setup.retriever,
+        generator,
+        judge,
+        gold,
+        sample,
+        k,
+        retry_budget,
+        persona_suffix,
+        lore,
+        subject,
     )
     generation = summarize_generation(verdicts)
     generation_by_slice = generation_metrics_by_slice(verdicts, gold)
@@ -112,6 +132,8 @@ async def run(
         config = "context"
     else:
         config = "pinned"
+    if persona_suffix is not None:
+        config = f"{config}-persona"
     values = manifest_row(
         manifest,
         embedder_provider=settings.embedder_provider,
