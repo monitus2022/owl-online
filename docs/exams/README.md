@@ -94,10 +94,10 @@ are `eval/exam/` (#191), run with
 `uv run python scripts/run_exam_eval.py`; the record is
 `docs/runs/2026-11-09-191-dada-bank-eval.md`.
 
-The Charms bank 1.0.0 is recorded at `docs/exams/charms-1.0.0.md`. It pins the
-same judge model and prompt version as DADA; the prompt id keeps its original
-`dada-` prefix because the rubric judge contract is shared and the grader
-rejects a different pin.
+The Charms bank 1.0.0 is recorded at `docs/exams/charms-1.0.0.md`. It uses the
+subject-neutral `owl-bank-judge-v3` prompt; DADA keeps `dada-bank-judge-v2` so
+its calibration record stays reproducible. The grader accepts both pins and
+selects the matching system prompt.
 
 ## Serving
 

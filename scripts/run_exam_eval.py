@@ -41,6 +41,11 @@ def main() -> int:
     parser.add_argument("--no-independent", action="store_true")
     parser.add_argument("--no-calibration", action="store_true")
     parser.add_argument(
+        "--skip-coverage-targets",
+        action="store_true",
+        help="skip the DADA topic, difficulty and one-item-per-material gate",
+    )
+    parser.add_argument(
         "--json",
         type=Path,
         default=None,
@@ -59,6 +64,7 @@ def main() -> int:
             concurrency=args.concurrency,
             independent=not args.no_independent,
             calibration=not args.no_calibration,
+            coverage_targets=not args.skip_coverage_targets,
         )
     )
     print(render_report(report))

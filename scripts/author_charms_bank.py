@@ -48,7 +48,7 @@ OUT = REPO / "data" / "exams" / SUBJECT
 PROMPT_VERSION = "charms-bank-authoring-v1"
 GENERATOR_MODEL = "deepseek/deepseek-v4.1-flash"
 JUDGE_MODEL = "mistralai/mistral-small-3.2-24b-instruct"
-JUDGE_PROMPT_VERSION = "dada-bank-judge-v2"
+JUDGE_PROMPT_VERSION = "owl-bank-judge-v3"
 
 ITEMS: list[dict] = [
     # foundations
@@ -528,7 +528,7 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-004",
         "kind": "short_answer",
         "material_id": "charms-growth",
-        "prompt": "Describe the Growth Charm and explain how it differs from a generic intention to make something bigger.",
+        "prompt": "Describe the Growth Charm, explain how it differs from a generic intention to make something bigger, and what can go wrong if its incantation is confused with a color-change spell.",
         "difficulty": "application",
         "model_answer": "The Growth Charm makes an object or creature larger and has its own incantation. It is a distinct charm, so a caster who mixes its incantation with a color-change spell can produce an oversized target instead of the intended color. The mistake shows that Growth must be learned as a specific spell, not treated as a vague wish to enlarge something.",
         "required_points": ["larger", "incantation"],

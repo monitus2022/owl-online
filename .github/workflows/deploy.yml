@@ -32,6 +32,7 @@ env:
   OWL_LESSON_MODE: ${{ vars.OWL_LESSON_MODE || 'false' }}
   OWL_LESSON_FALLBACK: ${{ vars.OWL_LESSON_FALLBACK || 'true' }}
   OWL_PERSONA: ${{ vars.OWL_PERSONA || 'false' }}
+  OWL_PERSONA_SUBJECT: ${{ vars.OWL_PERSONA_SUBJECT || 'dada' }}
 
 jobs:
   build-and-push:
@@ -112,6 +113,7 @@ jobs:
             -e OWL_LESSON_MODE="__OWL_LESSON_MODE__" \
             -e OWL_LESSON_FALLBACK="__OWL_LESSON_FALLBACK__" \
             -e OWL_PERSONA="__OWL_PERSONA__" \
+            -e OWL_PERSONA_SUBJECT="__OWL_PERSONA_SUBJECT__" \
             -v __DATA_DIR__:/data \
             __IMAGE__
           for i in $(seq 1 30); do
@@ -140,6 +142,7 @@ jobs:
           SCRIPT="${SCRIPT//__OWL_LESSON_MODE__/$OWL_LESSON_MODE}"
           SCRIPT="${SCRIPT//__OWL_LESSON_FALLBACK__/$OWL_LESSON_FALLBACK}"
           SCRIPT="${SCRIPT//__OWL_PERSONA__/$OWL_PERSONA}"
+          SCRIPT="${SCRIPT//__OWL_PERSONA_SUBJECT__/$OWL_PERSONA_SUBJECT}"
 
           # Validate before touching the host: a typo must not remove the
           # running container and leave the deploy without a rollback.

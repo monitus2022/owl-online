@@ -29,9 +29,10 @@ export function AboutPage() {
         <p>
           Defence Against the Dark Arts is taught by Professor Alistair
           Crane, who fought at the Battle as a student and served about ten
-          years in the Auror Office before co-founding the school. The other
-          four departments open as their classrooms are furnished and their
-          professors take the post.
+          years in the Auror Office before co-founding the school. Charms is
+          open with a published pack and exam bank while its professor post
+          stays vacant; the other three departments open as their classrooms
+          are furnished and their professors take the post.
         </p>
         <p>
           The academy, its founders and its professors are original

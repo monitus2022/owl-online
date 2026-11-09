@@ -1,12 +1,12 @@
 # Bank record: charms 1.0.0
 
 - Status: `published`
-- Built at: `2026-11-09T19:29:14Z`
-- Reviewed at: `2026-11-09T19:29:14Z`
+- Built at: `2026-11-09T19:44:24Z`
+- Reviewed at: `2026-11-09T19:44:24Z`
 - Pack: `1.0.0` / `12e1ee2fe077a004`
 - Index text hash: `aca4c57462d449f5`
 - Generator: `deepseek/deepseek-v4.1-flash` / `charms-bank-authoring-v1` / temperature 0.0
-- Judge: `mistralai/mistral-small-3.2-24b-instruct` / `dada-bank-judge-v2` / temperature 0.0
+- Judge: `mistralai/mistral-small-3.2-24b-instruct` / `owl-bank-judge-v3` / temperature 0.0
 - Items: 50 (25 MCQ, 25 short answer)
 - Validation: ok=True errors=0 warnings=0
 
@@ -165,21 +165,21 @@
 - Warnings: 0
 - Detailed messages stay in the CLI output; this record is structure only.
 
-## Near-duplicate check
+## Evaluation
 
-- Token Jaccard over the 50 prompts: maximum 0.6500; 0 pairs at or above 0.75.
-- Embedding cosine (`qwen3-embedding:0.6b`): maximum 0.8628; 0 pairs at or above 0.90.
-- Full report path is local and gitignored under `data/exams/charms/`.
-
-## Independent verification
-
-- Model: `mistralai/mistral-small-3.2-24b-instruct`, temperature `0.0`.
-- MCQ solver: 25/25 selected the stored key; 0 items had a second option judged correct.
-- Short-answer judge: 25/25 golden answers judged correct and complete; 0 missing required points.
-- Full report path is local and gitignored under `data/exams/charms/`.
+- Run id `exam-20261110-charms-1.0.0`; record
+  `docs/runs/2026-11-10-213-charms-bank-eval.md`.
+- Near-duplicates: max token Jaccard 0.6500 (limit 0.75), max embedding cosine
+  0.8628 (limit 0.90).
+- Independent verifier: 25/25 MCQ keys agree, 0 ambiguities; 25/25 golden
+  answers accepted, 0 missing required points.
+- Option lengths: correct option strictly longest in 48.0% of MCQs, mean gap
+  0.72 words.
 
 ## Review
 
 - The owner reviewed the item set and approved the final concept-only bank.
-- Every prompt, option, golden answer and rubric was checked against the no-character, no-scene, no-exam/lesson rule.
-- Reviewer notes: two earlier drafts were rejected for story-dependent items, then for exam-administration and classroom-pedagogy items.
+- Every prompt, option, golden answer and rubric was checked against the
+  no-character, no-scene, no-exam/lesson rule.
+- Two earlier drafts were rejected: first for story-dependent items, then for
+  exam-administration and classroom-pedagogy items.

@@ -75,6 +75,7 @@ so on.
 | 2026-11-08 | #97 | `20261108T080558Z` | `pinned` (persona off, reproduction) | 0.76 | 0.31 | 13/15 | [Persona eval wiring](2026-11-08-97-persona-eval-wiring.md) |
 | 2026-11-08 | #97 | `20261108T080720Z` | `pinned-persona` | 0.76 | 0.29 | 12/14 | [Persona eval wiring](2026-11-08-97-persona-eval-wiring.md) |
 | 2026-11-09 | #191 | `exam-20261109-c0d00cb0` | `dada-bank-exam` | n/a | n/a | n/a | [DADA bank eval](2026-11-09-191-dada-bank-eval.md) |
+| 2026-11-10 | #213 | `exam-20261110-charms-1.0.0` | `charms-bank-exam` | n/a | n/a | n/a | [Charms bank eval](2026-11-10-213-charms-bank-eval.md) |
 | 2026-11-09 | #176 | `20261109T171502Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice](2026-11-09-176-persona-lesson-voice.md) |
 | 2026-11-10 | #176 | `20261109T174845Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice r2](2026-11-10-176-persona-lesson-voice-r2.md) |
 

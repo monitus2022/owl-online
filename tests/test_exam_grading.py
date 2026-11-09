@@ -799,6 +799,27 @@ async def test_judge_prompt_version_must_match() -> None:
         )
 
 
+def test_neutral_judge_prompt_version_is_accepted() -> None:
+    bank = _bank(judge_prompt_version="owl-bank-judge-v3")
+    judge_llm_from_bank(bank)
+
+
+async def test_neutral_judge_prompt_is_subject_agnostic() -> None:
+    bank = _bank(judge_prompt_version="owl-bank-judge-v3")
+    llm = ScriptedLlm(_judge_json({"dada-short-001": (4, 4)}))
+    result = await grade_attempt(
+        bank,
+        ["dada-short-001"],
+        [_answer("dada-short-001")],
+        llm=llm,
+    )
+    system = llm.calls[0][0]
+    assert "O.W.L. subject bank" in system
+    assert "Defence Against the Dark Arts" not in system
+    assert result.judge_prompt_version == "owl-bank-judge-v3"
+    assert result.questions[0].marks_awarded == 8
+
+
 async def test_judge_temperature_must_be_zero() -> None:
     bank = _bank(judge_temperature=0.5)
     with pytest.raises(ValueError, match="temperature must be 0"):

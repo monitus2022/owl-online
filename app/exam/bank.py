@@ -495,7 +495,11 @@ def write_exam_bank(bank: ExamBank, directory: Path) -> None:
 
 
 def _option_length_metrics(bank: ExamBank) -> tuple[float, float, int]:
-    """Correct-option length bias and mean gap, the same measure as the eval."""
+    """Correct-option length bias and mean gap.
+
+    Keep this in step with `eval/exam/checks.py`; the record and the eval gate
+    must report the same measure.
+    """
     longest = 0
     gaps: list[int] = []
     for item in bank.items:
