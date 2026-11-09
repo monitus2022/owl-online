@@ -502,6 +502,14 @@ has empty `material_citations` and cites the retrieved book chunks directly.
 With the flag off the request is rejected and the measured corpus path is
 unchanged.
 
+The #216 target is answer contract and knowledge authority, not whether a
+phrasing is already in the cue list: policy, closed facts and teaching are
+separate contracts, and a router miss is unclassified rather than a lesson
+question. The plan of record, gates, citation types and measurement bar are in
+`docs/routing-contracts.md` (#216). #219 changes the router so the lesson path is
+opt-in and unclassified traffic clarifies or abstains; today the router still
+promotes a miss to lesson.
+
 With the persona on, the lesson system prompt is persona-first: identity,
 register and stance precede the grounding rules, a short voice reminder closes
 them, and the teaching shape is a direct answer, why it matters, an example from

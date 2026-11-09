@@ -598,6 +598,7 @@ persists exam attempts and chat history.
 | #162/#163 | Starter prompts and routing contract | V3 - Product |
 | #19/#33 | Cost and latency instrumentation and a minimal dashboard | V3 - Product |
 | #182 | Persona name/background routing with fuzzy spellings | V3 - Product |
+| #216 | Contract and authority routing (#217-#220; #184 is the residual) | V3 - Product |
 
 ### Next - complete the loop
 
@@ -610,7 +611,7 @@ persists exam attempts and chat history.
 | #179 | E2E, accessibility and load checks | V3 - Product |
 | #180 | Privacy, retention and data handling | V3 - Product |
 | #181 | Versioned `/v1` chat and OpenAPI | V3 - Product |
-| #184 | Measured fallback classifier for ambiguous persona intent | V3 - Product |
+| #184 | Residual measurement and classifier decision under #216 | V3 - Product |
 
 ### Later - hardening
 
@@ -655,7 +656,7 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The next work is #30 and #184, with the Now items #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
+The active work is #216 (#217-#220); #30 follows. The remaining Now items are #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
 (#127 closed); #128 carries the pack wiring and the remaining subject content. The
 #87 schema, validator and the DADA and Charms 1.0.0 packs are delivered. #16, #120, #170, #172,
 #174 and #127 are closed. #107 is deferred and likely superseded by the

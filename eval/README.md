@@ -33,6 +33,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `scripts/measure_aggregation.py` | aggregation fixture measurement |
 | `eval/exam/` | DADA bank eval: deterministic checks, independent model checks, judge calibration, calibration fixture and runner (#191) |
 | `eval/persona/` | persona-conformance fixture, deterministic checks, pinned voice judge, calibration and runner (#176) |
+| `eval/routing/` | frozen contract/authority routing fixture and loader (#217) |
 
 `eval/harness/__init__.py` re-exports the public names, so callers keep
 importing from `eval.harness`.
@@ -545,3 +546,17 @@ its Wilson lower bound, and the per-scenario variance across samples.
 The latest run is `docs/runs/2026-11-10-176-persona-lesson-voice-r2.md`: pass
 rate 0.00 to 0.40, Wilson lower bound 0.29, citation retention 0.79, no boundary
 or style violations, and the corpus gate unchanged.
+
+## Routing contracts (#217)
+
+`eval/routing/` freezes the contract/authority routing fixture before cue
+tuning. `contracts.jsonl` has 207 items across policy, persona, lore, lesson,
+abstain and clarify; each records the gold contract, fact IDs, fact-present flag,
+category and a holdout flag. The 14 held-out items span policy, persona, lesson,
+abstain and clarify. The SHA-256 is pinned in `test_fixtures.py`, so a
+fixture change is a deliberate test and record change.
+
+The fixture is used by #219 for the gate confusion matrix and by #184 for the
+residual buckets. Metrics are policy leak, authority bleed, false abstain given
+fact present, unsupported claim rate and clarify precision. The design note is
+`docs/routing-contracts.md`.
