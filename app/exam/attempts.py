@@ -13,6 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.exam.bank import ExamBank
+from app.grading.bands import Band
 from app.grading.models import AttemptGrade
 
 
@@ -86,6 +87,7 @@ class AttemptRecord(_StrictModel):
     subject: str
     bank_version: str
     created_at: str
+    session_id: str
     questions: tuple[AttemptQuestion, ...] = Field(min_length=1)
     graded_at: str | None = None
     grade: AttemptGrade | None = None
@@ -104,6 +106,36 @@ class AttemptRecord(_StrictModel):
             marks=sum(question.marks for question in self.questions),
             questions=tuple(question.view() for question in self.questions),
         )
+
+
+class AttemptSummary(_StrictModel):
+    """One graded attempt as the session history list may see it."""
+
+    attempt_id: str
+    paper_id: str
+    subject: str
+    version: str
+    created_at: str
+    graded_at: str
+    total: int | None = None
+    max_marks: int = Field(gt=0)
+    band: Band | None = None
+    needs_review: bool = False
+
+    @model_validator(mode="after")
+    def _totals(self) -> AttemptSummary:
+        _non_blank(self.attempt_id)
+        _non_blank(self.paper_id)
+        _non_blank(self.subject)
+        _non_blank(self.version)
+        _non_blank(self.created_at)
+        _non_blank(self.graded_at)
+        if self.needs_review:
+            if self.total is not None or self.band is not None:
+                raise ValueError("an unresolved attempt cannot carry a total or band")
+        elif self.total is None or self.band is None:
+            raise ValueError("a resolved attempt needs a total and band")
+        return self
 
 
 class QuestionView(_StrictModel):
@@ -135,6 +167,7 @@ def sample_attempt(
     attempt_id: str,
     paper_id: str,
     created_at: str,
+    session_id: str,
     mcq_count: int = 6,
     short_count: int = 4,
     rng: random.Random | None = None,
@@ -196,6 +229,7 @@ def sample_attempt(
         subject=bank.manifest.subject,
         bank_version=bank.manifest.version,
         created_at=created_at,
+        session_id=session_id,
         questions=tuple(questions),
     )
 
@@ -203,6 +237,7 @@ def sample_attempt(
 __all__ = [
     "AttemptQuestion",
     "AttemptRecord",
+    "AttemptSummary",
     "AttemptView",
     "QuestionView",
     "ServedOption",

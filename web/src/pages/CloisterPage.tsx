@@ -7,7 +7,7 @@ import { ProgressBoard } from "../components/ProgressBoard";
 import { SUBJECTS } from "../data/subjects";
 
 // The cloister: one door per department, and the noticeboard below with the
-// device-local best mark for each. Departments open as their subject packs
+// session-scoped best mark for each. Departments open as their subject packs
 // and professors land, so the closed doors are honest placeholders, not
 // half-built pages.
 export function CloisterPage() {
@@ -19,7 +19,7 @@ export function CloisterPage() {
     Promise.all(
       SUBJECTS.map(async (subject) => {
         try {
-          return [subject.slug, await resultsStore.best(subject.slug)] as const;
+          return [subject.slug, await resultsStore.best(subject.apiSubject)] as const;
         } catch {
           // undefined = unreadable drawer for this department, distinct from
           // null = genuinely no records; the board words them differently.

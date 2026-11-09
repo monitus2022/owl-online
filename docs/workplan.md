@@ -46,14 +46,14 @@ page describes what comes next and why.
 - The academy frontend surface has shipped: `web/` deployed on Cloudflare
   Pages - the gate, the cloister with five identified venues, live chat
   against `/ask/stream` with citation chips and in-world limit copy, the
-  demonstration exam room, device-local paper history and the cloister
+  served exam room, session-scoped paper history and the cloister
   noticeboard, an about page stating real versus demonstration versus not
   built, and the wizard-hat identity. The venue reads `GET /v1/subjects` for
   the published pack and the live lesson/persona flags, and keeps the static
   status for open/soon; a statically open department with no pack stays on
   corpus chat with a note (#172, PR #173). Frontend follow-ups are contract-gated:
-  the served exam client is wired (#193); server-side records need #35; starter
-  prompts are #162/#163.
+  the served exam client is wired (#193), session-scoped records are server-side
+  (#206); cross-device records need #35; starter prompts are #162/#163.
 - The deterministic CI gate is merged; #74 and #75 follow. #107 is deferred.
 - The Lexicon canon index (#125-#128) is the feed for the B1 packs: an
   item/concept-to-chapter mapping harvested as structure only from
@@ -589,6 +589,7 @@ persists exam attempts and chat history.
 |---|---|---|
 | #178 | Exam bank one-paper vertical slice (tracker for #38/#39/#40/#41/#42) | V3 - Product |
 | #187 | DADA bank: 25 MCQ + 25 short answer, 50 items total (#188-#193) | V3 - Product |
+| #206 | Session-scoped attempt history without accounts | V3 - Product |
 | #38/#39/#40/#41/#42 | Exam model, generator, evaluation, grader and endpoints | V3 - Product |
 | #162/#163 | Starter prompts and routing contract | V3 - Product |
 | #19/#33 | Cost and latency instrumentation and a minimal dashboard | V3 - Product |
@@ -690,7 +691,7 @@ completion by maintainer decision.
 | The professor is an original character, not a canon one | Limits IP exposure and avoids invented quotations; the persona is tone plus reviewed meta facts, and never adds facts to a grounded answer |
 | Academy papers are mcq plus short answer | Frontend review (2026-11-07, #132): the student-facing paper drops long answers; rubric judging stays available if a future paper needs it. Revisit in #41 |
 | Short answers grade in one batch call against the stored key | Four short answers fit one context window; the batch response keeps per-question structured records so retry and regrade semantics survive. Revisit in #41 |
-| Result records are device-local until auth | The frontend shows best-so-far from localStorage before #35; the server becomes the authority when attempts land and the UI keeps labelling local records provisional. Revisit in #35 |
+| Result records are session-scoped until auth | The server owns the attempt and grade; the signed session cookie is the ownership boundary, and the frontend reads `GET /v1/attempts`. Cross-device history waits on #35 |
 | Venue art is inline SVG geometry, never raster and never academic content | The raster pipeline was blocked twice by the image provider's terms of service (#134); SVG themes with the accent tokens, costs kilobytes, stays crisp and accessible, and keeps closed departments decorative rather than invented. Raster heroes return only as owner-supplied assets |
 
 ## Evaluation

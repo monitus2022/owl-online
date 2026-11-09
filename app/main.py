@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from sse_starlette.sse import EventSourceResponse
@@ -40,7 +40,7 @@ from app.api.schemas import (
     SubjectsResponse,
 )
 from app.config import Settings, settings
-from app.exam.attempts import AttemptRecord, AttemptView, sample_attempt
+from app.exam.attempts import AttemptRecord, AttemptSummary, AttemptView, sample_attempt
 from app.exam.bank import MCQ_MARKS, SHORT_ANSWER_MARKS
 from app.grading import AttemptAnswer, AttemptGrade, grade_attempt
 from app.knowledge import LORE_SELECTION_VERSION
@@ -49,6 +49,7 @@ from app.logging import configure_logging, get_request_id, set_request_id
 from app.pipeline.generate import DEFAULT_TOP_K, SYSTEM_PROMPT, AskResult, ask
 from app.providers.contracts import Llm, Retriever
 from app.providers.errors import ProviderError
+from app.storage.exam_store import ExamStore
 from app.trace import TraceSink, current_tracer, end_trace, start_trace
 
 logger = logging.getLogger(__name__)
@@ -314,6 +315,15 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             graded_at=grade.graded_at,
             questions=list(grade.questions),
         )
+
+    def owned_attempt(
+        store: ExamStore, attempt_id: str, session_id: str
+    ) -> AttemptRecord:
+        """An attempt is visible only to the session that started it."""
+        record = store.attempt(attempt_id)
+        if record is None or record.session_id != session_id:
+            raise HTTPException(status_code=404, detail="attempt not found")
+        return record
 
     def record_usage(
         request: Request,
@@ -788,6 +798,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 .replace("+00:00", "Z"),
                 mcq_count=app_settings.exam_mcq_count,
                 short_count=app_settings.exam_short_count,
+                session_id=request.state.session_id,
                 rng=random.Random(secrets.randbits(64)),
             )
             store.create_attempt(record)
@@ -797,15 +808,29 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             ) from error
         return record.view()
 
+    @app.get("/v1/attempts", response_model=list[AttemptSummary])
+    def list_attempts(
+        request: Request,
+        subject: str | None = None,
+        limit: int = Query(default=50, ge=1, le=50),
+    ) -> list[AttemptSummary]:
+        """Graded attempts for the current session, newest first."""
+        store = request.app.state.runtime.exam_store
+        if store is None:
+            raise HTTPException(status_code=503, detail="exam bank unavailable")
+        return store.list_attempts(
+            session_id=request.state.session_id,
+            subject=subject or app_settings.exam_subject,
+            limit=limit,
+        )
+
     @app.get("/v1/attempts/{attempt_id}", response_model=AttemptView)
     def get_attempt(attempt_id: str, request: Request) -> AttemptView:
         """The same persisted view on a reload; options are not reshuffled."""
         store = request.app.state.runtime.exam_store
         if store is None:
             raise HTTPException(status_code=503, detail="exam bank unavailable")
-        record = store.attempt(attempt_id)
-        if record is None:
-            raise HTTPException(status_code=404, detail="attempt not found")
+        record = owned_attempt(store, attempt_id, request.state.session_id)
         return record.view()
 
     @app.post(
@@ -822,9 +847,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         store = runtime.exam_store
         if store is None:
             raise HTTPException(status_code=503, detail="exam bank unavailable")
-        record = store.attempt(attempt_id)
-        if record is None:
-            raise HTTPException(status_code=404, detail="attempt not found")
+        record = owned_attempt(store, attempt_id, request.state.session_id)
         if record.grade is not None:
             return grade_response(record, record.grade)
         bank = store.bank(record.subject, record.bank_version)

@@ -90,6 +90,7 @@ JSONL:
 |---|---|
 | `GET /v1/exams` | paper descriptor: 10 questions, 6 MCQ, 4 short answers, 50 marks, 60 minutes |
 | `POST /v1/exams/{paper_id}/attempts` | sample 6 MCQ and 4 short answers, persist them, return the attempt view |
+| `GET /v1/attempts` | graded attempts for the current session, newest first, no question detail |
 | `GET /v1/attempts/{attempt_id}` | the same persisted view on a reload |
 | `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one judge call, then the deterministic band |
 
@@ -105,6 +106,13 @@ also stores the submitted answers with the grade so a result can be audited.
 The grade response carries the MCQ key, per-question marks, model answer,
 feedback, criteria and the band. An unresolved judge result sets
 `needs_review` and leaves the total and band null.
+
+Attempts are scoped to the signed anonymous session cookie. The list route
+returns only the current session's graded attempts, and fetching or grading
+another session's attempt is a `404`. The cookie lasts 24 hours from first
+issue, so the history is browser-session history, not cross-device history;
+auth (#35) later claims these rows and moves the limit to a user id. The
+frontend reads the list route instead of localStorage.
 
 Attempts are capped per session at three per day anonymous and five per day
 signed-in, with a separate nine-per-day per-IP cap; over a cap is `429` with

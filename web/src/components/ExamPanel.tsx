@@ -13,13 +13,16 @@ import { BandSeal } from "./BandSeal";
 import { ResultsCard } from "./ResultsCard";
 
 // Exam mode against the served bank. The server samples the paper, keeps the
-// MCQ key, and grades after submission; records stay device-local until auth
-// (#35), so the provisional wording must stay while that is true.
+// MCQ key, and grades after submission; records are session-scoped on the
+// server, and accounts (#35) will move them across devices.
 
 type Phase = "idle" | "answering" | "grading" | "graded";
 
 function messageFor(error: unknown): string {
   if (error instanceof ExamApiError) {
+    if (error.status === 404) {
+      return "This paper or session is no longer available. Start a new paper.";
+    }
     if (error.status === 429) {
       return "You have used today's attempt allowance. Try again tomorrow.";
     }
@@ -40,11 +43,27 @@ export function ExamPanel({ subject }: { subject: Subject }) {
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [result, setResult] = useState<GradeResult | null>(null);
   const [best, setBest] = useState<StoredAttempt | null>(null);
+  const [bestFailed, setBestFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    resultsStore.best(subject.slug).then(setBest);
-  }, [subject.slug, phase]);
+    let live = true;
+    setBestFailed(false);
+    resultsStore
+      .best(subject.apiSubject)
+      .then((value) => {
+        if (live) setBest(value);
+      })
+      .catch(() => {
+        if (live) {
+          setBest(null);
+          setBestFailed(true);
+        }
+      });
+    return () => {
+      live = false;
+    };
+  }, [subject.apiSubject, phase]);
 
   async function startPaper() {
     setError(null);
@@ -75,12 +94,13 @@ export function ExamPanel({ subject }: { subject: Subject }) {
       if (graded.total !== null && graded.band !== null) {
         await resultsStore.save({
           id: graded.attemptId,
-          subject: subject.slug,
+          subject: subject.apiSubject,
           paperId: graded.paperId,
           total: graded.total,
           max: graded.maxMarks,
           band: graded.band,
           gradedAt: graded.gradedAt,
+          needsReview: graded.needsReview,
         });
       }
       setResult(graded);
@@ -98,7 +118,7 @@ export function ExamPanel({ subject }: { subject: Subject }) {
           Practice paper from the published DADA bank. The result is provisional
           and is not an official O.W.L. record.
         </div>
-        <ResultsCard best={best} />
+        <ResultsCard best={best} failed={bestFailed} />
         {error && <p className="exam-error">{error}</p>}
         <button className="btn-primary" onClick={startPaper}>
           Take a paper
@@ -201,7 +221,7 @@ export function ExamPanel({ subject }: { subject: Subject }) {
             );
           })}
         </ol>
-        <ResultsCard best={best} />
+        <ResultsCard best={best} failed={bestFailed} />
         <div className="exam-actions">
           <button className="btn-primary" onClick={startPaper}>
             Another paper

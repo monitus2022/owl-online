@@ -374,6 +374,15 @@ CORS already allows `https://*.pages.dev` - deploy previews included - through
 `OWL_CORS_ORIGIN_REGEX`. For a custom domain, add the exact origin to
 `OWL_CORS_ORIGINS` on the host and restart the API.
 
+Exam history and the attempt limits depend on the signed `owl_session` cookie.
+When the Pages site is on `*.pages.dev` and the API is on `api.monitus.org`, the
+cookie is third-party: `SameSite=None; Secure` in a cross-site page. Safari and
+Firefox block third-party cookies by default, so attempt creation, grading and
+history can land in different sessions. Serve the frontend from a `monitus.org`
+subdomain, for example `owl.monitus.org`, so the cookie is same-site, or proxy
+`/v1` through the Pages origin. Verify the exam flow in Safari and Firefox, not
+only Chrome.
+
 ### The single-file test page
 
 The chat page is a single file, `app/api/static/index.html`, with no build

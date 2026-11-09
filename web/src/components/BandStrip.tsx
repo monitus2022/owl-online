@@ -26,13 +26,17 @@ function formatDay(attempt: StoredAttempt): string {
 // decorative); the list role is restored because list-style removal drops it
 // in Safari/VoiceOver.
 export function BandStrip({ attempts }: { attempts: StoredAttempt[] }) {
-  if (attempts.length === 0) return null;
-  const shown = attempts.slice(0, 12);
+  const resolved = attempts.filter(
+    (attempt): attempt is StoredAttempt & { band: Band; total: number } =>
+      !attempt.needsReview && attempt.band !== null && attempt.total !== null,
+  );
+  if (resolved.length === 0) return null;
+  const shown = resolved.slice(0, 12);
   return (
     <ol
       className="band-strip"
       role="list"
-      aria-label={`Last ${shown.length} of ${attempts.length} papers, newest first`}
+      aria-label={`Last ${shown.length} of ${resolved.length} papers, newest first`}
     >
       {shown.map((attempt) => (
         <li

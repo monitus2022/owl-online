@@ -13,7 +13,7 @@ the raw test page and is not part of this build.
 | `src/api/subjects.ts` | Live client for `GET /v1/subjects`; the venue merges the response into the static presentation metadata. |
 | `src/api/chat.ts` | Live client for `POST /ask/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for the DADA venue when the API reports it. |
 | `src/api/exams.ts` | Live client for the served exam bank: paper descriptors, attempt creation and grading; the API can return the same persisted attempt by id. The browser never sees the MCQ key before the grade response. |
-| `src/api/results.ts` | `ResultsStore` interface; the localStorage implementation is provisional until server-side attempt history exists. |
+| `src/api/results.ts` | `ResultsStore` interface; `HttpResultsStore` reads the session-scoped `GET /v1/attempts` history. The server is the source of truth; records are provisional until #35. |
 | `src/pages/` | Front gate, about page, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |
 | `src/components/` | Door, chat panel, professor silhouette, crest, colonnade backdrop, exam panel, band seal, results card, band strip, history panel, noticeboard, site footer. |
 | `src/styles/base.css` | The theme: dark warm base, gold chrome, `--accent` per subject. |
@@ -35,7 +35,7 @@ sends `mode=lesson`, and with `OWL_PERSONA=true` the professor copy goes live.
 Without the flags the venue falls back to corpus answers and rehearsal copy. The
 exam room uses the served bank at `/v1/exams`; it needs the imported
 `data/exams/exams.db` (`uv run python scripts/import_exam_bank.py --subject dada`)
-and records results on this device until auth (#35).
+and records results in the signed browser session until auth (#35).
 
 ## Deploy (Cloudflare Pages)
 
@@ -64,8 +64,9 @@ and records results on this device until auth (#35).
   against the stored rubric. Marks are a practice result, not an official
   O.W.L. record; the UI labels them as such on every screen of the flow,
   including the history and noticeboard.
-- Best-so-far and paper history are device-local and provisional until auth
-  (#35) and server history exist; unreadable storage says so instead of
-  claiming the drawer is empty.
+- Best-so-far and paper history are session-scoped and provisional until auth
+  (#35); unreadable history says so instead of claiming the drawer is empty.
+- Existing local-storage result records are not migrated; the session history
+  starts from the server.
 - Bands follow the canon two-tier split in colour: O/E/A pass, P/D/T fail.
 - Model output renders as plain text, never HTML.

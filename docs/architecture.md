@@ -225,15 +225,14 @@ already ships as its own static build.
 `web/` is a React + Vite single-page app, built to static assets and served on
 Cloudflare Pages, separate from the API container (docs/deploy.md). Only the
 venue chat calls `POST /ask/stream`; the gate and the cloister are static over
-the device-local store. The build imports no Python, renders no model output
-as HTML, and runs no request-time generation.
-Two interfaces keep the demonstration boundary between the UI and the services
-that do not exist yet:
+the session-scoped result store. The build imports no Python, renders no model
+output as HTML, and runs no request-time generation.
+Two interfaces keep the boundary between the UI and the services:
 
 | Interface | Lives in | Today | Swap when |
 |---|---|---|---|
-| `ExamClient` | `web/src/api/exams.ts` | `HttpExamClient` lists papers, starts an attempt and submits it for server grading; the API can return the same persisted attempt by id, and the browser never sees the MCQ key before the grade response | device-local result records move server-side with #35 |
-| `ResultsStore` | `web/src/api/results.ts` | device-local localStorage records, labelled provisional | #35 moves history server-side |
+| `ExamClient` | `web/src/api/exams.ts` | `HttpExamClient` lists papers, starts an attempt and submits it for server grading; the API can return the same persisted attempt by id, and the browser never sees the MCQ key before the grade response | accounts move records across devices with #35 |
+| `ResultsStore` | `web/src/api/results.ts` | `HttpResultsStore` reads `GET /v1/attempts` for the signed session; records are provisional | #35 moves history to a user id |
 
 The static subject list decides which departments are open. The venue fetches
 `GET /v1/subjects` for the published pack and the live `persona` and `lesson`
@@ -627,14 +626,19 @@ sequenceDiagram
   A->>J: one call for all short answers
   A->>S: save the grade and submitted answers
   A-->>C: per-question marks, feedback and band
+  C->>A: GET /v1/attempts?subject=dada
+  A->>S: graded attempts for this session
+  A-->>C: summaries, no key or evidence
 ```
 
 The attempt is persisted before the client sees it, so a reload returns the same
 options and a repeated grade returns the stored result without a second judge
 call. The server never puts `correct_option_id`, the golden answer, the rubric
-or evidence into the pre-submission view. The exam limiter caps attempts at
-three per day anonymous, five signed-in and nine per day per IP; it is separate
-from the chat limiter.
+or evidence into the pre-submission view. The history list is scoped to the
+signed anonymous session cookie, and another session gets `404` on the attempt
+and grade routes, so an attempt id is not a shared bearer token. The exam limiter
+caps attempts at three per day anonymous, five signed-in and nine per day per
+IP; it is separate from the chat limiter.
 
 The boundary matters because the two surfaces have different guarantees. Chat
 practice is disposable and formative. Exam-bank papers are validated, versioned
@@ -709,9 +713,10 @@ that resolves follow-ups. Anonymous threads are enough for a continuous
 professor chat.
 
 Per-user long-term memory is the last optional phase. It needs Google OIDC, a
-users table, ownership checks, and storage for chat threads and exam attempts. It
-also needs retention, export and delete rules. Auth is deliberately not a
-dependency of the exam bank or of short-term chat continuity.
+users table, per-user ownership on top of the session ownership that already
+exists, and storage for chat threads and exam attempts. It also needs retention,
+export and delete rules. Auth is deliberately not a dependency of the exam bank
+or of short-term chat continuity.
 
 See `docs/workplan.md` for phase order and exit criteria.
 
@@ -807,9 +812,10 @@ Built bank types (#189):
 | `ShortAnswerKey` | `app/exam/bank.py` | golden answer, required points and rubric |
 | `EvidenceSnapshot` | `app/exam/bank.py` | chunk id plus excerpt text, book and chapter at generation time |
 | `AttemptQuestion` / `ServedOption` | `app/exam/attempts.py` | one persisted question; the MCQ options served plus the server-side correct option id |
-| `AttemptRecord` | `app/exam/attempts.py` | sampled attempt: paper id, bank version, questions, later grade |
+| `AttemptRecord` | `app/exam/attempts.py` | sampled attempt: paper id, bank version, session id, questions, later grade |
+| `AttemptSummary` | `app/exam/attempts.py` | one graded attempt in the session history list; no question detail |
 | `AttemptView` / `QuestionView` | `app/exam/attempts.py` | the pre-submission client payload; no key, golden answer, rubric or evidence |
-| `ExamStore` | `app/storage/exam_store.py` | SQLite banks, items, attempts and grades |
+| `ExamStore` | `app/storage/exam_store.py` | SQLite banks, items, session-owned attempts, grades and submitted answers |
 
 Planned storage types, once the remaining #38 surface lands:
 

@@ -9,7 +9,7 @@ import { bandTone } from "./BandStrip";
 type BestState = StoredAttempt | null | undefined;
 
 // The cloister noticeboard: best band per department, read from the same
-// device-local store as the venue history. Empty states are honest and in
+// session-scoped store as the venue history. Empty states are honest and in
 // the room metaphor: a closed door, an unfurnished classroom, or a best
 // mark once papers have been sat.
 export function ProgressBoard({
@@ -23,7 +23,7 @@ export function ProgressBoard({
     <section className="progress" aria-label="Department noticeboard">
       <h2>The noticeboard</h2>
       <div className="notice notice-mock">
-        Practice marks recorded on this device only until school
+        Practice marks kept for this browser session until school
         accounts arrive (#35).
       </div>
       <ul className="progress-grid" role="list" aria-live="polite">
@@ -35,7 +35,10 @@ export function ProgressBoard({
           } else if (best === undefined) {
             state = "the records could not be read";
           } else if (best) {
-            state = `best: ${BAND_LABELS[best.band]} (${best.total}/${best.max})`;
+            state =
+              best.band && best.total !== null
+                ? `best: ${BAND_LABELS[best.band]} (${best.total}/${best.max})`
+                : "a paper awaits examiner review";
           } else if (subject.status === "open") {
             state = "the room is furnished, no papers sat yet";
           } else {
@@ -49,13 +52,13 @@ export function ProgressBoard({
             >
               <span
                 className={
-                  best
+                  best && best.band
                     ? `band-chip cell-${bandTone(best.band)}`
                     : "band-chip band-none"
                 }
                 aria-hidden="true"
               >
-                {best ? best.band : "—"}
+                {best && best.band ? best.band : "—"}
               </span>
               <span className="progress-name">{subject.name}</span>
               <span className="progress-state">{state}</span>
