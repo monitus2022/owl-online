@@ -130,7 +130,7 @@ def _bank(
     *,
     generator_model: str = "deepseek/deepseek-v4.1-flash",
     judge_model: str = "mistralai/mistral-small-3.2-24b-instruct",
-    judge_prompt_version: str = "dada-bank-judge-v1",
+    judge_prompt_version: str = "dada-bank-judge-v2",
     judge_temperature: float = 0.0,
     status: str = "published",
 ) -> ExamBank:
@@ -199,6 +199,9 @@ def _judge_json(
     evidence: dict[str, list[str]] | None = None,
     missing: dict[str, list[str]] | None = None,
     totals: dict[str, int] | None = None,
+    duplicate: dict[str, str] | None = None,
+    maxima: dict[str, dict[str, int]] | None = None,
+    floats: dict[str, dict[str, float]] | None = None,
 ) -> str:
     results: dict[str, dict] = {}
     for item_id, (correctness, completeness) in marks.items():
@@ -222,6 +225,23 @@ def _judge_json(
                 for criterion in criteria
                 if criterion["criterion_id"] not in missing[item_id]
             ]
+        if duplicate and item_id in duplicate:
+            duplicate_id = duplicate[item_id]
+            criteria.append(
+                next(
+                    dict(criterion)
+                    for criterion in criteria
+                    if criterion["criterion_id"] == duplicate_id
+                )
+            )
+        if maxima and item_id in maxima:
+            for criterion in criteria:
+                if criterion["criterion_id"] in maxima[item_id]:
+                    criterion["max_marks"] = maxima[item_id][criterion["criterion_id"]]
+        if floats and item_id in floats:
+            for criterion in criteria:
+                if criterion["criterion_id"] in floats[item_id]:
+                    criterion["awarded"] = floats[item_id][criterion["criterion_id"]]
         results[item_id] = {
             "criteria": criteria,
             "total": (
@@ -351,7 +371,6 @@ async def test_one_judge_call_for_all_short_answers() -> None:
     [
         ("full", (4, 4), 8, "O"),
         ("partial", (2, 2), 4, "P"),
-        ("blank", (0, 0), 0, "T"),
         ("off-topic", (0, 0), 0, "T"),
         ("contradictory", (1, 0), 1, "T"),
         ("verbose", (4, 4), 8, "O"),
@@ -365,17 +384,32 @@ async def test_short_answer_states(
 ) -> None:
     bank = _bank()
     llm = ScriptedLlm(_judge_json({"dada-short-001": marks}))
-    answer = "" if label == "blank" else f"{label} answer"
     result = await grade_attempt(
         bank,
         ["dada-short-001"],
-        [_answer("dada-short-001", answer)],
+        [_answer("dada-short-001", f"{label} answer")],
         llm=llm,
     )
     assert len(llm.calls) == 1
     assert result.questions[0].marks_awarded == expected_total
     assert result.total == expected_total
     assert result.band == expected_band
+
+
+async def test_blank_short_answer_scores_zero_without_judge() -> None:
+    bank = _bank()
+    llm = ScriptedLlm()
+    result = await grade_attempt(
+        bank,
+        ["dada-short-001"],
+        [_answer("dada-short-001", "")],
+        llm=llm,
+    )
+    assert len(llm.calls) == 0
+    assert result.questions[0].marks_awarded == 0
+    assert all(criterion.awarded == 0 for criterion in result.questions[0].criteria)
+    assert result.total == 0
+    assert result.band == "T"
 
 
 async def test_unanswered_mcq_scores_zero() -> None:
@@ -500,6 +534,104 @@ async def test_unknown_evidence_id_retries() -> None:
     assert result.total == 8
 
 
+async def test_duplicate_criterion_retries() -> None:
+    bank = _bank()
+    llm = ScriptedLlm(
+        _judge_json(
+            {"dada-short-001": (4, 4)},
+            duplicate={"dada-short-001": "correctness"},
+        ),
+        _judge_json({"dada-short-001": (4, 4)}),
+    )
+    result = await grade_attempt(
+        bank,
+        ["dada-short-001"],
+        [_answer("dada-short-001")],
+        llm=llm,
+    )
+    assert len(llm.calls) == 2
+    assert result.needs_review is False
+    assert result.total == 8
+
+
+async def test_max_marks_mismatch_retries() -> None:
+    bank = _bank()
+    llm = ScriptedLlm(
+        _judge_json(
+            {"dada-short-001": (4, 4)},
+            maxima={"dada-short-001": {"correctness": 5}},
+        ),
+        _judge_json({"dada-short-001": (4, 4)}),
+    )
+    result = await grade_attempt(
+        bank,
+        ["dada-short-001"],
+        [_answer("dada-short-001")],
+        llm=llm,
+    )
+    assert len(llm.calls) == 2
+    assert result.needs_review is False
+    assert result.total == 8
+
+
+async def test_negative_mark_retries() -> None:
+    bank = _bank()
+    llm = ScriptedLlm(
+        _judge_json({"dada-short-001": (-1, 4)}),
+        _judge_json({"dada-short-001": (4, 4)}),
+    )
+    result = await grade_attempt(
+        bank,
+        ["dada-short-001"],
+        [_answer("dada-short-001")],
+        llm=llm,
+    )
+    assert len(llm.calls) == 2
+    assert result.needs_review is False
+    assert result.total == 8
+
+
+async def test_non_integer_mark_retries() -> None:
+    bank = _bank()
+    llm = ScriptedLlm(
+        _judge_json(
+            {"dada-short-001": (4, 4)},
+            floats={"dada-short-001": {"correctness": 3.0}},
+        ),
+        _judge_json({"dada-short-001": (4, 4)}),
+    )
+    result = await grade_attempt(
+        bank,
+        ["dada-short-001"],
+        [_answer("dada-short-001")],
+        llm=llm,
+    )
+    assert len(llm.calls) == 2
+    assert result.needs_review is False
+    assert result.total == 8
+
+
+async def test_mixed_retry_keeps_the_valid_item() -> None:
+    bank = _bank()
+    llm = ScriptedLlm(
+        _judge_json(
+            {"dada-short-001": (4, 4), "dada-short-002": (4, 4)},
+            missing={"dada-short-002": ["completeness"]},
+        ),
+        _judge_json({"dada-short-002": (4, 4)}),
+    )
+    result = await grade_attempt(
+        bank,
+        ["dada-short-001", "dada-short-002"],
+        [_answer("dada-short-001"), _answer("dada-short-002")],
+        llm=llm,
+    )
+    assert len(llm.calls) == 2
+    assert result.needs_review is False
+    assert result.total == 16
+    assert [question.marks_awarded for question in result.questions] == [8, 8]
+
+
 async def test_cache_hit_skips_second_call(tmp_path) -> None:
     bank = _bank()
     path = tmp_path / "judge_cache.jsonl"
@@ -511,16 +643,14 @@ async def test_cache_hit_skips_second_call(tmp_path) -> None:
         llm=first_llm,
         cache=JudgeCache(path),
     )
-    second_llm = ScriptedLlm()
     second = await grade_attempt(
         bank,
         ["dada-short-001"],
         [_answer("dada-short-001", "The same answer.")],
-        llm=second_llm,
+        llm=None,
         cache=JudgeCache(path),
     )
     assert len(first_llm.calls) == 1
-    assert len(second_llm.calls) == 0
     assert second.total == first.total == 8
     assert second.judge_output_sha256 is None
     assert second.questions[0].judge_response_sha256 is not None
@@ -549,8 +679,79 @@ async def test_cache_misses_on_a_different_answer(tmp_path) -> None:
     assert second.total == 4
 
 
+async def test_needs_review_is_not_cached(tmp_path) -> None:
+    bank = _bank()
+    path = tmp_path / "judge_cache.jsonl"
+    llm = ScriptedLlm("not json", "still not json")
+    result = await grade_attempt(
+        bank,
+        ["dada-short-001"],
+        [_answer("dada-short-001")],
+        llm=llm,
+        cache=JudgeCache(path),
+    )
+    assert result.needs_review is True
+    assert not path.exists()
+
+
+async def test_cache_key_changes_with_the_rubric(tmp_path) -> None:
+    bank = _bank()
+    path = tmp_path / "judge_cache.jsonl"
+    first_llm = ScriptedLlm(_judge_json({"dada-short-001": (4, 4)}))
+    await grade_attempt(
+        bank,
+        ["dada-short-001"],
+        [_answer("dada-short-001", "The same answer.")],
+        llm=first_llm,
+        cache=JudgeCache(path),
+    )
+    item = bank.find_item("dada-short-001")
+    assert item is not None
+    changed = item.model_copy(
+        update={
+            "rubric": (
+                RubricCriterion(
+                    criterion_id="correctness",
+                    description="Changed correctness.",
+                    max_marks=4,
+                ),
+                RubricCriterion(
+                    criterion_id="completeness",
+                    description="Changed completeness.",
+                    max_marks=4,
+                ),
+            )
+        }
+    )
+    changed_bank = ExamBank(manifest=bank.manifest, items=[changed])
+    second_llm = ScriptedLlm(_judge_json({"dada-short-001": (2, 2)}))
+    second = await grade_attempt(
+        changed_bank,
+        ["dada-short-001"],
+        [_answer("dada-short-001", "The same answer.")],
+        llm=second_llm,
+        cache=JudgeCache(path),
+    )
+    assert len(second_llm.calls) == 1
+    assert second.total == 4
+
+
 async def test_judge_must_be_a_different_family() -> None:
     bank = _bank(generator_model="mistralai/mistral-small-3.2-24b-instruct")
+    with pytest.raises(ValueError, match="different model family"):
+        await grade_attempt(
+            bank,
+            ["dada-short-001"],
+            [_answer("dada-short-001")],
+            llm=ScriptedLlm("{}"),
+        )
+
+
+async def test_family_aliases_do_not_bypass_the_family_gate() -> None:
+    bank = _bank(
+        generator_model="mistralai/mistral-small-3.2-24b-instruct",
+        judge_model="mistral.mistral-large-2411",
+    )
     with pytest.raises(ValueError, match="different model family"):
         await grade_attempt(
             bank,
@@ -593,6 +794,12 @@ async def test_draft_bank_cannot_be_graded() -> None:
         )
 
 
+def test_banned_judge_model_is_rejected() -> None:
+    bank = _bank(judge_model="openai/gpt-4o")
+    with pytest.raises(ValueError, match="banned vendor"):
+        judge_llm_from_bank(bank)
+
+
 def test_judge_llm_uses_bank_pins(monkeypatch) -> None:
     bank = _bank()
     captured: dict[str, object] = {}
@@ -608,6 +815,20 @@ def test_judge_llm_uses_bank_pins(monkeypatch) -> None:
     assert captured["model"] == bank.manifest.judge_model
     assert captured["temperature"] == 0.0
     assert captured["max_tokens"] == settings.exam_judge_max_tokens
+
+
+def test_bedrock_llm_passes_max_tokens(monkeypatch) -> None:
+    from app.providers.factory import make_llm
+
+    captured: dict[str, object] = {}
+
+    class FakeBedrockLlm:
+        def __init__(self, **kwargs: object) -> None:
+            captured.update(kwargs)
+
+    monkeypatch.setattr("app.providers.factory.BedrockLlm", FakeBedrockLlm)
+    make_llm("bedrock", model="qwen.qwen3-32b-v1:0", max_tokens=1800)
+    assert captured["max_tokens"] == 1800
 
 
 async def test_answer_shape_must_match_item_kind() -> None:
@@ -654,3 +875,15 @@ async def test_duplicate_answer_raises() -> None:
             [_answer("dada-short-001"), _answer("dada-short-001")],
             llm=ScriptedLlm("{}"),
         )
+
+
+async def test_blank_option_id_scores_zero() -> None:
+    bank = _bank()
+    result = await grade_attempt(
+        bank,
+        ["dada-mcq-001"],
+        [AttemptAnswer(item_id="dada-mcq-001", option_id="")],
+        llm=None,
+    )
+    assert result.questions[0].marks_awarded == 0
+    assert result.questions[0].feedback == "No option selected."

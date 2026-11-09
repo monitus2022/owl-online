@@ -32,7 +32,7 @@ from app.grading.models import (
 from app.providers.contracts import Llm
 from app.providers.factory import make_llm
 
-PROMPT_VERSION = "dada-bank-judge-v1"
+PROMPT_VERSION = "dada-bank-judge-v2"
 
 JUDGE_SYSTEM = (
     "You are an exam judge for the O.W.L. Defence Against the Dark Arts bank. "
@@ -40,14 +40,15 @@ JUDGE_SYSTEM = (
     "evidence. Compare each student answer with the golden answer for correctness "
     "and completeness. Award marks for every rubric criterion. Do not require the "
     "golden wording: a paraphrase or a correct answer without the key term can "
-    "still earn marks when the rubric is satisfied. Do not reward verbosity. An "
-    "off-topic, contradictory or unsupported answer loses the relevant criteria. "
-    "A blank answer earns 0. Return strict JSON and nothing else. The response "
-    'must be an object with a "results" object keyed by item id. Each value must '
-    'contain "criteria" (one entry per supplied criterion, with criterion_id, '
-    'awarded, max_marks and reason), "total" (the sum of awarded), "feedback" '
-    '(a short comment) and "evidence_ids" (a non-empty list of chunk ids from '
-    "the supplied evidence). Do not add or omit items or criteria."
+    "still earn marks when the rubric is satisfied. Do not reward verbosity. Do "
+    "not penalise a concise answer that covers the required points. An off-topic, "
+    "contradictory or unsupported answer loses the relevant criteria. A blank "
+    "answer earns 0. Return strict JSON and nothing else. The response must be an "
+    'object with a "results" object keyed by item id. Each value must contain '
+    '"criteria" (one entry per supplied criterion, with criterion_id, awarded, '
+    'max_marks and reason), "total" (the sum of awarded), "feedback" (a short '
+    'comment) and "evidence_ids" (a non-empty list of chunk ids from the supplied '
+    "evidence). Do not add or omit items or criteria."
 )
 
 RETRY_SYSTEM = (
@@ -66,6 +67,25 @@ def _vendor(slug: str) -> str:
     return head.split(".", 1)[0].strip().lower()
 
 
+_FAMILY_ALIASES = {
+    "mistral": "mistral",
+    "mistralai": "mistral",
+    "meta": "meta",
+    "meta-llama": "meta",
+    "amazon": "amazon",
+    "qwen": "qwen",
+    "deepseek": "deepseek",
+    "cohere": "cohere",
+    "nvidia": "nvidia",
+    "microsoft": "microsoft",
+}
+
+
+def _family(slug: str) -> str:
+    head = _vendor(slug)
+    return _FAMILY_ALIASES.get(head, head)
+
+
 def _judge_config(bank: ExamBank) -> JudgeConfig:
     manifest = bank.manifest
     if manifest.status != "published":
@@ -78,12 +98,14 @@ def _judge_config(bank: ExamBank) -> JudgeConfig:
         raise ValueError("exam judge temperature must be 0")
     if manifest.judge_prompt_version != PROMPT_VERSION:
         raise ValueError("bank judge prompt version does not match the grader")
-    if _vendor(manifest.generator_model) == _vendor(manifest.judge_model):
+    if _family(manifest.generator_model) == _family(manifest.judge_model):
         raise ValueError("judge must be a different model family from the generator")
     return JudgeConfig(
         model=manifest.judge_model,
         temperature=manifest.judge_temperature,
         prompt_version=manifest.judge_prompt_version,
+        provider=settings.exam_judge_provider,
+        max_tokens=settings.exam_judge_max_tokens,
     )
 
 
@@ -98,7 +120,7 @@ def judge_llm_from_bank(bank: ExamBank) -> Llm:
         settings.exam_judge_provider,
         model=config.model,
         temperature=config.temperature,
-        max_tokens=settings.exam_judge_max_tokens,
+        max_tokens=config.max_tokens,
     )
 
 
@@ -326,6 +348,31 @@ def _needs_review(item: BankItem, reason: str, raw_sha256: str) -> QuestionGrade
     )
 
 
+def _blank_grade(item: BankItem) -> QuestionGrade:
+    criteria = tuple(
+        CriterionGrade(
+            criterion_id=criterion.criterion_id,
+            awarded=0,
+            max_marks=criterion.max_marks,
+            reason="Blank answer.",
+        )
+        for criterion in item.rubric
+    )
+    return QuestionGrade(
+        item_id=item.item_id,
+        kind="short_answer",
+        marks_awarded=0,
+        max_marks=item.marks,
+        model_answer=item.model_answer,
+        criteria=criteria,
+        feedback=f"No answer submitted. [{item.evidence_snapshot.chunk_id}]",
+        material_id=item.material_id,
+        evidence_ids=(item.evidence_snapshot.chunk_id,),
+        canon_tier=item.canon_tier,
+        rubric_version=item.prompt_version,
+    )
+
+
 async def _call_judge(
     llm: Llm,
     bank_version: str,
@@ -435,12 +482,13 @@ async def grade_attempt(
                 if answer is not None and answer.answer_text is not None
                 else ""
             )
-            short_entries.append((item, text))
+            if text.strip():
+                short_entries.append((item, text))
+            else:
+                grades[item.item_id] = _blank_grade(item)
 
     raws: list[str] = []
     if short_entries:
-        if llm is None:
-            raise ValueError("short answers need a judge LLM")
         pending: list[tuple[BankItem, str, str | None]] = []
         for item, text in short_entries:
             key: str | None = None
@@ -452,16 +500,26 @@ async def grade_attempt(
                     continue
             pending.append((item, text, key))
         if pending:
+            if llm is None:
+                raise ValueError("short answers need a judge LLM")
             judged, raws = await _call_judge(
                 llm,
                 bank.manifest.version,
                 [(item, text) for item, text, _ in pending],
             )
-            for item, _, key in pending:
+            for item, text, key in pending:
                 grade = judged[item.item_id]
                 grades[item.item_id] = grade
                 if cache is not None and key is not None and not grade.needs_review:
-                    cache.set(key, grade, grade.judge_response_sha256 or "")
+                    cache.set(
+                        key,
+                        bank.manifest.version,
+                        item,
+                        text,
+                        config,
+                        grade,
+                        grade.judge_response_sha256 or "",
+                    )
 
     ordered = [grades[item_id] for item_id in item_ids]
     marks = [grade.marks_awarded for grade in ordered]

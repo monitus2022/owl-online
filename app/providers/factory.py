@@ -63,7 +63,11 @@ def make_llm(
                 model=resolved,
                 region=settings.aws_region,
                 temperature=temperature,
-                max_tokens=settings.bedrock_llm_max_tokens,
+                max_tokens=(
+                    settings.bedrock_llm_max_tokens
+                    if max_tokens is None
+                    else max_tokens
+                ),
             )
         case _:
             raise ValueError(f"unknown provider: {provider}")

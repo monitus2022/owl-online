@@ -51,6 +51,8 @@ class JudgeCache:
             config.model,
             config.temperature,
             config.prompt_version,
+            config.provider,
+            config.max_tokens,
             item.prompt_version,
             rubric,
         ]
@@ -68,13 +70,32 @@ class JudgeCache:
             return None
         if grade.item_id != item.item_id or grade.max_marks != item.marks:
             return None
+        if grade.needs_review:
+            return None
         return grade
 
-    def set(self, key: str, grade: QuestionGrade, raw_sha256: str) -> None:
+    def set(
+        self,
+        key: str,
+        bank_version: str,
+        item: BankItem,
+        answer_text: str,
+        config: JudgeConfig,
+        grade: QuestionGrade,
+        raw_sha256: str,
+    ) -> None:
         if grade.needs_review or grade.marks_awarded is None:
             raise ValueError("needs_review grades are not cached")
         entry = {
             "key": key,
+            "bank_version": bank_version,
+            "item_id": item.item_id,
+            "rubric_version": item.prompt_version,
+            "judge_model": config.model,
+            "judge_provider": config.provider,
+            "judge_temperature": config.temperature,
+            "judge_prompt_version": config.prompt_version,
+            "answer_sha256": _sha256(answer_text),
             "raw_sha256": raw_sha256,
             "created_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
             "grade": grade.model_dump(mode="json"),
@@ -92,6 +113,8 @@ class JudgeCache:
             try:
                 entry = json.loads(line)
                 key = entry["key"]
+                if not isinstance(key, str):
+                    raise ValueError("cache key must be a string")
                 QuestionGrade.model_validate(entry["grade"])
             except Exception:  # noqa: BLE001 - skip a malformed line
                 logger.warning("ignoring corrupt judge cache line %s:%s", path, line_number)

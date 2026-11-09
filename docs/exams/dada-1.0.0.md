@@ -6,7 +6,7 @@
 - Pack: `1.0.0` / `e7139cbcc23eaa5c`
 - Index text hash: `aca4c57462d449f5`
 - Generator: `deepseek/deepseek-v4.1-flash` / `dada-bank-authoring-v1` / temperature 0.0
-- Judge: `mistralai/mistral-small-3.2-24b-instruct` / `dada-bank-judge-v1` / temperature 0.0
+- Judge: `mistralai/mistral-small-3.2-24b-instruct` / `dada-bank-judge-v2` / temperature 0.0
 - Items: 50 (25 MCQ, 25 short answer)
 - Validation: ok=True errors=0 warnings=0
 
@@ -140,6 +140,13 @@
 - Short-answer judge: 25/25 golden answers judged correct and complete; 0 missing required points.
 - Full report: `data/exams/dada/candidates/verification.json` (local, gitignored).
 
+## Grading probe
+
+- Prompt: `dada-bank-judge-v2`, temperature `0.0`.
+- Items: `dada-short-001`, `dada-short-002`, `dada-short-014`, `dada-short-017`.
+- One judge call; valid JSON; no retry; no needs_review; 32/32; band O.
+- Record: `docs/exams/dada-1.0.0-grading-probe.md`.
+
 ## Review
 
 - 25 MCQ keys and 25 short-answer golden answers and rubrics were reviewed.
@@ -147,4 +154,4 @@
 - Sampled distractors and evidence: all 25 MCQs were checked, so every distractor and every cited evidence set was covered; all 25 materials were sampled.
 - Reviewer notes: the authored pool was 25 MCQ and 25 short answers, one per reviewed material. The ~35 + ~35 buffer in #190 is a contingency for rejects; the independent verifier rejected none, so no replacement pool was needed.
 - Rejected items: none.
-- Owner sign-off: the PR approval for #190.
+- Owner sign-off: the PR approval for #190; the grading prompt v2 is covered by the #192 PR.

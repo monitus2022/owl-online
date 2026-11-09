@@ -74,6 +74,10 @@ O at least 90 percent, E at least 80, A at least 70, P at least 50, D at least
 hash, rubric content and judge configuration under
 `data/exam_judge_cache.jsonl` (gitignored).
 
+The published bank's live probe is
+`docs/exams/dada-1.0.0-grading-probe.md`; the calibration set and agreement
+metrics are #191.
+
 ## Status flow
 
 | Status | Meaning |

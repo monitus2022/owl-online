@@ -34,6 +34,8 @@ class JudgeConfig:
     model: str
     temperature: float
     prompt_version: str
+    provider: str = "openrouter"
+    max_tokens: int = 2000
 
 
 class AttemptAnswer(_StrictModel):
@@ -48,9 +50,17 @@ class AttemptAnswer(_StrictModel):
     def _item_id(cls, value: str) -> str:
         return _non_blank(value)
 
-    @field_validator("option_id", "answer_text")
+    @field_validator("option_id")
     @classmethod
-    def _optional_text(cls, value: str | None) -> str | None:
+    def _option_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+    @field_validator("answer_text")
+    @classmethod
+    def _answer_text(cls, value: str | None) -> str | None:
         return None if value is None else value.strip()
 
     @model_validator(mode="after")
@@ -114,6 +124,8 @@ class QuestionGrade(_StrictModel):
             raise ValueError("a graded question must carry marks")
         if not self.evidence_ids:
             raise ValueError("a graded question must cite at least one evidence id")
+        if self.canon_tier != "primary":
+            raise ValueError("exam grades are primary canon only")
         if self.kind == "mcq":
             if self.criteria:
                 raise ValueError("MCQ grades do not carry rubric criteria")
