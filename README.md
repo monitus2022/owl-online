@@ -127,7 +127,8 @@ probe the configured model once with
 `uv run python scripts/probe_bedrock.py`. Copy `.env.example` to `.env` and fill
 it in. For containers and hosting, see [`docs/deploy.md`](docs/deploy.md).
 
-The chat page uses `POST /ask/stream`. To watch the raw SSE events:
+The academy frontend, or a direct client, uses `POST /ask/stream`. To watch the
+raw SSE events:
 
 ```
 curl -N -X POST http://localhost:8000/ask/stream \

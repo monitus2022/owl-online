@@ -110,12 +110,18 @@ def test_provider_error_maps_to_502_without_a_traceback():
     assert "traceback" not in response.text.lower()
 
 
-def test_chat_page_is_served():
+def test_api_root_is_a_json_descriptor_not_a_chat_page():
     with _client() as client:
         response = client.get("/")
     assert response.status_code == 200
-    assert "text/html" in response.headers["content-type"]
-    assert "O.W.L. Online" in response.text
+    assert response.headers["content-type"].startswith("application/json")
+    assert "text/html" not in response.headers["content-type"]
+    assert response.json() == {
+        "service": "owl-online-api",
+        "status": "ok",
+        "health": "/health",
+        "subjects": "/v1/subjects",
+    }
 
 
 def test_ask_rejects_a_blank_question():

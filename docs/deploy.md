@@ -383,23 +383,24 @@ subdomain, for example `owl.monitus.org`, so the cookie is same-site, or proxy
 `/v1` through the Pages origin. Verify the exam flow in Safari and Firefox, not
 only Chrome.
 
-### The single-file test page
+### The API host
 
-The chat page is a single file, `app/api/static/index.html`, with no build
-step. Host it on Cloudflare Pages and point it at the API by setting the meta
-tag:
-
-```html
-<meta name="owl-api-base" content="https://your-api-host" />
-```
-
-CORS already allows `https://*.pages.dev` via `OWL_CORS_ORIGIN_REGEX`; add the
-exact origin to `OWL_CORS_ORIGINS` if you use a custom domain.
+The API host serves only the API. `GET /` returns a small JSON service
+descriptor; the academy frontend is the Cloudflare Pages build. The old
+single-file chat page (`app/api/static/index.html`) was removed so the API
+origin cannot be used as a second chat surface. CORS still allows
+`https://*.pages.dev` via `OWL_CORS_ORIGIN_REGEX`; add the exact origin to
+`OWL_CORS_ORIGINS` if you use a custom domain.
 
 ## Check it
 
 ```
 curl -s https://your-api-host/health
+curl -si https://your-api-host/ | head -n 5
 curl -s https://your-api-host/ask -H 'Content-Type: application/json' \
   -d '{"question":"..."}'
 ```
+
+The root check must show `application/json`, not `text/html`. Cloudflare can
+keep serving the cached HTML at `/` until the edge cache for that path is
+purged; purge it after the deploy if the old page still appears.
