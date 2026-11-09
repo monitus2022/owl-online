@@ -232,7 +232,7 @@ that do not exist yet:
 
 | Interface | Lives in | Today | Swap when |
 |---|---|---|---|
-| `ExamClient` | `web/src/api/exams.ts` | `HttpExamClient` lists papers, starts an attempt, can reload one, and submits it for server grading; the browser never sees the MCQ key before the grade response | device-local result records move server-side with #35 |
+| `ExamClient` | `web/src/api/exams.ts` | `HttpExamClient` lists papers, starts an attempt and submits it for server grading; the API can return the same persisted attempt by id, and the browser never sees the MCQ key before the grade response | device-local result records move server-side with #35 |
 | `ResultsStore` | `web/src/api/results.ts` | device-local localStorage records, labelled provisional | #35 moves history server-side |
 
 The static subject list decides which departments are open. The venue fetches
@@ -633,8 +633,8 @@ The attempt is persisted before the client sees it, so a reload returns the same
 options and a repeated grade returns the stored result without a second judge
 call. The server never puts `correct_option_id`, the golden answer, the rubric
 or evidence into the pre-submission view. The exam limiter caps attempts at
-three per day anonymous and five signed-in; it is separate from the chat
-limiter.
+three per day anonymous, five signed-in and nine per day per IP; it is separate
+from the chat limiter.
 
 The boundary matters because the two surfaces have different guarantees. Chat
 practice is disposable and formative. Exam-bank papers are validated, versioned

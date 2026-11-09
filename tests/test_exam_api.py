@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 
 from fastapi.testclient import TestClient
 
 from app.api.runtime import Runtime
 from app.config import Settings
 from app.exam.bank import ExamBank
-from app.main import create_app
+from app.main import _parse_paper_id, create_app
 from app.storage.exam_store import ExamStore
 from eval.exam.fixtures import build_bank
 
@@ -102,7 +103,9 @@ def _setup(tmp_path) -> tuple[ExamStore, _Judge]:
     return store, _Judge()
 
 
-def _client(store: ExamStore, judge: _Judge) -> TestClient:
+def _client(
+    store: ExamStore, judge: _Judge, settings: Settings | None = None
+) -> TestClient:
     runtime = Runtime(
         retriever=_Retriever(),
         llm=_ChatLlm(),
@@ -110,7 +113,7 @@ def _client(store: ExamStore, judge: _Judge) -> TestClient:
         exam_judge=judge,
     )
     app = create_app(
-        Settings(exam_attempts_per_day_anonymous=3),
+        settings or Settings(exam_attempts_per_day_anonymous=3),
         runtime=runtime,
     )
     return TestClient(app)
@@ -298,3 +301,51 @@ def test_no_exam_store_returns_empty_and_503() -> None:
         assert client.get("/v1/exams").json() == []
         assert client.post("/v1/exams/dada-1.0.0/attempts").status_code == 503
         assert client.get("/v1/attempts/nope").status_code == 503
+
+
+def test_paper_id_parses_hyphenated_subjects_and_versions() -> None:
+    assert _parse_paper_id("dada-1.0.0") == ("dada", "1.0.0")
+    assert _parse_paper_id("care-of-magical-creatures-1.0.0") == (
+        "care-of-magical-creatures",
+        "1.0.0",
+    )
+    assert _parse_paper_id("dada-1.0.0-rc1") == ("dada", "1.0.0-rc1")
+
+
+def test_grade_persists_submitted_answers(tmp_path) -> None:
+    store, judge = _setup(tmp_path)
+    with _client(store, judge) as client:
+        _, view = _start(client)
+        answers = _answers(view)
+        response = client.post(
+            f"/v1/attempts/{view['attempt_id']}/grade",
+            json={"answers": answers},
+        )
+        assert response.status_code == 200
+        with sqlite3.connect(store.path) as conn:
+            row = conn.execute(
+                "SELECT answers_json FROM attempts WHERE attempt_id = ?",
+                (view["attempt_id"],),
+            ).fetchone()
+        assert row is not None
+        saved = json.loads(row[0])
+        assert {answer["item_id"] for answer in saved} == {
+            question["item_id"] for question in view["questions"]
+        }
+
+
+def test_attempt_ip_limit_returns_429(tmp_path) -> None:
+    store, judge = _setup(tmp_path)
+    settings = Settings(
+        exam_attempts_per_day_anonymous=3,
+        exam_attempts_per_day_ip=2,
+    )
+    with _client(store, judge, settings) as client:
+        paper, _ = _start(client)
+        assert (
+            client.post(f"/v1/exams/{paper['paper_id']}/attempts").status_code
+            == 201
+        )
+        limited = client.post(f"/v1/exams/{paper['paper_id']}/attempts")
+        assert limited.status_code == 429
+        assert limited.headers["Retry-After"]

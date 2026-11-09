@@ -60,11 +60,18 @@ _SUBJECT_TITLES = dict(SUBJECTS)
 
 
 def _parse_paper_id(paper_id: str) -> tuple[str, str]:
-    """A paper id is `<subject>-<version>`; the subject key has no hyphen."""
-    subject, _, version = paper_id.partition("-")
-    if not subject or not version:
-        raise HTTPException(status_code=404, detail="paper not found")
-    return subject, version
+    """Split `<subject>-<version>` against the known subject keys.
+
+    Subject keys may themselves contain hyphens (`care-of-magical-creatures`),
+    so match the longest known key rather than splitting on the first hyphen.
+    """
+    for subject in sorted(_SUBJECT_TITLES, key=len, reverse=True):
+        prefix = f"{subject}-"
+        if paper_id.startswith(prefix):
+            version = paper_id[len(prefix) :]
+            if version:
+                return subject, version
+    raise HTTPException(status_code=404, detail="paper not found")
 
 
 def _client_ip(
@@ -727,8 +734,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         manifest = store.published_manifest(subject, version)
         if manifest is None:
             return []
-        mcq_count = min(app_settings.exam_mcq_count, manifest.mcq_count)
-        short_count = min(app_settings.exam_short_count, manifest.short_answer_count)
+        mcq_count = app_settings.exam_mcq_count
+        short_count = app_settings.exam_short_count
+        if (
+            manifest.mcq_count < mcq_count
+            or manifest.short_answer_count < short_count
+        ):
+            return []
         return [
             ExamPaper(
                 paper_id=f"{manifest.subject}-{manifest.version}",
@@ -774,10 +786,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 .replace(microsecond=0)
                 .isoformat()
                 .replace("+00:00", "Z"),
-                mcq_count=min(app_settings.exam_mcq_count, bank.manifest.mcq_count),
-                short_count=min(
-                    app_settings.exam_short_count, bank.manifest.short_answer_count
-                ),
+                mcq_count=app_settings.exam_mcq_count,
+                short_count=app_settings.exam_short_count,
                 rng=random.Random(secrets.randbits(64)),
             )
             store.create_attempt(record)
