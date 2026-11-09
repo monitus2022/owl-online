@@ -6,9 +6,10 @@ quote from the corpus at a hand-picked anchor, hash-checks it through
 `validate_pack`, and writes the pack plus a maintainer review sheet. The pack
 stays `draft` until the maintainer reviews the prose and marks it reviewed.
 
-  uv run python scripts/author_charms.py            # draft rebuild
-  uv run python scripts/author_charms.py --publish  # reviewed publish
-  uv run python scripts/author_charms.py --publish --force  # republish
+  uv run python scripts/author_charms.py                 # draft rebuild
+  uv run python scripts/author_charms.py --mark-reviewed  # record approval
+  uv run python scripts/author_charms.py --publish        # publish reviewed pack
+  uv run python scripts/author_charms.py --mark-reviewed --publish --force  # republish
 """
 
 from __future__ import annotations
@@ -190,6 +191,7 @@ def main() -> int:
 
     data = json.loads(AUTHORING.read_text(encoding="utf-8"))
     publish = "--publish" in sys.argv
+    mark_reviewed = "--mark-reviewed" in sys.argv
     seeds = {
         seed["concept_id"]: seed
         for seed in (
@@ -282,7 +284,7 @@ def main() -> int:
         )
         previous = old_materials.get(material_id)
         material_references = [reference] if reference else []
-        review_status = "reviewed" if publish else _review_status(
+        review_status = "reviewed" if mark_reviewed else _review_status(
             previous,
             text=text,
             topic=spec["topic"],
@@ -305,6 +307,22 @@ def main() -> int:
         concepts[concept_id] = concept
         materials[material_id] = material
         review_rows.append({"unit": spec.get("unit", ""), "material": material})
+
+    if publish:
+        unreviewed = sorted(
+            material.material_id
+            for material in materials.values()
+            if material.review_status != "reviewed"
+        )
+        if unreviewed:
+            print(
+                "cannot publish unreviewed materials: "
+                + ", ".join(unreviewed[:5])
+                + (" ..." if len(unreviewed) > 5 else "")
+                + "; run --mark-reviewed after the maintainer review",
+                file=sys.stderr,
+            )
+            return 1
 
     version = (
         data.get("publish_version", "1.0.0")

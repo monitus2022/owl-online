@@ -104,13 +104,15 @@ no corpus text; the material prose stays in the local pack and the data backup.
 
 ```text
 uv run python scripts/build_seeds.py --subject charms --index-hash auto
+uv run python scripts/author_charms.py
+uv run python scripts/author_charms.py --mark-reviewed
 uv run python scripts/author_charms.py --publish --force
 uv run pytest tests
 ```
 
-A rebuild from the gitignored authoring batch is reproducible at the same
-index hash and fingerprint. Publication is the maintainer-reviewed step; the
-pack stays draft until `--publish` is passed.
+A rebuild on an existing published pack needs `--force`. `--mark-reviewed` is
+the explicit maintainer-approval step; `--publish` refuses if any material is
+still draft.
 
 ## Scope notes
 
