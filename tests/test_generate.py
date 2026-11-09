@@ -10,7 +10,6 @@ from app.pipeline.generate import (
     RETRY_SYSTEM_PROMPT,
     ask,
 )
-from app.pipeline.generate.generate import is_refusal
 from app.schemas import Chunk, ChunkMetadata
 
 # RRF reference scores with rrf_k=60: one leg contributes 1/(rrf_k+1) for its
@@ -361,38 +360,3 @@ async def test_on_stage_reports_retrieve_then_generate():
         on_stage=stages.append,
     )
     assert stages == ["retrieve", "generate"]
-
-
-def test_lesson_source_refusal_is_a_refusal_on_the_corpus_path():
-    assert is_refusal(
-        "The set-text excerpts do not contain the answer [b1-c01-0000].",
-        cited=True,
-    )
-    assert is_refusal(
-        "Neither source contains the answer [b1-c01-0000].", cited=True
-    )
-    assert is_refusal("I don’t know [b1-c01-0000].", cited=True)
-
-
-def test_cited_partial_answer_after_a_source_refusal_is_kept():
-    assert not is_refusal(
-        "The lesson notes do not contain the answer, but the curse is "
-        "unforgivable [b1-c01-0000].",
-        cited=True,
-    )
-
-
-def test_leading_so_does_not_turn_a_partial_answer_into_a_refusal():
-    assert not is_refusal(
-        "So the curse is unforgivable [b1-c01-0000].", cited=True
-    )
-
-
-def test_cited_partial_answer_after_lesson_vocabulary_is_kept():
-    for draft in (
-        "The set-text excerpts do not contain the answer, but the curse is "
-        "unforgivable [b1-c01-0000].",
-        "Neither source contains the answer, but the curse is unforgivable "
-        "[b1-c01-0000].",
-    ):
-        assert not is_refusal(draft, cited=True)

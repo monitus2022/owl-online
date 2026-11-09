@@ -272,11 +272,17 @@ def variants(word: str) -> set[str]:
     return forms
 
 
+def _is_stopword(word: str) -> bool:
+    return word in _STOPWORDS or any(
+        form in _STOPWORDS for form in variants(word)
+    )
+
+
 def content_terms(text: str) -> set[str]:
     """The meaningful words in a question or a passage, with plural variants."""
     terms: set[str] = set()
     for word in _WORD.findall(text.lower()):
-        if len(word) >= 3 and word not in _STOPWORDS:
+        if len(word) >= 3 and not _is_stopword(word):
             terms.update(variants(word))
     return terms
 
@@ -286,7 +292,7 @@ def missing_terms(text: str, coverage: str) -> set[str]:
     coverage_terms = content_terms(coverage)
     missing: set[str] = set()
     for word in _WORD.findall(text.lower()):
-        if len(word) < 3 or word in _STOPWORDS:
+        if len(word) < 3 or _is_stopword(word):
             continue
         forms = variants(word)
         if not (forms & coverage_terms):
@@ -304,7 +310,7 @@ def phrase_match_score(phrase: str, question_terms: set[str]) -> int:
     words = [
         word
         for word in _WORD.findall(phrase.lower())
-        if len(word) >= 3 and word not in _STOPWORDS
+        if len(word) >= 3 and not _is_stopword(word)
     ]
     if not words:
         return 0

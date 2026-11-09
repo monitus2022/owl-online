@@ -32,7 +32,6 @@ from app.pipeline.generate.generate import (
     AskResult,
     LessonScope,
     TokenSink,
-    is_refusal,
     one_draft,
     render_evidence,
     retrieval_floor,
@@ -224,14 +223,14 @@ def _drop_unknown_lesson_citations(
 
 
 _OFF_PACK_LABEL_PATTERN = (
-    r"this is (?:not|outside) (?:in )?the department['’]s notes[,.;:—–-]?\s*|"
-    r"this question is not covered by the department['’]s notes[,.;:—–-]?\s*|"
-    r"this is (?:not|outside) (?:in )?the department(?:[,.;:—–-]|\s*$)\s*|"
-    r"this question is not covered by the department(?:[,.;:—–-]|\s*$)\s*"
+    r"this is (?:not|outside) (?:in )?the department['’]s notes\s*[,.;:—–-]?\s*|"
+    r"this question is not covered by the department['’]s notes\s*[,.;:—–-]?\s*|"
+    r"this is (?:not|outside) (?:in )?the department(?:\s*[,.;:—–-]|\s*$)\s*|"
+    r"this question is not covered by the department(?:\s*[,.;:—–-]|\s*$)\s*"
 )
 _MIXED_LABEL_PATTERN = (
     r"the department['’]s notes cover part of this question; "
-    r"the set texts cover the rest[,.;:—–-]?\s*"
+    r"the set texts cover the rest\s*[,.;:—–-]?\s*"
 )
 _OFF_PACK_LABEL_PREFIX = re.compile(
     r"^(?:" + _OFF_PACK_LABEL_PATTERN + r")", re.IGNORECASE
@@ -261,6 +260,60 @@ def _strip_lesson_labels(draft: str) -> str:
     department's notes"; that sentence must not hide a following refusal.
     """
     return _LABEL_PREFIX.sub("", draft.strip(), count=1)
+
+
+_LESSON_REFUSAL_PREFIX = re.compile(
+    r"^(?:(?:so|and|therefore|thus)\b[,:\s]*)?"
+    r"(i (cannot|can['’]t|can not) answer|i (do not|don['’]t) know|"
+    r"the (excerpts|books?|passages|lesson notes|notes|set-text excerpts|set texts|sources?) "
+    r"(do not|don['’]t|does not|doesn['’]t) (say|contain|mention|cover)|"
+    r"neither (source|the notes|the excerpts|the set texts|the lesson notes)\b|"
+    r"there is no (information|evidence))",
+    re.IGNORECASE,
+)
+_LESSON_REFUSAL_CLAUSE = re.compile(
+    r"^(?:(?:so|and|therefore|thus|also)\b[,:\s]*)?"
+    r"(i (cannot|can['’]t|can not) (answer|say|confirm|help)|"
+    r"i (do not|don['’]t) know|i am (unable|not able)|"
+    r"no (information|evidence|answer|mention)|"
+    r"not (enough|sufficient) (information|evidence)|"
+    r"the (excerpts|books?|passages|lesson notes|notes|set-text excerpts|set texts|sources?) "
+    r"(do not|don['’]t|does not|doesn['’]t) (say|contain|mention|cover)|"
+    r"neither (source|the notes|the excerpts|the set texts|the lesson notes)\b|"
+    r"nothing (in|about))",
+    re.IGNORECASE,
+)
+_LESSON_CLAUSE_SPLIT = re.compile(
+    r"[.;:,!?\n]|\s[-—–]\s|\b(?:but|however|although|though|yet|and|while)\b",
+    re.IGNORECASE,
+)
+
+
+def is_lesson_refusal(draft: str, *, cited: bool) -> bool:
+    """The lesson-path refusal check, including lesson source vocabulary.
+
+    Kept separate from the corpus `is_refusal` so the measured corpus path is
+    byte-for-byte unchanged.
+    """
+    text = _strip_lesson_labels(draft).strip()
+    if text.startswith(ABSTAIN_MESSAGE):
+        return True
+    clean = _CITATION.sub(" ", text).strip()
+    if (
+        _LESSON_REFUSAL_PREFIX.match(clean) is None
+        and _LESSON_REFUSAL_CLAUSE.match(clean) is None
+    ):
+        return False
+    if not cited:
+        return True
+    clauses = [
+        part.strip() for part in _LESSON_CLAUSE_SPLIT.split(clean) if part.strip()
+    ]
+    for clause in clauses[1:]:
+        words = re.findall(r"[A-Za-z0-9]+", clause)
+        if len(words) >= 2 and _LESSON_REFUSAL_CLAUSE.match(clause) is None:
+            return False
+    return True
 
 
 def ground_lesson_answer(
@@ -446,8 +499,8 @@ async def ask_lesson(
             (not require_material or bool(result.material_citations))
             and (not require_book or book_cited)
         )
-        refusal = is_refusal(
-            _strip_lesson_labels(draft),
+        refusal = is_lesson_refusal(
+            draft,
             cited=bool(result.material_citations or result.citations),
         )
         if has_required or refusal or attempt > max_retries:

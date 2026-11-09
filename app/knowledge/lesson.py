@@ -44,15 +44,13 @@ def _embedding_text(pack: SubjectPack, material: Material) -> str:
 
 
 # One-word concept titles that are also ordinary adjectives or nouns. A bare
-# lexical hit is not enough; require a determiner or a capitalised occurrence.
+# lexical hit is not enough; require a plural noun or a mid-sentence proper noun.
 _AMBIGUOUS_ONE_WORD = frozenset({"grim"})
 
 
 def _has_ambiguous_context(question: str, word: str) -> bool:
-    """A determiner, a plural noun, or a mid-sentence proper noun."""
+    """A plural noun or a mid-sentence proper noun."""
     lowered = question.lower()
-    if re.search(rf"\bthe\s+{re.escape(word)}s?\b", lowered):
-        return True
     if re.search(rf"\b{re.escape(word)}s\b", lowered):
         return True
     for match in re.finditer(rf"\b{re.escape(word.capitalize())}\b", question):

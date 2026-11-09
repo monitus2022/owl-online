@@ -18,6 +18,7 @@ from app.knowledge.packs import (
 from app.pipeline.generate.lesson import (
     ask_lesson,
     ground_lesson_answer,
+    is_lesson_refusal,
     uncovered_terms,
 )
 from app.schemas import Chunk, ChunkMetadata
@@ -175,6 +176,21 @@ class ZeroEmbedder:
 
     async def embed(self, texts):
         return [[0.0, 0.0, 0.0, 0.0] for _ in texts]
+
+
+class LowScoreEmbedder:
+    """Materials and queries are orthogonal, so the embedding floor is missed."""
+
+    name = "fake/low"
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def embed(self, texts):
+        self.calls += 1
+        if self.calls == 1:
+            return [[0.0, 1.0, 0.0, 0.0] for _ in texts]
+        return [[1.0, 0.0, 0.0, 0.0] for _ in texts]
 
 
 def _disarming_pack() -> SubjectPack:
@@ -808,7 +824,7 @@ async def test_ask_lesson_lexical_alias_produces_mixed():
     ],
 )
 async def test_production_questions_are_off_pack(question):
-    selector = await LessonSelector.build(_disarming_store(), ZeroEmbedder())
+    selector = await LessonSelector.build(_disarming_store(), LowScoreEmbedder())
     retriever = StaticRetriever(
         [_chunk("b1-c01-0000", "A book passage.", book=1, chapter=1)]
     )
@@ -1007,6 +1023,10 @@ async def test_ask_lesson_abstains_when_an_uncovered_term_has_no_corpus_evidence
         "The set-text excerpts do not contain the answer. [b1-c01-0000]",
         "Neither source contains the answer. [b1-c01-0000]",
         "This is not in the department’s notes, so I cannot answer that. [b1-c01-0000]",
+        "This is outside the department. I cannot answer that. [b1-c01-0000]",
+        "This question is not covered by the department. I cannot answer that. [b1-c01-0000]",
+        "This is not in the department's notes — I cannot answer that [b1-c01-0000]",
+        "This is not in the department's notes\nI cannot answer that [b1-c01-0000]",
     ],
 )
 async def test_ask_lesson_treats_source_refusals_as_refusals(draft):
@@ -1036,6 +1056,7 @@ async def test_uncovered_terms_ignores_generic_subject_words():
         "Why is a boggart dangerous?",
         "What spell banishes a boggart?",
         "How do you defend against a boggart?",
+        "How are you defending against a boggart?",
     ):
         materials = selector.select_lexical(question, subject="dada")
         coverage = selector.coverage_text("dada", materials)
@@ -1043,13 +1064,16 @@ async def test_uncovered_terms_ignores_generic_subject_words():
         assert uncovered_terms(question, materials, coverage=coverage) == set()
 
     selector = await LessonSelector.build(_disarming_store(), ZeroEmbedder())
-    question = "How do you protect against a dementor?"
-    materials = selector.select_lexical(question, subject="dada")
-    coverage = selector.coverage_text("dada", materials)
-    assert [material.material_id for material in materials] == [
-        "dada-dark-creatures-dementors"
-    ]
-    assert uncovered_terms(question, materials, coverage=coverage) == set()
+    for question in (
+        "How do you protect against a dementor?",
+        "How are you protecting against a dementor?",
+    ):
+        materials = selector.select_lexical(question, subject="dada")
+        coverage = selector.coverage_text("dada", materials)
+        assert [material.material_id for material in materials] == [
+            "dada-dark-creatures-dementors"
+        ]
+        assert uncovered_terms(question, materials, coverage=coverage) == set()
 
 
 @pytest.mark.asyncio
@@ -1057,6 +1081,7 @@ async def test_selector_lexical_grim_adjective_and_plural_cases():
     selector = await LessonSelector.build(_disarming_store(), ZeroEmbedder())
 
     assert selector.select_lexical("Was it a grim war?", subject="dada") == []
+    assert selector.select_lexical("the grim war", subject="dada") == []
     assert selector.select_lexical("Grim omens are common.", subject="dada") == []
 
     selected = selector.select_lexical("What are grims?", subject="dada")
@@ -1130,3 +1155,34 @@ async def test_ask_lesson_alias_and_title_forms_are_in_pack(question):
     assert result.abstained is False
     assert result.scope == "in_pack"
     assert result.material_citations == ["dada-dueling-disarming-charm"]
+
+
+@pytest.mark.parametrize(
+    "draft",
+    [
+        "I cannot say [b1-c01-0000].",
+        "I cannot confirm [b1-c01-0000].",
+        "I am unable to answer [b1-c01-0000].",
+        "No information [b1-c01-0000].",
+        "The source does not contain the answer [b1-c01-0000].",
+        "The book does not mention it [b1-c01-0000].",
+        "Neither the lesson notes nor the set texts contain it [b1-c01-0000].",
+        "This is not in the department's notes — I cannot answer that [b1-c01-0000]",
+        "This is not in the department's notes\nI cannot answer that [b1-c01-0000]",
+    ],
+)
+def test_is_lesson_refusal_variants(draft):
+    assert is_lesson_refusal(draft, cited=True)
+
+
+@pytest.mark.parametrize(
+    "draft",
+    [
+        "The notes do not mention his surname — the curse is unforgivable "
+        "[b1-c01-0000].",
+        "The notes do not mention his surname\nThe curse is unforgivable "
+        "[b1-c01-0000].",
+    ],
+)
+def test_is_lesson_refusal_keeps_a_dash_or_newline_partial(draft):
+    assert not is_lesson_refusal(draft, cited=True)
