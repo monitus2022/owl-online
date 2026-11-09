@@ -55,6 +55,13 @@ not ask about plot events, character biography or classroom anecdotes. A scene
 can supply the evidence for a concept question, but the question must stand on
 the subject concept and the evidence, not on knowing the story.
 
+Neither the prompt nor the golden answer may name a character, house, book or
+scene, and a student must not need story knowledge to answer. Write "a caster",
+"a target" or "a learner" instead of a named person. Evidence may quote a scene;
+the item restates the concept in general terms. An item that only makes sense
+after reading the cited scene is rejected, however well grounded its evidence.
+The authoring script enforces this with a character and scene denylist.
+
 ## Grading
 
 MCQ answers are scored deterministically by option id; no model call. Short

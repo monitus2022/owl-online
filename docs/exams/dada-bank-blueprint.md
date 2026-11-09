@@ -283,6 +283,12 @@ classroom anecdotes are not examinable on their own. A scene may supply the
 evidence for a concept question, but the question must stand without story
 knowledge.
 
+The prompt, options and golden answer must not name a character, house, book or
+scene, and must not depend on knowing one. Write "a caster", "a target" or "a
+learner". An item that only makes sense after reading the cited scene is
+rejected even when its evidence is valid. The authoring script enforces a
+character and scene denylist before the bank is written.
+
 ### MCQ rules
 
 - Exactly 6 options: 1 correct and 5 plausible distractors from the same DADA family.

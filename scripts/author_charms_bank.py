@@ -5,6 +5,12 @@ material, reuses that material's books-bucket source refs, and is validated by
 `app.exam.bank.validate_bank` against the current corpus index hash. Evidence
 quotes are never invented; they come from the pack's hash-checked refs.
 
+Items are concept-only. Neither the prompt nor the golden answer may name a
+character, house, book or scene, and a student must not need story knowledge to
+answer. A scene may supply evidence, but the item restates the concept in
+general terms ("a caster", "a target", "a learner"). `_check_prose` enforces a
+denylist so a future edit cannot reintroduce a character or a scene.
+
     uv run python scripts/author_charms_bank.py                    # draft rebuild
     uv run python scripts/author_charms_bank.py --mark-reviewed    # record approval
     uv run python scripts/author_charms_bank.py --publish          # publish reviewed
@@ -13,6 +19,7 @@ quotes are never invented; they come from the pack's hash-checked refs.
 
 from __future__ import annotations
 
+import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -83,7 +90,7 @@ ITEMS: list[dict] = [
         "item_id": "charms-mcq-003",
         "kind": "mcq",
         "material_id": "charms-foundation-incantation",
-        "prompt": "Why does Hermione correct Ron's pronunciation of Wingardium Leviosa?",
+        "prompt": "Why does precise pronunciation matter when casting Wingardium Leviosa?",
         "difficulty": "explanation",
         "options": [
             "The spell only works if the wizard holds the wand in the left hand.",
@@ -100,7 +107,7 @@ ITEMS: list[dict] = [
         "item_id": "charms-mcq-004",
         "kind": "mcq",
         "material_id": "charms-foundation-wand-movement",
-        "prompt": "What wand movement does Flitwick drill before the class attempts the Levitation Charm?",
+        "prompt": "What wand movement is used for the Levitation Charm?",
         "difficulty": "recall",
         "options": [
             "A slow circle over the target.",
@@ -111,7 +118,7 @@ ITEMS: list[dict] = [
             "A backward wave over the shoulder.",
         ],
         "correct": 2,
-        "rationale": "The swish-and-flick wrist movement is drilled before the first attempt.",
+        "rationale": "The swish-and-flick wrist movement is the taught form for the charm.",
     },
     {
         "item_id": "charms-mcq-005",
@@ -135,7 +142,7 @@ ITEMS: list[dict] = [
         "item_id": "charms-mcq-006",
         "kind": "mcq",
         "material_id": "charms-levitation-theory",
-        "prompt": "Which result shows Hermione's Wingardium Leviosa working correctly in the first lesson?",
+        "prompt": "Which result shows the Levitation Charm working correctly?",
         "difficulty": "recall",
         "options": [
             "The feather turns into a small bird.",
@@ -146,24 +153,24 @@ ITEMS: list[dict] = [
             "The feather splits into two identical feathers.",
         ],
         "correct": 1,
-        "rationale": "The material records the feather lifting four feet above the desk.",
+        "rationale": "The charm lifts the target clear of the desk without changing or damaging it.",
     },
     {
         "item_id": "charms-mcq-007",
         "kind": "mcq",
         "material_id": "charms-banishing",
-        "prompt": "Why does Flitwick give the class a stack of cushions for the Banishing Charm?",
+        "prompt": "Why is the Banishing Charm practised on soft, light objects before heavier ones?",
         "difficulty": "explanation",
         "options": [
             "The cushions are the only objects the charm works on.",
-            "A miss can send heavy objects flying, so cushions make practice safer.",
+            "A miss can send heavy objects flying, so soft targets make practice safer.",
             "The cushions are used to muffle the sound of the incantation.",
             "The charm turns cushions into birds when it succeeds.",
             "The cushions mark the boundary of the practice area.",
             "The cushions are needed to wipe the wands between attempts.",
         ],
         "correct": 1,
-        "rationale": "The cushion stack exists because a missed Banishing Charm has consequences.",
+        "rationale": "Soft practice targets exist because a missed Banishing Charm has consequences.",
     },
     {
         "item_id": "charms-mcq-008",
@@ -186,11 +193,11 @@ ITEMS: list[dict] = [
         "item_id": "charms-mcq-009",
         "kind": "mcq",
         "material_id": "charms-locomotor",
-        "prompt": "What is the effect of Locomotor when cast on a trunk?",
+        "prompt": "What is the effect of Locomotor when cast on an object?",
         "difficulty": "application",
         "options": [
             "It shrinks the trunk to fit in a pocket.",
-            "It moves the trunk through the air under the caster's direction.",
+            "It moves the object through the air under the caster's direction.",
             "It locks the trunk so only the caster can open it.",
             "It turns the trunk into a bed.",
             "It summons the trunk from another room.",
@@ -203,7 +210,7 @@ ITEMS: list[dict] = [
         "item_id": "charms-mcq-010",
         "kind": "mcq",
         "material_id": "charms-unlocking",
-        "prompt": "What does the failure of Alohomora on the third-floor door show about the spell?",
+        "prompt": "What does a resisted Alohomora show about the spell?",
         "difficulty": "explanation",
         "options": [
             "It only works on doors made of wood.",
@@ -214,7 +221,7 @@ ITEMS: list[dict] = [
             "It only works on doors that are already unlocked.",
         ],
         "correct": 1,
-        "rationale": "The scene presents Alohomora as a practical tool with limits.",
+        "rationale": "Alohomora is a practical tool with limits.",
     },
     # elements
     {
@@ -289,11 +296,11 @@ ITEMS: list[dict] = [
         "item_id": "charms-mcq-015",
         "kind": "mcq",
         "material_id": "charms-drought",
-        "prompt": "Why can the Drought Charm not solve the problem of breathing underwater in the lake?",
+        "prompt": "Why can the Drought Charm not remove a large body of water?",
         "difficulty": "application",
         "options": [
             "It only works on salt water.",
-            "It dries puddles and ponds but cannot drain a body of water as large as the lake.",
+            "It dries puddles and ponds but cannot drain a body of water as large as a lake.",
             "It only works on living plants.",
             "It requires the caster to stand on dry land.",
             "It creates water instead of removing it.",
@@ -481,26 +488,26 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-001",
         "kind": "short_answer",
         "material_id": "charms-foundation-concentration",
-        "prompt": "Explain why concentration is treated as part of charm technique, and what the vinegar-to-wine lesson shows about it.",
+        "prompt": "Explain why concentration is treated as part of charm technique, and what happens when it is not controlled.",
         "difficulty": "explanation",
-        "model_answer": "Concentration is the inward half of charm work, coordinating the incantation and the wand movement. In the vinegar-to-wine lesson Harry and Ron raise their wands and concentrate with all their might, but Harry's vinegar turns to ice and Ron's flask explodes. The result shows that reciting a word loudly is not the same as holding the spell clearly in mind.",
-        "required_points": ["concentration", "vinegar"],
+        "model_answer": "Concentration is the inward half of charm work: it coordinates the incantation and the wand movement toward one clear intention. A caster who recites the words with great force but without a settled intention can produce the wrong effect or an uncontrolled one. Concentration does not replace technique; it holds the word and the movement together.",
+        "required_points": ["concentration", "intention"],
         "rubric": [
             ("correctness", "Explains concentration as the coordinating intention behind word and movement.", 4),
-            ("completeness", "Uses the vinegar-to-wine outcome to show that intention alone is not enough.", 4),
+            ("completeness", "Explains that force or wording alone does not replace a settled intention.", 4),
         ],
     },
     {
         "item_id": "charms-short-002",
         "kind": "short_answer",
         "material_id": "charms-foundation-practice",
-        "prompt": "Explain why the school treats repetition as part of learning a charm, using two examples from the books.",
+        "prompt": "Explain why repetition is treated as part of learning a charm rather than an optional extra.",
         "difficulty": "explanation",
-        "model_answer": "Charms is learned by repetition, and the school treats practice as the route to control. Flitwick puts the class in pairs to practise the Levitation Charm, and after Ron's flask explodes he sends the boys away with the single word practice. McGonagall tells the OWL year that no one passes without serious application and practice.",
+        "model_answer": "Charms is learned by repetition, and practice is treated as the route to control. Learners begin in pairs with short attempts, receive immediate correction of wrist movement and wording, and repeat the attempt after a failure. A charm that works once is not yet reliable; the school expects sustained application before an exam.",
         "required_points": ["repetition", "practice"],
         "rubric": [
             ("correctness", "States that control comes from repeated practice, not a single success.", 4),
-            ("completeness", "Gives two book examples of enforced or expected practice.", 4),
+            ("completeness", "Gives two examples of practice being expected or enforced.", 4),
         ],
     },
     # movement, short answer
@@ -508,26 +515,26 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-003",
         "kind": "short_answer",
         "material_id": "charms-levitation-practice",
-        "prompt": "Explain what the Levitation Charm lesson shows about why charm failure is usually a problem of technique.",
+        "prompt": "Explain the parts of charm technique a learner must coordinate, and why raw power cannot make up for a mistake in them.",
         "difficulty": "explanation",
-        "model_answer": "In the Levitation Charm lesson Harry and Seamus swish and flick, but the feather stays on the desk and Seamus sets it alight by prodding it. Ron shouts the incantation and waves his arms like a windmill, and Hermione tells him he is saying it wrong. The scene shows that failure comes from the movement, the wording or the emphasis rather than from a lack of power.",
-        "required_points": ["feather", "windmill"],
+        "model_answer": "The Levitation Charm requires the swish-and-flick wrist movement, the precise incantation Wingardium Leviosa, and a clear intention held in mind. An attempt fails when a learner prods the target instead of performing the movement, stresses the syllables wrongly, or waves the arm without control. Power does not compensate for those errors, because the charm depends on coordinated technique rather than force.",
+        "required_points": ["swish", "technique"],
         "rubric": [
-            ("correctness", "Identifies technique, not raw power, as the cause of the failures.", 4),
-            ("completeness", "Uses both the feather and Ron's mistake as evidence.", 4),
+            ("correctness", "Names movement, wording and focus as the charm's requirements.", 4),
+            ("completeness", "Explains why force does not compensate for a technique error.", 4),
         ],
     },
     {
         "item_id": "charms-short-004",
         "kind": "short_answer",
         "material_id": "charms-growth",
-        "prompt": "Describe the Growth Charm and explain what Harry's mistake in the Charms practical shows about it.",
+        "prompt": "Describe the Growth Charm and explain how it differs from a generic intention to make something bigger.",
         "difficulty": "application",
-        "model_answer": "The Growth Charm makes an object or creature larger, and it has its own incantation. In the Charms practical Harry is supposed to turn a rat orange but mixes up Color-Change and Growth, so the rat swells to the size of a badger. The mistake shows that Growth is a distinct charm, not a generic intention to make something bigger.",
+        "model_answer": "The Growth Charm makes an object or creature larger and has its own incantation. It is a distinct charm, so a caster who mixes its incantation with a color-change spell can produce an oversized target instead of the intended color. The mistake shows that Growth must be learned as a specific spell, not treated as a vague wish to enlarge something.",
         "required_points": ["larger", "badger"],
         "rubric": [
             ("correctness", "States the effect of the Growth Charm and that it has its own incantation.", 4),
-            ("completeness", "Explains the mix-up with Color-Change and the resulting oversized rat.", 4),
+            ("completeness", "Explains the confusion with a color-change spell and the resulting oversized target.", 4),
         ],
     },
     # elements, short answer
@@ -537,7 +544,7 @@ ITEMS: list[dict] = [
         "material_id": "charms-nox",
         "prompt": "Explain what Nox does and why it is described as the counterpart of Lumos.",
         "difficulty": "explanation",
-        "model_answer": "Nox extinguishes wandlight, ending the illumination created by Lumos. Harry and Hermione whisper it together on a dark landing, and the lights at the ends of their wands go out. It is the counterpart of Lumos because it removes a previous charm precisely without creating a new object or force.",
+        "model_answer": "Nox extinguishes wandlight, ending the illumination created by Lumos. It is a precise command: the light goes out without affecting anything else, and the caster can still speak quietly. It is the counterpart of Lumos because it removes a previous charm rather than creating a new object or force.",
         "required_points": ["extinguishes", "lumos"],
         "rubric": [
             ("correctness", "States that Nox ends wandlight and names its relation to Lumos.", 4),
@@ -548,48 +555,48 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-006",
         "kind": "short_answer",
         "material_id": "charms-bird-conjuring",
-        "prompt": "Describe the Bird-Conjuring Charm and explain what Ollivander's demonstration shows about testing a wand.",
+        "prompt": "Describe the Bird-Conjuring Charm and explain what its effect shows about conjuration as charm work.",
         "difficulty": "explanation",
-        "model_answer": "Avis, the Bird-Conjuring Charm, produces a flock of small birds from the wand. Ollivander casts it with Krum's hornbeam wand, and the birds fly out of the end and through the window with a blast like a gun. The demonstration shows that a wand test is functional, because the charm proves the wand is responding.",
-        "required_points": ["flock", "hornbeam"],
+        "model_answer": "Avis, the Bird-Conjuring Charm, produces a flock of small birds from the wand. The birds are real enough to fly away, and the spell carries force and direction as they burst from the wand tip. It is a conjuration within charm work: the caster creates a small living effect rather than changing an existing object.",
+        "required_points": ["flock", "conjuration"],
         "rubric": [
             ("correctness", "Names the charm and describes the flock of birds.", 4),
-            ("completeness", "Explains that the visible effect is used as a functional wand test.", 4),
+            ("completeness", "Explains that the charm creates a living effect rather than changing an object.", 4),
         ],
     },
     {
         "item_id": "charms-short-007",
         "kind": "short_answer",
         "material_id": "charms-bluebell-flames",
-        "prompt": "Describe Bluebell Flames and explain how Hermione uses them in the third-floor corridor.",
+        "prompt": "Describe Bluebell Flames and explain what makes them useful as a charm-produced fire.",
         "difficulty": "application",
-        "model_answer": "Bluebell Flames are a charm-produced fire that gives light and warmth without needing wood. Hermione casts them on the Devil's Snare in the third-floor corridor, and the plant recoils from the light and heat. The scene shows the charm used as a quick tool in a crisis rather than as a weapon.",
-        "required_points": ["bluebell", "snare"],
+        "model_answer": "Bluebell Flames are a charm-produced fire that gives light and warmth without needing wood. They can be cast quickly and used as a tool in a crisis, for example to drive back a light-shy plant. They behave like fire for that purpose, but they are created by the charm rather than fuelled by a material.",
+        "required_points": ["bluebell", "warmth"],
         "rubric": [
             ("correctness", "Describes the flames as charm-produced light and heat.", 4),
-            ("completeness", "Explains the use against the Devil's Snare and the plant's reaction.", 4),
+            ("completeness", "Explains their use against a light-shy plant and how they behave like fire.", 4),
         ],
     },
     {
         "item_id": "charms-short-008",
         "kind": "short_answer",
         "material_id": "charms-fountain-of-wine",
-        "prompt": "Describe the Fountain of Wine and explain what its use in the wand-weighing ceremony shows.",
+        "prompt": "Describe the Fountain of Wine and explain what its effect shows about charm work.",
         "difficulty": "explanation",
-        "model_answer": "The Fountain of Wine is a conjuring charm that produces a controlled stream of liquid from the wand tip. Ollivander makes a fountain of wine shoot out of Harry's wand before pronouncing it in perfect condition. The display shows that charm work can be used for demonstration and verification, not only for combat or household tasks.",
+        "model_answer": "The Fountain of Wine is a conjuring charm that produces a controlled stream of liquid from the wand tip. It is not a combat spell; it demonstrates controlled production and can show that a wand is responding. The effect shows that charm work can serve demonstration and verification as well as combat or household tasks.",
         "required_points": ["fountain", "verification"],
         "rubric": [
             ("correctness", "Describes a controlled production of liquid from the wand.", 4),
-            ("completeness", "Explains the ceremonial use as a demonstration of wand condition.", 4),
+            ("completeness", "Explains the demonstration as a controlled production that verifies the wand.", 4),
         ],
     },
     {
         "item_id": "charms-short-009",
         "kind": "short_answer",
         "material_id": "charms-orchideous",
-        "prompt": "Describe Orchideous and explain what its use during the wand-weighing shows about charm work.",
+        "prompt": "Describe Orchideous and explain what its effect shows about charm work.",
         "difficulty": "explanation",
-        "model_answer": "Orchideous produces a bunch of flowers from the wand tip. Ollivander uses it while checking Fleur's wand, and the flowers burst out before he hands the wand back. The charm is a simple conjuration, and its use in the ceremony shows that a small harmless effect can prove a wand is working.",
+        "model_answer": "Orchideous produces a bunch of flowers from the wand tip. It is a simple conjuration that creates a small, harmless object rather than changing an existing one. A quick effect of this kind can serve as a functional test, showing that the wand is responding.",
         "required_points": ["flowers", "conjuration"],
         "rubric": [
             ("correctness", "Describes the bunch of flowers produced from the wand.", 4),
@@ -601,13 +608,13 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-010",
         "kind": "short_answer",
         "material_id": "charms-cheering",
-        "prompt": "Explain what the Cheering Charm does and what the third-year exam shows about controlling it.",
+        "prompt": "Explain what the Cheering Charm does and why controlling how much is applied matters.",
         "difficulty": "explanation",
-        "model_answer": "The Cheering Charm lifts a person's mood, and the third-years come out of Flitwick's lesson grinning broadly after practising it. In the third-year exam Harry overdoes it and Ron ends up in fits of hysterical laughter. The charm works on feelings rather than producing a physical effect, so the caster must judge how much to apply.",
+        "model_answer": "The Cheering Charm lifts a person's mood, and the effect is visible in behaviour rather than in a physical transformation. Because it works on feelings, an excessive application can tip the target into uncontrolled laughter instead of a balanced lift in mood. The caster therefore has to judge the strength of the effect, not just the incantation.",
         "required_points": ["mood", "laughter"],
         "rubric": [
             ("correctness", "States that the charm affects mood rather than the body.", 4),
-            ("completeness", "Uses the overdone exam result to explain the need for control.", 4),
+            ("completeness", "Explains that an excessive application produces uncontrolled laughter.", 4),
         ],
     },
     {
@@ -616,7 +623,7 @@ ITEMS: list[dict] = [
         "material_id": "charms-countercharm-hiccups",
         "prompt": "Explain the principle of a counter-charm using the countercharm for hiccups as the example.",
         "difficulty": "explanation",
-        "model_answer": "A counter-charm targets a particular unwanted effect rather than undoing all magic. The countercharm for hiccups is a small, specific counter-charm that Hermione mentions while reviewing the Charms theory paper. Its place on the exam shows that students are expected to know both the original nuisance and the precise counter.",
+        "model_answer": "A counter-charm targets a particular unwanted effect rather than undoing all magic. The countercharm for hiccups is a small, specific counter-charm, and it is examinable because students must know both the original nuisance and the precise counter. Its narrowness is the point: it does not disable every spell, only the effect it is designed to answer.",
         "required_points": ["hiccups", "counter-charm"],
         "rubric": [
             ("correctness", "Explains that a counter-charm is specific to one effect.", 4),
@@ -628,22 +635,22 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-012",
         "kind": "short_answer",
         "material_id": "charms-densaugeo",
-        "prompt": "Describe Densaugeo and explain what the corridor scene shows about hexes in a crowded space.",
+        "prompt": "Describe Densaugeo and explain the risk a local hex creates when it misses.",
         "difficulty": "application",
-        "model_answer": "Densaugeo enlarges the target's front teeth. Malfoy casts it at Harry in the corridor, but the jet ricochets into Hermione, whose front teeth grow at an alarming rate. The scene shows that a miss can hit the wrong person, and it contrasts a local hex with the Growth Charm.",
+        "model_answer": "Densaugeo enlarges the target's front teeth. The effect is local and specific, but a missed jet can ricochet and strike someone other than the intended target. That risk distinguishes a precise hex from a broad effect and makes aim and line of sight important.",
         "required_points": ["teeth", "ricochets"],
         "rubric": [
             ("correctness", "Describes the local effect on the target's front teeth.", 4),
-            ("completeness", "Explains the ricochet and the risk it creates in a crowded corridor.", 4),
+            ("completeness", "Explains the ricochet and the risk it creates for bystanders.", 4),
         ],
     },
     {
         "item_id": "charms-short-013",
         "kind": "short_answer",
         "material_id": "charms-furnunculus",
-        "prompt": "Describe Furnunculus and explain what the corridor scene shows about aim and line of sight.",
+        "prompt": "Describe Furnunculus and explain why aim and line of sight matter when casting a hex.",
         "difficulty": "application",
-        "model_answer": "Furnunculus covers the target in boils, and the Pimple Jinx is a hex with a clear and unpleasant effect. Harry casts it at Malfoy in the corridor, but the spell ricochets into Goyle, whose nose erupts in ugly boils. The scene shows that a missed hex can hit an ally, so aim and line of sight matter in a duel.",
+        "model_answer": "Furnunculus covers the target in boils, and the Pimple Jinx is a hex with a clear, unpleasant effect. A missed hex can ricochet off a surface and strike an ally instead of the intended target. Aim and line of sight therefore matter as much as the incantation in a crowded space.",
         "required_points": ["boils", "ricochets"],
         "rubric": [
             ("correctness", "Describes the boils produced by the Pimple Jinx.", 4),
@@ -654,10 +661,10 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-014",
         "kind": "short_answer",
         "material_id": "charms-leg-locker",
-        "prompt": "Describe the Leg-Locker Curse and explain what the bathroom duel shows about its risks.",
+        "prompt": "Describe the Leg-Locker Curse and explain the risk of casting it in a confined space.",
         "difficulty": "application",
-        "model_answer": "The Leg-Locker Curse binds a target's legs. In the bathroom duel Harry attempts it, but the spell backfires off the wall and smashes the cistern. The scene shows both the purpose of the spell and the risk of aiming a jinx in a confined space, where a miss can hit the environment.",
-        "required_points": ["legs", "cistern"],
+        "model_answer": "The Leg-Locker Curse binds a target's legs. It is simple in principle but dangerous in practice: a missed spell can strike a wall or an object and affect the environment instead. In a confined space, the caster must consider the background as well as the target.",
+        "required_points": ["legs", "confined"],
         "rubric": [
             ("correctness", "States that the curse binds the target's legs.", 4),
             ("completeness", "Explains the backfire and the danger of a confined space.", 4),
@@ -669,8 +676,8 @@ ITEMS: list[dict] = [
         "material_id": "charms-rictusempra",
         "prompt": "Describe Rictusempra and explain why it sits between a playful charm and a combat jinx.",
         "difficulty": "explanation",
-        "model_answer": "Rictusempra is the Tickling Charm, a jet of silver light that overwhelms a target with tickling sensation. Harry casts it at Malfoy in the duelling club, and Malfoy doubles up wheezing and can barely move for laughing. It is not a curse, but it is disabling while it lasts, which is why it sits between a playful charm and a combat jinx.",
-        "required_points": ["tickling", "duelling"],
+        "model_answer": "Rictusempra is the Tickling Charm, a jet of silver light that overwhelms a target with tickling sensation. It is not a curse, but it is disabling while it lasts because the target can barely move for laughing. That combination of a harmless label and a disabling effect is why it sits between a playful charm and a combat jinx.",
+        "required_points": ["tickling", "jinx"],
         "rubric": [
             ("correctness", "Describes the tickling effect and the jet of light.", 4),
             ("completeness", "Explains why the effect is disabling without being a curse.", 4),
@@ -682,7 +689,7 @@ ITEMS: list[dict] = [
         "material_id": "charms-tarantallegra",
         "prompt": "Describe Tarantallegra and explain what its effect shows about the difference between a jinx and a curse.",
         "difficulty": "comparison",
-        "model_answer": "Tarantallegra forces a target's legs into a frantic dance. Malfoy casts it at Harry in the duelling club, and Harry's legs jerk out of his control in a kind of quickstep. The spell is a jinx with a visible and humiliating effect that takes away control of movement without killing or wounding, which is what separates it from a curse.",
+        "model_answer": "Tarantallegra forces a target's legs into a frantic dance. The effect is visible and humiliating, and it takes away control of movement without killing or wounding. That distinguishes a jinx from a curse: the spell disrupts and embarrasses rather than causing lasting harm.",
         "required_points": ["dance", "jinx"],
         "rubric": [
             ("correctness", "Describes the forced dancing movement.", 4),
@@ -696,24 +703,24 @@ ITEMS: list[dict] = [
         "material_id": "charms-scourgify",
         "prompt": "Explain what Scourgify does and what kind of charm it is.",
         "difficulty": "explanation",
-        "model_answer": "Scourgify cleans a surface or object by removing dirt and mess rather than moving the object. Tonks uses it on Hedwig's cage, and Hermione uses it to vanish Stinksap from the train compartment. It is a household utility charm, and it improves a condition without changing a thing's identity.",
+        "model_answer": "Scourgify cleans a surface or object by removing dirt and mess rather than moving the object. It is a household utility charm, and it improves a condition without changing the thing's identity. Its short incantation and pointed wand action make it a practical spell for ordinary mess rather than a combat effect.",
         "required_points": ["dirt", "identity"],
         "rubric": [
             ("correctness", "States that Scourgify cleans rather than moves or changes the object.", 4),
-            ("completeness", "Explains its place as a household utility charm with an example.", 4),
+            ("completeness", "Explains its place as a household utility charm and what it leaves unchanged.", 4),
         ],
     },
     {
         "item_id": "charms-short-018",
         "kind": "short_answer",
         "material_id": "charms-impervius",
-        "prompt": "Explain how Impervius changes a surface's interaction with its environment, using the Quidditch example.",
+        "prompt": "Explain how Impervius changes how a surface interacts with its environment, using rain as the example.",
         "difficulty": "application",
-        "model_answer": "Impervius repels water from a surface. Angelina has the Quidditch team cast it to keep rain off their faces and preserve visibility during the match. The charm changes how an object interacts with its environment without changing the object itself.",
+        "model_answer": "Impervius repels water from a surface. It is a practical response to weather: a water-repellent surface keeps rain off and preserves visibility for as long as the charm lasts. The charm changes how an object interacts with its environment without changing the object itself.",
         "required_points": ["repels", "visibility"],
         "rubric": [
             ("correctness", "States that Impervius repels water from a surface.", 4),
-            ("completeness", "Uses the Quidditch rain example and explains the environmental change.", 4),
+            ("completeness", "Explains the rain-repellent effect and the environmental change.", 4),
         ],
     },
     {
@@ -722,7 +729,7 @@ ITEMS: list[dict] = [
         "material_id": "charms-hover",
         "prompt": "Explain what the Hover Charm does and how it differs from Summoning or Banishing.",
         "difficulty": "comparison",
-        "model_answer": "The Hover Charm lifts an object and holds it in the air as a sustained levitation. The Ministry writes to Harry about a Hover Charm used at Privet Drive, and Hermione uses one to get Harry into his bunk because she cannot lift him. Unlike Summoning or Banishing, it keeps the object aloft rather than calling it to hand or throwing it away.",
+        "model_answer": "The Hover Charm lifts an object and holds it in the air as a sustained levitation. It is used when an object is too heavy or awkward to lift by hand, and the object stays aloft rather than being thrown or pulled to the caster. Unlike Summoning or Banishing, it maintains the object in place in the air.",
         "required_points": ["aloft", "lift"],
         "rubric": [
             ("correctness", "Describes the sustained lift rather than a pull or push.", 4),
@@ -736,7 +743,7 @@ ITEMS: list[dict] = [
         "material_id": "charms-owl-theory",
         "prompt": "Explain what the Charms theory paper tests and why it is not a formality.",
         "difficulty": "explanation",
-        "model_answer": "The Charms theory paper is a written examination that asks candidates to explain charm work, such as the wand movement required to make objects fly. Hermione comes out of it unsure about Cheering Charms and the countercharm for hiccups. The paper is not a formality because the Wizarding Examinations Authority sets it and the papers carry Anti-Cheating Charms.",
+        "model_answer": "The Charms theory paper is a written examination that asks candidates to explain charm work, such as the wand movement required to make objects fly. It tests knowledge that cannot be shown by a single practical demonstration, including the countercharm for hiccups and the principles behind a charm. The paper is not a formality: it is externally set and the papers carry Anti-Cheating Charms.",
         "required_points": ["theory", "hiccups"],
         "rubric": [
             ("correctness", "Describes the written paper as testing explanation of charm work.", 4),
@@ -749,7 +756,7 @@ ITEMS: list[dict] = [
         "material_id": "charms-owl-practical",
         "prompt": "Explain how the Charms practical examination is conducted and what it asks candidates to do.",
         "difficulty": "explanation",
-        "model_answer": "The Charms practical is examined one small group at a time in a side chamber, while students wait and practise their incantations and wand movements. Inside, the examiner asks for concrete results, such as making an eggcup cartwheel with the Levitation Charm. The practical is a performance test rather than a written explanation.",
+        "model_answer": "The Charms practical is examined one small group at a time in a side chamber. Candidates wait, mutter incantations and practise wand movements until their names are called, then must produce concrete results such as making an eggcup cartwheel with the Levitation Charm. The practical is a performance test rather than a written explanation.",
         "required_points": ["chamber", "cartwheel"],
         "rubric": [
             ("correctness", "Describes the small-group, one-at-a-time format.", 4),
@@ -760,10 +767,10 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-022",
         "kind": "short_answer",
         "material_id": "charms-spell-failure",
-        "prompt": "Explain why charm failure in the books is usually a problem of technique rather than power, using two examples.",
+        "prompt": "Explain why charm failure is usually a problem of technique rather than power, using two examples.",
         "difficulty": "explanation",
-        "model_answer": "Charm failure usually comes from wrong movement, wrong emphasis, wrong incantation or too much force. Seamus prods his feather with his wand and sets it alight, while Ron shouts the incantation and waves his arms until Hermione tells him he is saying it wrong. The pattern repeats when Harry mixes up Color-Change and Growth and swells the rat instead of turning it orange.",
-        "required_points": ["technique", "feather"],
+        "model_answer": "Charm failure usually comes from wrong movement, wrong emphasis, wrong incantation or too much force. A learner who prods the target instead of performing the movement may set it alight, while a learner who shouts and waves the arm can still be saying the incantation wrongly. The pattern repeats when one charm's incantation is confused with another and the wrong effect appears.",
+        "required_points": ["technique", "movement"],
         "rubric": [
             ("correctness", "Names technique errors as the cause of failure.", 4),
             ("completeness", "Uses two distinct failed attempts as evidence.", 4),
@@ -773,13 +780,13 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-023",
         "kind": "short_answer",
         "material_id": "charms-wands",
-        "prompt": "Explain what the wand-weighing ceremony shows about how a wand's condition is tested.",
+        "prompt": "Explain how a wand's condition is tested and why the test is functional.",
         "difficulty": "explanation",
-        "model_answer": "A wand is the focus through which charm work is performed, and the books treat its condition as part of the magic. Ollivander examines the champions' wands for scratches and tests each one with a charm, using Orchideous, Avis and a fountain of wine. The ceremony shows that the test is functional because the charm proves the wand is responding.",
-        "required_points": ["scratches", "functional"],
+        "model_answer": "A wand is the focus through which charm work is performed, and its condition is part of the magic. A functional test uses a charm whose visible effect proves that the wand is responding, and different charms can be used for that test. The test is practical rather than decorative because a damaged or failing wand will not produce the expected effect.",
+        "required_points": ["functional", "condition"],
         "rubric": [
             ("correctness", "States that a wand is the focus of charm work and that condition matters.", 4),
-            ("completeness", "Describes the charm tests and why the demonstration is functional.", 4),
+            ("completeness", "Explains why a visible charm effect is a practical test of condition.", 4),
         ],
     },
     {
@@ -788,20 +795,20 @@ ITEMS: list[dict] = [
         "material_id": "charms-class",
         "prompt": "Explain how Charms lessons are organised to turn practice into control.",
         "difficulty": "explanation",
-        "model_answer": "Charms classes are practical, paired and noisy, with Flitwick moving between desks to correct wrist movements and incantations. The trio also use the Charms classroom outside lessons to rehearse for the Triwizard tasks with Flitwick's cushions, and the OWL year adds revision and exam pressure. The pattern is short attempts, visible success and immediate correction.",
-        "required_points": ["paired", "cushions"],
+        "model_answer": "Charms classes are practical, paired and noisy: learners make short attempts while a teacher moves between desks correcting wrist movements and incantations. Practice continues outside set lessons, when learners use the classroom and its soft practice objects to rehearse. The pattern is short attempts, visible success and immediate correction, with revision and exam pressure added later.",
+        "required_points": ["paired", "revision"],
         "rubric": [
             ("correctness", "Describes paired practice with immediate correction.", 4),
-            ("completeness", "Uses the out-of-lesson rehearsal and the OWL revision to show repetition.", 4),
+            ("completeness", "Uses out-of-lesson rehearsal and revision to show repetition.", 4),
         ],
     },
     {
         "item_id": "charms-short-025",
         "kind": "short_answer",
         "material_id": "charms-flitwick",
-        "prompt": "Explain the teaching pattern the books associate with Flitwick and why it suits charm learning.",
+        "prompt": "Explain the teaching sequence used for charm instruction and why it suits charm learning.",
         "difficulty": "explanation",
-        "model_answer": "Flitwick demonstrates a charm, corrects the class's wrist movements and incantations, and then has them repeat it. He announces the Levitation Charm and drills swish-and-flick before the class tries it, praises Hermione's success publicly, and sends the boys away with the single word practice after Ron's flask explodes. The pattern of demonstrate, correct and repeat suits charm learning because control comes from repetition.",
+        "model_answer": "Charm instruction follows a clear sequence: demonstrate the spell, correct the learner's wrist movement and incantation, then have the learner repeat it. A correct attempt is praised publicly, and a failed attempt is answered with the single instruction to practise rather than with more power. The pattern suits charm learning because control comes from repetition.",
         "required_points": ["demonstrate", "repeat"],
         "rubric": [
             ("correctness", "Describes the sequence of demonstration, correction and repetition.", 4),
@@ -827,6 +834,62 @@ def _validate_specs() -> None:
                 raise SystemExit(f"{spec['item_id']}: needs two rubric criteria")
             if sum(marks for _, _, marks in spec["rubric"]) != 8:
                 raise SystemExit(f"{spec['item_id']}: rubric must sum to 8")
+        _check_prose(spec)
+
+
+# Concept-only rule: prompts, keys, options and rubrics must never need story
+# knowledge. Names and scene markers are rejected rather than reviewed.
+_FORBIDDEN_CHARACTERS = (
+    "harry", "ron", "hermione", "malfoy", "neville", "seamus", "cedric",
+    "ollivander", "tonks", "angelina", "bagman", "dumbledore", "hagrid",
+    "krum", "fleur", "goyle", "flitwick", "mcgonagall", "snape", "dolohov",
+    "ginny", "george", "fred", "luna", "sirius", "lupin", "voldemort",
+    "quirrell", "lockhart", "umbridge", "slughorn", "crouch", "fudge",
+    "skeeter", "cho", "dean", "lavender", "parvati", "dobby", "kreacher",
+    "buckbeak", "hedwig", "crookshanks", "scabbers", "norbert", "aragog",
+)
+_FORBIDDEN_SCENES = (
+    "privet drive", "third-floor", "duelling club", "bathroom", "train "
+    "compartment", "quidditch", "triwizard", "grimmauld", "ministry of magic",
+    "little whinging", "diagon alley", "hogwarts", "d.a.", "dumbledore's army",
+    "chamber of secrets", "room of requirement", "burrow", "spinner's end",
+)
+
+
+def _check_prose(spec: dict) -> None:
+    """Reject a character name or scene marker anywhere student-facing."""
+    fields: list[tuple[str, str]] = [
+        ("prompt", spec["prompt"]),
+        ("rationale", spec.get("rationale") or ""),
+    ]
+    fields.extend(
+        (f"options[{index}]", text)
+        for index, text in enumerate(spec.get("options", []))
+    )
+    fields.extend(
+        (f"required_points[{index}]", point)
+        for index, point in enumerate(spec.get("required_points", []))
+    )
+    fields.extend(
+        (f"rubric[{criterion_id}]", description)
+        for criterion_id, description, _ in spec.get("rubric", [])
+    )
+    if spec.get("model_answer"):
+        fields.append(("model_answer", spec["model_answer"]))
+    for name, value in fields:
+        lowered = value.lower()
+        for term in _FORBIDDEN_CHARACTERS:
+            if re.search(rf"\b{re.escape(term)}\b", lowered):
+                raise SystemExit(
+                    f"{spec['item_id']}: {name} names a character ({term!r}); "
+                    "questions must stand without story knowledge"
+                )
+        for term in _FORBIDDEN_SCENES:
+            if term in lowered:
+                raise SystemExit(
+                    f"{spec['item_id']}: {name} refers to a scene ({term!r}); "
+                    "questions must stand without story knowledge"
+                )
 
 
 def _build_item(spec: dict, material, mark_reviewed: bool, position: int = 0) -> BankItem:
