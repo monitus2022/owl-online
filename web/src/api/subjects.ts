@@ -1,16 +1,16 @@
 import { apiBase } from "./base";
 
-// GET /v1/subjects, the backend contract in docs/api.md. The response owns
-// availability (which packs are published) and the two live flags; the static
-// subject list in src/data/ keeps the presentation metadata (professor,
-// accent, crest, blurb) because those are not API data.
+// GET /v1/subjects, the backend contract in docs/api.md. The response supplies
+// the published pack summaries and the live lesson/persona flags. The static
+// subject list decides which departments are open/soon; this response does
+// not override that product decision.
 
 export interface SubjectSummary {
   subject: string;
   title: string;
   tier: string;
   version: string;
-  status: string;
+  status: "draft" | "validated" | "published";
   built_at: string;
   fingerprint: string;
   topics: string[];

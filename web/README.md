@@ -9,7 +9,7 @@ the raw test page and is not part of this build.
 
 | Path | What it is |
 |---|---|
-| `src/data/subjects.ts` | The five departments: URL slug, API subject key, professor, accent, crest, status. Presentation metadata only; availability, version, lesson and persona flags come from `GET /v1/subjects`. |
+| `src/data/subjects.ts` | The five departments: URL slug, API subject key, professor, accent, crest, status. The static status is the product open/soon decision; the pack version and lesson/persona flags come from `GET /v1/subjects`. |
 | `src/api/subjects.ts` | Live client for `GET /v1/subjects`; the venue merges the response into the static presentation metadata. |
 | `src/api/chat.ts` | Live client for `POST /ask/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for the DADA venue when the API reports it. |
 | `src/api/exams.ts` | `ExamClient` interface mirroring the planned `/v1/exams` contract, plus `MockExamClient` with a demo DADA bank. |
@@ -51,11 +51,12 @@ exam room is the mock.
 - One subject is real (Defence Against the Dark Arts, chat only). The other
   four doors lead to "classroom being furnished" — no invented professors or
   content.
-- The persona flag (`OWL_PERSONA`) and lesson flag (`OWL_LESSON_MODE`) are read
-  from `GET /v1/subjects`; the venue uses the API values and keeps the static
-  `personaState`/`status` only as the fallback when the API is unreachable.
-  With the flags off the copy addresses the professor without claiming he
-  authored a live reply.
+- The static subject list decides which departments are open. The persona flag
+  (`OWL_PERSONA`) and lesson flag (`OWL_LESSON_MODE`) are read from
+  `GET /v1/subjects`; a statically open department with no pack stays on corpus
+  chat with a note, and a statically "soon" department stays furnished. With the
+  flags off the copy addresses the professor without claiming he authored a live
+  reply.
 - Exam papers, marks and bands are a demo until the exam bank (#38, #42)
   ships; the UI labels them as such and must keep doing so, on every screen
   of the flow including the history and noticeboard.
