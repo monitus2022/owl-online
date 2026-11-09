@@ -1,8 +1,8 @@
 # Architecture
 
 One page, three views of the engine: the layers, the provider contracts, and the
-request flows. It describes the chat surface built today and the exam-bank
-boundary that is planned. The README diagram is the full V1-V3 vision.
+request flows. It describes the built chat surface and the exam-bank boundary
+as it lands. The README diagram is the full V1-V3 vision.
 
 Keep this in sync when the contracts or the top-level flow change. The diagrams
 are Mermaid code, so they render on GitHub and diff in review like any other file.
@@ -14,6 +14,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
 | Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166); the DADA pack is published; pack wiring and Charms content remain on #128 |
+| Exam bank | `app/exam/`, `app/storage/` | bank records and pack/corpus validator; SQLite import for the serving store (#189) |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -43,8 +44,9 @@ Exam-bank and canon-index stages (canon-index rows are built; the rest is planne
 | Canon index harvest (built, #125+#126) | `app/pipeline/ingest/lexicon/` | sitemap discovery, polite cached fetch of hp-lexicon.org, entry and chapter parse plus fetch metadata to gitignored JSONL |
 | Canon index resolve (built, #127) | `app/knowledge/lexicon.py` | agreement join (forward citations vs chapter tabs vs sidebar), chunk-candidate resolution with phrase priority and spans, deterministic review sample and integrity verification |
 | Subject packs | `app/knowledge/` | subject taxonomy, material records, source refs, pack build and validation |
+| Exam bank | `app/exam/` | bank records, pack and corpus validation, duplicate and publication gates |
 | Exam build | `app/pipeline/exam/` | offline plan, retrieve, generate, validate, persist |
-| Exam store | `app/storage/` | SQLite models and repository for exams, questions, attempts |
+| Exam store | `app/storage/` | SQLite banks and items imported from validated JSONL; paper and attempt repository follows #38 |
 | Grading | `app/grading/` | hybrid: deterministic objective scoring, LLM rubric judge for free text, deterministic totals and bands |
 
 ## Build vs managed
@@ -565,9 +567,16 @@ film or secondary material.
 |---|---|---|
 | Pack build | batch job over the corpus | validated materials with source refs and pack version |
 | Exam build | batch job over the packs | validated questions, rubrics, evidence snapshots |
-| Exam store | SQLite in `/data` | static papers with versions and status |
+| Exam store | SQLite in `/data` | bank items with versions and status; paper and attempt records follow #38 |
 | Exam serving | `GET /exams` and `GET /exams/{id}` | stored paper, no model call |
 | Attempt grading | submit endpoint | hybrid score and score band |
+
+The bank is authored as `data/exams/<subject>/bank.jsonl` plus `manifest.toml`,
+validated by `app/exam/bank.py`, and imported into `data/exams/exams.db` by
+`scripts/import_exam_bank.py`. An item stores its material id, source refs and
+evidence snapshot; the validator recomputes every hash against the corpus. MCQ
+items keep at least six options, while the serving view samples four per
+attempt. Short-answer items keep a golden answer and rubric for the judge.
 
 The boundary matters because the two surfaces have different guarantees. Chat
 practice is disposable and formative. Exam-bank papers are validated, versioned
@@ -714,15 +723,24 @@ Canon-index types (spike shapes and resolver landed on #125/#127):
 | `QueueItem` / `FetchResult` | `app/pipeline/ingest/lexicon/{discovery,fetch}.py` | work queue row; fetch record with access date and response hash |
 | `CanonEdge` / `Candidate` | `app/knowledge/lexicon.py` | built (#127): entry, book/chapter/epilogue key, agreement, sources, candidate refs as (chunk id, text hash, span) |
 
-Planned exam-bank types, once the offline pipeline lands:
+Built bank types (#189):
+
+| Type | Module | Purpose |
+|---|---|---|
+| `BankManifest` | `app/exam/bank.py` | version, resource pins, generator and judge config, counts |
+| `BankItem` | `app/exam/bank.py` | MCQ or short-answer item with material and evidence grounding |
+| `McqOption` | `app/exam/bank.py` | one stored option in the six-or-more pool |
+| `RubricCriterion` | `app/exam/bank.py` | criterion id, description and maximum marks |
+| `ShortAnswerKey` | `app/exam/bank.py` | golden answer, required points and rubric |
+| `EvidenceSnapshot` | `app/exam/bank.py` | chunk id plus excerpt text, book and chapter at generation time |
+
+Planned paper and attempt types, once #38 lands:
 
 | Type | Module | Purpose |
 |---|---|---|
 | `ExamFormat` | `app/storage/models.py` | subject blueprint, canon basis, fidelity, marks, duration and question mix |
 | `Exam` | `app/storage/models.py` | paper identity, scope, version, publication status |
 | `Question` | `app/storage/models.py` | prompt, type, max marks, stored rubric, evidence snapshot |
-| `RubricCriterion` | `app/storage/models.py` | criterion id, marks, guidance |
-| `EvidenceSnapshot` | `app/storage/models.py` | chunk id plus excerpt text, book and chapter at generation time |
 | `Attempt` | `app/storage/models.py` | one student submission, total score, band, judge config |
 | `Response` | `app/storage/models.py` | one answer, awarded marks, feedback, matched criteria |
 | `JudgeRun` | `app/storage/models.py` | judge model, prompt version, rubric version, raw or hashed output |
