@@ -122,6 +122,8 @@ def test_answer_suffix_keeps_the_grounding_rules():
     assert "Professor Crane" in suffix
     assert "Defense Against the Dark Arts" in suffix
     assert "citation and abstention rules" in suffix
+    assert "rules in this prompt" in suffix
+    assert "rules above" not in suffix
     assert "Never invent" in suffix
     assert "exactly as it appears" in suffix
     assert "Ashcombe" not in suffix

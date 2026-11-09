@@ -44,7 +44,7 @@ async def lesson_node(
         on_token=emit,
         on_reset=reset,
         max_retries=max_retries,
-        persona_suffix=persona.answer_suffix() if persona is not None else None,
+        persona=persona,
     )
     if result.abstained and persona is not None:
         # Keep the abstention contract; only the user-facing line changes.

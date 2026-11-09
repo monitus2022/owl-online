@@ -6,6 +6,7 @@ keyword embedder so the ranking is deterministic and offline.
 
 import pytest
 
+from app.agent.persona import PERSONA
 from app.knowledge.lesson import LessonSelector
 from app.knowledge.materials import Material, SourceRef
 from app.knowledge.packs import (
@@ -19,6 +20,7 @@ from app.pipeline.generate.lesson import (
     ask_lesson,
     ground_lesson_answer,
     is_lesson_refusal,
+    render_materials,
     uncovered_terms,
 )
 from app.schemas import Chunk, ChunkMetadata
@@ -516,6 +518,43 @@ async def test_ask_lesson_appends_the_persona_suffix():
     )
 
     assert "PERSONA-SUFFIX" in llm.systems[0]
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_puts_the_persona_before_the_grounding_rules():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = SequencedLlm(
+        ["A boggart takes your fear's shape [mat:dada-dark-creatures-boggarts-nature]."]
+    )
+
+    await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        persona=PERSONA,
+    )
+
+    system = llm.systems[0]
+    assert system.index("Professor Crane") < system.index(
+        "Teach only from the lesson notes"
+    )
+    assert "You are teaching a student directly" in system
+    assert "citation and abstention rules in this prompt" in system
+    assert "rules above" not in system
+    assert "open with a direct answer in the second person" in system
+    assert "under 250 words" in system
+
+
+def test_render_materials_hides_inline_chunk_ids():
+    material = _pack().materials[0]
+    material = material.model_copy(
+        update={"text": "A boggart changes shape [b3-c07-0050] when watched."}
+    )
+    rendered = render_materials([material])
+    assert "[b3-c07-0050]" not in rendered
+    assert "[mat:dada-dark-creatures-boggarts-nature]" in rendered
+    assert "A boggart changes shape" in rendered
 
 
 @pytest.mark.asyncio

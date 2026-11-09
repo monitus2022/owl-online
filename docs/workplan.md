@@ -38,7 +38,7 @@ page describes what comes next and why.
   citations, validated against the pack. The variant bank (#120) gives every
   scripted meta topic, the personal reply and the abstention line several
   reviewed phrasings. The real pack is published at 1.0.0; the lore eval
-  follows (#97) and the lesson voice follows (#176). Scope
+  follows (#97); the lesson voice is delivered (#176). Scope
   decision 2026-11-08: persona expression is tiered 0-2 - voiced grounded
   answers, then generative-within-the-record bounded by the lore pack - with
   tier 3 (invented non-canon flavor) explicitly out of scope; tiers and the
@@ -75,7 +75,7 @@ page describes what comes next and why.
   the extraction pipeline; the #87 pack schema and validator landed with PR #153.
 - The served exam paper (#193) is built; DADA packs and the DADA bank 1.0.0 are
   delivered, mixed-scope lesson answers are delivered (#177, PR #199), and the
-  answer path is settled except the voice work (#176). The bank blueprint (#188)
+  answer path is settled, and the lesson voice is delivered (#176). The bank blueprint (#188)
   fixes a target of 25 MCQ and 25 short-answer items. The bank schema, validator
   and SQLite import are in #189, the DADA bank 1.0.0 is published in #190, the
   hybrid grader is built in #192, the bank eval and judge calibration are
@@ -598,7 +598,6 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #176 | Persona lesson voice and conformance eval | V3 - Product |
 | #30 | Conversation memory and follow-up rewrite | V3 - Product |
 | #44 | Progress tracking and weak topics | V3 - Product |
 | #35 | Auth, per-user history and limits | V3 - Product |
@@ -639,7 +638,7 @@ persists exam attempts and chat history.
 | Ingest | #113 |
 | CI gate | #16 |
 | Frontend surfaces | #132, #134, #135, #136, #137, #141, #143, #145, #157 |
-| Lesson mode and persona | #120, #166, #168, #177 (PR #199; the #97 thin slice is delivered, #97 stays open for the voice work, #176) |
+| Lesson mode and persona | #120, #166, #168, #176, #177 (PR #199; the #97 thin slice is delivered, #97 stays open for the remaining persona work) |
 | Venue fallback | #172 (PR #173) |
 | Deploy hardening | #170, #174 (PR #175) |
 
@@ -651,7 +650,7 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The next work is the Now set: #178, #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
+The next work is #30 and #184, with the Now items #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
 (#127 closed); #128 carries the pack wiring and Charms content. The
 #87 schema, validator and DADA 1.0.0 pack are delivered. #16, #120, #170, #172,
 #174 and #127 are closed. #107 is deferred and likely superseded by the

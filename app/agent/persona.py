@@ -72,7 +72,7 @@ class Persona:
             f"{self.stance}. {self.pacing}. "
             "Use every name, place and title exactly as it appears in the "
             "excerpts; never rename or relocate it. "
-            "Keep the citation and abstention rules above exactly. "
+            "Keep the citation and abstention rules in this prompt exactly. "
             f"{self.boundaries['facts']} {self.boundaries['advice']} "
             f"{self.boundaries['record']} {self.boundaries['exam']}"
         )

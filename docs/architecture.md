@@ -492,7 +492,7 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
 | `meta` | persona on; identity, subject scope, subject definition, exam (non-disclosure), syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
-| `lesson` | classification would be answer, explicit `mode=lesson`, `OWL_LESSON_MODE` on | teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
+| `lesson` | classification would be answer, explicit `mode=lesson`, `OWL_LESSON_MODE` on | persona-first teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
 
 Lesson mode is the one intent grounded in a subject pack first; the corpus is a
 labelled fallback when the pack is thin. The selector is derived at startup by
@@ -502,6 +502,16 @@ in `material_citations` and their book chunks in `citations`; an off-pack answer
 has empty `material_citations` and cites the retrieved book chunks directly.
 With the flag off the request is rejected and the measured corpus path is
 unchanged.
+
+With the persona on, the lesson system prompt is persona-first: identity,
+register and stance precede the grounding rules, a short voice reminder closes
+them, and the teaching shape is a direct answer, why it matters, an example from
+the notes, a caution and a short check. The note prose is rendered without its
+inline book chunk ids, so the only note citation the model sees is the material
+id; the material source refs still resolve on the response. The conformance
+fixture in `eval/persona/` runs deterministic citation, source-hash, boundary,
+style and length checks before a pinned judge scores voice and teaching shape
+only. The 2026-11-09 record is `docs/runs/2026-11-09-176-persona-lesson-voice.md`.
 
 ## Persona layer
 
