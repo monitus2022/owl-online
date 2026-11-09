@@ -76,10 +76,12 @@ export function VenuePage() {
   const summary = department?.subjects.find(
     (entry) => entry.subject === subject.apiSubject,
   );
+  // The static list is the product decision for open/soon; a published pack
+  // can open a department, but an absent pack must not close one that the
+  // product says is open. Without the pack the room stays usable on the
+  // corpus path.
   const isOpen =
-    department === null
-      ? subject.status === "open"
-      : summary?.status === "published";
+    subject.status === "open" || summary?.status === "published";
   const personaState =
     department === null
       ? subject.personaState
@@ -94,8 +96,13 @@ export function VenuePage() {
   const lesson = Boolean(
     department?.lesson &&
       department.lesson_subject === subject.apiSubject &&
+      summary?.status === "published" &&
       isOpen,
   );
+  const packMissing =
+    department !== null &&
+    subject.status === "open" &&
+    summary?.status !== "published";
 
   if (room.status === "soon") {
     return (
@@ -145,6 +152,12 @@ export function VenuePage() {
         <Crest crest={room.crest} className="venue-crest" />
       </header>
       <ArchBackdrop crest={room.crest} />
+      {packMissing && (
+        <p className="venue-note">
+          The department's lesson notes are not loaded on the server; answers
+          come from the set texts until the pack is available.
+        </p>
+      )}
       <div className="tabs" role="tablist" aria-label="Room" onKeyDown={moveTab}>
         {TABS.map((entry) => (
           <button
