@@ -74,7 +74,9 @@ page describes what comes next and why.
   source-ref prefill, chapter-to-subject lesson table) remains for Charms and
   the extraction pipeline; the #87 pack schema and validator landed with PR #153.
 - The exam bank (#178) follows; DADA packs are delivered and the answer path is
-  settled except the voice work (#176).
+  settled except the voice work (#176). The bank blueprint (#188) fixes a
+  target of 25 MCQ and 25 short-answer items; authoring follows the bank schema
+  (#189).
 
 ## Product shape
 
@@ -211,7 +213,8 @@ Caps: seven map calls, fan-out 4, up to 15 candidates per book, one extraction p
 ## Cost and abuse controls
 
 Chat is the variable-cost surface. Exam content is mostly fixed and offline;
-grading adds a judge call per free-text answer. Before user growth, cap chat.
+grading adds one judge call per attempt for the free-text answers. Before user
+growth, cap chat.
 
 Defaults, configurable with `OWL_` settings:
 
@@ -435,7 +438,7 @@ call.)
 | Type | Scored by |
 |---|---|
 | `mcq` | deterministic matcher |
-| `short_answer` | deterministic accepted variants, LLM fallback for paraphrase |
+| `short_answer` | pinned LLM judge against the stored golden answer and rubric |
 | `long_answer` | pinned LLM judge against the stored rubric and evidence |
 
 ### Exam format blueprint
@@ -466,7 +469,8 @@ Canon constraints:
 Adapted for this product:
 
 - 10 questions per subject paper, not a full two-week timetable;
-- 50 questions pre-generated for each subject randomly selected for each attempt;
+- 50 questions pre-generated per subject (25 MCQ and 25 short answer), randomly
+  selected for each attempt;
 - fixed marks and duration;
 - a practical section written as a simulation: incantation, wand movement,
   intended effect and counter-measure, not actual spellcasting;
@@ -485,6 +489,9 @@ Tickets:
 | #42 | Static exam endpoints and attempt submission |
 | #40 | Exam and grading evaluation |
 
+The DADA bank line is #187 (sub-issues #188-#193): 25 MCQ and 25 short-answer
+items, 50 in total. The blueprint is `docs/exams/dada-bank-blueprint.md`.
+
 Exit criteria:
 
 - a validated 10-question paper can be generated offline and stored;
@@ -492,7 +499,7 @@ Exit criteria:
 - a paper can be served without a model call;
 - an attempt can be submitted and graded;
 - objective questions are scored deterministically;
-- free-text answers are judged per question with structured output;
+- free-text answers are judged once per attempt with per-question structured output;
 - invalid judge output is retried once and then flagged, never silently zeroed;
 - totals and bands are deterministic;
 - a human-marked calibration set reports score agreement and mean absolute error.
@@ -570,6 +577,7 @@ persists exam attempts and chat history.
 |---|---|---|
 | #177 | Lesson mixed-scope answers with labelled corpus fallback | V3 - Product |
 | #178 | Exam bank one-paper vertical slice (tracker for #38/#39/#40/#41/#42) | V3 - Product |
+| #187 | DADA bank: 25 MCQ + 25 short answer, 50 items total (#188-#193) | V3 - Product |
 | #38/#39/#40/#41/#42 | Exam model, generator, evaluation, grader and endpoints | V3 - Product |
 | #162/#163 | Starter prompts and routing contract | V3 - Product |
 | #19/#33 | Cost and latency instrumentation and a minimal dashboard | V3 - Product |
@@ -654,7 +662,8 @@ completion by maintainer decision.
 | Static content and rubric | Reproducible after the index changes |
 | Evidence snapshot per question | Chunk ids alone break when the index is rebuilt |
 | Hybrid grading | Objective answers do not need a judge; free text does |
-| Per-question judge calls | Isolates failures, enables retries, keeps prompts small |
+| One judge call per attempt | Four short answers fit one context; per-question records keep retries and regrading auditable |
+| 25 MCQ plus 25 short answer, 50 marks | A paper is six MCQ and four short answers; 50 marks gives 2 percent per mark and clean band boundaries |
 | Pinned judge, temperature 0, prompt version | Makes regrading auditable |
 | Judge from a different model family than the generator | Reduces self-preference bias |
 | Deterministic totals and bands | The final score is not model-generated |
@@ -669,7 +678,7 @@ completion by maintainer decision.
 | Per-book retrieval is measured before wiring | At equal k=7 the prototype raises coverage 0.58 to 0.79 and keeps near-misses single-hop; chat stays one-pass until extraction and synthesis land |
 | The professor is an original character, not a canon one | Limits IP exposure and avoids invented quotations; the persona is tone plus reviewed meta facts, and never adds facts to a grounded answer |
 | Academy papers are mcq plus short answer | Frontend review (2026-11-07, #132): the student-facing paper drops long answers; rubric judging stays available if a future paper needs it. Revisit in #41 |
-| Short answers grade in one batch call against the stored key | Ten answers fit one context window; the batch response keeps per-question structured records so retry and regrade semantics survive. Revisit in #41 |
+| Short answers grade in one batch call against the stored key | Four short answers fit one context window; the batch response keeps per-question structured records so retry and regrade semantics survive. Revisit in #41 |
 | Result records are device-local until auth | The frontend shows best-so-far from localStorage before #35; the server becomes the authority when attempts land and the UI keeps labelling local records provisional. Revisit in #35 |
 | Venue art is inline SVG geometry, never raster and never academic content | The raster pipeline was blocked twice by the image provider's terms of service (#134); SVG themes with the accent tokens, costs kilobytes, stays crisp and accessible, and keeps closed departments decorative rather than invented. Raster heroes return only as owner-supplied assets |
 
@@ -721,7 +730,7 @@ Lesson mode adds:
 | LLM judge disagrees with a human | Calibration set, pinned config, review threshold |
 | Judge output is malformed | Structured JSON, schema validation, one retry, `needs_review` |
 | Exam changes after reindex | Evidence snapshots and exam versions |
-| Grading cost grows | Per-question calls, caching, objective questions where possible |
+| Grading cost grows | One judge call per attempt, caching, objective questions where possible |
 | Chat spam or runaway token use | Per-session/day caps, token caps, exact cache, spend guard |
 | Subject pack drift after reindex | Source text hashes, index hash, pack version, rebuild validation |
 | Question or lesson cites an unknown material | Pack validator rejects before publication |
