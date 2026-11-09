@@ -37,6 +37,7 @@ data/*
 # Eval artifacts: timestamped runs stay local; the pinned baseline is committed.
 eval/results/*.csv
 !eval/results/baseline.csv
+eval/results/persona-*.json
 eval/.cache/
 
 # Notebooks

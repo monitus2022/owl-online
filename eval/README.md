@@ -32,6 +32,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `scripts/run_eval.py` | CLI params and dispatch |
 | `scripts/measure_aggregation.py` | aggregation fixture measurement |
 | `eval/exam/` | DADA bank eval: deterministic checks, independent model checks, judge calibration, calibration fixture and runner (#191) |
+| `eval/persona/` | persona-conformance fixture, deterministic checks, pinned voice judge, calibration and runner (#176) |
 
 `eval/harness/__init__.py` re-exports the public names, so callers keep
 importing from `eval.harness`.
@@ -511,3 +512,36 @@ only for a quick check.
 
 The record is `docs/runs/2026-11-09-191-dada-bank-eval.md`; a row is in the Runs
 table in `docs/runs/README.md`.
+
+## Persona conformance (#176)
+
+`eval/persona/` measures the lesson and persona surfaces separately from the
+factual gold set. The fixture is 29 scenarios across in-pack, mixed, off-pack,
+meta, personal, off-topic and adversarial prompts. Each scenario records the
+expected route, accepted scopes, citation requirement, boundary and rubric
+anchors. Questions are original; no corpus or pack prose is stored.
+
+```text
+uv run python scripts/run_persona_eval.py
+```
+
+The runner compares the pre-#176 lesson prompt (grounding rules first, then the
+tone suffix) with the shipped persona-first prompt on the same selector,
+retriever and generator. It runs three samples per scenario per condition. The
+deterministic checks run first:
+
+- every `[mat:]` or book citation resolves, and the required citation space is
+  present;
+- cited material source refs resolve and their text hashes match the corpus;
+- off-topic and out-of-pack misses use the in-world abstention line;
+- no exam disclosure, mark scheme, private knowledge or out-of-role advice;
+- no slang, emoji, deadlines or countdowns, and the length budget holds.
+
+The pinned judge (`deepseek/deepseek-v4.1-flash-1017`, temperature 0) scores voice and
+teaching shape only and never sees the condition. Calibration uses ten
+owner-adopted examples that span the 0-2 bands. The report gives exact and adjacent agreement, MAE, the pass rate and
+its Wilson lower bound, and the per-scenario variance across samples.
+
+The 2026-11-09 run is `docs/runs/2026-11-09-176-persona-lesson-voice.md`: pass
+rate 0.00 to 0.40, Wilson lower bound 0.29, citation retention 0.79, no boundary
+or style violations, and the corpus gate unchanged.
