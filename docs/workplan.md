@@ -75,8 +75,8 @@ page describes what comes next and why.
   the extraction pipeline; the #87 pack schema and validator landed with PR #153.
 - The exam bank (#178) follows; DADA packs are delivered and the answer path is
   settled except the voice work (#176). The bank blueprint (#188) fixes a
-  target of 25 MCQ and 25 short-answer items; authoring follows the bank schema
-  (#189).
+  target of 25 MCQ and 25 short-answer items. The bank schema, validator and
+  SQLite import are in #189; authoring (#190) follows.
 
 ## Product shape
 
