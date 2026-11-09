@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: grounded chat, the DADA pack published at 1.0.0, the DADA exam bank published at 1.0.0, and the professor persona live behind `OWL_PERSONA`. Lesson mode is implemented behind `OWL_LESSON_MODE` and needs the pack on the host volume. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; a missing pack falls back to labelled corpus chat. The bank holds 25 MCQ and 25 short-answer items; the served paper and hybrid grading are next. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
+> Status: grounded chat, the DADA pack published at 1.0.0, the DADA exam bank published at 1.0.0, and the professor persona live behind `OWL_PERSONA`. Lesson mode is implemented behind `OWL_LESSON_MODE` and needs the pack on the host volume. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; a missing pack falls back to labelled corpus chat. The bank holds 25 MCQ and 25 short-answer items and hybrid grading is built; the served paper is next. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
 
 ---
 
@@ -15,7 +15,7 @@ O.W.L. Online has two product surfaces on one retrieval core:
 | Chat answer | Grounded Q&A with citations | live |
 | Chat practice | On-demand grounded practice question | live |
 | Chat feedback | Formative feedback and a provisional mark | live |
-| Exam bank | 25 MCQ + 25 short-answer bank sampled into 6 MCQ + 4 short-answer papers and graded by a hybrid scorer | bank 1.0.0 published (#190); serving and grading next (#192/#193) |
+| Exam bank | 25 MCQ + 25 short-answer bank sampled into 6 MCQ + 4 short-answer papers and graded by a hybrid scorer | bank 1.0.0 published (#190); grading built (#192); serving next (#193) |
 | Lesson mode | Pack-grounded teaching answers with material and book citations | implemented behind `OWL_LESSON_MODE`; needs the pack on the host volume |
 
 Chat practice and feedback are ephemeral and formative. The exam bank is the
@@ -32,8 +32,8 @@ validated against the pack and the corpus, and stored with an evidence snapshot
 on every item. A paper samples 6 MCQ and 4 short answers for 50 marks: MCQ
 answers are scored by code, short answers go to a pinned judge with the rubric
 and evidence, and the judge never writes the final total or band. Servable
-attempts and the production grader are the next tickets (#192/#193). Questions
-test the subject, not the plot; the scope rule is in
+attempts and the frontend swap are the next ticket (#193). Questions test the
+subject, not the plot; the scope rule is in
 [`docs/exams/README.md`](docs/exams/README.md).
 
 Exam generation and lesson mode read from versioned subject knowledge packs:
@@ -189,7 +189,7 @@ Execution is phased:
 | V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval + rerank, cited generation with abstention, API, mini-eval, deployed | shipped (https://api.monitus.org) |
 | V2 - Deepening | guardrails, chat intents (LangGraph), Bedrock Llm adapter, cost controls, local eval gate, retrieval foundation, multi-book answer path, professor persona | chat foundation, retrieval foundation, held-out set, CI gate, persona and the stateless lesson slice delivered; #105 flag-off and time-boxed; voice work #176 |
 | V2.5 - Subject packs | taxonomy, material packs, source refs, validation, lesson mode | DADA 1.0.0 published; Charms content #128 |
-| V3 - Exam bank and continuity | exam bank, hybrid grading, memory, threads, lesson continuity, progress | exam bank 1.0.0 published; serving/grading next (#192/#193); continuity after |
+| V3 - Exam bank and continuity | exam bank, hybrid grading, memory, threads, lesson continuity, progress | exam bank 1.0.0 published; grading built (#192); serving next (#193); continuity after |
 | V4 - Identity (optional) | Google auth, per-user chat and exam history, progress tracking, long-term memory | last, if needed |
 
 ---
@@ -214,7 +214,7 @@ This repository is developed with AI coding agents under human review.
 
 This project is developed with AI coding agents under human review, and that usage is recorded per ticket.
 
-- AI drafted most implementation code and tests: provider adapters and probes, retrieval and reranking, generation and verification, the API and SSE surface, the agent graph and router, the persona and lore layer, ingest and index, the eval harness and CI gate, the deploy files, and the entire frontend (`web/`, tickets #132, #134-#137, #141, #143, #145), including a read-only reviewer agent that checked each frontend ticket against its acceptance criteria before merge. It also drafted the DADA subject-pack materials and the lesson-table audit that produced pack 1.0.0 and `GET /v1/subjects`, and the DADA exam bank 1.0.0 (25 MCQ + 25 short answers), which an independent Mistral Small verifier checked.
+- AI drafted most implementation code and tests: provider adapters and probes, retrieval and reranking, generation and verification, the API and SSE surface, the agent graph and router, the persona and lore layer, ingest and index, the eval harness and CI gate, the deploy files, and the entire frontend (`web/`, tickets #132, #134-#137, #141, #143, #145), including a read-only reviewer agent that checked each frontend ticket against its acceptance criteria before merge. It also drafted the DADA subject-pack materials and the lesson-table audit that produced pack 1.0.0 and `GET /v1/subjects`, the DADA exam bank 1.0.0 (25 MCQ + 25 short answers), which an independent Mistral Small verifier checked, and the hybrid grading path (#192).
 - The human set the contracts, provider abstraction, eval discipline and scope boundaries; chose the defaults, degradation policies and flag states; froze the held-out sets; approved the DADA prose and lesson-table scope on 2026-11-08; and reviewed and owns every line.
 - AI assisted with documentation, issue text and run records; the human reviewed the published text.
 

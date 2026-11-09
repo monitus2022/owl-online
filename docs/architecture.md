@@ -47,7 +47,7 @@ Exam-bank and canon-index stages (canon-index rows are built; the rest is planne
 | Exam bank | `app/exam/` | bank records, pack and corpus validation, duplicate and publication gates |
 | Exam build | `app/pipeline/exam/` | offline plan, retrieve, generate, validate, persist |
 | Exam store | `app/storage/` | SQLite banks and items imported from validated JSONL; paper and attempt repository follows #38 |
-| Grading | `app/grading/` | hybrid: deterministic objective scoring, LLM rubric judge for free text, deterministic totals and bands |
+| Grading | `app/grading/` | built (#192): deterministic MCQ scoring, one-call short-answer LLM judge, deterministic totals and bands |
 
 ## Build vs managed
 
@@ -603,18 +603,17 @@ returns per-question structured JSON:
 
 ```json
 {
-  "questions": [
-    {
-      "question_id": "dada-short-01",
+  "results": {
+    "dada-short-01": {
       "criteria": [
-        {"id": "c1", "awarded": 2, "max": 2, "reason": "..."},
-        {"id": "c2", "awarded": 1, "max": 2, "reason": "..."}
+        {"criterion_id": "correctness", "awarded": 2, "max_marks": 2, "reason": "..."},
+        {"criterion_id": "completeness", "awarded": 1, "max_marks": 2, "reason": "..."}
       ],
       "total": 3,
       "feedback": "...",
       "evidence_ids": ["b3-c10-0036"]
     }
-  ]
+  }
 }
 ```
 
@@ -629,6 +628,11 @@ feedback; it does not write the final grade. The judge is pinned by model,
 temperature 0, prompt version and rubric version. It must be a different model
 family from the question generator. Grading outputs are cached by exam version,
 question id, answer hash and judge configuration so a regrade is reproducible.
+
+The implementation lives in `app/grading/`: `score_mcq`, `grade_attempt`,
+`JudgeCache` and `band_for`. The public records are `AttemptAnswer`,
+`AttemptGrade` and `QuestionGrade`; `tests/test_exam_grading.py` covers the
+validation and retry paths.
 
 A human-marked calibration set measures exact and adjacent agreement, mean
 absolute error and per-criterion agreement. That set is the evidence that the
