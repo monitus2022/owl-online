@@ -95,6 +95,10 @@ def load_calibration(
             clean_marks[criterion_id] = mark
         if variant not in VARIANTS:
             raise ValueError(f"{path}:{line_number}: unknown variant {variant!r}")
+        if variant != "blank" and not answer.strip():
+            raise ValueError(
+                f"{path}:{line_number}: only the blank variant may have an empty answer"
+            )
         key = (pass_name, item_id)
         if key in seen:
             raise ValueError(f"{path}:{line_number}: duplicate case {key}")
@@ -114,6 +118,17 @@ def load_calibration(
         raise ValueError(
             f"{path}: calibration set has {len(item_ids)} items; "
             f"expected {min_items}-{max_items}"
+        )
+    per_item: dict[str, int] = {}
+    for case in cases:
+        per_item[case.item_id] = per_item.get(case.item_id, 0) + 1
+    bad_counts = {
+        item_id: count for item_id, count in per_item.items()
+        if not 3 <= count <= 4
+    }
+    if bad_counts:
+        raise ValueError(
+            f"{path}: each item needs 3-4 answers; got {bad_counts}"
         )
     return cases
 
@@ -202,6 +217,7 @@ async def run_calibration(
                     delta=delta,
                     needs_review=question.needs_review,
                     criteria=criteria,
+                    word_count=len(case.answer.split()),
                 )
             )
 
@@ -243,12 +259,9 @@ async def run_calibration(
     verbose_delta = (
         sum(detail.delta for detail in verbose) / len(verbose) if verbose else None
     )
-    word_counts = {
-        case.item_id: len(case.answer.split()) for case in cases
-    }
     correlation = _pearson(
         [
-            (float(word_counts[detail.item_id]), float(detail.delta))
+            (float(detail.word_count), float(detail.delta))
             for detail in resolved
             if detail.delta is not None
         ]

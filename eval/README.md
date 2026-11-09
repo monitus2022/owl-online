@@ -499,7 +499,8 @@ It runs:
   every option, answers each short question and compares its answer with the
   golden answer;
 - calibration: 8 short questions with 3 student-style answers each (24 cases)
-  and human criterion marks in `eval/exam/fixtures/calibration.jsonl`; one judge
+  and owner-reviewed criterion marks (AI-proposed from the rubric; the owner
+  adopts them via the PR) in `eval/exam/fixtures/calibration.jsonl`; one judge
   pass per answer group.
 
 Thresholds: grounding 100 percent, MCQ independent solver 100 percent, ambiguity
@@ -509,4 +510,4 @@ failure. `--no-independent` and `--no-calibration` run the deterministic checks
 only for a quick check.
 
 The record is `docs/runs/2026-11-09-191-dada-bank-eval.md`; a row is in the Runs
-table above.
+table in `docs/runs/README.md`.

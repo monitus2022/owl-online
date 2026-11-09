@@ -5,7 +5,7 @@
 - Ticket: #191 (DADA bank quality evaluation and short-answer judge calibration)
 - Bank: `dada` 1.0.0
 - Artifacts: `eval/exam/fixtures/calibration.jsonl` (committed), `data/exams/dada/candidates/exam_eval.json` (local, gitignored)
-- Human marks: proposed by the AI author from the rubric; the owner's approval of the #191 PR is the sign-off.
+- Human marks: proposed by the AI author from the rubric; the owner's approval of the #191 PR is the sign-off and adopts them as the calibration reference.
 
 ## Configuration
 
@@ -14,6 +14,7 @@
 | Bank | `dada` 1.0.0 |
 | Pack | 1.0.0 / `e7139cbcc23eaa5c` |
 | Bank index hash | `aca4c57462d449f5` |
+| Rubric version | `dada-bank-v1` |
 | Judge | `mistralai/mistral-small-3.2-24b-instruct` |
 | Judge provider | `openrouter` |
 | Judge temperature | 0.0 |
@@ -32,14 +33,16 @@
 | `bank_validation` | gate | PASS | errors=0 warnings=0 |
 | `counts` | gate | PASS | mcq=25 short_answer=25 |
 | `grounding` | gate | PASS | 50/50 items grounded |
-| `mcq_options` | gate | PASS | 25/25 MCQs have six unique options and one key |
+| `mcq_options` | gate | PASS | 25/25 MCQs have exactly six unique options and one key |
+| `trivial_options` | gate | PASS | 0 MCQs contain all/none-of-the-above options |
+| `negative_stems` | gate | PASS | 0 MCQs use a negative equal-completion stem |
 | `answer_positions` | gate | PASS | max stored position holds 5/25 |
-| `option_length_bias` | diagnostic | WARN | correct option is longest in 88.00% of MCQs; mean gap 1.28 |
+| `option_length_bias` | gate | PASS | correct option is strictly longest in 80.00% of MCQs; mean gap 1.28; cap 90% |
 | `short_quality` | gate | PASS | 25/25 short answers have valid length, rubric and points; 0 unsupported points |
-| `near_duplicates` | gate | PASS | exact=0 max_jaccard=0.4545 max_cosine=0.8772 |
+| `near_duplicates` | gate | PASS | exact=0 max_jaccard=0.4545 (limit 0.75) max_cosine=0.8772 (limit 0.90) |
 | `coverage` | gate | PASS | topics=0 concepts=0 materials=0 difficulty=0 |
 
-Metrics: max Jaccard `0.4545`, max cosine `0.8772`, option-length bias `0.88` with a mean gap of `1.28` words.
+Metrics: max Jaccard `0.4545` (pair `['dada-mcq-014', 'dada-mcq-024']`), max cosine `0.8772` (pair `['dada-short-016', 'dada-short-018']`), option-length bias `0.80` with a mean gap of `1.28` words.
 
 ### Topic coverage
 
@@ -130,10 +133,14 @@ Metrics: max Jaccard `0.4545`, max cosine `0.8772`, option-length bias `0.88` wi
 ## Independent checks
 
 | Check | Result |
-|---|---:|
+|---|---|
 | MCQ key matches | 25/25 |
+| MCQ mismatch ids | `[]` |
 | MCQ ambiguities | 0 |
+| MCQ ambiguity ids | `[]` |
 | Short golden correct and complete | 25/25 |
+| Short candidate correct and complete | 20/25 (diagnostic) |
+| Short review ids | `[]` |
 | Short missing required points | 0 |
 | Errors | 0 |
 
@@ -142,55 +149,56 @@ Metrics: max Jaccard `0.4545`, max cosine `0.8772`, option-length bias `0.88` wi
 | Metric | Value |
 |---|---:|
 | Exact agreement | 0.5833 |
-| Adjacent agreement | 1.0000 |
-| Mean absolute error | 0.4167 |
+| Adjacent agreement | 0.9167 |
+| Mean absolute error | 0.5000 |
 | Correctness agreement | 0.5833 |
-| Completeness agreement | 0.6667 |
-| Judge calls | 3 |
+| Completeness agreement | 0.9167 |
+| Judge calls | 4 |
 | Passes with a call | 3 |
-| Retries | 0 |
+| Retry rate | 1/3 |
 | Needs review | 0 |
 | Verbose mean delta | 0.0 |
-| Word-count correlation | -0.0312 |
+| Word-count correlation | -0.0707 |
 
 ### Cases
 
-| Item | Variant | Human | Judge | Delta | Needs review |
-|---|---|---:|---:|---:|---|
-| `dada-short-001` | full | 8 | 8 | 0 | False |
-| `dada-short-004` | full | 8 | 8 | 0 | False |
-| `dada-short-006` | full | 8 | 8 | 0 | False |
-| `dada-short-009` | full | 8 | 8 | 0 | False |
-| `dada-short-012` | full | 8 | 8 | 0 | False |
-| `dada-short-014` | full | 8 | 8 | 0 | False |
-| `dada-short-017` | full | 8 | 8 | 0 | False |
-| `dada-short-024` | full | 8 | 8 | 0 | False |
-| `dada-short-001` | partial | 5 | 4 | -1 | False |
-| `dada-short-004` | partial | 5 | 4 | -1 | False |
-| `dada-short-006` | partial | 5 | 4 | -1 | False |
-| `dada-short-009` | partial | 5 | 4 | -1 | False |
-| `dada-short-012` | partial | 5 | 4 | -1 | False |
-| `dada-short-014` | partial | 5 | 4 | -1 | False |
-| `dada-short-017` | partial | 5 | 4 | -1 | False |
-| `dada-short-024` | partial | 5 | 4 | -1 | False |
-| `dada-short-001` | wrong | 0 | 0 | 0 | False |
-| `dada-short-004` | missing_key_term | 7 | 8 | 1 | False |
-| `dada-short-006` | verbose | 8 | 8 | 0 | False |
-| `dada-short-009` | contradictory | 1 | 2 | 1 | False |
-| `dada-short-012` | off_topic | 0 | 0 | 0 | False |
-| `dada-short-014` | blank | 0 | 0 | 0 | False |
-| `dada-short-017` | wrong | 0 | 0 | 0 | False |
-| `dada-short-024` | verbose | 8 | 8 | 0 | False |
+| Item | Variant | Human | Judge | Delta | Words | Needs review |
+|---|---|---:|---:|---:|---:|---|
+| `dada-short-001` | full | 8 | 8 | 0 | 32 | False |
+| `dada-short-004` | full | 8 | 8 | 0 | 44 | False |
+| `dada-short-006` | full | 8 | 8 | 0 | 35 | False |
+| `dada-short-009` | full | 8 | 8 | 0 | 41 | False |
+| `dada-short-012` | full | 8 | 8 | 0 | 48 | False |
+| `dada-short-014` | full | 8 | 8 | 0 | 40 | False |
+| `dada-short-017` | full | 8 | 8 | 0 | 39 | False |
+| `dada-short-024` | full | 8 | 8 | 0 | 41 | False |
+| `dada-short-001` | partial | 5 | 3 | -2 | 17 | False |
+| `dada-short-004` | partial | 5 | 3 | -2 | 22 | False |
+| `dada-short-006` | partial | 5 | 6 | 1 | 17 | False |
+| `dada-short-009` | partial | 5 | 6 | 1 | 24 | False |
+| `dada-short-012` | partial | 5 | 6 | 1 | 20 | False |
+| `dada-short-014` | partial | 5 | 6 | 1 | 17 | False |
+| `dada-short-017` | partial | 5 | 6 | 1 | 17 | False |
+| `dada-short-024` | partial | 5 | 6 | 1 | 21 | False |
+| `dada-short-001` | wrong | 0 | 0 | 0 | 20 | False |
+| `dada-short-004` | missing_key_term | 7 | 8 | 1 | 32 | False |
+| `dada-short-006` | verbose | 8 | 8 | 0 | 89 | False |
+| `dada-short-009` | contradictory | 1 | 2 | 1 | 33 | False |
+| `dada-short-012` | off_topic | 0 | 0 | 0 | 25 | False |
+| `dada-short-014` | blank | 0 | 0 | 0 | 0 | False |
+| `dada-short-017` | wrong | 0 | 0 | 0 | 20 | False |
+| `dada-short-024` | verbose | 8 | 8 | 0 | 100 | False |
 
 ## Reading
 
-- All gated deterministic checks pass. The option-length diagnostic is the one warning: the correct option is the longest in 88 percent of MCQs, with a mean gap of 1.28 words. The independent solver selected the key on 25/25 and found no second defensible option, so this is a presentation risk for a future bank revision, not an ambiguity in 1.0.0. Written disposition: accept for 1.0.0 and level option lengths in the next bank version.
-- The independent model agrees with every MCQ key and finds no ambiguous option. Every short-answer golden answer is judged correct and complete with no missing required points. There are no model-check errors.
-- Calibration passes both thresholds: adjacent agreement 1.0000 and MAE 0.4167 on 24 answers over 8 items. Exact agreement is 0.5833 because the judge differs by one mark from the human partial marks on the eight partial answers; the partial-answer split is the refinement target, not a blocker. Correctness agreement is 0.5833 and completeness agreement is 0.6667.
-- A second run of the same frozen set (same set hash) measured adjacent 0.9167, MAE 0.5000, exact 0.5833, correctness 0.5833 and completeness 0.9167. The partial-answer marks moved by one or two; the exact agreement and both thresholds held. The judge is temperature 0 but not bit-for-bit deterministic across hosted calls; the adjacent/MAE thresholds are the stable gate.
-- There are no retries and no needs_review cases. The verbose answers scored the same as the full answers, the verbose mean delta is 0.0 and the word-count correlation is -0.031, so there is no measured verbosity bias.
-- The calibration answers are original student-style responses. The committed set contains no golden answers or corpus prose.
-- The human marks are the reference; the owner's PR approval is the sign-off. The set is frozen at the SHA256 above.
+- All gated deterministic checks pass. The option-length gate passes at 80% against the 90 percent cap, with a mean gap of 1.28 words. The independent solver selected the key on 25/25 and found no second defensible option. The share is high enough to schedule option-length levelling in the next bank revision without treating it as an ambiguity in 1.0.0.
+- The independent model agrees with every MCQ key, reports no mismatch or ambiguity ids, and finds every short-answer golden answer correct and complete with no missing required points. The candidate-answer diagnostic is 20/25 correct and complete; the five short candidates that were not complete do not change the golden-answer result. There are no model-check errors.
+- Calibration passes both thresholds: adjacent agreement 0.9167 and MAE 0.5000 on 24 answers over 8 items. Exact agreement is 0.5833; the ten non-exact cases are partial 8 (2 at -2, 6 at +1), missing_key_term 1 (+1) and contradictory 1 (+1). Correctness agreement is 0.5833 and completeness agreement is 0.9167; the partial-answer split is the refinement target, not a blocker.
+- The final run used 4 judge calls over 3 passes, a retry rate of 1/3, and no needs_review. One pass retried once after an invalid response; the retry succeeded. There is no unreviewed parse failure.
+- The verbose answers scored the same as the full answers: verbose mean delta 0.0, word-count correlation -0.0707. The weak negative correlation does not show a verbosity reward or a length penalty; the judge is slightly harsher on the two shortest partial answers.
+- Stability probes on the same frozen set measured adjacent 0.9167 to 1.0000 and MAE 0.4167 to 0.5000 across three runs; exact agreement stayed 0.5833. Those probes are informal and have no separate records; the run above is the recorded run. The hosted judge is temperature 0 but not bit-for-bit deterministic across calls, so the adjacent and MAE thresholds are the stable gate.
+- The calibration answers are original student-style responses. The committed set contains no golden answers or corpus prose. The set is frozen at the SHA256 above.
+- The human marks are the reference; the owner's PR approval is the sign-off and adopts the AI-proposed marks. The eval gates a strict one-MCQ and one-short-answer per material; the 1.0.0 bank has no recorded slot swaps. The calibration gate treats any needs_review as a failure because a reviewed state is not modelled yet; this run has no needs_review.
 
 ## Reproduce
 
@@ -207,63 +215,71 @@ Deterministic checks:
   bank_validation        PASS  errors=0 warnings=0
   counts                 PASS  mcq=25 short_answer=25
   grounding              PASS  50/50 items grounded
-  mcq_options            PASS  25/25 MCQs have six unique options and one key
+  mcq_options            PASS  25/25 MCQs have exactly six unique options and one key
+  trivial_options        PASS  0 MCQs contain all/none-of-the-above options
+  negative_stems         PASS  0 MCQs use a negative equal-completion stem
   answer_positions       PASS  max stored position holds 5/25
-  option_length_bias     WARN (diagnostic)  correct option is longest in 88.00% of MCQs; mean gap 1.28
+  option_length_bias     PASS  correct option is strictly longest in 80.00% of MCQs; mean gap 1.28; cap 90%
   short_quality          PASS  25/25 short answers have valid length, rubric and points; 0 unsupported points
-  near_duplicates        PASS  exact=0 max_jaccard=0.4545 max_cosine=0.8772
+  near_duplicates        PASS  exact=0 max_jaccard=0.4545 (limit 0.75) max_cosine=0.8772 (limit 0.90)
   coverage               PASS  topics=0 concepts=0 materials=0 difficulty=0
 
 Deterministic metrics:
   max_jaccard=0.45454545454545453
+  max_jaccard_pair=('dada-mcq-014', 'dada-mcq-024')
   max_cosine=0.877175277200924
-  option_length_bias=0.88
+  max_cosine_pair=('dada-short-016', 'dada-short-018')
+  option_length_bias=0.8
   option_length_mean_gap=1.28
   answer_positions={'0': 5, '1': 4, '2': 4, '3': 4, '4': 4, '5': 4}
 
 Independent checks:
   model=mistralai/mistral-small-3.2-24b-instruct temperature=0.0 prompt=dada-bank-independent-v1
   MCQ key matches=25/25
+  MCQ mismatches=[]
   MCQ ambiguities=0
+  MCQ ambiguity ids=[]
   Short golden=25/25
+  Short candidate correct and complete=20
+  Short review ids=[]
   Short missing points=0
   Errors=0
 
 Calibration:
   model=mistralai/mistral-small-3.2-24b-instruct provider=openrouter temperature=0.0 prompt=dada-bank-judge-v2
   set_sha256=c0d00cb0d557bcbb39048cc910df41942949c2fbaadaa3470bdb75aa72eeb970
-  n=24 exact=0.5833 adjacent=1.0000 MAE=0.4166666666666667
-  per_criterion={'completeness': 0.6666666666666666, 'correctness': 0.5833333333333334}
-  calls=3 passes=3 retries=0 needs_review=0
-  verbose_delta=0.0 word_count_correlation=-0.03124598115183978
+  n=24 exact=0.5833 adjacent=0.9167 MAE=0.5
+  per_criterion={'completeness': 0.9166666666666666, 'correctness': 0.5833333333333334}
+  calls=4 passes=3 retries=1 needs_review=0
+  verbose_delta=0.0 word_count_correlation=-0.07072124965341807
 
 Calibration cases:
-| Item | Variant | Human | Judge | Delta | Needs review |
-|---|---|---:|---:|---:|---|
-| `dada-short-001` | full | 8 | 8 | 0 | False |
-| `dada-short-004` | full | 8 | 8 | 0 | False |
-| `dada-short-006` | full | 8 | 8 | 0 | False |
-| `dada-short-009` | full | 8 | 8 | 0 | False |
-| `dada-short-012` | full | 8 | 8 | 0 | False |
-| `dada-short-014` | full | 8 | 8 | 0 | False |
-| `dada-short-017` | full | 8 | 8 | 0 | False |
-| `dada-short-024` | full | 8 | 8 | 0 | False |
-| `dada-short-001` | partial | 5 | 4 | -1 | False |
-| `dada-short-004` | partial | 5 | 4 | -1 | False |
-| `dada-short-006` | partial | 5 | 4 | -1 | False |
-| `dada-short-009` | partial | 5 | 4 | -1 | False |
-| `dada-short-012` | partial | 5 | 4 | -1 | False |
-| `dada-short-014` | partial | 5 | 4 | -1 | False |
-| `dada-short-017` | partial | 5 | 4 | -1 | False |
-| `dada-short-024` | partial | 5 | 4 | -1 | False |
-| `dada-short-001` | wrong | 0 | 0 | 0 | False |
-| `dada-short-004` | missing_key_term | 7 | 8 | 1 | False |
-| `dada-short-006` | verbose | 8 | 8 | 0 | False |
-| `dada-short-009` | contradictory | 1 | 2 | 1 | False |
-| `dada-short-012` | off_topic | 0 | 0 | 0 | False |
-| `dada-short-014` | blank | 0 | 0 | 0 | False |
-| `dada-short-017` | wrong | 0 | 0 | 0 | False |
-| `dada-short-024` | verbose | 8 | 8 | 0 | False |
+| Item | Variant | Human | Judge | Delta | Words | Needs review |
+|---|---|---:|---:|---:|---:|---|
+| `dada-short-001` | full | 8 | 8 | 0 | 32 | False |
+| `dada-short-004` | full | 8 | 8 | 0 | 44 | False |
+| `dada-short-006` | full | 8 | 8 | 0 | 35 | False |
+| `dada-short-009` | full | 8 | 8 | 0 | 41 | False |
+| `dada-short-012` | full | 8 | 8 | 0 | 48 | False |
+| `dada-short-014` | full | 8 | 8 | 0 | 40 | False |
+| `dada-short-017` | full | 8 | 8 | 0 | 39 | False |
+| `dada-short-024` | full | 8 | 8 | 0 | 41 | False |
+| `dada-short-001` | partial | 5 | 3 | -2 | 17 | False |
+| `dada-short-004` | partial | 5 | 3 | -2 | 22 | False |
+| `dada-short-006` | partial | 5 | 6 | 1 | 17 | False |
+| `dada-short-009` | partial | 5 | 6 | 1 | 24 | False |
+| `dada-short-012` | partial | 5 | 6 | 1 | 20 | False |
+| `dada-short-014` | partial | 5 | 6 | 1 | 17 | False |
+| `dada-short-017` | partial | 5 | 6 | 1 | 17 | False |
+| `dada-short-024` | partial | 5 | 6 | 1 | 21 | False |
+| `dada-short-001` | wrong | 0 | 0 | 0 | 20 | False |
+| `dada-short-004` | missing_key_term | 7 | 8 | 1 | 32 | False |
+| `dada-short-006` | verbose | 8 | 8 | 0 | 89 | False |
+| `dada-short-009` | contradictory | 1 | 2 | 1 | 33 | False |
+| `dada-short-012` | off_topic | 0 | 0 | 0 | 25 | False |
+| `dada-short-014` | blank | 0 | 0 | 0 | 0 | False |
+| `dada-short-017` | wrong | 0 | 0 | 0 | 20 | False |
+| `dada-short-024` | verbose | 8 | 8 | 0 | 100 | False |
 
 gate: PASS
 wrote data/exams/dada/candidates/exam_eval.json

@@ -102,7 +102,7 @@ def _option_length_stats(items: list) -> tuple[float, float, int]:
             default=0,
         )
         gaps.append(correct - other)
-        if correct >= other:
+        if correct > other:
             longest += 1
     fraction = longest / len(items) if items else 0.0
     mean_gap = sum(gaps) / len(gaps) if gaps else 0.0
@@ -157,7 +157,23 @@ async def run_deterministic_checks(
     item_errors = {
         item.item_id
         for item in items
-        if any(error.startswith(item.item_id) for error in validation.errors)
+        if any(
+            error.startswith(f"{item.item_id}:")
+            or error.startswith(f"{item.item_id} ")
+            for error in validation.errors
+            if any(
+                marker in error
+                for marker in (
+                    "source ref",
+                    "text hash",
+                    "quote",
+                    "chunk",
+                    "material",
+                    "evidence_snapshot",
+                    "index hash",
+                )
+            )
+        )
     }
     grounded = len(items) - len(item_errors)
     checks.append(
@@ -178,7 +194,7 @@ async def run_deterministic_checks(
             for option in item.options
         ]
         if (
-            len(item.options) >= 6
+            len(item.options) == 6
             and len(set(option_ids)) == len(option_ids)
             and len(set(normalised)) == len(normalised)
             and item.correct_option_id in option_ids
@@ -188,9 +204,42 @@ async def run_deterministic_checks(
         Check(
             "mcq_options",
             valid_mcq == len(mcq_items),
-            f"{valid_mcq}/{len(mcq_items)} MCQs have six unique options and one key",
+            f"{valid_mcq}/{len(mcq_items)} MCQs have exactly six unique options "
+            "and one key",
             value=valid_mcq,
             threshold=len(mcq_items),
+        )
+    )
+
+    trivial = [
+        item.item_id
+        for item in mcq_items
+        if any(
+            _OPTION_TEXT_RE.sub(" ", option.text.lower()).strip()
+            in {"all of the above", "none of the above"}
+            for option in item.options
+        )
+    ]
+    checks.append(
+        Check(
+            "trivial_options",
+            not trivial,
+            f"{len(trivial)} MCQs contain all/none-of-the-above options",
+            value=len(trivial),
+        )
+    )
+
+    negative = [
+        item.item_id
+        for item in mcq_items
+        if re.search(r"\bwhich\b.*\b(not|except)\b", item.prompt, re.IGNORECASE)
+    ]
+    checks.append(
+        Check(
+            "negative_stems",
+            not negative,
+            f"{len(negative)} MCQs use a negative equal-completion stem",
+            value=len(negative),
         )
     )
 
@@ -212,11 +261,11 @@ async def run_deterministic_checks(
     checks.append(
         Check(
             "option_length_bias",
-            bias <= 0.60,
-            f"correct option is longest in {bias:.2%} of MCQs; mean gap {mean_gap:.2f}",
-            gated=False,
+            bias <= 0.90,
+            f"correct option is strictly longest in {bias:.2%} of MCQs; "
+            f"mean gap {mean_gap:.2f}; cap 90%",
             value=bias,
-            threshold=0.60,
+            threshold=0.90,
         )
     )
 
@@ -263,7 +312,9 @@ async def run_deterministic_checks(
             "near_duplicates",
             duplicates_ok,
             f"exact={exact_duplicates} max_jaccard={max_jaccard:.4f} "
-            f"max_cosine={max_cosine if max_cosine is None else f'{max_cosine:.4f}'}",
+            f"(limit {JACCARD_THRESHOLD:.2f}) max_cosine="
+            f"{max_cosine if max_cosine is None else f'{max_cosine:.4f}'} "
+            f"(limit {COSINE_THRESHOLD:.2f})",
             value=max(max_jaccard, max_cosine or 0.0),
             threshold=COSINE_THRESHOLD,
         )

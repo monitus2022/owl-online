@@ -508,7 +508,8 @@ Exit criteria:
 - free-text answers are judged once per attempt with per-question structured output;
 - invalid judge output is retried once and then flagged, never silently zeroed;
 - totals and bands are deterministic;
-- a human-marked calibration set reports score agreement and mean absolute error
+- an owner-reviewed calibration set (AI-proposed marks adopted by the owner)
+  reports score agreement and mean absolute error
   (`docs/runs/2026-11-09-191-dada-bank-eval.md`).
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
@@ -705,7 +706,8 @@ Exam generation adds:
 
 Grading adds:
 
-- agreement with a human-marked calibration set;
+- agreement with an owner-reviewed calibration set (AI-proposed marks adopted
+  by the owner);
 - exact and adjacent agreement;
 - mean absolute error;
 - per-criterion agreement;

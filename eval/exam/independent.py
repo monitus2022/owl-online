@@ -16,7 +16,7 @@ from app.providers.contracts import Llm
 from eval.exam.models import IndependentReport
 
 INDEPENDENT_PROMPT_VERSION = "dada-bank-independent-v1"
-LETTERS = "ABCDEF"
+LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 MCQ_SYSTEM = (
     "You are an independent exam-bank verifier. Use only the supplied material "
@@ -111,30 +111,46 @@ def _short_judge_prompt(item: BankItem, material_text: str, candidate: str) -> s
     )
 
 
-def _mcq_flags(item: BankItem, payload: dict) -> tuple[bool, bool]:
-    """Return (key_match, ambiguous) for one MCQ reply."""
+def _mcq_flags(item: BankItem, payload: dict) -> tuple[bool, bool, str | None]:
+    """Return (key_match, ambiguous, error) for one MCQ reply."""
     key_index = next(
         index
         for index, option in enumerate(item.options)
         if option.option_id == item.correct_option_id
     )
     key_letter = LETTERS[key_index]
-    judgements = payload.get("option_judgements", {})
+    judgements = payload.get("option_judgements")
     if not isinstance(judgements, dict):
-        judgements = {}
+        return False, True, f"{item.item_id}: option_judgements must be an object"
+    expected = [LETTERS[index] for index in range(len(item.options))]
+    missing = [letter for letter in expected if letter not in judgements]
+    invalid = [
+        letter
+        for letter in expected
+        if str(judgements.get(letter, "")).lower()
+        not in {"correct", "plausible", "false"}
+    ]
+    if missing or invalid:
+        return (
+            False,
+            True,
+            f"{item.item_id}: option judgements missing={missing} invalid={invalid}",
+        )
+    best = payload.get("best")
+    second = payload.get("second_defensible")
     other_correct = [
         letter
-        for letter, value in judgements.items()
-        if letter != key_letter and str(value).lower() == "correct"
+        for letter in expected
+        if letter != key_letter and str(judgements[letter]).lower() == "correct"
     ]
-    second = payload.get("second_defensible")
+    key_match = best == key_letter
     ambiguous = (
-        payload.get("best") != key_letter
-        or (key_letter in judgements and str(judgements[key_letter]).lower() != "correct")
+        not key_match
+        or str(judgements[key_letter]).lower() != "correct"
         or bool(other_correct)
-        or (second and str(judgements.get(second, "")).lower() == "correct")
+        or second is not None
     )
-    return payload.get("best") == key_letter, bool(ambiguous)
+    return key_match, ambiguous, None
 
 
 async def _verify_mcq(
@@ -143,15 +159,14 @@ async def _verify_mcq(
     try:
         material = _material_text(pack, item)
         payload = await _call_json(llm, MCQ_SYSTEM, _mcq_prompt(item, material))
-        key_match, ambiguous = _mcq_flags(item, payload)
-        return key_match, ambiguous, None
+        return _mcq_flags(item, payload)
     except Exception as error:  # noqa: BLE001 - report, never crash the run
-        return False, False, f"{item.item_id}: {error}"
+        return False, True, f"{item.item_id}: {error}"
 
 
 async def _verify_short(
     llm: Llm, item: BankItem, pack: SubjectPack
-) -> tuple[bool, int, str | None]:
+) -> tuple[bool, int, str | None, bool]:
     try:
         material = _material_text(pack, item)
         candidate = await llm.generate(
@@ -168,9 +183,13 @@ async def _verify_short(
             and judgement.get("golden_complete") is True
             and not missing
         )
-        return ok, len(missing), None
+        candidate_ok = (
+            judgement.get("candidate_correct") is True
+            and judgement.get("candidate_complete") is True
+        )
+        return ok, len(missing), None, candidate_ok
     except Exception as error:  # noqa: BLE001
-        return False, 0, f"{item.item_id}: {error}"
+        return False, 0, f"{item.item_id}: {error}", False
 
 
 async def run_independent_checks(
@@ -198,16 +217,23 @@ async def run_independent_checks(
             key_match, ambiguous, error = await _verify_mcq(llm, item, pack)
             if key_match:
                 report.mcq_key_matches += 1
+            else:
+                report.mcq_mismatch_ids.append(item.item_id)
             if ambiguous:
                 report.mcq_ambiguities += 1
+                report.mcq_ambiguous_ids.append(item.item_id)
             if error:
                 report.errors.append(error)
 
     async def one_short(item: BankItem) -> None:
         async with semaphore:
-            ok, missing, error = await _verify_short(llm, item, pack)
+            ok, missing, error, candidate_ok = await _verify_short(llm, item, pack)
             if ok:
                 report.short_golden_ok += 1
+            else:
+                report.short_review_ids.append(item.item_id)
+            if candidate_ok:
+                report.short_candidate_ok += 1
             report.short_missing_points += missing
             if error:
                 report.errors.append(error)

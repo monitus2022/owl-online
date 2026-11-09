@@ -84,22 +84,24 @@ async def test_calibration_metrics(tmp_path) -> None:
         [
             _case("full", "full", "A full answer.", 4, 4),
             _case("partial", "partial", "A partial answer.", 3, 2),
+            _case("wrong", "wrong", "A wrong answer.", 0, 0),
         ],
     )
     cases = load_calibration(path, min_items=1)
     llm = _ScriptedLlm(
         _judge_json("dada-short-001", 4, 4),
         _judge_json("dada-short-001", 3, 2),
+        _judge_json("dada-short-001", 0, 0),
     )
     report = await run_calibration(bank, cases, llm, set_sha256="test")
     assert report.ok
-    assert report.n == 2
+    assert report.n == 3
     assert report.exact == 1.0
     assert report.adjacent == 1.0
     assert report.mae == 0.0
     assert report.per_criterion == {"correctness": 1.0, "completeness": 1.0}
-    assert report.calls == 2
-    assert report.passes == 2
+    assert report.calls == 3
+    assert report.passes == 3
     assert report.retries == 0
     assert report.needs_review == 0
 
@@ -111,6 +113,7 @@ async def test_calibration_counts_a_retry(tmp_path) -> None:
         [
             _case("full", "full", "A full answer.", 4, 4),
             _case("partial", "partial", "A partial answer.", 3, 2),
+            _case("wrong", "wrong", "A wrong answer.", 0, 0),
         ],
     )
     cases = load_calibration(path, min_items=1)
@@ -118,10 +121,11 @@ async def test_calibration_counts_a_retry(tmp_path) -> None:
         "not json",
         _judge_json("dada-short-001", 4, 4),
         _judge_json("dada-short-001", 3, 2),
+        _judge_json("dada-short-001", 0, 0),
     )
     report = await run_calibration(bank, cases, llm)
-    assert report.calls == 3
-    assert report.passes == 2
+    assert report.calls == 4
+    assert report.passes == 3
     assert report.retries == 1
     assert report.ok
 
@@ -133,6 +137,7 @@ async def test_calibration_needs_review_is_not_ok(tmp_path) -> None:
         [
             _case("full", "full", "A full answer.", 4, 4),
             _case("partial", "partial", "A partial answer.", 3, 2),
+            _case("wrong", "wrong", "A wrong answer.", 0, 0),
         ],
     )
     cases = load_calibration(path, min_items=1)
@@ -140,6 +145,7 @@ async def test_calibration_needs_review_is_not_ok(tmp_path) -> None:
         "not json",
         "still not json",
         _judge_json("dada-short-001", 3, 2),
+        _judge_json("dada-short-001", 0, 0),
     )
     report = await run_calibration(bank, cases, llm)
     assert report.needs_review == 1
@@ -167,11 +173,67 @@ async def test_calibration_reports_verbosity_bias(tmp_path) -> None:
     assert report.verbose_delta == 0.0
 
 
+async def test_calibration_word_count_correlation_uses_each_answer(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "Short.", 4, 4),
+            _case(
+                "partial",
+                "partial",
+                "A much longer partial answer with several more words.",
+                3,
+                2,
+            ),
+            _case("wrong", "wrong", "No.", 0, 0),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 0, 0),
+    )
+    report = await run_calibration(bank, cases, llm)
+    assert report.word_count_correlation is not None
+    assert report.word_count_correlation > 0.5
+
+
+async def test_calibration_fails_when_mae_and_adjacent_miss(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "A full answer.", 4, 4),
+            _case("partial", "partial", "A partial answer.", 3, 2),
+            _case("wrong", "wrong", "A wrong answer.", 0, 0),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        _judge_json("dada-short-001", 0, 0),
+        _judge_json("dada-short-001", 0, 0),
+        _judge_json("dada-short-001", 0, 0),
+    )
+    report = await run_calibration(bank, cases, llm)
+    assert report.adjacent < 0.9
+    assert report.mae is not None and report.mae > 1.5
+    assert not report.ok
+
+
 async def test_calibration_marks_must_match_the_rubric(tmp_path) -> None:
     bank, _, _, _ = build_bank()
-    row = _case("full", "full", "A full answer.", 4, 4)
-    row["marks"] = {"correctness": 4}
-    path = _write(tmp_path / "calibration.jsonl", [row])
+    bad = _case("full", "full", "A full answer.", 4, 4)
+    bad["marks"] = {"correctness": 4}
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            bad,
+            _case("partial", "partial", "A partial answer.", 3, 2),
+            _case("wrong", "wrong", "A wrong answer.", 0, 0),
+        ],
+    )
     cases = load_calibration(path, min_items=1)
     with pytest.raises(ValueError, match="marks must name exactly"):
         await run_calibration(bank, cases, _ScriptedLlm())

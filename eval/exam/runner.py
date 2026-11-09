@@ -61,6 +61,7 @@ async def run_exam_eval(
             await llm.aclose()
     return ExamEvalReport(
         bank_version=bank.manifest.version,
+        subject=bank.manifest.subject,
         deterministic=deterministic,
         independent=independent_report,
         calibration=calibration_report,
@@ -69,7 +70,7 @@ async def run_exam_eval(
 
 def render_report(report: ExamEvalReport) -> str:
     """Render the structure-only summary that goes into the run record."""
-    lines = [f"exam eval: dada {report.bank_version}", "", "Deterministic checks:"]
+    lines = [f"exam eval: {report.subject} {report.bank_version}", "", "Deterministic checks:"]
     for check in report.deterministic.checks:
         gate = "" if check.gated else " (diagnostic)"
         status = "PASS" if check.ok else ("WARN" if not check.gated else "FAIL")
@@ -80,7 +81,9 @@ def render_report(report: ExamEvalReport) -> str:
             "",
             "Deterministic metrics:",
             f"  max_jaccard={metrics.get('max_jaccard')}",
+            f"  max_jaccard_pair={metrics.get('max_jaccard_pair')}",
             f"  max_cosine={metrics.get('max_cosine')}",
+            f"  max_cosine_pair={metrics.get('max_cosine_pair')}",
             f"  option_length_bias={metrics.get('option_length_bias')}",
             f"  option_length_mean_gap={metrics.get('option_length_mean_gap')}",
             f"  answer_positions={metrics.get('answer_positions')}",
@@ -95,8 +98,12 @@ def render_report(report: ExamEvalReport) -> str:
                 f"  model={independent.model} temperature={independent.temperature} "
                 f"prompt={independent.prompt_version}",
                 f"  MCQ key matches={independent.mcq_key_matches}/{independent.mcq_total}",
+                f"  MCQ mismatches={independent.mcq_mismatch_ids}",
                 f"  MCQ ambiguities={independent.mcq_ambiguities}",
+                f"  MCQ ambiguity ids={independent.mcq_ambiguous_ids}",
                 f"  Short golden={independent.short_golden_ok}/{independent.short_total}",
+                f"  Short candidate correct and complete={independent.short_candidate_ok}",
+                f"  Short review ids={independent.short_review_ids}",
                 f"  Short missing points={independent.short_missing_points}",
                 f"  Errors={len(independent.errors)}",
             ]
@@ -120,14 +127,15 @@ def render_report(report: ExamEvalReport) -> str:
                 f"word_count_correlation={calibration.word_count_correlation}",
                 "",
                 "Calibration cases:",
-                "| Item | Variant | Human | Judge | Delta | Needs review |",
-                "|---|---|---:|---:|---:|---|",
+                "| Item | Variant | Human | Judge | Delta | Words | Needs review |",
+                "|---|---|---:|---:|---:|---:|---|",
             ]
         )
         for detail in calibration.details:
             lines.append(
                 f"| `{detail.item_id}` | {detail.variant} | {detail.human} | "
-                f"{detail.judge} | {detail.delta} | {detail.needs_review} |"
+                f"{detail.judge} | {detail.delta} | {detail.word_count} | "
+                f"{detail.needs_review} |"
             )
     lines.extend(["", f"gate: {'PASS' if report.ok else 'FAIL'}"])
     return "\n".join(lines)

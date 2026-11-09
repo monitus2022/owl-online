@@ -80,6 +80,19 @@ are `eval/exam/` (#191), run with
 `uv run python scripts/run_exam_eval.py`; the record is
 `docs/runs/2026-11-09-191-dada-bank-eval.md`.
 
+## Bank 1.0.0 quality notes
+
+The bank eval gates the share of MCQs whose correct option is strictly the
+longest at 90 percent and reports the mean length gap. DADA 1.0.0 is at 80
+percent with a 1.28-word mean gap, so it passes at the cap and is scheduled for
+option-length levelling in the next bank revision. The independent solver
+selects the stored key on every MCQ and finds no second defensible option.
+
+The eval also gates a strict one-MCQ and one-short-answer per material; the
+1.0.0 bank has no recorded slot swaps. The calibration gate treats any
+needs_review as a failure because a reviewed state is not modelled yet; the
+1.0.0 run has no needs_review.
+
 ## Status flow
 
 | Status | Meaning |

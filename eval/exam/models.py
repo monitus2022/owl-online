@@ -43,9 +43,13 @@ class IndependentReport:
     mcq_total: int = 0
     mcq_key_matches: int = 0
     mcq_ambiguities: int = 0
+    mcq_mismatch_ids: list[str] = field(default_factory=list)
+    mcq_ambiguous_ids: list[str] = field(default_factory=list)
     short_total: int = 0
     short_golden_ok: int = 0
     short_missing_points: int = 0
+    short_candidate_ok: int = 0
+    short_review_ids: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
     @property
@@ -59,9 +63,12 @@ class IndependentReport:
             and self.mcq_total > 0
             and self.mcq_key_matches == self.mcq_total
             and self.mcq_ambiguities == 0
+            and not self.mcq_mismatch_ids
+            and not self.mcq_ambiguous_ids
             and self.short_total > 0
             and self.short_golden_ok == self.short_total
             and self.short_missing_points == 0
+            and not self.short_review_ids
         )
 
 
@@ -92,6 +99,7 @@ class CalibrationDetail:
     delta: int | None
     needs_review: bool
     criteria: dict[str, tuple[int, int]]
+    word_count: int = 0
 
 
 @dataclass
@@ -130,6 +138,7 @@ class ExamEvalReport:
     """The full bank evaluation: deterministic, independent and calibration."""
 
     bank_version: str
+    subject: str
     deterministic: BankCheckReport
     independent: IndependentReport | None = None
     calibration: CalibrationReport | None = None

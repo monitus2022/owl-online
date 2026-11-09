@@ -33,12 +33,17 @@ class _ScriptedLlm:
         raise AssertionError("stream is not used")
 
 
-def _mcq(best: str, judgements: dict[str, str]) -> str:
+def _mcq(
+    best: str,
+    judgements: dict[str, str],
+    *,
+    second: str | None = None,
+) -> str:
     return json.dumps(
         {
             "best": best,
             "option_judgements": judgements,
-            "second_defensible": None,
+            "second_defensible": second,
             "reason": "Grounded.",
         }
     )
@@ -70,8 +75,12 @@ async def test_independent_checks_pass_on_a_good_reply() -> None:
     assert report.ok
     assert report.mcq_key_matches == 1
     assert report.mcq_ambiguities == 0
+    assert report.mcq_mismatch_ids == []
+    assert report.mcq_ambiguous_ids == []
     assert report.short_golden_ok == 1
+    assert report.short_candidate_ok == 1
     assert report.short_missing_points == 0
+    assert report.short_review_ids == []
 
 
 async def test_independent_checks_flag_a_solver_mismatch_and_ambiguity() -> None:
@@ -94,6 +103,8 @@ async def test_independent_checks_flag_a_solver_mismatch_and_ambiguity() -> None
     assert not report.ok
     assert report.mcq_key_matches == 0
     assert report.mcq_ambiguities == 1
+    assert report.mcq_mismatch_ids == ["dada-mcq-001"]
+    assert report.mcq_ambiguous_ids == ["dada-mcq-001"]
 
 
 async def test_independent_checks_flag_a_short_golden_gap() -> None:
@@ -109,3 +120,49 @@ async def test_independent_checks_flag_a_short_golden_gap() -> None:
     assert not report.ok
     assert report.short_golden_ok == 0
     assert report.short_missing_points == 1
+    assert report.short_review_ids == ["dada-short-001"]
+
+
+async def test_missing_option_judgement_is_an_error() -> None:
+    bank, pack, _, _ = build_bank()
+    llm = _ScriptedLlm(
+        mcq=_mcq(
+            "A",
+            {
+                "A": "correct",
+                "B": "false",
+                "C": "false",
+                "D": "false",
+                "E": "false",
+            },
+        ),
+        short_judge=_short(),
+    )
+    report = await run_independent_checks(bank, pack, llm)
+    assert not report.ok
+    assert report.errors
+    assert report.mcq_mismatch_ids == ["dada-mcq-001"]
+    assert report.mcq_ambiguous_ids == ["dada-mcq-001"]
+
+
+async def test_second_defensible_plausible_is_ambiguous() -> None:
+    bank, pack, _, _ = build_bank()
+    llm = _ScriptedLlm(
+        mcq=_mcq(
+            "A",
+            {
+                "A": "correct",
+                "B": "plausible",
+                "C": "false",
+                "D": "false",
+                "E": "false",
+                "F": "false",
+            },
+            second="B",
+        ),
+        short_judge=_short(),
+    )
+    report = await run_independent_checks(bank, pack, llm)
+    assert not report.ok
+    assert report.mcq_ambiguities == 1
+    assert report.mcq_ambiguous_ids == ["dada-mcq-001"]

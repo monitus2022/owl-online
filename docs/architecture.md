@@ -636,9 +636,10 @@ The implementation lives in `app/grading/`: `score_mcq`, `grade_attempt`,
 validation and retry paths. The package imports `app.exam.bank` and the provider
 contracts; it never imports the chat agent.
 
-A human-marked calibration set measures exact and adjacent agreement, mean
-absolute error and per-criterion agreement. That set is the evidence that the
-judge is usable, not a claim that it is infallible.
+An owner-reviewed calibration set (the marks are AI-proposed from the rubric
+and adopted by the owner) measures exact and adjacent agreement, mean absolute
+error and per-criterion agreement. That set is the evidence that the judge is
+usable, not a claim that it is infallible.
 
 The DADA bank eval and calibration are in `eval/exam/` (#191): deterministic
 bank checks, independent model checks and a 24-case calibration set over 8 short
