@@ -71,8 +71,9 @@ page describes what comes next and why.
   sampled quotes was not recorded before that merge, so the criterion stays
   automated-met / human-pending and is carried into the #128 DADA and Charms
   authoring review. #128 (pack wiring: concept seeding, reference and
-  source-ref prefill, chapter-to-subject lesson table) remains for Charms and
-  the extraction pipeline; the #87 pack schema and validator landed with PR #153.
+  source-ref prefill, chapter-to-subject lesson table) has the Charms 1.0.0
+  pack published; pack wiring and the other subjects remain with the
+  extraction pipeline; the #87 pack schema and validator landed with PR #153.
 - The served exam paper (#193) is built; DADA packs and the DADA bank 1.0.0 are
   delivered, mixed-scope lesson answers are delivered (#177, PR #199), and the
   answer path is settled, and the lesson voice is delivered (#176). The bank blueprint (#188)
@@ -250,7 +251,7 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
 ## Phase B: Subject packs and exam bank
 
-Status: DADA packs delivered; the DADA bank 1.0.0 is published, the hybrid
+Status: DADA and Charms packs delivered; the DADA bank 1.0.0 is published, the hybrid
 grader is built, the bank eval and judge calibration are recorded (#191), and
 served attempts are built (#193).
 
@@ -269,9 +270,12 @@ and compiled at `config/lessons/` (2026-11-08). The DADA pilot pack is
 authored, reviewed and published: 25 materials, 21 concepts, 4 topics,
 version 1.0.0, fingerprint `e7139cbcc23eaa5c`, and `GET /v1/subjects`
 serves published packs. The pack validation record is
-`docs/packs/dada-1.0.0.md`. Remaining on #87: pack wiring and the Charms/multi-subject content passes
-(#128), and coverage maintenance. The canon-index coverage summary is
-`scripts/lexicon_report.py`; per-subject pack coverage remains part of #87.
+`docs/packs/dada-1.0.0.md`. The Charms pack is authored, reviewed and published
+at 1.0.0: 50 materials, 49 concepts, 7 topics, fingerprint
+`12e1ee2fe077a004`; the record is `docs/packs/charms-1.0.0.md`. Remaining on
+#87: pack wiring and the remaining subject content passes (#128), and coverage
+maintenance. The canon-index coverage summary is `scripts/lexicon_report.py`;
+per-subject pack coverage remains part of #87.
 
 Lesson mode's stateless first slice (#166) answers from the pack behind
 `OWL_LESSON_MODE`: the selector embeds the material texts in memory at startup,
@@ -652,8 +656,8 @@ persists exam attempts and chat history.
 - An active ticket needs a `Done when` and a verification step.
 
 The next work is #30 and #184, with the Now items #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
-(#127 closed); #128 carries the pack wiring and Charms content. The
-#87 schema, validator and DADA 1.0.0 pack are delivered. #16, #120, #170, #172,
+(#127 closed); #128 carries the pack wiring and the remaining subject content. The
+#87 schema, validator and the DADA and Charms 1.0.0 packs are delivered. #16, #120, #170, #172,
 #174 and #127 are closed. #107 is deferred and likely superseded by the
 per-book path. The courtesy note to the Lexicon is deferred to project
 completion by maintainer decision.
