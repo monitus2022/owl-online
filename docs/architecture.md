@@ -47,7 +47,7 @@ Exam-bank and canon-index stages (canon-index rows are built; the rest is planne
 | Exam bank | `app/exam/` | bank records, pack and corpus validation, duplicate and publication gates |
 | Exam build | `app/pipeline/exam/` | offline plan, retrieve, generate, validate, persist |
 | Exam store | `app/storage/` | SQLite banks and items imported from validated JSONL; paper and attempt repository follows #38 |
-| Grading | `app/grading/` | hybrid: deterministic objective scoring, LLM rubric judge for free text, deterministic totals and bands |
+| Grading | `app/grading/` | built (#192): deterministic MCQ scoring, one-call short-answer LLM judge, deterministic totals and bands |
 
 ## Build vs managed
 
@@ -544,7 +544,7 @@ flowchart LR
 The DADA bank 1.0.0 is published under `data/exams/dada` with 25 MCQ and 25
 short-answer items. `docs/exams/dada-1.0.0.md` is the structure-only record and
 `docs/exams/dada-1.0.0.manifest.toml` holds the version and pins. The serving
-API and grader are still planned (#192/#193).
+API is still planned (#193).
 
 A pack contains subjects, topics, concepts, materials and source refs. Every
 material points to a chunk id, book, chapter, quote, text hash and index hash.
@@ -603,18 +603,17 @@ returns per-question structured JSON:
 
 ```json
 {
-  "questions": [
-    {
-      "question_id": "dada-short-01",
+  "results": {
+    "dada-short-01": {
       "criteria": [
-        {"id": "c1", "awarded": 2, "max": 2, "reason": "..."},
-        {"id": "c2", "awarded": 1, "max": 2, "reason": "..."}
+        {"criterion_id": "correctness", "awarded": 2, "max_marks": 2, "reason": "..."},
+        {"criterion_id": "completeness", "awarded": 1, "max_marks": 2, "reason": "..."}
       ],
       "total": 3,
       "feedback": "...",
       "evidence_ids": ["b3-c10-0036"]
     }
-  ]
+  }
 }
 ```
 
@@ -628,7 +627,14 @@ Totals and bands are computed by code. The LLM writes criterion marks and
 feedback; it does not write the final grade. The judge is pinned by model,
 temperature 0, prompt version and rubric version. It must be a different model
 family from the question generator. Grading outputs are cached by exam version,
-question id, answer hash and judge configuration so a regrade is reproducible.
+question id, answer hash, rubric content and judge configuration so a regrade is
+reproducible.
+
+The implementation lives in `app/grading/`: `score_mcq`, `grade_attempt`,
+`JudgeCache` and `band_for`. The public records are `AttemptAnswer`,
+`AttemptGrade` and `QuestionGrade`; `tests/test_exam_grading.py` covers the
+validation and retry paths. The package imports `app.exam.bank` and the provider
+contracts; it never imports the chat agent.
 
 A human-marked calibration set measures exact and adjacent agreement, mean
 absolute error and per-criterion agreement. That set is the evidence that the
@@ -699,6 +705,8 @@ generate) for the per-call detail.
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
 | `Persona` | `app/agent/persona.py` | dataclass | reviewed identity, register, boundaries, variant banks for meta, personal and abstain replies, in-world abstention |
 | `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
+| `AttemptAnswer` / `AttemptGrade` / `QuestionGrade` / `CriterionGrade` | `app/grading/models.py` | pydantic | answer shape, per-question criteria and marks, per-attempt total and band |
+| `JudgeConfig` | `app/grading/models.py` | dataclass | pinned judge model, temperature, prompt version, provider and max tokens |
 | `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash, published pack summaries, pack store and derived lesson selector |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |

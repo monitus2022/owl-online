@@ -12,6 +12,6 @@ generator_temperature = 0.0
 generator_prompt_version = "dada-bank-authoring-v1"
 judge_model = "mistralai/mistral-small-3.2-24b-instruct"
 judge_temperature = 0.0
-judge_prompt_version = "dada-bank-judge-v1"
+judge_prompt_version = "dada-bank-judge-v2"
 mcq_count = 25
 short_answer_count = 25

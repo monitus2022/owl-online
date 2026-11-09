@@ -54,6 +54,30 @@ not ask about plot events, character biography or classroom anecdotes. A scene
 can supply the evidence for a concept question, but the question must stand on
 the subject concept and the evidence, not on knowing the story.
 
+## Grading
+
+MCQ answers are scored deterministically by option id; no model call. Short
+answers are judged in one call per attempt against the stored golden answer,
+rubric and evidence. The judge is pinned by the bank manifest: model,
+temperature 0, prompt version and per-item rubric version. It must be a
+different family from the generator.
+
+The judge returns a `results` object keyed by item id. Every criterion must
+appear once, `0 <= awarded <= max_marks`, the total must be the sum, and
+evidence ids must be a subset of the item's source refs. A malformed or
+incomplete response gets one retry for the affected questions; a second failure
+sets `needs_review` and never a silent zero.
+
+Totals and bands are computed by code. The bands are percentage-based:
+O at least 90 percent, E at least 80, A at least 70, P at least 50, D at least
+30, and T below 30. Grading results are cached by bank version, item id, answer
+hash, rubric content and judge configuration under
+`data/exam_judge_cache.jsonl` (gitignored).
+
+The published bank's live probe is
+`docs/exams/dada-1.0.0-grading-probe.md`; the calibration set and agreement
+metrics are #191.
+
 ## Status flow
 
 | Status | Meaning |

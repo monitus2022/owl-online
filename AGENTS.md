@@ -6,10 +6,11 @@ O.W.L. Online - a grounded, agentic RAG application. Read this before making cha
 
 A retrieval-augmented question-answering engine with two surfaces: a chat that
 answers, sets practice and gives formative feedback, and a static exam bank with
-offline generation and hybrid grading. The DADA pack is published at 1.0.0;
-the professor persona is live behind `OWL_PERSONA`; lesson mode is implemented
-behind `OWL_LESSON_MODE` and needs the pack on the host volume; the exam bank is
-the next product surface. The project's point is the evaluation discipline and
+offline generation and hybrid grading. The DADA pack and exam bank are published
+at 1.0.0; the professor persona is live behind `OWL_PERSONA`; lesson mode is
+implemented behind `OWL_LESSON_MODE` and needs the pack on the host volume;
+hybrid grading is built; the served paper is the next product slice. The
+project's point is the evaluation discipline and
 the full-stack agent, not the corpus.
 
 ## Commands
@@ -54,8 +55,8 @@ Layout:
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
 - `app/agent/` - LangGraph chat graph, node functions, state (V2); lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
 - `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts) and feeds lesson mode through a derived in-memory material selector (#166); pack wiring and Charms content remain on #128
-- `app/storage/` - planned exam store (SQLite models and repository)
-- `app/grading/` - planned hybrid grader: deterministic objective scoring, pinned LLM rubric judge for free text, deterministic score bands
+- `app/storage/` - SQLite bank store (#189); the attempt and paper repository follows #193
+- `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the served paper is #193
 - `data/subjects/` - local subject packs; the DADA pack is published; source text stays out of git
 - `app/schemas.py` - domain data (`Chunk`)
 - `app/config.py` - settings (env-based, `OWL_` prefix)

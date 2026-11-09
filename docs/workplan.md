@@ -76,8 +76,9 @@ page describes what comes next and why.
 - The exam bank (#178) follows; DADA packs are delivered and the answer path is
   settled except the voice work (#176). The bank blueprint (#188) fixes a
   target of 25 MCQ and 25 short-answer items. The bank schema, validator and
-  SQLite import are in #189. The DADA bank 1.0.0 is published in #190; quality
-  evaluation (#191), grading (#192) and serving (#193) follow.
+  SQLite import are in #189. The DADA bank 1.0.0 is published in #190 and the
+  hybrid grader is built in #192; quality calibration (#191) and serving (#193)
+  follow.
 
 ## Product shape
 
@@ -248,8 +249,8 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
 ## Phase B: Subject packs and exam bank
 
-Status: DADA packs delivered; the DADA bank 1.0.0 is published; quality
-evaluation (#191), grading (#192) and serving (#193) are next.
+Status: DADA packs delivered; the DADA bank 1.0.0 is published and the hybrid
+grader is built; quality calibration (#191) and serving (#193) are next.
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
 bank and hybrid grader on top of them.
@@ -431,17 +432,18 @@ B1 exit criteria:
 
 ### B2: Exam bank
 
-A paper is 10 questions. That is long enough to feel like a paper and short
-enough to finish for fun. A paper may mix three question types: (the
-student-facing academy papers shipped with the frontend are mcq and short
-answer only - see Decisions, #132; whether long answers return is a #41
-call.)
+Status: bank 1.0.0 published (#190); hybrid grading built (#192); quality
+calibration and serving next (#191/#193).
+
+A paper is 10 questions: 6 MCQ at 3 marks and 4 short answers at 8 marks, 50
+marks total. That is long enough to feel like a paper and short enough to finish
+for fun. The first bank has no long answers.
 
 | Type | Scored by |
 |---|---|
 | `mcq` | deterministic matcher |
 | `short_answer` | pinned LLM judge against the stored golden answer and rubric |
-| `long_answer` | pinned LLM judge against the stored rubric and evidence |
+| `long_answer` | not in the first bank; future extension |
 
 ### Exam format blueprint
 
@@ -496,7 +498,8 @@ items, 50 in total. The blueprint is `docs/exams/dada-bank-blueprint.md`.
 
 Exit criteria:
 
-- a validated 10-question paper can be generated offline and stored;
+- a validated 50-item bank is stored (25 MCQ and 25 short answer);
+- a paper is sampled per attempt without a model call;
 - every question has a rubric, maximum marks, evidence snapshot and model answer;
 - a paper can be served without a model call;
 - an attempt can be submitted and graded;
