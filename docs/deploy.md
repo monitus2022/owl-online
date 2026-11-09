@@ -87,7 +87,11 @@ The instance role needs `bedrock:InvokeModel` and
 The image is runtime-only: `uv sync --no-default-groups` installs `[project]`
 dependencies, including LangGraph and sse-starlette because the V2 API imports
 them. The `ingest` (PDF parsing) group is excluded, and chromadb's unused
-`kubernetes` and `onnxruntime` are excluded in `pyproject.toml`. The V1 image was
+`kubernetes` and `onnxruntime` are excluded in `pyproject.toml`. The Dockerfile
+pins uv 0.13.1 and Python 3.12 (`0.13.1-python3.12-trixie-slim`), copies
+`.python-version`, and sets `UV_PYTHON_PREFERENCE=system` plus
+`UV_PYTHON_DOWNLOADS=never`, so the build uses the image interpreter and never
+downloads a managed one from GitHub. The V1 image was
 about 215 MB; the V2 image adds LangGraph and SSE, so re-measure after the next
 build. It remains well within the host's 8 GB volume.
 

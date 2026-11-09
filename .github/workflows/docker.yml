@@ -1,0 +1,37 @@
+# Image build gate for pull requests (#170).
+#
+# The deploy workflow builds the API image only on main, so a Dockerfile that
+# cannot resolve its interpreter or dependencies merges green and fails during
+# rollout. This job builds the same image on every pull request, without a push.
+#
+# Required check: `image` from the `docker` workflow, next to `lint-and-tests`
+# and the web `build`.
+
+name: docker
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: owl-online:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
