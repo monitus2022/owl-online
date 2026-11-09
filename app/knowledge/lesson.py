@@ -49,14 +49,17 @@ _AMBIGUOUS_ONE_WORD = frozenset({"grim"})
 
 
 def _has_ambiguous_context(question: str, word: str) -> bool:
-    return bool(
-        re.search(
-            rf"\b(?:a|an|the)\s+{re.escape(word)}\b",
-            question,
-            re.IGNORECASE,
-        )
-        or re.search(rf"\b{re.escape(word.capitalize())}\b", question)
-    )
+    """A determiner, a plural noun, or a mid-sentence proper noun."""
+    lowered = question.lower()
+    if re.search(rf"\bthe\s+{re.escape(word)}s?\b", lowered):
+        return True
+    if re.search(rf"\b{re.escape(word)}s\b", lowered):
+        return True
+    for match in re.finditer(rf"\b{re.escape(word.capitalize())}\b", question):
+        prefix = question[: match.start()].rstrip()
+        if prefix and prefix[-1] not in ".!?":
+            return True
+    return False
 
 
 def _cosine(left: tuple[float, ...], right: tuple[float, ...]) -> float:
@@ -137,6 +140,36 @@ class LessonSelector:
         if pack is None:
             return " ".join(material.text for material in materials)
         return " ".join(_embedding_text(pack, material) for material in materials)
+
+    def filter_ambiguous(
+        self,
+        subject: str,
+        question: str,
+        materials: list[Material],
+    ) -> list[Material]:
+        """Drop a one-word ambiguous title used as an ordinary word.
+
+        The embedding selector can return the Grim material for "Was it a grim
+        war?"; the curated matcher already guards this, but the embedding path
+        must be guarded too.
+        """
+        pack = self.store.get(subject)
+        if pack is None:
+            return materials
+        kept: list[Material] = []
+        for material in materials:
+            concept = next(
+                (c for c in pack.concepts if c.concept_id == material.concept),
+                None,
+            )
+            if (
+                concept is not None
+                and concept.title.lower() in _AMBIGUOUS_ONE_WORD
+                and not _has_ambiguous_context(question, concept.title.lower())
+            ):
+                continue
+            kept.append(material)
+        return kept
 
     def select_lexical(
         self,

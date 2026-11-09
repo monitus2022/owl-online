@@ -99,9 +99,9 @@ _ID_SEPARATOR = re.compile(r"[,\s]+")
 # so common paraphrases also count as a refusal and are never retried.
 _REFUSAL_PREFIX = re.compile(
     r"^(?:(?:so|and|therefore|thus)\b[,:\s]*)?"
-    r"(i (cannot|can't|can not) answer|i (do not|don't) know|"
+    r"(i (cannot|can['’]t|can not) answer|i (do not|don['’]t) know|"
     r"the (excerpts|books|passages|lesson notes|notes|set-text excerpts|set texts|sources?) "
-    r"(do not|don't) (say|contain|mention|cover)|"
+    r"(do not|don['’]t) (say|contain|mention|cover)|"
     r"neither (source|the notes|the excerpts|the set texts)\b|"
     r"there is no (information|evidence))",
     re.IGNORECASE,
@@ -109,12 +109,12 @@ _REFUSAL_PREFIX = re.compile(
 # A refusal that trails on into "so I am unable ..." stays a refusal.
 _REFUSAL_CLAUSE = re.compile(
     r"^(?:(?:so|and|therefore|thus|also)\b[,:\s]*)?"
-    r"(i (cannot|can't|can not) (answer|say|confirm|help)|"
-    r"i (do not|don't) know|i am (unable|not able)|"
+    r"(i (cannot|can['’]t|can not) (answer|say|confirm|help)|"
+    r"i (do not|don['’]t) know|i am (unable|not able)|"
     r"no (information|evidence|answer|mention)|"
     r"not (enough|sufficient) (information|evidence)|"
     r"the (excerpts|books|passages|lesson notes|notes|set-text excerpts|set texts|sources?) "
-    r"(do not|don't) (say|contain|mention|cover)|"
+    r"(do not|don['’]t) (say|contain|mention|cover)|"
     r"neither (source|the notes|the excerpts|the set texts)\b|"
     r"nothing (in|about))",
     re.IGNORECASE,

@@ -39,6 +39,8 @@ _STOPWORDS = frozenset(
         "by",
         "call",
         "called",
+        "charm",
+        "charms",
         "can",
         "case",
         "cases",
@@ -47,6 +49,16 @@ _STOPWORDS = frozenset(
         "compare",
         "comparison",
         "could",
+        "creature",
+        "creatures",
+        "curse",
+        "curses",
+        "dangerous",
+        "dark",
+        "defence",
+        "defend",
+        "defends",
+        "defense",
         "department",
         "describe",
         "did",
@@ -62,6 +74,8 @@ _STOPWORDS = frozenset(
         "example",
         "examples",
         "explain",
+        "favourite",
+        "favorite",
         "fifth",
         "first",
         "for",
@@ -135,7 +149,11 @@ _STOPWORDS = frozenset(
         "parts",
         "please",
         "prof",
+        "protect",
+        "protects",
+        "protection",
         "professor",
+        "really",
         "same",
         "say",
         "says",
@@ -149,6 +167,8 @@ _STOPWORDS = frozenset(
         "should",
         "similar",
         "sixth",
+        "spell",
+        "spells",
         "so",
         "some",
         "student",
@@ -171,12 +191,16 @@ _STOPWORDS = frozenset(
         "they",
         "third",
         "this",
+        "three",
+        "two",
         "those",
         "through",
         "to",
         "too",
         "type",
         "types",
+        "ten",
+        "thousand",
         "under",
         "until",
         "up",
@@ -201,6 +225,7 @@ _STOPWORDS = frozenset(
         "why",
         "will",
         "with",
+        "without",
         "wizard",
         "wizards",
         "wizarding",
@@ -210,6 +235,7 @@ _STOPWORDS = frozenset(
         "works",
         "world",
         "would",
+        "hundred",
         "year",
         "years",
         "you",
@@ -238,6 +264,11 @@ def variants(word: str) -> set[str]:
         forms.add(word[:-2])
     if len(word) > 3 and word.endswith("s") and not word.endswith("ss"):
         forms.add(word[:-1])
+    if len(word) > 5 and word.endswith("ing"):
+        forms.add(word[:-3])
+        forms.add(word[:-3] + "e")
+    if len(word) > 5 and word.endswith("tion"):
+        forms.add(word[:-4] + "t")
     return forms
 
 
@@ -248,6 +279,19 @@ def content_terms(text: str) -> set[str]:
         if len(word) >= 3 and word not in _STOPWORDS:
             terms.update(variants(word))
     return terms
+
+
+def missing_terms(text: str, coverage: str) -> set[str]:
+    """Words in `text` with no variant in `coverage`."""
+    coverage_terms = content_terms(coverage)
+    missing: set[str] = set()
+    for word in _WORD.findall(text.lower()):
+        if len(word) < 3 or word in _STOPWORDS:
+            continue
+        forms = variants(word)
+        if not (forms & coverage_terms):
+            missing.update(forms)
+    return missing
 
 
 def phrase_match_score(phrase: str, question_terms: set[str]) -> int:

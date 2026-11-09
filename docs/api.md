@@ -16,7 +16,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 |---|---|---|
 | `GET` | `/health` | liveness; returns `{"status": "ok"}` |
 | `GET` | `/` | the static chat page |
-| `GET` | `/v1/subjects` | published subject packs plus the `lesson` and `persona` flags |
+| `GET` | `/v1/subjects` | published subject packs plus the `lesson`, `lesson_subject`, `lesson_fallback` and `persona` flags |
 | `POST` | `/ask` | one-shot grounded answer |
 | `POST` | `/ask/stream` | chat over server-sent events |
 

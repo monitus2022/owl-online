@@ -12,6 +12,7 @@ and abstention rules are never replaced by it.
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Callable
 from dataclasses import replace
@@ -24,7 +25,7 @@ from app.knowledge.lesson import (
     DEFAULT_TOP_K as LESSON_TOP_K,
 )
 from app.knowledge.materials import Material
-from app.knowledge.terms import content_terms
+from app.knowledge.terms import missing_terms
 from app.pipeline.generate.generate import (
     ABSTAIN_MESSAGE,
     DEFAULT_TOP_K,
@@ -39,6 +40,8 @@ from app.pipeline.generate.generate import (
 )
 from app.providers.contracts import Llm, Retriever
 from app.schemas import Chunk
+
+logger = logging.getLogger(__name__)
 
 LESSON_SYSTEM_PROMPT = (
     "You are O.W.L. Online, a revision tutor. Teach only from the lesson notes "
@@ -115,7 +118,7 @@ def uncovered_terms(
     text = coverage if coverage is not None else " ".join(
         material.text for material in materials
     )
-    return content_terms(question) - content_terms(text)
+    return missing_terms(question, text)
 
 
 def render_materials(materials: list[Material]) -> str:
@@ -220,42 +223,35 @@ def _drop_unknown_lesson_citations(
     return _CITATION.sub(lambda match: keep(match.group(1)), answer).strip()
 
 
-def _starts_with_any(answer: str, prefixes: tuple[str, ...]) -> bool:
-    lowered = answer.strip().lower().replace("’", "'")
-    return any(lowered.startswith(prefix) for prefix in prefixes)
+_OFF_PACK_LABEL_PATTERN = (
+    r"this is (?:not|outside) (?:in )?the department['’]s notes[,.;:—–-]?\s*|"
+    r"this question is not covered by the department['’]s notes[,.;:—–-]?\s*|"
+    r"this is (?:not|outside) (?:in )?the department(?:[,.;:—–-]|\s*$)\s*|"
+    r"this question is not covered by the department(?:[,.;:—–-]|\s*$)\s*"
+)
+_MIXED_LABEL_PATTERN = (
+    r"the department['’]s notes cover part of this question; "
+    r"the set texts cover the rest[,.;:—–-]?\s*"
+)
+_OFF_PACK_LABEL_PREFIX = re.compile(
+    r"^(?:" + _OFF_PACK_LABEL_PATTERN + r")", re.IGNORECASE
+)
+_MIXED_LABEL_PREFIX = re.compile(
+    r"^(?:" + _MIXED_LABEL_PATTERN + r")", re.IGNORECASE
+)
+_LABEL_PREFIX = re.compile(
+    r"^(?:" + _OFF_PACK_LABEL_PATTERN + r"|" + _MIXED_LABEL_PATTERN + r")",
+    re.IGNORECASE,
+)
 
 
 def _label_answer(answer: str, scope: LessonScope) -> str:
     """Deterministic prose label; the model is not trusted to add it."""
-    if scope == "off_pack" and not _starts_with_any(
-        answer,
-        (
-            "this is not in the department",
-            "this is outside the department",
-            "this question is not covered by the department",
-        ),
-    ):
+    if scope == "off_pack" and not _OFF_PACK_LABEL_PREFIX.match(answer):
         return f"{OFF_PACK_LABEL}\n\n{answer}"
-    if scope == "mixed" and not _starts_with_any(
-        answer,
-        (
-            "the department's notes cover part of this question",
-            "outside the department",
-        ),
-    ):
+    if scope == "mixed" and not _MIXED_LABEL_PREFIX.match(answer):
         return f"{MIXED_LABEL}\n\n{answer}"
     return answer
-
-
-_LABEL_PREFIX = re.compile(
-    r"^(?:"
-    r"this is (?:not|outside) (?:in )?the department['’]s notes[,.;:]?\s*|"
-    r"this question is not covered by the department['’]s notes[,.;:]?\s*|"
-    r"the department['’]s notes cover part of this question; "
-    r"the set texts cover the rest[,.;:]?\s*"
-    r")",
-    re.IGNORECASE,
-)
 
 
 def _strip_lesson_labels(draft: str) -> str:
@@ -325,7 +321,16 @@ async def _retrieve_corpus(
     floor = retrieval_floor(retriever, None)
     if chunks[0].score < floor:
         return []
-    return chunks
+    kept: list[Chunk] = []
+    for chunk in chunks:
+        cleaned, removed = sanitize_evidence(chunk.text)
+        if removed:
+            logger.warning("sanitized %d instruction span(s) in %s", removed, chunk.id)
+        if cleaned.strip():
+            kept.append(chunk.model_copy(update={"text": cleaned}) if removed else chunk)
+        else:
+            logger.warning("dropped %s: fallback evidence was only an instruction", chunk.id)
+    return kept
 
 
 def _system_prompts(scope: LessonScope) -> tuple[str, str]:
@@ -369,6 +374,9 @@ async def ask_lesson(
         top_k=top_k,
         min_score=DEFAULT_MIN_SCORE if min_score is None else min_score,
     )
+    filter_fn = getattr(selector, "filter_ambiguous", None)
+    if callable(filter_fn):
+        materials = filter_fn(subject, question, materials)
     lexical = getattr(selector, "select_lexical", None)
     if callable(lexical):
         extras = lexical(question, subject=subject, top_k=top_k)
