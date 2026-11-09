@@ -487,9 +487,9 @@ page, sidecar-backed), `harvest_failures.jsonl`, `invalid_chapters.jsonl`,
 | #128 pack wiring (depends on #87 schema landing) | pack build reads canon_index for concept seeding and reference/source-ref prefill; DADA authored and published, Charms seeded; attribution recorded | a reviewed DADA material cites both a Lexicon reference and a books-bucket source_ref that hash-validates |
 
 #125 (PR #130), #126 (PR #148) and #127 (PR #159) are merged and closed.
-#128 is open under the V3 - Product milestone. The DADA pack is published at
-1.0.0 and the seeding queues are landed; the remaining work is the Charms
-content pass and the coverage report.
+#128 is open under the V3 - Product milestone. The DADA and Charms packs are
+published at 1.0.0 and the seeding queues are landed; the remaining work is the
+other subject content passes and the coverage report.
 
 ## Risks
 

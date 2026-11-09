@@ -13,7 +13,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
-| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper and the curated concept-title/alias matcher; the DADA pack is published; pack wiring and Charms content remain on #128 |
+| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper and the curated concept-title/alias matcher; the DADA and Charms packs are published; pack wiring and the remaining subjects remain on #128 |
 | Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); the DADA bank 1.0.0 is published (#190) |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
@@ -786,9 +786,8 @@ generate) for the per-call detail.
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 
-Subject-knowledge types (schema landed on #87; the DADA pack published with
-#166; the extraction build and pack wiring remain on #128):
-
+Subject-knowledge types (schema landed on #87; the DADA and Charms packs are
+published; the extraction build and pack wiring remain on #128):
 | Type | Module | Purpose |
 |---|---|---|
 | `Subject` | `app/knowledge/taxonomy.py` | one of the 12 O.W.L. subjects |

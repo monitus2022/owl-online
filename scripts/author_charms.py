@@ -6,7 +6,9 @@ quote from the corpus at a hand-picked anchor, hash-checks it through
 `validate_pack`, and writes the pack plus a maintainer review sheet. The pack
 stays `draft` until the maintainer reviews the prose and marks it reviewed.
 
-  uv run python scripts/author_charms.py
+  uv run python scripts/author_charms.py            # draft rebuild
+  uv run python scripts/author_charms.py --publish  # reviewed publish
+  uv run python scripts/author_charms.py --publish --force  # republish
 """
 
 from __future__ import annotations
@@ -187,6 +189,7 @@ def main() -> int:
         raise SystemExit(f"corpus not found at {chunks_path}")
 
     data = json.loads(AUTHORING.read_text(encoding="utf-8"))
+    publish = "--publish" in sys.argv
     seeds = {
         seed["concept_id"]: seed
         for seed in (
@@ -279,7 +282,7 @@ def main() -> int:
         )
         previous = old_materials.get(material_id)
         material_references = [reference] if reference else []
-        review_status = _review_status(
+        review_status = "reviewed" if publish else _review_status(
             previous,
             text=text,
             topic=spec["topic"],
@@ -303,13 +306,17 @@ def main() -> int:
         materials[material_id] = material
         review_rows.append({"unit": spec.get("unit", ""), "material": material})
 
-    version = data.get("version", "0.1.0")
+    version = (
+        data.get("publish_version", "1.0.0")
+        if publish
+        else data.get("version", "0.1.0")
+    )
     pack = SubjectPack(
         manifest=PackManifest(
             subject=SUBJECT,
             tier="owl",
             version=version,
-            status="draft",
+            status="published" if publish else "draft",
             built_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             index_text_hash=index_hash,
         ),
@@ -342,7 +349,12 @@ def main() -> int:
         "# Charms materials review",
         "",
         f"Pack {pack.manifest.version}, fingerprint `{fingerprint}`, index hash",
-        f"`{index_hash}`. Every material is pending the maintainer's prose pass.",
+        f"`{index_hash}`. "
+        + (
+            "Published after the maintainer's prose pass."
+            if publish
+            else "Every material is pending the maintainer's prose pass."
+        ),
         "Quotes below are reconstructed from the corpus at a hand-picked anchor",
         "and hash-checked by `validate_pack`; the full chunk follows each quote so",
         "the claim can be checked in context.",
