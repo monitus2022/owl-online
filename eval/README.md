@@ -550,12 +550,13 @@ or style violations, and the corpus gate unchanged.
 ## Routing contracts (#217)
 
 `eval/routing/` freezes the contract/authority routing fixture before cue
-tuning. `contracts.jsonl` has 203 items across policy, persona, lore, lesson,
+tuning. `contracts.jsonl` has 207 items across policy, persona, lore, lesson,
 abstain and clarify; each records the gold contract, fact IDs, fact-present flag,
-category and a holdout flag. The SHA-256 is pinned in `test_fixtures.py`, so a
+category and a holdout flag. The 14 held-out items span policy, persona, lesson,
+abstain and clarify. The SHA-256 is pinned in `test_fixtures.py`, so a
 fixture change is a deliberate test and record change.
 
-The fixture is used by #219 for the gate confusion matrix and residual buckets.
-Metrics are policy leak, authority bleed, false abstain given fact present,
-unsupported claim rate and clarify precision. The design note is
+The fixture is used by #219 for the gate confusion matrix and by #184 for the
+residual buckets. Metrics are policy leak, authority bleed, false abstain given
+fact present, unsupported claim rate and clarify precision. The design note is
 `docs/routing-contracts.md`.

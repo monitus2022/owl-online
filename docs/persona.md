@@ -72,10 +72,11 @@ Hogwarts?" stays on the answer path. Book characters such as Professor Snape
 stay on the answer path. A measured LLM fallback for residual ambiguous
 questions is planned in #184 and is not in the router today.
 
-The contract and authority model behind this is in
-`docs/routing-contracts.md` (#216). Policy, closed facts and teaching are
-separate contracts; a router miss is unclassified rather than a lesson question,
-and the lesson path is opt-in.
+The #216 target is the contract and authority model in
+`docs/routing-contracts.md`. Policy, closed facts and teaching are separate
+contracts; when #219 lands, a router miss will be unclassified rather than a
+lesson question, and the lesson path will be opt-in. Today the deterministic
+router still promotes a miss to lesson.
 
 ## Variant bank
 

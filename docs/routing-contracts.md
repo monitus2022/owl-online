@@ -16,10 +16,11 @@ pack. A router miss is unclassified, not a teaching question.
 | Closed fact | Persona card or lore pack, stable fact IDs | Identity, biography, school, subject scope as setting, world facts with a canonical span | Retrieved fact IDs, then at most light verbalization that passes containment | Lesson citations, new claims, card/lore facts cited as book chunks |
 | Teaching | Lesson corpus only | Explain, apply, compare, work an example from the materials | Persona-first composition, every claim entailed by a lesson span, lesson citations only | Card/lore facts laundered as book citations, policy content |
 
-"What is included in DADA?" is not automatically teaching. If the lore pack has
-a reviewed subject-scope fact, it is a closed-fact question. If the student is
-asking what the sitting will test, it is policy. Distinguish the reading before
-any retriever runs.
+"What is included in DADA?" is ambiguous before retrieval: it can mean the lore
+scope fact `lore:dada-001` or the assessment policy
+`policy:assessment.dada`. The gate clarifies. A direct scope question such as
+"What topics does DADA cover?" is the lore fact; a direct assessment question is
+policy. Distinguish the relation before any retriever runs.
 
 "Where did you study when you are young" is a closed persona fact with a typo.
 It never reaches the corpus.
@@ -80,6 +81,23 @@ Store two facts when both are true, and route on the relation, not the entity:
 If the utterance does not disambiguate, clarify. Do not let the book retriever
 break the tie.
 
+## Authority assignment
+
+Pick one authority per fact, even when the card and the lore pack overlap:
+
+- `lore:school-001` owns school location, founding, student count, houses and
+  departments. The card's `school` reply is a scripted variant, not the fixture
+  authority.
+- `lore:dada-001` owns subject scope. `persona:subject` owns the role and
+  definition ("what is your subject", "what is DADA").
+- `lore:auror-001` owns the Auror pathway. `persona:professor.background` owns
+  Crane's own service.
+- `lore:teaching-record` owns the set-texts policy.
+- `lore:public-record-people`, `lore:public-record-war` and
+  `lore:public-record-limits` own the public-history boundaries.
+
+A fact that genuinely has two readings is a clarify, not a guess.
+
 ## Composer
 
 A constrained meta composer is reasonable only inside the closed-fact contract,
@@ -110,9 +128,10 @@ a fact ID in shadow eval.
 ## Measurement
 
 The fixture is `eval/routing/fixtures/contracts.jsonl`. It is frozen before cue
-tuning; the SHA-256 is pinned in `eval/routing/test_fixtures.py`. It has 203
-items across policy, persona, lore, lesson, abstain and clarify, with 12
-held-out paraphrase and typo items that are not for cue tuning.
+tuning; the SHA-256 is pinned in `eval/routing/test_fixtures.py`. It has 207
+items across policy, persona, lore, lesson, abstain and clarify, with 14
+held-out policy, persona, lesson, abstain and clarify items that are not for cue
+tuning. Policy is the largest stratum (51 of 207).
 
 Each item records:
 
@@ -131,7 +150,8 @@ Metrics, in gate order:
   `persona:` cite used to support a teaching claim. Target zero.
 - False abstain given fact present: the card or lore contains the gold fact ID
   and the system abstained or went to lessons. Track this separately from
-  ordinary out-of-scope abstains.
+  ordinary out-of-scope abstains. Clarify items are excluded; a clarify is not
+  a false abstain.
 - Unsupported claim rate on composed answers, judged against the provided pack
   or lesson spans.
 - Clarify precision: clarifications that were genuinely ambiguous.
@@ -176,7 +196,7 @@ Add a residual classifier only if all of these hold on the untouched holdout:
 |---|---|
 | `app/agent/router.py` `classify()` promotes a miss to `lesson` under `mode=lesson` | Policy, closed-fact and teaching gates; miss clarifies or abstains |
 | `meta` topics and regex cues | Closed-fact gate over a normalized lexicon and slots |
-| `app/knowledge/lore.py` `_SETTING_CUE` phrase list | Lexicon plus relation slots; no full-utterance matching |
+| `app/knowledge/lore.py` `_SETTING_CUE` regex cue | Lexicon plus relation slots; no full-utterance matching |
 | `ask_lesson()` accepts material/book citations | Lesson citations only, and only after the teaching gate |
 | `AskResult` has three untyped citation lists | Typed citation authority and a cross-type checker |
 | Persona card has no fact IDs | Stable `persona:` fact IDs and templates |

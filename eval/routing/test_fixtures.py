@@ -14,7 +14,7 @@ from eval.routing.fixtures import (
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "contracts.jsonl"
-FIXTURE_SHA256 = "f703a812c188b605728a34cf3f851ec86cf73b5c937429c91e96d4093120a6f2"
+FIXTURE_SHA256 = "efc781f68d2a8c091042226f095f1ecd83f06860fb5f1abb085ae287274a06fc"
 
 
 def test_fixture_loads_and_validates():
@@ -45,9 +45,20 @@ def test_required_examples_are_labelled():
 def test_holdout_family_is_present_and_separate():
     items = load_routing_items(FIXTURE)
     holdout = [item for item in items if item.holdout]
-    assert len(holdout) >= 8
+    assert len(holdout) >= 12
+    assert {item.contract for item in holdout} >= {
+        "policy",
+        "persona",
+        "lesson",
+        "abstain",
+        "clarify",
+    }
     assert any("persona:professor.education" in item.fact_ids for item in holdout)
-    assert any(item.contract == "clarify" for item in holdout)
+    training = {
+        item.utterance.lower().rstrip("?.!") for item in items if not item.holdout
+    }
+    for item in holdout:
+        assert item.utterance.lower().rstrip("?.!") not in training
 
 
 def test_fixture_hash_is_frozen():
@@ -112,3 +123,19 @@ def test_fact_present_must_match_fact_ids():
             },
             "test",
         )
+
+
+def test_generator_reproduces_the_fixture():
+    import importlib.util
+    import json
+
+    script = Path(__file__).parents[2] / "scripts" / "build_routing_fixture.py"
+    spec = importlib.util.spec_from_file_location("build_routing_fixture", script)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    rows = module.build_rows()
+    expected = (
+        "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n"
+    )
+    assert FIXTURE.read_text(encoding="utf-8") == expected
