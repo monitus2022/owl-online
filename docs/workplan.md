@@ -265,6 +265,11 @@ serves published packs. The pack validation record is
 ticketed as #128, active), the Charms content pass and the coverage report
 as a script.
 
+Lesson mode's stateless first slice (#166) answers from the pack behind
+`OWL_LESSON_MODE`: the selector embeds the material texts in memory at startup,
+the answer cites `[mat:<id>]` and resolves the materials' book `source_refs`.
+The measured corpus answer path is unchanged while the flag is off.
+
 A pack is the single source of truth for one O.W.L. subject. Exam generation and
 lesson mode read from packs, not from free model memory.
 
@@ -568,6 +573,7 @@ persists exam attempts and chat history.
 | #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
 | #87 | Subject packs: DADA 1.0.0 published; extraction build and Charms content open | V3 - Product |
 | #128 | Lexicon canon index: pack wiring and seeding queues; DADA authored, Charms seeded, Charms content open | V3 - Product |
+| #166 | Lesson mode, first slice: pack-grounded answers with a derived material selector (flag off) | V3 - Product |
 
 ### Next
 
@@ -584,7 +590,7 @@ persists exam attempts and chat history.
 | #38, #39 | Exam data model, offline generation and validation | V3 - Product |
 | #41, #42 | Hybrid grading and exam endpoints | V3 - Product |
 | #40 | Exam and grading evaluation | V3 - Product |
-| #43 | Lesson mode | V3 - Product |
+| #43 | Thread-based lesson mode on the continuous chat graph | V3 - Product |
 | #30 | Conversation memory and follow-up rewrite | V3 - Product |
 | #35, #44 | Google auth, progress tracking and weak topics | V3 - Product |
 | #19 | Cost and latency p50/p95 instrumentation | V3 - Product |

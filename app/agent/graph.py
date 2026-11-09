@@ -1,4 +1,7 @@
-"""Compiled LangGraph chat graph: router -> answer | practice | feedback | meta | personal."""
+"""Compiled LangGraph chat graph.
+
+Router: answer | practice | feedback | meta | personal | lesson.
+"""
 
 from functools import partial
 
@@ -7,12 +10,16 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.agent.nodes.answer import answer_node
 from app.agent.nodes.feedback import feedback_node
+from app.agent.nodes.lesson import lesson_node
 from app.agent.nodes.persona import meta_node, personal_node
 from app.agent.nodes.practice import practice_node
 from app.agent.persona import PERSONA, Persona
 from app.agent.router import route
 from app.agent.state import AgentState
 from app.knowledge import LoreStore
+from app.knowledge.lesson import DEFAULT_MIN_SCORE as LESSON_MIN_SCORE
+from app.knowledge.lesson import DEFAULT_TOP_K as LESSON_TOP_K
+from app.knowledge.lesson import LessonSelector
 from app.pipeline.generate import DEFAULT_MAX_RETRIES, DEFAULT_TOP_K
 from app.providers.contracts import Llm, Retriever
 
@@ -29,6 +36,10 @@ def build_graph(
     lore: LoreStore | None = None,
     lore_subject: str = "dada",
     small_llm: Llm | None = None,
+    lesson: LessonSelector | None = None,
+    lesson_subject: str = "dada",
+    lesson_top_k: int = LESSON_TOP_K,
+    lesson_min_score: float = LESSON_MIN_SCORE,
 ) -> CompiledStateGraph:
     """Build the stateless per-request graph; no checkpointer in D4."""
     graph = StateGraph(AgentState)
@@ -77,15 +88,36 @@ def build_graph(
         graph.add_edge(name, END)
 
     graph.add_edge(START, "router")
+    routes = {
+        "answer": "answer",
+        "practice": "practice",
+        "feedback": "feedback",
+        "meta": "meta",
+        "personal": "personal",
+    }
+    if lesson is not None:
+        graph.add_node(
+            "lesson",
+            partial(
+                lesson_node,
+                selector=lesson,
+                llm=llm,
+                subject=lesson_subject,
+                top_k=lesson_top_k,
+                min_score=lesson_min_score,
+                max_retries=max_retries,
+                persona=persona,
+            ),
+        )
+        graph.add_edge("lesson", END)
+        routes["lesson"] = "lesson"
+    else:
+        # Lesson is an explicit request only; without a selector it falls back
+        # to the corpus answer path rather than failing the request.
+        routes["lesson"] = "answer"
     graph.add_conditional_edges(
         "router",
         lambda state: state["mode"],
-        {
-            "answer": "answer",
-            "practice": "practice",
-            "feedback": "feedback",
-            "meta": "meta",
-            "personal": "personal",
-        },
+        routes,
     )
     return graph.compile()

@@ -12,8 +12,8 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | Layer | Path | Responsibility |
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
-| Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal nodes |
-| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the DADA pack is published, the extraction build pipeline (#128) and Charms content are in progress |
+| Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
+| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166); the DADA pack is published, the extraction build pipeline (#128) and Charms content are in progress |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -27,7 +27,7 @@ Pipeline stages, in order:
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
-| Generate | `app/pipeline/generate/` | `ask`, `build_prompt`, `ground_answer`, `verify_draft` |
+| Generate | `app/pipeline/generate/` | `ask`, `ask_lesson`, `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
 | Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node` |
 
 `parse_chapters` drops the front matter before book 1 and trims the previous
@@ -354,7 +354,7 @@ sequenceDiagram
   API->>API: cache.get when the intent is answer
   API->>API: limiter.admit (429 / 503)
   API->>G: astream(state)
-  G->>G: router -> answer | practice | feedback | meta | personal
+  G->>G: router -> answer | practice | feedback | meta | personal | lesson
   G-->>API: mode update
   API-->>C: event: mode
   G->>R: retrieve(question, top_k)
@@ -374,7 +374,7 @@ sequenceDiagram
   end
   G-->>API: final state
   API-->>C: event: reset when abstained
-  API-->>C: event: final {answer, citations, lore_citations, abstained, needs_input, attempts, mode}
+  API-->>C: event: final {answer, citations, lore_citations, material_citations, abstained, needs_input, attempts, mode}
 ```
 
 SSE events:
@@ -384,7 +384,7 @@ SSE events:
 | `mode` | `{"mode": "answer"}` | after the router update |
 | `token` | `{"text": "..."}` | for each streamed token |
 | `reset` | `{"reason": "retry"}` before a retry draft, `{"reason": "fallback"}` before a routing fallback; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
-| `final` | `answer`, `citations`, `lore_citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
@@ -398,6 +398,16 @@ complete answer, so an ungrounded stream emits `reset` before the authoritative
 retry when the budget allows; the client drops the rejected draft on the same
 event. Provider failures arrive as an `error` event because HTTP headers are
 already sent.
+
+### Lesson branch
+
+When the request mode is `lesson` and `OWL_LESSON_MODE` is on, the graph routes
+to `lesson_node` instead of `answer`. The derived selector scores the in-memory
+material vectors, the prompt carries only the selected materials, the draft must
+cite `[mat:<id>]` from that set, and the final payload carries
+`material_citations` plus the materials' book `source_refs` as `citations`. This
+branch makes no retrieval or reranker call. Below the selector's best-match
+floor it returns nothing and the request abstains with `no_evidence`.
 
 ## Model routing
 
@@ -450,6 +460,14 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
 | `meta` | persona on; identity, subject scope, exam (non-disclosure), syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
+| `lesson` | explicit `mode=lesson`, `OWL_LESSON_MODE` on | teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs | no | no |
+
+Lesson mode is the one intent grounded in a subject pack rather than the corpus.
+The selector is derived at startup by embedding material texts in memory and
+scoring a question by cosine; the corpus join through `source_refs` remains the
+grounding check, not the selector. A lesson answer cites material ids in
+`material_citations` and their book chunks in `citations`. With the flag off the
+request is rejected and the measured corpus path is unchanged.
 
 ## Persona layer
 
@@ -614,17 +632,20 @@ restart resets the windows; auth later moves them to a user id.
 Corpus-only answers pass through an in-process exact cache keyed by prompt
 version, index text hash, retrieval settings, embedder and reranker config,
 model, normalised question, the persona flag, a hash of the persona suffix, the
-lore pack version and the lore selection version. Practice, feedback, meta and
-personal never read or write it: feedback is personalised by the student answer,
-practice is meant to vary, and meta/personal are scripted. Usage is logged for
+lore pack version, the lore selection version, and (when lesson mode is on) the
+pack fingerprints, lesson top-k, floor and subject. Practice, feedback, meta,
+personal and lesson never read or write it: feedback is personalised by the
+student answer, practice is meant to vary, meta/personal are scripted, and
+lesson answers are pack-scoped. Usage is logged for
 each processed request, cache hits included; a 429, 502, 503 or 504 does not
 produce a line. The line carries estimated input/output tokens,
 model, intent, cache hit, cost and latency; a client that disconnects before the
 stream ends may not produce a line. Prices are configuration, not constants.
 
 The `Runtime` (the retriever with its optional reranker, the llm, the compiled
-agent graph and the index text hash used by the cache key) is built once in the
-app lifespan, never per request.
+agent graph, the index text hash used by the cache key, and the loaded pack store
+with its derived lesson selector) is built once in the app lifespan, never per
+request.
 Provider failures surface as a normalized `ProviderError` and become a 502 at
 the edge, or an SSE `error` event once a stream has started.
 
@@ -640,14 +661,14 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, lore_chars, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, lore_citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, lore_chars, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, lore_citations, material_citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
 | `Persona` | `app/agent/persona.py` | dataclass | reviewed identity, register, boundaries, variant banks for meta, personal and abstain replies, in-world abstention |
 | `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
-| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash, published pack summaries |
+| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash, published pack summaries, pack store and derived lesson selector |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 

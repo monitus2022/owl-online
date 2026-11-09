@@ -4,8 +4,8 @@ from typing import Literal, TypedDict
 
 from app.schemas import Chunk
 
-Mode = Literal["answer", "practice", "feedback", "meta", "personal"]
-RequestedMode = Literal["auto", "answer", "practice", "feedback"]
+Mode = Literal["answer", "practice", "feedback", "meta", "personal", "lesson"]
+RequestedMode = Literal["auto", "answer", "practice", "feedback", "lesson"]
 
 
 class AgentState(TypedDict, total=False):
@@ -19,6 +19,7 @@ class AgentState(TypedDict, total=False):
     answer: str
     citations: list[str]
     lore_citations: list[str]
+    material_citations: list[str]
     abstained: bool
     needs_input: bool
     attempts: int
@@ -26,3 +27,4 @@ class AgentState(TypedDict, total=False):
     abstain_reason: str | None
     retry_reason: str | None
     llm_model: str
+    prompt_chars: int

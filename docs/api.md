@@ -37,15 +37,18 @@ Response `200`:
   "answer": "Alastor Moody ... [b4-c25-0075]",
   "citations": ["b4-c25-0075"],
   "abstained": false,
-  "lore_citations": []
+  "lore_citations": [],
+  "material_citations": []
 }
 ```
 
 `citations` are book chunk ids. `lore_citations` are setting-entry ids in the
-`[lore:<id>]` space. The two spaces are validated separately; an unknown id of
-either kind is stripped from the text. `abstained` is true when there is no book
-or lore evidence, the draft cites nothing, or the model refuses. The answer text
-is always returned; an abstention is a `200`, not an error.
+`[lore:<id>]` space. `material_citations` are lesson-material ids; it is always
+empty on `/ask`, which stays corpus-only, and lesson answers are stream-only.
+The citation spaces are validated separately; an unknown id of any kind is
+stripped from the text. `abstained` is true when there is no book or lore
+evidence, the draft cites nothing, or the model refuses. The answer text is
+always returned; an abstention is a `200`, not an error.
 
 ### `POST /ask/stream`
 
@@ -59,31 +62,62 @@ Request:
 }
 ```
 
-`mode` is `auto`, `answer`, `practice` or `feedback`. `student_answer` is at most
-6000 characters and is only valid with `auto` or `feedback`. When the persona is
-on, the server may also route to `meta` or `personal`; those are not accepted as
-request modes.
+`mode` is `auto`, `answer`, `practice`, `feedback` or `lesson`. `student_answer`
+is at most 6000 characters and is only valid with `auto` or `feedback`. When the
+persona is on, the server may also route to `meta` or `personal`; those are not
+accepted as request modes. `lesson` is explicit only, never inferred, and is
+rejected with `400` unless `OWL_LESSON_MODE` is on and a published pack loaded.
 
 The response is `text/event-stream`. Events:
 
 | Event | Data | When |
 |---|---|---|
-| `mode` | `{"mode": "answer"}` | after the router; can be `answer`, `practice`, `feedback`, `meta` or `personal` |
+| `mode` | `{"mode": "answer"}` | after the router; can be `answer`, `practice`, `feedback`, `meta`, `personal` or `lesson` |
 | `token` | `{"text": "..."}` | each streamed token |
 | `reset` | `{}` or `{"reason": "retry"}` / `{"reason": "fallback"}` | clear the draft before a retry, a fallback, an error, or an abstained final |
-| `final` | `answer`, `citations`, `lore_citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | terminal; always preceded by `reset` |
 
 `final` is the authoritative payload. A client should replace the draft on
 `reset` and render `final` when it arrives. Once the stream has started, a
 provider failure is an `error` event, not an HTTP status.
 
+### Lesson mode
+
+With `OWL_LESSON_MODE=true` and a published pack loaded, a request with
+`"mode": "lesson"` answers from reviewed pack materials instead of raw book
+excerpts:
+
+```json
+{
+  "answer": "Moody showed the curses two years early ... [mat:dada-countering-countercurse-doctrine]",
+  "citations": ["b4-c14-0006", "b4-c14-0009"],
+  "lore_citations": [],
+  "material_citations": ["dada-countering-countercurse-doctrine"],
+  "abstained": false
+}
+```
+
+`material_citations` are `[mat:<material_id>]` ids, validated against the
+materials selected for that answer. `citations` are the book chunk ids those
+materials resolve to through their `source_refs`, so the lesson answer still
+points at canon. The selector is
+derived at startup by embedding the material texts in memory; no second index is
+built or stored. The subject is `OWL_LORE_SUBJECT` until the request `subject`
+field ships. Lesson answers are never cached.
+
+The best-match cosine must clear `OWL_LESSON_MIN_SCORE` (default 0.58,
+calibrated for the local `qwen3-embedding:0.6b`: related questions 0.598-0.791,
+off-topic 0.160-0.549). Below the floor the selector returns nothing and the
+request abstains with the usual in-world line.
+
 ### `GET /v1/subjects`
 
 Returns the published subject packs the server can serve. A draft, broken or
 unreadable pack is skipped, never served; a host with no packs returns an empty
 list. The server loads and validates packs once at startup, so this route is a
-read of the in-process summary and does not touch the corpus.
+read of the in-process summary and does not touch the corpus. Subjects are
+returned sorted by subject key.
 
 Response `200`:
 
@@ -111,6 +145,7 @@ Response `200`:
 | Status | Shape | When |
 |---|---|---|
 | `422` | FastAPI validation detail | malformed request |
+| `400` | `{"detail": "lesson mode is not enabled"}` | `mode=lesson` while `OWL_LESSON_MODE` is off or no pack loaded |
 | `429` | `{"error": "rate limited", "reason": "...", "retry_after": n}` | minute, day or concurrency limit |
 | `503` | `{"error": "chat temporarily unavailable", "reason": "..."}` | daily token budget or degraded mode |
 | `502` | `{"detail": "model provider unavailable"}` | normalized provider failure on `/ask` |

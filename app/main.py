@@ -114,6 +114,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     lore=built.lore,
                     lore_subject=app_settings.lore_subject,
                     small_llm=built.small_llm,
+                    lesson=built.lesson,
+                    lesson_subject=app_settings.lore_subject,
+                    lesson_top_k=app_settings.lesson_top_k,
+                    lesson_min_score=app_settings.lesson_min_score,
                 ),
             )
         app.state.runtime = built
@@ -205,6 +209,12 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             if app_settings.persona
             else "off"
         )
+        lesson_scope = (
+            f"{runtime.pack_store.scope()}|{app_settings.lesson_top_k}|"
+            f"{app_settings.lesson_min_score}|{app_settings.lore_subject}"
+            if app_settings.lesson_mode and runtime.pack_store is not None
+            else "off"
+        )
         return "|".join(
             [
                 runtime.index_hash,
@@ -219,6 +229,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 str(app_settings.retry_budget),
                 str(app_settings.multi_book),
                 persona_scope,
+                lesson_scope,
                 runtime.lore.version() if runtime.lore is not None else "none",
                 LORE_SELECTION_VERSION,
                 app_settings.lore_subject,
@@ -268,12 +279,16 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             else 0
         )
         per_draft = (
-            len(SYSTEM_PROMPT)
-            + persona_chars
-            + len(question)
-            + len(student)
-            + result.lore_chars
-            + sum(len(chunk.text) for chunk in result.chunks)
+            result.prompt_chars
+            if result.prompt_chars
+            else (
+                len(SYSTEM_PROMPT)
+                + persona_chars
+                + len(question)
+                + len(student)
+                + result.lore_chars
+                + sum(len(chunk.text) for chunk in result.chunks)
+            )
         )
         input_tokens = (
             0 if cache_hit or scripted else max(1, attempts * per_draft // 4)
@@ -357,6 +372,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     citations=cached.citations,
                     abstained=cached.abstained,
                     lore_citations=cached.lore_citations,
+                    material_citations=cached.material_citations,
                 )
             start = time.perf_counter()
             try:
@@ -411,6 +427,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 citations=result.citations,
                 abstained=result.abstained,
                 lore_citations=result.lore_citations,
+                material_citations=result.material_citations,
             )
         finally:
             limiter.release(decision.token)
@@ -427,6 +444,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         agent = runtime.agent
         if agent is None:
             raise RuntimeError("agent graph was not built")
+        if body.mode == "lesson" and (
+            not app_settings.lesson_mode or runtime.lesson is None
+        ):
+            raise HTTPException(status_code=400, detail="lesson mode is not enabled")
         session = request.state.session_id
         limiter: ChatLimiter = app.state.limiter
         llm = runtime.llm
@@ -495,6 +516,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                                 "answer": cached.answer,
                                 "citations": cached.citations,
                                 "lore_citations": cached.lore_citations,
+                                "material_citations": cached.material_citations,
                                 "abstained": cached.abstained,
                                 "needs_input": False,
                                 "attempts": cached.attempts,
@@ -568,6 +590,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 answer=str(final.get("answer", "")),
                 citations=list(final.get("citations", [])),
                 lore_citations=list(final.get("lore_citations", [])),
+                material_citations=list(final.get("material_citations", [])),
+                prompt_chars=int(final.get("prompt_chars") or 0),
                 lore_chars=int(final.get("lore_chars") or 0),
                 abstained=bool(final.get("abstained", False)),
                 chunks=list(final.get("chunks", [])),
@@ -597,6 +621,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         "answer": final.get("answer", ""),
                         "citations": final.get("citations", []),
                         "lore_citations": final.get("lore_citations", []),
+                        "material_citations": final.get("material_citations", []),
                         "abstained": final.get("abstained", False),
                         "needs_input": final.get("needs_input", False),
                         "attempts": final.get("attempts", 1),

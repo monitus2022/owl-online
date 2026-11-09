@@ -49,8 +49,8 @@ Layout:
 - `app/api/` - FastAPI HTTP surface (`/ask`, `/ask/stream`, `/v1/subjects`; exam endpoints are planned)
 - `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam build is planned; `ingest/lexicon/` holds the hp-lexicon canon-index harvester (spike grammar and parsers plus the #126 discovery/fetch/harvest modules)
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
-- `app/agent/` - LangGraph chat graph, node functions, state (V2)
-- `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts); the extraction build pipeline (#128) and Charms content are in progress
+- `app/agent/` - LangGraph chat graph, node functions, state (V2); lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
+- `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts) and feeds lesson mode through a derived in-memory material selector (#166); the extraction build pipeline (#128) and Charms content are in progress
 - `app/storage/` - planned exam store (SQLite models and repository)
 - `app/grading/` - planned hybrid grader: deterministic objective scoring, pinned LLM rubric judge for free text, deterministic score bands
 - `data/subjects/` - local subject packs; the DADA pack is published; source text stays out of git

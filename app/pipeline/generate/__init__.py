@@ -15,6 +15,7 @@ from app.pipeline.generate.generate import (
     retrieval_floor,
     sanitize_evidence,
 )
+from app.pipeline.generate.lesson import ask_lesson, build_lesson_prompt, ground_lesson_answer
 from app.pipeline.generate.verify import Verification, verify_draft
 
 __all__ = [
@@ -27,8 +28,11 @@ __all__ = [
     "AskResult",
     "Verification",
     "ask",
+    "ask_lesson",
+    "build_lesson_prompt",
     "build_prompt",
     "ground_answer",
+    "ground_lesson_answer",
     "render_evidence",
     "retrieval_floor",
     "sanitize_evidence",

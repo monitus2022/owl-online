@@ -147,6 +147,12 @@ class AskResult:
     model_calls: int = 0
     lore_citations: list[str] = field(default_factory=list)
     lore_chars: int = 0
+    # Lesson mode cites reviewed pack materials; `citations` then carries the
+    # book chunk ids those materials resolve to.
+    material_citations: list[str] = field(default_factory=list)
+    # Exact prompt size when the path knows it (lesson mode). The corpus path
+    # stays 0 so usage accounting keeps its existing estimate.
+    prompt_chars: int = 0
 
 
 def retrieval_floor(
@@ -400,7 +406,7 @@ async def ask(
         attempt += 1
         prompt_system = system if attempt == 1 else retry_system
         generate_span = tracer.start("generate") if tracer else None
-        draft = await _one_draft(prompt_system, prompt, llm, on_token)
+        draft = await one_draft(prompt_system, prompt, llm, on_token)
         if tracer is not None and generate_span is not None:
             tracer.finish(
                 generate_span,
@@ -421,7 +427,7 @@ async def ask(
                 citations=len(result.citations),
                 lore_citations=len(result.lore_citations),
             )
-        refusal = _is_refusal(
+        refusal = is_refusal(
             draft, cited=bool(result.citations or result.lore_citations)
         )
         if verdict.ok or refusal or attempt > max_retries:
@@ -438,7 +444,7 @@ async def ask(
         if on_reset is not None:
             on_reset()
     generate_ms = (time.perf_counter() - generate_start) * 1000
-    if _is_refusal(draft, cited=bool(result.citations or result.lore_citations)):
+    if is_refusal(draft, cited=bool(result.citations or result.lore_citations)):
         # A refusal is final even when the draft also carries a citation: the
         # answer says it cannot answer, so it must not be returned as grounded.
         result = AskResult(
@@ -489,7 +495,7 @@ async def ask(
     return result
 
 
-async def _one_draft(
+async def one_draft(
     system: str, prompt: str, llm: Llm, on_token: TokenSink | None
 ) -> str:
     """Generate one draft, streaming it when the caller wants tokens."""
@@ -502,7 +508,7 @@ async def _one_draft(
     return "".join(pieces)
 
 
-def _is_refusal(draft: str, *, cited: bool) -> bool:
+def is_refusal(draft: str, *, cited: bool) -> bool:
     """A model that says it cannot answer is not a verification failure.
 
     The verbatim sentinel is a refusal even when a citation follows it. A

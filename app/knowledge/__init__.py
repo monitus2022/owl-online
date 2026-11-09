@@ -1,5 +1,6 @@
 """Knowledge layer: authored setting facts and subject-knowledge packs."""
 
+from app.knowledge.lesson import LessonSelector
 from app.knowledge.lore import (
     LORE_SELECTION_VERSION,
     LoreEntry,
@@ -10,11 +11,13 @@ from app.knowledge.materials import Material, ReferenceLink, SourceRef, chunk_te
 from app.knowledge.packs import (
     Concept,
     PackManifest,
+    PackStore,
     PackSummary,
     PackValidation,
     SubjectPack,
     Topic,
     index_chunks,
+    load_pack_store,
     load_pack_summaries,
     load_subject_pack,
     pack_fingerprint,
@@ -25,10 +28,12 @@ from app.knowledge.packs import (
 __all__ = [
     "LORE_SELECTION_VERSION",
     "Concept",
+    "LessonSelector",
     "LoreEntry",
     "LoreStore",
     "Material",
     "PackManifest",
+    "PackStore",
     "PackSummary",
     "PackValidation",
     "ReferenceLink",
@@ -38,6 +43,7 @@ __all__ = [
     "chunk_text_hash",
     "index_chunks",
     "load_lore",
+    "load_pack_store",
     "load_pack_summaries",
     "load_subject_pack",
     "pack_fingerprint",
