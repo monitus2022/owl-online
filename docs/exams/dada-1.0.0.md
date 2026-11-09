@@ -142,10 +142,14 @@
 
 ## Grading probe
 
-- Prompt: `dada-bank-judge-v2`, temperature `0.0`.
+- Judge: `mistralai/mistral-small-3.2-24b-instruct`, provider `openrouter`,
+  temperature `0.0`, max tokens 2000, prompt `dada-bank-judge-v2`.
 - Items: `dada-short-001`, `dada-short-002`, `dada-short-014`, `dada-short-017`.
 - One judge call; valid JSON; no retry; no needs_review; 32/32; band O.
+- Output hash: `9961fce489b5a0a037a8aed50bee3b1dfd0462e019013430c473164c7d8a033d`.
 - Record: `docs/exams/dada-1.0.0-grading-probe.md`.
+- Calibration: #191 (pending); this probe is a smoke test, not the
+  human-marked calibration set.
 
 ## Review
 

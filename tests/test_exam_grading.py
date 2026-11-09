@@ -359,6 +359,8 @@ async def test_one_judge_call_for_all_short_answers() -> None:
     assert result.needs_review is False
     assert result.graded_at == "2026-11-09T00:00:00Z"
     assert result.judge_output_sha256 is not None
+    assert result.judge_provider == settings.exam_judge_provider
+    assert result.judge_max_tokens == settings.exam_judge_max_tokens
     assert [question.marks_awarded for question in result.questions] == [0, 8, 5]
     assert result.questions[1].feedback.endswith(f"[{REF.chunk_id}]")
     assert [
@@ -539,6 +541,7 @@ async def test_duplicate_criterion_retries() -> None:
     llm = ScriptedLlm(
         _judge_json(
             {"dada-short-001": (4, 4)},
+            missing={"dada-short-001": ["completeness"]},
             duplicate={"dada-short-001": "correctness"},
         ),
         _judge_json({"dada-short-001": (4, 4)}),
@@ -654,6 +657,30 @@ async def test_cache_hit_skips_second_call(tmp_path) -> None:
     assert second.total == first.total == 8
     assert second.judge_output_sha256 is None
     assert second.questions[0].judge_response_sha256 is not None
+
+
+async def test_cache_entry_records_the_full_pins(tmp_path) -> None:
+    bank = _bank()
+    path = tmp_path / "judge_cache.jsonl"
+    llm = ScriptedLlm(_judge_json({"dada-short-001": (4, 4)}))
+    await grade_attempt(
+        bank,
+        ["dada-short-001"],
+        [_answer("dada-short-001", "Pinned answer.")],
+        llm=llm,
+        cache=JudgeCache(path),
+    )
+    entry = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
+    assert entry["bank_version"] == "1.0.0"
+    assert entry["item_id"] == "dada-short-001"
+    assert entry["rubric_version"] == "dada-bank-v1"
+    assert entry["judge_model"] == bank.manifest.judge_model
+    assert entry["judge_provider"] == settings.exam_judge_provider
+    assert entry["judge_temperature"] == 0.0
+    assert entry["judge_max_tokens"] == settings.exam_judge_max_tokens
+    assert entry["judge_prompt_version"] == "dada-bank-judge-v2"
+    assert entry["answer_sha256"]
+    assert entry["raw_sha256"]
 
 
 async def test_cache_misses_on_a_different_answer(tmp_path) -> None:

@@ -537,6 +537,8 @@ async def grade_attempt(
         subject=bank.manifest.subject,
         judge_model=config.model,
         judge_temperature=config.temperature,
+        judge_provider=config.provider,
+        judge_max_tokens=config.max_tokens,
         judge_prompt_version=config.prompt_version,
         graded_at=graded_at,
         questions=tuple(ordered),

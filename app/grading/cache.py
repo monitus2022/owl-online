@@ -94,6 +94,7 @@ class JudgeCache:
             "judge_model": config.model,
             "judge_provider": config.provider,
             "judge_temperature": config.temperature,
+            "judge_max_tokens": config.max_tokens,
             "judge_prompt_version": config.prompt_version,
             "answer_sha256": _sha256(answer_text),
             "raw_sha256": raw_sha256,

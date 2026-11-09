@@ -151,6 +151,8 @@ class AttemptGrade(_StrictModel):
     subject: str
     judge_model: str
     judge_temperature: float
+    judge_provider: str
+    judge_max_tokens: int = Field(gt=0)
     judge_prompt_version: str
     graded_at: str
     questions: tuple[QuestionGrade, ...] = Field(min_length=1)
@@ -160,7 +162,14 @@ class AttemptGrade(_StrictModel):
     needs_review: bool = False
     judge_output_sha256: str | None = None
 
-    @field_validator("bank_version", "subject", "judge_model", "judge_prompt_version", "graded_at")
+    @field_validator(
+        "bank_version",
+        "subject",
+        "judge_model",
+        "judge_provider",
+        "judge_prompt_version",
+        "graded_at",
+    )
     @classmethod
     def _text(cls, value: str) -> str:
         return _non_blank(value)
