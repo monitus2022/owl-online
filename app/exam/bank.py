@@ -195,12 +195,15 @@ class BankManifest(_StrictModel):
     version: str
     status: str = "draft"
     built_at: str = ""
+    reviewed_at: str = ""
     pack_version: str = ""
     pack_fingerprint: str = ""
     index_text_hash: str = ""
     generator_model: str = ""
+    generator_temperature: float | None = Field(default=None, ge=0, le=2)
     generator_prompt_version: str = ""
     judge_model: str = ""
+    judge_temperature: float | None = Field(default=None, ge=0, le=2)
     judge_prompt_version: str = ""
     mcq_count: int = Field(default=0, ge=0)
     short_answer_count: int = Field(default=0, ge=0)
@@ -413,6 +416,8 @@ class BankCoverage:
     per_topic: dict[str, int] = field(default_factory=dict)
     per_topic_kind: dict[str, dict[str, int]] = field(default_factory=dict)
     per_concept: dict[str, int] = field(default_factory=dict)
+    per_concept_kind: dict[str, dict[str, int]] = field(default_factory=dict)
+    difficulty: dict[str, dict[str, int]] = field(default_factory=dict)
     by_kind: dict[str, int] = field(default_factory=dict)
     answer_positions: dict[str, int] = field(default_factory=dict)
     total: int = 0
@@ -480,7 +485,10 @@ def write_exam_bank(bank: ExamBank, directory: Path) -> None:
     )
     lines = []
     for name in BankManifest.model_fields:
-        lines.append(f"{name} = {json.dumps(getattr(manifest, name), ensure_ascii=False)}")
+        value = getattr(manifest, name)
+        if value is None:
+            continue
+        lines.append(f"{name} = {json.dumps(value, ensure_ascii=False)}")
     (directory / "manifest.toml").write_text("\n".join(lines) + "\n", encoding="utf-8")
     body = "\n".join(item.model_dump_json() for item in bank.items)
     (directory / "bank.jsonl").write_text(body + "\n" if body else "", encoding="utf-8")
@@ -495,10 +503,14 @@ def structure_record(bank: ExamBank, validation: BankValidation) -> str:
         "",
         f"- Status: `{manifest.status}`",
         f"- Built at: `{manifest.built_at}`",
+        f"- Reviewed at: `{manifest.reviewed_at}`",
         f"- Pack: `{manifest.pack_version}` / `{manifest.pack_fingerprint}`",
         f"- Index text hash: `{manifest.index_text_hash}`",
-        f"- Generator: `{manifest.generator_model}` / `{manifest.generator_prompt_version}`",
-        f"- Judge: `{manifest.judge_model}` / `{manifest.judge_prompt_version}`",
+        f"- Generator: `{manifest.generator_model}` / "
+        f"`{manifest.generator_prompt_version}` / "
+        f"temperature {manifest.generator_temperature}",
+        f"- Judge: `{manifest.judge_model}` / `{manifest.judge_prompt_version}` / "
+        f"temperature {manifest.judge_temperature}",
         f"- Items: {sum(counts.values())} ({counts['mcq']} MCQ, "
         f"{counts['short_answer']} short answer)",
         f"- Validation: ok={validation.ok} errors={len(validation.errors)} "
@@ -509,8 +521,39 @@ def structure_record(bank: ExamBank, validation: BankValidation) -> str:
         "| Topic | MCQ | Short answer |",
         "|---|---:|---:|",
     ]
-    for topic, counts in sorted(validation.coverage.per_topic_kind.items()):
-        lines.append(f"| `{topic}` | {counts.get('mcq', 0)} | {counts.get('short_answer', 0)} |")
+    for topic, kind_counts in sorted(validation.coverage.per_topic_kind.items()):
+        lines.append(
+            f"| `{topic}` | {kind_counts.get('mcq', 0)} | "
+            f"{kind_counts.get('short_answer', 0)} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Concept coverage",
+            "",
+            "| Concept | MCQ | Short answer |",
+            "|---|---:|---:|",
+        ]
+    )
+    for concept, kind_counts in sorted(validation.coverage.per_concept_kind.items()):
+        lines.append(
+            f"| `{concept}` | {kind_counts.get('mcq', 0)} | "
+            f"{kind_counts.get('short_answer', 0)} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Difficulty",
+            "",
+            "| Difficulty | MCQ | Short answer |",
+            "|---|---:|---:|",
+        ]
+    )
+    for difficulty, kind_counts in sorted(validation.coverage.difficulty.items()):
+        lines.append(
+            f"| {difficulty} | {kind_counts.get('mcq', 0)} | "
+            f"{kind_counts.get('short_answer', 0)} |"
+        )
     lines.extend(
         [
             "",
@@ -621,12 +664,18 @@ def validate_bank(
     if manifest.status == "published":
         if not manifest.built_at.strip():
             result.errors.append("published bank has no built_at")
+        if not manifest.reviewed_at.strip():
+            result.errors.append("published bank has no reviewed_at")
         if not manifest.generator_model.strip():
             result.errors.append("published bank has no generator model")
+        if manifest.generator_temperature is None:
+            result.errors.append("published bank has no generator temperature")
         if not manifest.generator_prompt_version.strip():
             result.errors.append("published bank has no generator prompt version")
         if not manifest.judge_model.strip():
             result.errors.append("published bank has no judge model")
+        if manifest.judge_temperature is None:
+            result.errors.append("published bank has no judge temperature")
         if not manifest.judge_prompt_version.strip():
             result.errors.append("published bank has no judge prompt version")
 
@@ -707,7 +756,11 @@ def validate_bank(
         topic_kind[item.kind] = topic_kind.get(item.kind, 0) + 1
         for concept in item.concepts:
             coverage.per_concept[concept] = coverage.per_concept.get(concept, 0) + 1
+            concept_kind = coverage.per_concept_kind.setdefault(concept, {})
+            concept_kind[item.kind] = concept_kind.get(item.kind, 0) + 1
         coverage.by_kind[item.kind] = coverage.by_kind.get(item.kind, 0) + 1
+        difficulty_kind = coverage.difficulty.setdefault(item.difficulty, {})
+        difficulty_kind[item.kind] = difficulty_kind.get(item.kind, 0) + 1
         if item.kind == "mcq" and item.correct_option_id is not None:
             position = next(
                 (
@@ -728,6 +781,9 @@ def validate_bank(
         coverage.per_topic_kind.setdefault(topic, {})
     for concept in sorted(concept_ids):
         coverage.per_concept.setdefault(concept, 0)
+        coverage.per_concept_kind.setdefault(concept, {})
+    for difficulty in DIFFICULTIES:
+        coverage.difficulty.setdefault(difficulty, {})
 
     mcq_total = coverage.by_kind.get("mcq", 0)
     if mcq_total >= 5:

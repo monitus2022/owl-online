@@ -14,17 +14,20 @@ data/exams/exams.db SQLite serving copy imported from the validated JSONL
 
 docs/exams/<subject>-<version>.md
     structure-only record: counts, ids, coverage and validation summary
+docs/exams/<subject>-<version>.manifest.toml
+    committed snapshot of the published manifest (no prose)
 ```
 
 The JSONL is the authoring source. The SQLite store is a deterministic import,
 not a second source of truth. Both live under `/data`; question prose and
-evidence quotes are not committed.
+evidence quotes are not committed. The published snapshot under `docs/exams/`
+is structure only.
 
 ## Records
 
 | Record | Purpose |
 |---|---|
-| `BankManifest` | subject, tier, version, status, built_at, pack version and fingerprint, index text hash, generator model and prompt version, judge model and prompt version, MCQ and short-answer counts |
+| `BankManifest` | subject, tier, version, status, built_at, reviewed_at, pack version and fingerprint, index text hash, generator model, temperature and prompt version, judge model, temperature and prompt version, MCQ and short-answer counts |
 | `BankItem` | one question: id, kind, prompt, topic, concepts, material id, source refs, evidence snapshot, difficulty, marks, rubric, required points, model answer, options and correct option id for MCQ, rationale, review status, prompt version |
 | `McqOption` | one stored option: option id and text |
 | `RubricCriterion` | criterion id, description and maximum marks |
@@ -42,6 +45,15 @@ points and a rubric that sums to 8 marks. The rubric must include `correctness`
 and `completeness` criteria. The judge compares the student answer with the
 golden answer and the rubric.
 
+## Question scope
+
+Questions test the subject, not the plot. They ask about spells, creatures,
+defences, mechanisms, limits, comparisons and application: what a spell does,
+when it works, what it cannot do, and what danger it protects against. They do
+not ask about plot events, character biography or classroom anecdotes. A scene
+can supply the evidence for a concept question, but the question must stand on
+the subject concept and the evidence, not on knowing the story.
+
 ## Status flow
 
 | Status | Meaning |
@@ -50,11 +62,11 @@ golden answer and the rubric.
 | `validated` | the deterministic validator passes; the importer accepts it |
 | `published` | every item is reviewed, every pin matches, and the bank may be served |
 
-A published bank must have a built_at value, a generator model and prompt
-version and a judge model and prompt version. An unreviewed item in a published
-bank is an error. A published version is immutable in the serving store unless
-the importer is run with `--force`; a paper or attempt may already point at its
-item ids.
+A published bank must have `built_at` and `reviewed_at` values, a generator
+model, temperature and prompt version and a judge model, temperature and prompt
+version. An unreviewed item in a published bank is an error. A published version
+is immutable in the serving store unless the importer is run with `--force`; a
+paper or attempt may already point at its item ids.
 
 ## Validation
 
@@ -84,9 +96,12 @@ The validator checks:
 
 The validator reports every problem it can see, not just the first one. The
 `--record` output is written only after a successful validation; it contains
-counts, ids and coverage, never prompts, golden answers or evidence quotes. The
-25 + 25 count target and the topic quotas are authoring gates in #190; this
-schema validator reports coverage but does not hardcode the DADA target.
+counts, ids, topic, concept and difficulty coverage, the review date and the
+validation summary, never prompts, golden answers or evidence quotes. The
+near-duplicate, independent-verification and review sections are run-specific
+and are appended after the command. The 25 + 25 count target and the topic
+quotas are authoring gates in #190; this schema validator reports coverage but
+does not hardcode the DADA target.
 
 ## Source policy
 
@@ -97,5 +112,5 @@ schema validator reports coverage but does not hardcode the DADA target.
 - The Lexicon is discovery only; it is never a source ref and its prose is
   never copied.
 
-Related tickets: #187 (epic), #188 (blueprint), #189 (this schema), #190
-(authoring), #191 (quality), #192 (grading), #193 (serving).
+Related tickets: #187 (epic), #188 (blueprint), #189 (schema), #190 (this
+bank), #191 (quality), #192 (grading), #193 (serving).
