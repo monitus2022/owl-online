@@ -195,7 +195,7 @@ def build_rows() -> list[dict[str, object]]:
         "professor_education_holdout",
         [
             "Which academy did you attend in your youth?",
-            "Who taught you magic when you were a lad?",
+            "Where did you learn magic when you were a lad?",
             "Where did you train as a young wizard?",
             "What was your education before the war?",
         ],
@@ -344,11 +344,14 @@ def build_rows() -> list[dict[str, object]]:
     add(
         "lesson",
         "boggart",
-        [
-            "What is a Boggart?",
-            "Give me an example of a Boggart lesson.",
-        ],
+        ["What is a Boggart?"],
         fact_ids=["lesson:dada-dark-creatures-boggarts-nature"],
+    )
+    add(
+        "lesson",
+        "boggart_example",
+        ["Give me an example of a Boggart lesson."],
+        fact_ids=["lesson:dada-dark-creatures-boggarts-field"],
     )
     add(
         "lesson",
@@ -506,18 +509,29 @@ def build_rows() -> list[dict[str, object]]:
     add(
         "lesson",
         "lesson_holdout",
-        [
-            "Why does a Patronus need a joyful recollection?",
-            "How do you stop a shape-shifter that copies your fear?",
-            "What is the counter to a spell that throws you off your feet?",
-        ],
+        ["Why does a Patronus need a joyful recollection?"],
+        fact_ids=["lesson:dada-magic-patronus-theory"],
+        holdout=True,
+        note="Held-out Patronus paraphrase. Do not tune cues on these.",
+    )
+    add(
+        "lesson",
+        "lesson_holdout",
+        ["How do you stop a shape-shifter that copies your fear?"],
+        fact_ids=["lesson:dada-dark-creatures-boggarts-counter"],
+        holdout=True,
+        note="Held-out Boggart paraphrase. Do not tune cues on these.",
+    )
+    add(
+        "lesson",
+        "lesson_holdout",
+        ["What is the counter to a spell that throws you off your feet?"],
         fact_ids=[
-            "lesson:dada-magic-patronus-theory",
-            "lesson:dada-dark-creatures-boggarts-counter",
             "lesson:dada-dueling-shield-charm",
+            "lesson:dada-dueling-stunning-spell",
         ],
         holdout=True,
-        note="Held-out teaching paraphrases. Do not tune cues on these.",
+        note="Held-out Stunning/Shield paraphrase. Do not tune cues on these.",
     )
 
     # Abstain: no such fact, off-topic, unsafe, or no lesson span.
@@ -600,7 +614,7 @@ def build_rows() -> list[dict[str, object]]:
             "What is your school?",
             "Tell me about your school.",
             "Which school are you from?",
-            "Tell me about the school.",
+            "Tell me about your old school.",
         ],
         fact_ids=["lore:school-001", "persona:professor.education"],
         note="Ashcombe as employer or Hogwarts as alma mater.",
@@ -637,13 +651,19 @@ def build_rows() -> list[dict[str, object]]:
     add(
         "clarify",
         "cross_subject_compare",
-        [
-            "Compare Expelliarmus with the Levitation Charm.",
-            "Compare Expelliarmus with the Summoning Charm.",
-        ],
+        ["Compare Expelliarmus with the Levitation Charm."],
         fact_ids=[
             "lesson:dada-dueling-disarming-charm",
             "lesson:charms-levitation-theory",
+        ],
+        note="Cross-subject comparison; clarify the subject before teaching.",
+    )
+    add(
+        "clarify",
+        "cross_subject_compare",
+        ["Compare Expelliarmus with the Summoning Charm."],
+        fact_ids=[
+            "lesson:dada-dueling-disarming-charm",
             "lesson:charms-summoning",
         ],
         note="Cross-subject comparison; clarify the subject before teaching.",

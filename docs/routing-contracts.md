@@ -70,11 +70,20 @@ authority check, not a prompt instruction.
 The current API has `citations`, `lore_citations` and `material_citations`.
 #218 adds the typed field and the checker without breaking the frontend.
 
+The fixture uses fact IDs; the emitted cite IDs are a small mapping:
+
+| Fact ID | Emitted cite |
+|---|---|
+| `policy:assessment.dada` | `policy:script:assessment.dada` |
+| `persona:professor.education` | `persona:professor.education` |
+| `lore:dada-001` | `lore:dada-001` |
+| `lesson:dada-dueling-disarming-charm` | `lesson:dada-dueling-disarming-charm#<span>` |
+
 ## DADA is the sharp case
 
 Store two facts when both are true, and route on the relation, not the entity:
 
-- `lore:dada-001` - what the subject is, as setting. Answerable.
+- `lore:dada-001` - what the department covers, as setting. Answerable.
 - `policy:assessment.dada` - what the sitting will test, how it is graded, the
   syllabus as a key. Scripted refusal.
 

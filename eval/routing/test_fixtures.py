@@ -14,7 +14,7 @@ from eval.routing.fixtures import (
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "contracts.jsonl"
-FIXTURE_SHA256 = "efc781f68d2a8c091042226f095f1ecd83f06860fb5f1abb085ae287274a06fc"
+FIXTURE_SHA256 = "636c4e04c2ae7c9ff221ed787d5d962856e58f47e6a7553aec24c4364499beff"
 
 
 def test_fixture_loads_and_validates():
