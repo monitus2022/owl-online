@@ -579,30 +579,36 @@ An O.W.L. paper mixes question types, so grading is not one algorithm:
 
 | Question type | Scorer |
 |---|---|
-| `mcq` | deterministic normalised match |
-| `short_answer` | deterministic accepted variants, LLM fallback for paraphrase |
+| `mcq` | deterministic match by option id |
+| `short_answer` | pinned LLM judge against the stored golden answer and rubric |
 | `long_answer` | pinned LLM judge with the stored rubric and evidence |
 
 Each question stores its maximum marks, rubric criteria, evidence snapshot and
-model answer. The judge scores one question per call and returns structured
-JSON:
+model answer. One judge call covers all free-text answers in an attempt and
+returns per-question structured JSON:
 
 ```json
 {
-  "criteria": [
-    {"id": "c1", "awarded": 2, "max": 2, "reason": "..."},
-    {"id": "c2", "awarded": 1, "max": 2, "reason": "..."}
-  ],
-  "total": 3,
-  "feedback": "...",
-  "evidence_ids": ["b3-c10-0036"]
+  "questions": [
+    {
+      "question_id": "dada-short-01",
+      "criteria": [
+        {"id": "c1", "awarded": 2, "max": 2, "reason": "..."},
+        {"id": "c2", "awarded": 1, "max": 2, "reason": "..."}
+      ],
+      "total": 3,
+      "feedback": "...",
+      "evidence_ids": ["b3-c10-0036"]
+    }
+  ]
 }
 ```
 
 The scorer validates that every criterion appears once, that `0 <= awarded <=
 max`, that the total is the sum, and that evidence ids are a subset of the
-question evidence. A parse or validation failure gets one retry, then a
-`needs_review` state; it is never silently scored zero.
+question evidence. A parse or validation failure gets one retry for the
+attempt, then a `needs_review` state for the affected questions; it is never
+silently scored zero.
 
 Totals and bands are computed by code. The LLM writes criterion marks and
 feedback; it does not write the final grade. The judge is pinned by model,
