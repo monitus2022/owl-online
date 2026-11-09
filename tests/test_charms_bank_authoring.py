@@ -81,5 +81,10 @@ def test_scene_markers_are_rejected() -> None:
         _check_prose(_spec(prompt="How is the charm used in the Quidditch match?"))
 
 
+def test_exam_and_lesson_questions_are_rejected() -> None:
+    with pytest.raises(SystemExit, match="exams or teaching"):
+        _check_prose(_spec(prompt="What do students learn in a Charms lesson?"))
+
+
 def test_concept_only_prose_is_accepted() -> None:
     _check_prose(_spec(prompt="What does the Banishing Charm do to a target?"))

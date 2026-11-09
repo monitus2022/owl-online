@@ -60,7 +60,13 @@ scene, and a student must not need story knowledge to answer. Write "a caster",
 "a target" or "a learner" instead of a named person. Evidence may quote a scene;
 the item restates the concept in general terms. An item that only makes sense
 after reading the cited scene is rejected, however well grounded its evidence.
-The authoring script enforces this with a character and scene denylist.
+
+Exam administration and classroom pedagogy are not bank content. Items do not
+ask about papers, practicals, lessons, teachers, revision or school rules: the
+student is already sitting the assessment, so those items test the setting
+rather than the subject. They ask about the underlying charm concept instead.
+The authoring script enforces both rules with a character, scene and pedagogy
+denylist.
 
 ## Grading
 

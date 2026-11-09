@@ -81,7 +81,7 @@ ITEMS: list[dict] = [
             "Charms is practical; Transfiguration is only written theory.",
             "Charms needs no wand; Transfiguration needs a wand.",
             "Charms works only on creatures; Transfiguration works only on objects.",
-            "Charms is examined at OWL level; Transfiguration is not examined.",
+            "Charms requires no incantation; Transfiguration requires no wand movement.",
         ],
         "correct": 1,
         "rationale": "The subject boundary is behaviour versus identity, not practical versus theoretical.",
@@ -159,18 +159,18 @@ ITEMS: list[dict] = [
         "item_id": "charms-mcq-007",
         "kind": "mcq",
         "material_id": "charms-banishing",
-        "prompt": "Why is the Banishing Charm practised on soft, light objects before heavier ones?",
+        "prompt": "Why can a missed Banishing Charm be dangerous?",
         "difficulty": "explanation",
         "options": [
-            "The cushions are the only objects the charm works on.",
-            "A miss can send heavy objects flying, so soft targets make practice safer.",
-            "The cushions are used to muffle the sound of the incantation.",
-            "The charm turns cushions into birds when it succeeds.",
-            "The cushions mark the boundary of the practice area.",
-            "The cushions are needed to wipe the wands between attempts.",
+            "It can turn the target into a heavier object.",
+            "It can send a heavy object flying off course into the caster or a bystander.",
+            "It can silence everyone nearby.",
+            "It can make the caster lose control of the wand permanently.",
+            "It can make the object impossible to summon later.",
+            "It can create a second copy of the object.",
         ],
         "correct": 1,
-        "rationale": "Soft practice targets exist because a missed Banishing Charm has consequences.",
+        "rationale": "A missed Banishing Charm can send a heavy object off course.",
     },
     {
         "item_id": "charms-mcq-008",
@@ -469,19 +469,19 @@ ITEMS: list[dict] = [
     {
         "item_id": "charms-mcq-025",
         "kind": "mcq",
-        "material_id": "charms-anti-cheating",
-        "prompt": "What is the Anti-Cheating Spell used for?",
-        "difficulty": "recall",
+        "material_id": "charms-scourgify",
+        "prompt": "A caster needs to remove dirt from a surface without moving it. Which charm fits?",
+        "difficulty": "application",
         "options": [
-            "It stops students from entering the exam hall.",
-            "It is cast on exam papers and quills to stop candidates cheating.",
-            "It erases a candidate's memory after the exam.",
-            "It times the written paper automatically.",
-            "It marks the answers without an examiner.",
-            "It prevents candidates from speaking during the exam.",
+            "Reparo",
+            "Scourgify",
+            "Diffindo",
+            "Impervius",
+            "Incendio",
+            "Sonorus",
         ],
         "correct": 1,
-        "rationale": "The spell is an institutional security measure on papers and quills.",
+        "rationale": "Scourgify removes dirt and mess without moving or changing the object.",
     },
     # foundations, short answer
     {
@@ -500,14 +500,14 @@ ITEMS: list[dict] = [
     {
         "item_id": "charms-short-002",
         "kind": "short_answer",
-        "material_id": "charms-foundation-practice",
-        "prompt": "Explain why repetition is treated as part of learning a charm rather than an optional extra.",
-        "difficulty": "explanation",
-        "model_answer": "Charms is learned by repetition, and practice is treated as the route to control. Learners begin in pairs with short attempts, receive immediate correction of wrist movement and wording, and repeat the attempt after a failure. A charm that works once is not yet reliable; the school expects sustained application before an exam.",
-        "required_points": ["repetition", "practice"],
+        "material_id": "charms-foundation-charm-vs-transfiguration",
+        "prompt": "Explain how a charm differs from a Transfiguration spell, using a made object as the example.",
+        "difficulty": "comparison",
+        "model_answer": "A charm gives an object or creature a new action, quality or movement without changing what it fundamentally is. Transfiguration changes what the thing is, so a pineapple made to tap-dance is still a pineapple, while a mouse turned into a snuffbox is not. The boundary matters because the two subjects test different kinds of change.",
+        "required_points": ["charm", "transfiguration"],
         "rubric": [
-            ("correctness", "States that control comes from repeated practice, not a single success.", 4),
-            ("completeness", "Gives two examples of practice being expected or enforced.", 4),
+            ("correctness", "States that a charm adds behaviour and Transfiguration changes identity.", 4),
+            ("completeness", "Uses both example tasks to show the difference.", 4),
         ],
     },
     # movement, short answer
@@ -623,11 +623,11 @@ ITEMS: list[dict] = [
         "material_id": "charms-countercharm-hiccups",
         "prompt": "Explain the principle of a counter-charm using the countercharm for hiccups as the example.",
         "difficulty": "explanation",
-        "model_answer": "A counter-charm targets a particular unwanted effect rather than undoing all magic. The countercharm for hiccups is a small, specific counter-charm, and it is examinable because students must know both the original nuisance and the precise counter. Its narrowness is the point: it does not disable every spell, only the effect it is designed to answer.",
+        "model_answer": "A counter-charm targets a particular unwanted effect rather than undoing all magic. The countercharm for hiccups is a small, specific counter-charm, and it is taught as the model for the principle: a counter must match the effect it answers. Its narrowness is the point: it does not disable every spell, only the effect it is designed to answer.",
         "required_points": ["hiccups", "counter-charm"],
         "rubric": [
             ("correctness", "Explains that a counter-charm is specific to one effect.", 4),
-            ("completeness", "Uses the hiccups countercharm and its exam context as the example.", 4),
+            ("completeness", "Uses the hiccups countercharm as the example of a specific counter.", 4),
         ],
     },
     # jinxes, short answer
@@ -740,27 +740,27 @@ ITEMS: list[dict] = [
     {
         "item_id": "charms-short-020",
         "kind": "short_answer",
-        "material_id": "charms-owl-theory",
-        "prompt": "Explain what the Charms theory paper tests and why it is not a formality.",
-        "difficulty": "explanation",
-        "model_answer": "The Charms theory paper is a written examination that asks candidates to explain charm work, such as the wand movement required to make objects fly. It tests knowledge that cannot be shown by a single practical demonstration, including the countercharm for hiccups and the principles behind a charm. The paper is not a formality: it is externally set and the papers carry Anti-Cheating Charms.",
-        "required_points": ["theory", "hiccups"],
+        "material_id": "charms-incendio",
+        "prompt": "Explain what Incendio produces and why it demands care in an enclosed space.",
+        "difficulty": "application",
+        "model_answer": "Incendio produces fire with an immediate, visible effect of light and heat. Because the fire is real and can spread, it is dangerous in an enclosed space where the caster and others have little room to avoid it. The spell is controlled fire production, useful for light, heat or burning, but it must be used with that risk in mind.",
+        "required_points": ["fire", "enclosed"],
         "rubric": [
-            ("correctness", "Describes the written paper as testing explanation of charm work.", 4),
-            ("completeness", "Gives evidence that the paper is a serious, externally set examination.", 4),
+            ("correctness", "States that Incendio produces fire with light and heat.", 4),
+            ("completeness", "Explains the danger of fire in an enclosed space.", 4),
         ],
     },
     {
         "item_id": "charms-short-021",
         "kind": "short_answer",
-        "material_id": "charms-owl-practical",
-        "prompt": "Explain how the Charms practical examination is conducted and what it asks candidates to do.",
-        "difficulty": "explanation",
-        "model_answer": "The Charms practical is examined one small group at a time in a side chamber. Candidates wait, mutter incantations and practise wand movements until their names are called, then must produce concrete results such as making an eggcup cartwheel with the Levitation Charm. The practical is a performance test rather than a written explanation.",
-        "required_points": ["chamber", "cartwheel"],
+        "material_id": "charms-impediment",
+        "prompt": "Explain what the Impediment Curse does and why a caster might choose it over a binding spell.",
+        "difficulty": "comparison",
+        "model_answer": "The Impediment Curse slows a target and disrupts its momentum rather than stopping it outright. That makes it a defensive choice when the caster needs to buy time without fully restraining the target. A binding spell imposes a harder stop, so the choice depends on how much restraint the situation allows.",
+        "required_points": ["slows", "momentum"],
         "rubric": [
-            ("correctness", "Describes the small-group, one-at-a-time format.", 4),
-            ("completeness", "Gives the concrete eggcup task and contrasts it with the theory paper.", 4),
+            ("correctness", "States that the curse slows and disrupts rather than binds.", 4),
+            ("completeness", "Contrasts it with a binding spell and explains the choice.", 4),
         ],
     },
     {
@@ -792,27 +792,27 @@ ITEMS: list[dict] = [
     {
         "item_id": "charms-short-024",
         "kind": "short_answer",
-        "material_id": "charms-class",
-        "prompt": "Explain how Charms lessons are organised to turn practice into control.",
-        "difficulty": "explanation",
-        "model_answer": "Charms classes are practical, paired and noisy: learners make short attempts while a teacher moves between desks correcting wrist movements and incantations. Practice continues outside set lessons, when learners use the classroom and its soft practice objects to rehearse. The pattern is short attempts, visible success and immediate correction, with revision and exam pressure added later.",
-        "required_points": ["paired", "revision"],
+        "material_id": "charms-diffindo",
+        "prompt": "Explain what Diffindo does and why precise aim matters when casting it.",
+        "difficulty": "application",
+        "model_answer": "Diffindo cuts or splits an object along a line rather than blasting it apart. Because the effect is precise, the caster must aim carefully: a cut in the wrong place can damage what should have been left intact. It is a versatile utility charm, not a healing spell, and it separates material rather than restoring it.",
+        "required_points": ["cuts", "carefully"],
         "rubric": [
-            ("correctness", "Describes paired practice with immediate correction.", 4),
-            ("completeness", "Uses out-of-lesson rehearsal and revision to show repetition.", 4),
+            ("correctness", "Describes a precise cut or split along a line.", 4),
+            ("completeness", "Explains why aim matters and what the charm is not.", 4),
         ],
     },
     {
         "item_id": "charms-short-025",
         "kind": "short_answer",
-        "material_id": "charms-flitwick",
-        "prompt": "Explain the teaching sequence used for charm instruction and why it suits charm learning.",
+        "material_id": "charms-reparo",
+        "prompt": "Explain how Reparo reverses a break rather than hiding it.",
         "difficulty": "explanation",
-        "model_answer": "Charm instruction follows a clear sequence: demonstrate the spell, correct the learner's wrist movement and incantation, then have the learner repeat it. A correct attempt is praised publicly, and a failed attempt is answered with the single instruction to practise rather than with more power. The pattern suits charm learning because control comes from repetition.",
-        "required_points": ["demonstrate", "repeat"],
+        "model_answer": "Reparo mends a broken object by bringing its pieces back together. The object is rejoined rather than covered over, so the break is actually reversed and the object is good as new. That makes it a practical everyday charm rather than a cosmetic repair.",
+        "required_points": ["pieces", "break"],
         "rubric": [
-            ("correctness", "Describes the sequence of demonstration, correction and repetition.", 4),
-            ("completeness", "Connects the pattern to the need for control through practice.", 4),
+            ("correctness", "States that the pieces rejoin and the object is mended.", 4),
+            ("completeness", "Explains that the break is reversed rather than hidden.", 4),
         ],
     },
 ]
@@ -854,6 +854,13 @@ _FORBIDDEN_SCENES = (
     "little whinging", "diagon alley", "hogwarts", "d.a.", "dumbledore's army",
     "chamber of secrets", "room of requirement", "burrow", "spinner's end",
 )
+# Exam administration and classroom pedagogy are not charm concepts. A paper
+# that asks about the exam while the student is sitting it is a bad item.
+_FORBIDDEN_PEDAGOGY = (
+    "exam", "exams", "lesson", "lessons", "classroom", "syllabus", "revision",
+    "curriculum", "student", "students", "teacher", "teachers", "pupil",
+    "pupils",
+)
 
 
 def _check_prose(spec: dict) -> None:
@@ -889,6 +896,12 @@ def _check_prose(spec: dict) -> None:
                 raise SystemExit(
                     f"{spec['item_id']}: {name} refers to a scene ({term!r}); "
                     "questions must stand without story knowledge"
+                )
+        for term in _FORBIDDEN_PEDAGOGY:
+            if re.search(rf"\b{re.escape(term)}\b", lowered):
+                raise SystemExit(
+                    f"{spec['item_id']}: {name} asks about exams or teaching "
+                    f"({term!r}); items test charm concepts only"
                 )
 
 
