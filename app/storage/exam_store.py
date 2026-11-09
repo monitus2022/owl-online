@@ -21,12 +21,15 @@ CREATE TABLE IF NOT EXISTS banks (
     tier TEXT NOT NULL,
     status TEXT NOT NULL,
     built_at TEXT NOT NULL,
+    reviewed_at TEXT NOT NULL DEFAULT '',
     pack_version TEXT NOT NULL,
     pack_fingerprint TEXT NOT NULL,
     index_text_hash TEXT NOT NULL,
     generator_model TEXT NOT NULL,
+    generator_temperature REAL,
     generator_prompt_version TEXT NOT NULL,
     judge_model TEXT NOT NULL,
+    judge_temperature REAL,
     judge_prompt_version TEXT NOT NULL,
     mcq_count INTEGER NOT NULL,
     short_answer_count INTEGER NOT NULL,
@@ -69,12 +72,15 @@ _MANIFEST_COLUMNS = (
     "tier",
     "status",
     "built_at",
+    "reviewed_at",
     "pack_version",
     "pack_fingerprint",
     "index_text_hash",
     "generator_model",
+    "generator_temperature",
     "generator_prompt_version",
     "judge_model",
+    "judge_temperature",
     "judge_prompt_version",
     "mcq_count",
     "short_answer_count",
@@ -115,7 +121,23 @@ class ExamStore:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.executescript(_SCHEMA)
+        self._migrate()
         self._conn.commit()
+
+    def _migrate(self) -> None:
+        """Add manifest columns introduced after the first serving schema."""
+        columns = {
+            str(row["name"])
+            for row in self._conn.execute("PRAGMA table_info(banks)")
+        }
+        additions = {
+            "reviewed_at": "TEXT NOT NULL DEFAULT ''",
+            "generator_temperature": "REAL",
+            "judge_temperature": "REAL",
+        }
+        for name, ddl in additions.items():
+            if name not in columns:
+                self._conn.execute(f"ALTER TABLE banks ADD COLUMN {name} {ddl}")
 
     def close(self) -> None:
         self._conn.close()

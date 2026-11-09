@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -225,12 +226,15 @@ def _bank() -> tuple[ExamBank, SubjectPack, dict[str, Chunk]]:
         version="1.0.0",
         status="published",
         built_at="2026-11-09T00:00:00Z",
+        reviewed_at="2026-11-09T00:00:00Z",
         pack_version="1.0.0",
         pack_fingerprint=pack_fingerprint(pack),
         index_text_hash=INDEX_HASH,
         generator_model="test-generator",
+        generator_temperature=0.0,
         generator_prompt_version="gen-v1",
         judge_model="test-judge",
+        judge_temperature=0.0,
         judge_prompt_version="judge-v1",
         mcq_count=2,
         short_answer_count=2,
@@ -472,7 +476,8 @@ def test_structure_record_has_ids_not_prompts() -> None:
     assert "Riddikulus" not in record
     assert "## Concept coverage" in record
     assert "`dada-creature-boggart`" in record
-    assert f"`{bank.manifest.built_at[:10]}`" in record
+    assert "## Difficulty" in record
+    assert f"`{bank.manifest.reviewed_at}`" in record
 
 
 def test_structure_record_failure_omits_item_messages() -> None:
@@ -485,6 +490,70 @@ def test_structure_record_failure_omits_item_messages() -> None:
     record = structure_record(bank, validation)
     assert "Quidditch trophy" not in record
     assert "Detailed messages stay in the CLI output" in record
+
+
+def test_published_bank_requires_reviewed_at() -> None:
+    bank, pack, chunks = _bank()
+    bank.manifest = bank.manifest.model_copy(update={"reviewed_at": ""})
+    validation = validate_bank(bank, pack, chunks, INDEX_HASH)
+    assert not validation.ok
+    assert any("reviewed_at" in error for error in validation.errors)
+
+
+def test_published_bank_requires_temperatures() -> None:
+    bank, pack, chunks = _bank()
+    bank.manifest = bank.manifest.model_copy(update={"generator_temperature": None})
+    validation = validate_bank(bank, pack, chunks, INDEX_HASH)
+    assert not validation.ok
+    assert any("generator temperature" in error for error in validation.errors)
+
+
+def test_validate_bank_reports_per_concept_and_difficulty() -> None:
+    bank, pack, chunks = _bank()
+    validation = validate_bank(bank, pack, chunks, INDEX_HASH)
+    assert validation.coverage.per_concept_kind["dada-creature-boggart"] == {
+        "mcq": 1,
+        "short_answer": 1,
+    }
+    assert validation.coverage.difficulty["recall"] == {"mcq": 2}
+    assert validation.coverage.difficulty["explanation"] == {"short_answer": 2}
+
+
+def test_write_omits_unset_optional_manifest_fields(tmp_path: Path) -> None:
+    bank, _, _ = _bank()
+    bank.manifest = bank.manifest.model_copy(
+        update={
+            "status": "draft",
+            "reviewed_at": "",
+            "generator_temperature": None,
+            "judge_temperature": None,
+        }
+    )
+    directory = tmp_path / "dada"
+    write_exam_bank(bank, directory)
+    loaded = load_exam_bank(directory)
+    assert loaded.manifest.generator_temperature is None
+    assert loaded.manifest.judge_temperature is None
+    assert "null" not in (directory / "manifest.toml").read_text(encoding="utf-8")
+
+
+def test_committed_manifest_snapshot_is_published_and_pinned() -> None:
+    repo = Path(__file__).resolve().parents[1]
+    snapshot = tomllib.loads(
+        (repo / "docs" / "exams" / "dada-1.0.0.manifest.toml").read_text(encoding="utf-8")
+    )
+    manifest = BankManifest.model_validate(snapshot)
+    assert manifest.subject == "dada"
+    assert manifest.version == "1.0.0"
+    assert manifest.status == "published"
+    assert manifest.reviewed_at
+    assert manifest.generator_temperature == 0.0
+    assert manifest.judge_temperature == 0.0
+    assert manifest.mcq_count == 25
+    assert manifest.short_answer_count == 25
+    assert manifest.pack_version == "1.0.0"
+    assert manifest.pack_fingerprint == "e7139cbcc23eaa5c"
+    assert manifest.index_text_hash == "aca4c57462d449f5"
 
 
 def test_store_refuses_published_replace(tmp_path: Path) -> None:

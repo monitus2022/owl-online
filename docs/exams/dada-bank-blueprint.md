@@ -316,7 +316,10 @@ knowledge.
 ## Material intent map
 
 Each row is a planned facet, not a finished question. The authoring ticket turns
-the facet into a question and options.
+the facet into a question and options. Where a row names a lesson, event or
+person, the published item reframes it as the underlying subject concept under
+the question-scope rule; the bank is the source of truth and the row is only a
+planning aid.
 
 | Material | MCQ focus | Short-answer focus |
 |---|---|---|

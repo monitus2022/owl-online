@@ -2,11 +2,11 @@
 
 - Status: `published`
 - Built at: `2026-11-09T08:42:36Z`
-- Review date: `2026-11-09`
+- Reviewed at: `2026-11-09T09:01:28Z`
 - Pack: `1.0.0` / `e7139cbcc23eaa5c`
 - Index text hash: `aca4c57462d449f5`
-- Generator: `deepseek-v4.1-flash` / `dada-bank-authoring-v1`
-- Judge: `mistralai/mistral-small-3.2-24b-instruct` / `dada-bank-judge-v1`
+- Generator: `deepseek/deepseek-v4.1-flash` / `dada-bank-authoring-v1` / temperature 0.0
+- Judge: `mistralai/mistral-small-3.2-24b-instruct` / `dada-bank-judge-v1` / temperature 0.0
 - Items: 50 (25 MCQ, 25 short answer)
 - Validation: ok=True errors=0 warnings=0
 
@@ -21,29 +21,39 @@
 
 ## Concept coverage
 
-| Concept | Items |
-|---|---:|
-| `dada-creature-boggart` | 4 |
-| `dada-creature-dementors` | 2 |
-| `dada-creature-grim` | 2 |
-| `dada-creature-grindylow` | 2 |
-| `dada-creature-pixie` | 2 |
-| `dada-creature-thestral` | 2 |
-| `dada-creature-werewolf` | 4 |
-| `dada-magic-boggart-banishing-spell` | 2 |
-| `dada-magic-concealment-charm` | 2 |
-| `dada-magic-corporeal-patronus` | 2 |
-| `dada-magic-countercurse` | 2 |
-| `dada-magic-cruciatus-curse` | 2 |
-| `dada-magic-disarming-charm` | 2 |
-| `dada-magic-fidelius-charm` | 2 |
-| `dada-magic-hex-deflection` | 2 |
-| `dada-magic-imperius-curse` | 2 |
-| `dada-magic-killing-curse` | 2 |
-| `dada-magic-patronus` | 4 |
-| `dada-magic-shield-charm` | 4 |
-| `dada-magic-stunning-spell` | 2 |
-| `dada-magic-unforgivable-curses` | 2 |
+| Concept | MCQ | Short answer |
+|---|---:|---:|
+| `dada-creature-boggart` | 2 | 2 |
+| `dada-creature-dementors` | 1 | 1 |
+| `dada-creature-grim` | 1 | 1 |
+| `dada-creature-grindylow` | 1 | 1 |
+| `dada-creature-pixie` | 1 | 1 |
+| `dada-creature-thestral` | 1 | 1 |
+| `dada-creature-werewolf` | 2 | 2 |
+| `dada-magic-boggart-banishing-spell` | 1 | 1 |
+| `dada-magic-concealment-charm` | 1 | 1 |
+| `dada-magic-corporeal-patronus` | 1 | 1 |
+| `dada-magic-countercurse` | 1 | 1 |
+| `dada-magic-cruciatus-curse` | 1 | 1 |
+| `dada-magic-disarming-charm` | 1 | 1 |
+| `dada-magic-fidelius-charm` | 1 | 1 |
+| `dada-magic-hex-deflection` | 1 | 1 |
+| `dada-magic-imperius-curse` | 1 | 1 |
+| `dada-magic-killing-curse` | 1 | 1 |
+| `dada-magic-patronus` | 2 | 2 |
+| `dada-magic-shield-charm` | 2 | 2 |
+| `dada-magic-stunning-spell` | 1 | 1 |
+| `dada-magic-unforgivable-curses` | 1 | 1 |
+
+## Difficulty
+
+| Difficulty | MCQ | Short answer |
+|---|---:|---:|
+| application | 4 | 3 |
+| comparison | 4 | 5 |
+| explanation | 8 | 9 |
+| recall | 8 | 8 |
+| scenario | 1 | 0 |
 
 ## Answer positions
 
@@ -117,6 +127,12 @@
 - Warnings: 0
 - Detailed messages stay in the CLI output; this record is structure only.
 
+## Near-duplicate check
+
+- Token Jaccard over the 50 prompts: maximum 0.4545; 0 pairs at or above 0.75.
+- Embedding cosine (`qwen3-embedding:0.6b`): maximum 0.8772; 0 pairs at or above 0.90.
+- Full report: `data/exams/dada/candidates/near_duplicates.json` (local, gitignored).
+
 ## Independent verification
 
 - Model: `mistralai/mistral-small-3.2-24b-instruct`, temperature `0.0`.
@@ -127,5 +143,6 @@
 ## Review
 
 - 25 MCQ keys and 25 short-answer golden answers and rubrics were reviewed.
-- All 25 MCQs and all 25 short answers were checked by the independent model.
-- Rejected items: none. The authored pool was 25 MCQ and 25 short answers.
+- All 25 MCQs and all 25 short answers were checked by the independent model; all 50 prompts were checked for near-duplicates.
+- Reviewer notes: the authored pool was 25 MCQ and 25 short answers, one per reviewed material. The ~35 + ~35 buffer in #190 is a contingency for rejects; the independent verifier rejected none, so no replacement pool was needed.
+- Rejected items: none.

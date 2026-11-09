@@ -248,8 +248,8 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
 ## Phase B: Subject packs and exam bank
 
-Status: DADA packs delivered; the DADA bank 1.0.0 is published; grading and
-serving are next (#192/#193).
+Status: DADA packs delivered; the DADA bank 1.0.0 is published; quality
+evaluation (#191), grading (#192) and serving (#193) are next.
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
 bank and hybrid grader on top of them.

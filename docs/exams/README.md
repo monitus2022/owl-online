@@ -96,9 +96,12 @@ The validator checks:
 
 The validator reports every problem it can see, not just the first one. The
 `--record` output is written only after a successful validation; it contains
-counts, ids and coverage, never prompts, golden answers or evidence quotes. The
-25 + 25 count target and the topic quotas are authoring gates in #190; this
-schema validator reports coverage but does not hardcode the DADA target.
+counts, ids, topic, concept and difficulty coverage, the review date and the
+validation summary, never prompts, golden answers or evidence quotes. The
+near-duplicate, independent-verification and review sections are run-specific
+and are appended after the command. The 25 + 25 count target and the topic
+quotas are authoring gates in #190; this schema validator reports coverage but
+does not hardcode the DADA target.
 
 ## Source policy
 
