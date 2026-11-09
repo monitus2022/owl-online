@@ -324,12 +324,14 @@ The pipeline ships only the image. Do these once on the instance:
    `OWL_PERSONA` (repository variable or default), so they override the file
    even when no variable is set.
 
-3. The data at `/data`: `chunks.jsonl` plus the index built with the same
-   embedder. Build the Titan index locally, then upload both:
+3. The data at `/data`: `chunks.jsonl`, the index built with the same
+   embedder, `lore/` and `subjects/`. Build the Titan index locally, then
+   upload them:
 
    ```
    uv run python scripts/build_index.py --provider bedrock --index data/index/titan
-   # copy data/chunks.jsonl and data/index/titan/ to /data on the host
+   # copy data/chunks.jsonl, data/index/titan/, data/lore/ and data/subjects/ to /data
+   ls /data/subjects/dada/pack.toml
    ```
 
 4. TLS. nginx terminates HTTPS on 443 with the Cloudflare Origin Certificate

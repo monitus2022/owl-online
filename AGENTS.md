@@ -6,12 +6,14 @@ O.W.L. Online - a grounded, agentic RAG application. Read this before making cha
 
 A retrieval-augmented question-answering engine with two surfaces: a chat that
 answers, sets practice and gives formative feedback, and a static exam bank with
-offline generation and hybrid grading. The project's point is the evaluation
-discipline and the full-stack agent, not the corpus.
+offline generation and hybrid grading. The DADA pack is published at 1.0.0;
+lesson mode and the professor persona are live behind `OWL_LESSON_MODE` /
+`OWL_PERSONA`; the exam bank is the next product surface. The project's point is
+the evaluation discipline and the full-stack agent, not the corpus.
 
 ## Commands
 
-Provisional until the code layout exists; update these as the project takes shape.
+Run these from the repository root.
 
 - Install: `uv sync` (installs the dev and ingest groups; LangGraph and SSE are base dependencies)
 - Run API: `uvicorn app.main:app --reload`
