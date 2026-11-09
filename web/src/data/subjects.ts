@@ -1,8 +1,10 @@
 // The subject taxonomy as the frontend sees it. One entry per department of
 // Ashcombe Academy, matching the five founders in docs/persona.md and the
-// pilot order in docs/workplan.md. The backend contract for this list is the
-// planned GET /v1/subjects; until it lands, this file is the data source and
-// the venue pages must not invent facts about departments that are not open.
+// pilot order in docs/workplan.md. The backend contract is GET /v1/subjects:
+// it owns availability, version, lesson and persona flags, while this file
+// keeps the presentation metadata (professor, accent, crest, blurb) and the
+// fallback status for an unreachable API. The venue pages must not invent
+// facts about departments that are not open.
 
 export type SubjectStatus = "open" | "soon";
 
@@ -16,14 +18,15 @@ export type ProfessorVariant = "crane" | "witch-hat" | "flask" | "wide-hat" | "s
 // seedling), not invented heraldry: they decorate, they teach nothing.
 export type CrestName = "shield" | "flask" | "butterfly" | "star" | "sprout";
 
-// Whether the department's professor voice is live in the API. The persona
-// layer ships behind OWL_PERSONA and the flag is off on the served host
-// while #97 completes, so everything is in rehearsal; flipping this field
-// to "live" is the single switch the UI needs when the flag ships.
+// Whether the department's professor voice is live. The API `persona` flag in
+// GET /v1/subjects is authoritative; this field is only the fallback when the
+// API is unreachable.
 export type PersonaState = "live" | "rehearsal";
 
 export interface Subject {
   slug: string;
+  /** Canonical API subject key; differs from the URL slug for DADA. */
+  apiSubject: string;
   name: string;
   /** Short name for the crest plaque on the door. */
   plaque: string;
@@ -41,6 +44,7 @@ export interface Subject {
 export const SUBJECTS: Subject[] = [
   {
     slug: "defence-against-the-dark-arts",
+    apiSubject: "dada",
     name: "Defence Against the Dark Arts",
     plaque: "DADA",
     professor: "Professor Alistair Crane",
@@ -53,6 +57,7 @@ export const SUBJECTS: Subject[] = [
   },
   {
     slug: "potions",
+    apiSubject: "potions",
     name: "Potions",
     plaque: "POT",
     professor: "Department not yet open",
@@ -65,6 +70,7 @@ export const SUBJECTS: Subject[] = [
   },
   {
     slug: "transfiguration",
+    apiSubject: "transfiguration",
     name: "Transfiguration",
     plaque: "TRA",
     professor: "Department not yet open",
@@ -77,6 +83,7 @@ export const SUBJECTS: Subject[] = [
   },
   {
     slug: "charms",
+    apiSubject: "charms",
     name: "Charms",
     plaque: "CHA",
     professor: "Department not yet open",
@@ -89,6 +96,7 @@ export const SUBJECTS: Subject[] = [
   },
   {
     slug: "herbology",
+    apiSubject: "herbology",
     name: "Herbology",
     plaque: "HER",
     professor: "Department not yet open",

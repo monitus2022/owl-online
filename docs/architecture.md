@@ -28,7 +28,7 @@ Pipeline stages, in order:
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
 | Generate | `app/pipeline/generate/` | `ask`, `ask_lesson`, `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
-| Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node` |
+| Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node`, `lesson_node` |
 
 `parse_chapters` drops the front matter before book 1 and trims the previous
 book's trailing copyright page plus the next book's dedication and contents from
@@ -225,10 +225,12 @@ that do not exist yet:
 | `ExamClient` | `web/src/api/exams.ts` | `MockExamClient` runs a demo bank and grades on the device, in the shape of the planned `/v1/exams` contract | #38/#42 add `HttpExamClient` |
 | `ResultsStore` | `web/src/api/results.ts` | device-local localStorage records, labelled provisional | #35 moves history server-side |
 
-The voice rule lives in `web/src/data/subjects.ts`: while `OWL_PERSONA` is off
-at the served host the UI addresses the professor but claims no authorship;
-flipping that department's `personaState` is the single switch for the chat
-affordances. The `build` check of the `web` workflow runs the Pages build on
+The voice rule lives in `web/src/data/subjects.ts` for presentation metadata
+only. The venue fetches `GET /v1/subjects` and takes the live `persona` and
+`lesson` flags from it, so the UI addresses the professor only when the API says
+the voice is live, and the DADA room sends `mode=lesson` only when the API says
+the pack selector is loaded. The static file remains the fallback when the API
+is unreachable. The `build` check of the `web` workflow runs the Pages build on
 every pull request and push to main, and deploy-preview origins are covered by
 the API's CORS origin regex. `web/README.md` carries the component map and the
 honesty rules.
@@ -279,12 +281,12 @@ sequenceDiagram
       LLM-->>A: answer citing [chunk-id] or [lore:id]
     end
     alt verification passed
-      A-->>API: AskResult(answer, citations, lore_citations, attempts)
+      A-->>API: AskResult(answer, citations, lore_citations, material_citations, attempts)
     else refusal or still uncited
       A-->>API: AskResult(abstain, abstain_reason, attempts)
     end
   end
-  API-->>C: AskResponse {answer, citations, lore_citations, abstained}
+  API-->>C: AskResponse {answer, citations, lore_citations, material_citations, abstained}
 ```
 
 One deadline covers the whole request: `OWL_ASK_TIMEOUT_S` (default 30 s) wraps
@@ -388,26 +390,30 @@ SSE events:
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
-deterministic: an explicit mode wins, a supplied student answer is a feedback
-request, a practice request is a question or short set of questions, and
-everything else is answer. When `OWL_PERSONA` is on, narrow meta and personal
-cues route to scripted replies before the answer path. Meta and personal skip
-retrieval and the model, so they stream no tokens. Tokens are a draft. Citation validation runs on the
-complete answer, so an ungrounded stream emits `reset` before the authoritative
-`final` event. A failed deterministic verification emits `reset` and streams one
-retry when the budget allows; the client drops the rejected draft on the same
-event. Provider failures arrive as an `error` event because HTTP headers are
-already sent.
+deterministic. An explicit `answer`, `practice` or `feedback` wins. A supplied
+student answer is a feedback request, a practice request is a question or short
+set of questions, and everything else is answer. When `OWL_PERSONA` is on, narrow
+meta and personal cues route to scripted replies before the answer path.
+`mode=lesson` is a preference, not an override: it applies only when the
+classification would otherwise be `answer`; practice, feedback, meta and
+personal keep their routes, so a lesson-default venue still greets and tests.
+Meta and personal skip retrieval and the model, so they stream no tokens. Tokens
+are a draft. Citation validation runs on the complete answer, so an ungrounded
+stream emits `reset` before the authoritative `final` event. A failed
+deterministic verification emits `reset` and streams one retry when the budget
+allows; the client drops the rejected draft on the same event. Provider failures
+arrive as an `error` event because HTTP headers are already sent.
 
 ### Lesson branch
 
-When the request mode is `lesson` and `OWL_LESSON_MODE` is on, the graph routes
-to `lesson_node` instead of `answer`. The derived selector scores the in-memory
-material vectors, the prompt carries only the selected materials, the draft must
-cite `[mat:<id>]` from that set, and the final payload carries
-`material_citations` plus the materials' book `source_refs` as `citations`. This
-branch makes no retrieval or reranker call. Below the selector's best-match
-floor it returns nothing and the request abstains with `no_evidence`.
+When the classification would otherwise be `answer` and the request mode is
+`lesson` with `OWL_LESSON_MODE` on, the graph routes to `lesson_node` instead of
+`answer`. The derived selector scores the in-memory material vectors, the prompt
+carries only the selected materials, the draft must cite `[mat:<id>]` from that
+set, and the final payload carries `material_citations` plus the materials' book
+`source_refs` as `citations`. This branch makes no retrieval or reranker call.
+Below the selector's best-match floor it returns nothing and the request
+abstains with `no_evidence`.
 
 ## Model routing
 
@@ -460,7 +466,7 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
 | `meta` | persona on; identity, subject scope, exam (non-disclosure), syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
-| `lesson` | explicit `mode=lesson`, `OWL_LESSON_MODE` on | teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs | no | no |
+| `lesson` | classification would be answer, explicit `mode=lesson`, `OWL_LESSON_MODE` on | teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs | no | no |
 
 Lesson mode is the one intent grounded in a subject pack rather than the corpus.
 The selector is derived at startup by embedding material texts in memory and

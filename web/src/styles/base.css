@@ -669,6 +669,22 @@ main {
   color: var(--ink-dim);
 }
 
+.citation-group {
+  margin-top: 0.7rem;
+}
+
+.citation-group .citation-chips {
+  margin-top: 0.25rem;
+}
+
+.citation-label {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
 .abstain-note {
   font-size: 0.8rem;
   color: var(--ink-dim);

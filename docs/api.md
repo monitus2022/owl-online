@@ -16,7 +16,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 |---|---|---|
 | `GET` | `/health` | liveness; returns `{"status": "ok"}` |
 | `GET` | `/` | the static chat page |
-| `GET` | `/v1/subjects` | published subject packs |
+| `GET` | `/v1/subjects` | published subject packs plus the `lesson` and `persona` flags |
 | `POST` | `/ask` | one-shot grounded answer |
 | `POST` | `/ask/stream` | chat over server-sent events |
 
@@ -67,6 +67,9 @@ is at most 6000 characters and is only valid with `auto` or `feedback`. When the
 persona is on, the server may also route to `meta` or `personal`; those are not
 accepted as request modes. `lesson` is explicit only, never inferred, and is
 rejected with `400` unless `OWL_LESSON_MODE` is on and a published pack loaded.
+It is a preference for the answer path, not an absolute route: practice,
+feedback, meta and personal keep their normal handling, so a venue that defaults
+to lesson still greets and tests correctly.
 
 The response is `text/event-stream`. Events:
 
@@ -136,9 +139,18 @@ Response `200`:
       "concepts": 21,
       "materials": 25
     }
-  ]
+  ],
+  "lesson": true,
+  "lesson_subject": "dada",
+  "persona": true
 }
 ```
+
+`lesson` is true only when lesson mode is enabled, a selector loaded, and the
+configured subject (`OWL_LORE_SUBJECT`) is among the selector's subjects.
+`lesson_subject` names that subject when `lesson` is true, so the frontend can
+scope the mode to the right venue. `persona` mirrors `OWL_PERSONA`, so the
+frontend can stop hardcoding whether the professor's voice is live.
 
 ## Errors
 
@@ -166,8 +178,10 @@ bounded, because a legitimate stream can outlive the deadline.
 - Default chat limits: 10 messages per minute, 100 per day, 2 concurrent, plus a
   100/day per-IP cap and a 200k daily token budget. The counters live in the one
   API process and reset on restart.
-- Corpus-only answers use an exact answer cache. Practice, feedback, meta and
-  personal are never cached. The cache scope includes the lore pack version.
+- Corpus-only answers use an exact answer cache. Practice, feedback, meta,
+  personal and lesson are never cached. The cache scope includes the lore pack
+  version and, when lesson mode is on, the pack fingerprints and selector
+  settings.
 - The lore pack is loaded from `OWL_LORE_PATH` (a Markdown directory or a JSONL
   file). Absent means the answer path stays book-only.
 

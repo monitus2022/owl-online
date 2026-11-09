@@ -7,12 +7,19 @@ import type { PersonaState } from "../data/subjects";
 // addresses the professor as the addressee in every state; only the 503
 // consults personaState before using professor wording (voice live or not).
 
-export type ChatMode = "answer" | "practice" | "feedback" | "meta" | "personal";
+export type ChatMode =
+  | "answer"
+  | "practice"
+  | "feedback"
+  | "meta"
+  | "personal"
+  | "lesson";
 
 export interface FinalPayload {
   answer: string;
   citations: string[];
   lore_citations?: string[];
+  material_citations?: string[];
   abstained: boolean;
   needs_input?: boolean;
   attempts?: number;
@@ -32,6 +39,7 @@ export class ChatError extends Error {}
 export async function* askStream(
   question: string,
   personaState: PersonaState,
+  mode: "auto" | "lesson" = "auto",
 ): AsyncGenerator<StreamEvent> {
   let response: Response;
   try {
@@ -39,7 +47,7 @@ export async function* askStream(
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, mode: "auto" }),
+      body: JSON.stringify({ question, mode }),
     });
   } catch {
     throw new ChatError("Could not reach the Academy. Is the server running?");

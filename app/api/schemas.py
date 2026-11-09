@@ -53,6 +53,9 @@ class AskResponse(BaseModel):
 
 
 class SubjectsResponse(BaseModel):
-    """The published subject packs the API can serve."""
+    """The published subject packs the API can serve, plus the live flags."""
 
     subjects: list[PackSummary]
+    lesson: bool = False
+    lesson_subject: str = ""
+    persona: bool = False

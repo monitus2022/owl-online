@@ -8,6 +8,7 @@ import time
 from fastapi.testclient import TestClient
 
 from app.agent import build_graph
+from app.agent.persona import PERSONA
 from app.api.runtime import Runtime
 from app.config import Settings
 from app.knowledge.materials import Material, SourceRef
@@ -548,6 +549,9 @@ def test_subjects_lists_published_packs():
         response = client.get("/v1/subjects")
     assert response.status_code == 200
     body = response.json()
+    assert body["lesson"] is False
+    assert body["lesson_subject"] == ""
+    assert body["persona"] is False
     assert body["subjects"] == [
         {
             "subject": "dada",
@@ -568,7 +572,12 @@ def test_subjects_empty_without_packs():
     with _client() as client:
         response = client.get("/v1/subjects")
     assert response.status_code == 200
-    assert response.json() == {"subjects": []}
+    assert response.json() == {
+        "subjects": [],
+        "lesson": False,
+        "lesson_subject": "",
+        "persona": False,
+    }
 
 
 # Lesson mode: pack-grounded answers use an explicit mode, gated by settings.
@@ -597,6 +606,9 @@ _LESSON_MATERIAL = Material(
 class _LessonSelector:
     async def select(self, question, *, subject, top_k=3, min_score=0.0):
         return [_LESSON_MATERIAL]
+
+    def subjects(self):
+        return ("dada",)
 
 
 class _LessonLlm(_Llm):
@@ -668,6 +680,9 @@ class _EmptyLessonSelector:
     async def select(self, question, *, subject, top_k=3, min_score=0.0):
         return []
 
+    def subjects(self):
+        return ("dada",)
+
 
 def _empty_lesson_runtime() -> Runtime:
     selector = _EmptyLessonSelector()
@@ -734,3 +749,95 @@ def test_lesson_mode_abstains_when_no_material_matches():
     assert finals[0]["abstained"] is True
     assert finals[0]["material_citations"] == []
     assert finals[0]["citations"] == []
+
+
+def test_subjects_reports_lesson_and_persona_flags():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True, persona=True),
+        runtime=_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        body = client.get("/v1/subjects").json()
+    assert body["lesson"] is True
+    assert body["lesson_subject"] == "dada"
+    assert body["persona"] is True
+    assert body["subjects"] == []
+
+
+class _OtherLessonSelector(_EmptyLessonSelector):
+    def subjects(self):
+        return ("charms",)
+
+
+def test_subjects_reports_lesson_false_when_the_configured_subject_is_absent():
+    selector = _OtherLessonSelector()
+    graph = build_graph(
+        _Retriever(),
+        _LessonLlm(),
+        lesson=selector,
+        lesson_subject="dada",
+        lesson_top_k=3,
+    )
+    runtime = Runtime(
+        retriever=_Retriever(),
+        llm=_LessonLlm(),
+        agent=graph,
+        lesson=selector,
+    )
+    app = create_app(app_settings=Settings(lesson_mode=True), runtime=runtime)
+    with TestClient(app) as client:
+        body = client.get("/v1/subjects").json()
+        rejected = client.post(
+            "/ask/stream", json={"question": "Teach me", "mode": "lesson"}
+        )
+    assert body["lesson"] is False
+    assert body["lesson_subject"] == ""
+    assert rejected.status_code == 400
+
+
+def test_subjects_reports_lesson_false_without_a_selector():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True),
+        runtime=Runtime(retriever=_Retriever(), llm=_Llm()),
+    )
+    with TestClient(app) as client:
+        body = client.get("/v1/subjects").json()
+    assert body["lesson"] is False
+
+
+def _persona_lesson_runtime() -> Runtime:
+    selector = _LessonSelector()
+    graph = build_graph(
+        _Retriever(),
+        _LessonLlm(),
+        lesson=selector,
+        lesson_subject="dada",
+        lesson_top_k=3,
+        persona=PERSONA,
+    )
+    return Runtime(
+        retriever=_Retriever(),
+        llm=_LessonLlm(),
+        agent=graph,
+        lesson=selector,
+    )
+
+
+def test_lesson_mode_still_routes_meta_and_practice():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True, persona=True),
+        runtime=_persona_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        for question, expected in (
+            ("Who are you?", "meta"),
+            ("Give me a practice question", "practice"),
+        ):
+            with client.stream(
+                "POST",
+                "/ask/stream",
+                json={"question": question, "mode": "lesson"},
+            ) as response:
+                body = "".join(response.iter_text())
+            modes = [data["mode"] for name, data in _parse_sse(body) if name == "mode"]
+            assert modes[0] == expected

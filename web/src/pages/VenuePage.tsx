@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ArchBackdrop } from "../components/ArchBackdrop";
@@ -7,7 +7,10 @@ import { ChatPanel } from "../components/ChatPanel";
 import { ExamPanel } from "../components/ExamPanel";
 import { HistoryPanel } from "../components/HistoryPanel";
 import { Silhouette } from "../components/Silhouette";
+import { fetchSubjects } from "../api/subjects";
+import type { SubjectsPayload } from "../api/subjects";
 import { getSubject } from "../data/subjects";
+import type { Subject } from "../data/subjects";
 
 // The study venue. The subject accent is injected as a CSS variable for the
 // whole page, so every control, focus ring and seal picks up the department
@@ -25,6 +28,27 @@ export function VenuePage() {
   const { slug } = useParams();
   const subject = getSubject(slug);
   const [tab, setTab] = useState<Tab>("chat");
+  const [department, setDepartment] = useState<SubjectsPayload | null>(null);
+  const [departmentChecked, setDepartmentChecked] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetchSubjects()
+      .then((payload) => {
+        if (active) {
+          setDepartment(payload);
+          setDepartmentChecked(true);
+        }
+      })
+      .catch(() => {
+        // Keep the static stand-in when the API is unreachable; chat will
+        // report the connection failure on the first question.
+        if (active) setDepartmentChecked(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // WAI-ARIA tabs: arrow keys move activation around the ring of tabs,
   // Home/End jump to the ends. The list is short, so activation follows
@@ -49,23 +73,47 @@ export function VenuePage() {
 
   if (!subject) return <Navigate to="/cloister" replace />;
 
-  if (subject.status === "soon") {
+  const summary = department?.subjects.find(
+    (entry) => entry.subject === subject.apiSubject,
+  );
+  const isOpen =
+    department === null
+      ? subject.status === "open"
+      : summary?.status === "published";
+  const personaState =
+    department === null
+      ? subject.personaState
+      : department.persona
+        ? "live"
+        : "rehearsal";
+  const room: Subject = {
+    ...subject,
+    status: isOpen ? "open" : "soon",
+    personaState,
+  };
+  const lesson = Boolean(
+    department?.lesson &&
+      department.lesson_subject === subject.apiSubject &&
+      isOpen,
+  );
+
+  if (room.status === "soon") {
     return (
-      <main className="venue" style={{ "--accent": subject.accent } as CSSProperties}>
+      <main className="venue" style={{ "--accent": room.accent } as CSSProperties}>
         <nav className="crumbs" aria-label="Breadcrumb">
           <Link to="/">The gate</Link>
           <span aria-hidden="true"> / </span>
           <Link to="/cloister">The cloister</Link>
           <span aria-hidden="true"> / </span>
-          <span>{subject.name}</span>
+          <span>{room.name}</span>
         </nav>
-        <h1>{subject.name}</h1>
-        <ArchBackdrop crest={subject.crest} dim />
+        <h1>{room.name}</h1>
+        <ArchBackdrop crest={room.crest} dim />
         <div className="soon-card">
-          <Crest crest={subject.crest} className="soon-crest" />
+          <Crest crest={room.crest} className="soon-crest" />
           <h2>The classroom is being furnished</h2>
           <p>
-            {subject.blurb} This department opens when its subject pack is
+            {room.blurb} This department opens when its subject pack is
             validated and its professor takes the post.
           </p>
         </div>
@@ -76,27 +124,27 @@ export function VenuePage() {
   return (
     <main
       className="venue"
-      style={{ "--accent": subject.accent } as CSSProperties}
+      style={{ "--accent": room.accent } as CSSProperties}
     >
       <nav className="crumbs" aria-label="Breadcrumb">
         <Link to="/">The gate</Link>
         <span aria-hidden="true"> / </span>
         <Link to="/cloister">The cloister</Link>
         <span aria-hidden="true"> / </span>
-        <span>{subject.name}</span>
+        <span>{room.name}</span>
       </nav>
       <header className="venue-head">
-        <Silhouette variant={subject.professorVariant} />
+        <Silhouette variant={room.professorVariant} />
         <div>
-          <h1>{subject.name}</h1>
+          <h1>{room.name}</h1>
           <p className="venue-professor">
-            {subject.professor}
-            {subject.personaState === "live" ? "" : " — voice in rehearsal"}
+            {room.professor}
+            {room.personaState === "live" ? "" : " — voice in rehearsal"}
           </p>
         </div>
-        <Crest crest={subject.crest} className="venue-crest" />
+        <Crest crest={room.crest} className="venue-crest" />
       </header>
-      <ArchBackdrop crest={subject.crest} />
+      <ArchBackdrop crest={room.crest} />
       <div className="tabs" role="tablist" aria-label="Room" onKeyDown={moveTab}>
         {TABS.map((entry) => (
           <button
@@ -122,7 +170,12 @@ export function VenuePage() {
         aria-labelledby="tab-chat"
         hidden={tab !== "chat"}
       >
-        <ChatPanel subject={subject} />
+        <ChatPanel
+          key={room.slug}
+          subject={room}
+          lesson={lesson}
+          ready={departmentChecked}
+        />
       </div>
       <div
         id="panel-exam"
@@ -130,7 +183,7 @@ export function VenuePage() {
         aria-labelledby="tab-exam"
         hidden={tab !== "exam"}
       >
-        <ExamPanel subject={subject} />
+        <ExamPanel subject={room} />
       </div>
       <div
         id="panel-papers"
@@ -139,7 +192,7 @@ export function VenuePage() {
         tabIndex={0}
         hidden={tab !== "papers"}
       >
-        <HistoryPanel subject={subject} active={tab === "papers"} />
+        <HistoryPanel subject={room} active={tab === "papers"} />
       </div>
     </main>
   );

@@ -46,6 +46,37 @@ def test_explicit_mode_wins():
     assert classify("Generate a quiz", requested_mode="answer") == "answer"
 
 
+def test_lesson_is_an_answer_path_hint():
+    assert classify("What is a Boggart?", requested_mode="lesson") == "lesson"
+    assert (
+        classify("Who are you?", requested_mode="lesson", persona=True) == "meta"
+    )
+    assert (
+        classify("Give me a practice question", requested_mode="lesson")
+        == "practice"
+    )
+    assert (
+        classify(
+            "Grade this answer: Harry used Expelliarmus.",
+            requested_mode="lesson",
+        )
+        == "feedback"
+    )
+    assert (
+        classify("How are you feeling today?", requested_mode="lesson", persona=True)
+        == "lesson"
+    )
+    assert (
+        classify(
+            "I feel stressed about the exam.",
+            requested_mode="lesson",
+            persona=True,
+        )
+        == "personal"
+    )
+    assert classify("Who are you?", requested_mode="lesson", persona=False) == "lesson"
+
+
 def test_route_returns_a_state_update():
     state = {"question": "Who is the Head of Gryffindor House?"}
     assert route(state) == {"mode": "answer"}
