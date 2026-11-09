@@ -6,10 +6,11 @@ O.W.L. Online - a grounded, agentic RAG application. Read this before making cha
 
 A retrieval-augmented question-answering engine with two surfaces: a chat that
 answers, sets practice and gives formative feedback, and a static exam bank with
-offline generation and hybrid grading. The DADA pack is published at 1.0.0;
-the professor persona is live behind `OWL_PERSONA`; lesson mode is live behind
-`OWL_LESSON_MODE` with a labelled corpus fallback when the pack is thin; the exam
-bank is the next product surface. The project's point is the evaluation
+offline generation and hybrid grading. The DADA pack and exam bank are published
+at 1.0.0; the professor persona is live behind `OWL_PERSONA`; lesson mode is live
+behind `OWL_LESSON_MODE` with a labelled corpus fallback when the pack is thin;
+hybrid grading is built, and the bank eval and judge calibration are recorded;
+the served paper is the next product slice. The project's point is the evaluation
 discipline and the full-stack agent, not the corpus.
 
 ## Commands
@@ -54,17 +55,18 @@ Layout:
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
 - `app/agent/` - LangGraph chat graph, node functions, state (V2); lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
 - `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts) and feeds lesson mode through a derived in-memory material selector (#166); pack wiring and Charms content remain on #128
-- `app/storage/` - planned exam store (SQLite models and repository)
-- `app/grading/` - planned hybrid grader: deterministic objective scoring, pinned LLM rubric judge for free text, deterministic score bands
+- `app/storage/` - SQLite bank store (#189); the attempt and paper repository follows #193
+- `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the bank eval and judge calibration are in `eval/exam/` (#191); the served paper is #193
 - `data/subjects/` - local subject packs; the DADA pack is published; source text stays out of git
 - `app/schemas.py` - domain data (`Chunk`)
 - `app/config.py` - settings (env-based, `OWL_` prefix)
 - `app/logging.py` - logging setup: one formatter, level from settings, per-request id
 - `docs/architecture.md` - living diagrams (contracts, module deps, chat flows, exam-bank boundary); update when a contract, an adapter, or the top-level flow changes
 - `docs/workplan.md` - phase plan, ticket map, grading and memory decisions
+- `docs/exams/` - DADA bank blueprint, artifact rules, published bank record, manifest snapshot and grading probe (#188-#192)
 - `docs/lexicon-canon-index.md` - plan of record for the hp-lexicon canon index (#125-#128); update it when a parse rule, an artifact contract or the source policy changes
 - `docs/runs/` - one committed Markdown record per eval run, plus the template and index
-- `eval/` - harness, gold set, thresholds
+- `eval/` - harness, gold set, thresholds; `eval/exam/` holds the DADA bank evaluation and judge calibration (#191)
 - `web/` - React + Vite academy frontend, deployed separately on Cloudflare Pages (docs/deploy.md); it calls the versioned contract in `docs/api.md` and never imports Python code
 
 Every model call goes through an adapter; the provider is a config value.

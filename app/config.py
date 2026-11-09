@@ -61,6 +61,12 @@ class Settings(BaseSettings):
     # bounded because a legitimate stream can outlive it.
     ask_timeout_s: float = Field(default=30.0, gt=0)
 
+    # Exam grading (#192). The bank manifest pins the judge model and prompt
+    # version; these settings choose the runtime adapter, token budget and cache.
+    exam_judge_provider: Literal["bedrock", "openrouter"] = "openrouter"
+    exam_judge_max_tokens: int = Field(default=2000, ge=1)
+    exam_judge_cache_path: Path | None = Path("data/exam_judge_cache.jsonl")
+
     # Chat cost controls (#88). Anonymous limits; auth later moves them to a
     # user id. The counters live in one process, so a restart resets the windows.
     chat_per_minute: int = Field(default=10, ge=1)
@@ -95,7 +101,13 @@ class Settings(BaseSettings):
                 )
         return self
 
-    @field_validator("trace_file", "lore_path", "subjects_path", mode="before")
+    @field_validator(
+        "trace_file",
+        "lore_path",
+        "subjects_path",
+        "exam_judge_cache_path",
+        mode="before",
+    )
     @classmethod
     def _blank_path(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():

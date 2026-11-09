@@ -73,10 +73,12 @@ page describes what comes next and why.
   authoring review. #128 (pack wiring: concept seeding, reference and
   source-ref prefill, chapter-to-subject lesson table) remains for Charms and
   the extraction pipeline; the #87 pack schema and validator landed with PR #153.
-- The exam bank (#178) follows; DADA packs are delivered, mixed-scope lesson
-  answers are in review (PR #199, #177), and the answer path is settled except
-  the voice work (#176). The bank blueprint (#188) fixes a target of 25 MCQ and 25
-  short-answer items; authoring follows the bank schema (#189).
+- The served exam paper (#193) follows; DADA packs and the DADA bank 1.0.0 are
+  delivered, mixed-scope lesson answers are delivered (#177, PR #199), and the
+  answer path is settled except the voice work (#176). The bank blueprint (#188)
+  fixes a target of 25 MCQ and 25 short-answer items. The bank schema, validator
+  and SQLite import are in #189, the hybrid grader is built in #192, and the
+  bank eval and judge calibration are recorded in #191.
 
 ## Product shape
 
@@ -247,7 +249,9 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
 ## Phase B: Subject packs and exam bank
 
-Status: DADA packs delivered; the exam bank is next (#178).
+Status: DADA packs delivered; the DADA bank 1.0.0 is published, the hybrid
+grader is built and the bank eval and judge calibration are recorded (#191);
+serving (#193) is next.
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
 bank and hybrid grader on top of them.
@@ -431,17 +435,18 @@ B1 exit criteria:
 
 ### B2: Exam bank
 
-A paper is 10 questions. That is long enough to feel like a paper and short
-enough to finish for fun. A paper may mix three question types: (the
-student-facing academy papers shipped with the frontend are mcq and short
-answer only - see Decisions, #132; whether long answers return is a #41
-call.)
+Status: bank 1.0.0 published (#190); hybrid grading built (#192); bank eval and
+judge calibration recorded (#191); serving next (#193).
+
+A paper is 10 questions: 6 MCQ at 3 marks and 4 short answers at 8 marks, 50
+marks total. That is long enough to feel like a paper and short enough to finish
+for fun. The first bank has no long answers.
 
 | Type | Scored by |
 |---|---|
 | `mcq` | deterministic matcher |
 | `short_answer` | pinned LLM judge against the stored golden answer and rubric |
-| `long_answer` | pinned LLM judge against the stored rubric and evidence |
+| `long_answer` | not in the first bank; future extension |
 
 ### Exam format blueprint
 
@@ -496,7 +501,8 @@ items, 50 in total. The blueprint is `docs/exams/dada-bank-blueprint.md`.
 
 Exit criteria:
 
-- a validated 10-question paper can be generated offline and stored;
+- a validated 50-item bank is stored (25 MCQ and 25 short answer);
+- a paper is sampled per attempt without a model call;
 - every question has a rubric, maximum marks, evidence snapshot and model answer;
 - a paper can be served without a model call;
 - an attempt can be submitted and graded;
@@ -504,7 +510,9 @@ Exit criteria:
 - free-text answers are judged once per attempt with per-question structured output;
 - invalid judge output is retried once and then flagged, never silently zeroed;
 - totals and bands are deterministic;
-- a human-marked calibration set reports score agreement and mean absolute error.
+- an owner-reviewed calibration set (AI-proposed marks adopted by the owner)
+  reports score agreement and mean absolute error
+  (`docs/runs/2026-11-09-191-dada-bank-eval.md`).
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 
@@ -578,7 +586,6 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #177 | Lesson mixed-scope answers with labelled corpus fallback (in review, PR #199) | V3 - Product |
 | #178 | Exam bank one-paper vertical slice (tracker for #38/#39/#40/#41/#42) | V3 - Product |
 | #187 | DADA bank: 25 MCQ + 25 short answer, 50 items total (#188-#193) | V3 - Product |
 | #38/#39/#40/#41/#42 | Exam model, generator, evaluation, grader and endpoints | V3 - Product |
@@ -631,7 +638,7 @@ persists exam attempts and chat history.
 | Ingest | #113 |
 | CI gate | #16 |
 | Frontend surfaces | #132, #134, #135, #136, #137, #141, #143, #145, #157 |
-| Lesson mode and persona | #120, #166, #168 (the #97 thin slice is delivered; #97 stays open for the voice work, #176; #177 is in review, PR #199) |
+| Lesson mode and persona | #120, #166, #168, #177 (PR #199; the #97 thin slice is delivered, #97 stays open for the voice work, #176) |
 | Venue fallback | #172 (PR #173) |
 | Deploy hardening | #170, #174 (PR #175) |
 
@@ -643,7 +650,7 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The next work is the Now set: #177 (in review), #178, #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
+The next work is the Now set: #178, #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
 (#127 closed); #128 carries the pack wiring and Charms content. The
 #87 schema, validator and DADA 1.0.0 pack are delivered. #16, #120, #170, #172,
 #174 and #127 are closed. #107 is deferred and likely superseded by the
@@ -701,7 +708,8 @@ Exam generation adds:
 
 Grading adds:
 
-- agreement with a human-marked calibration set;
+- agreement with an owner-reviewed calibration set (AI-proposed marks adopted
+  by the owner);
 - exact and adjacent agreement;
 - mean absolute error;
 - per-criterion agreement;

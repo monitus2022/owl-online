@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: grounded chat, the DADA pack published at 1.0.0, lesson mode live behind `OWL_LESSON_MODE`, and the professor persona live behind `OWL_PERSONA`. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; questions outside the pack fall back to labelled set-text answers. The next product surface is the exam bank with hybrid grading, plus conversation memory and a second department. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
+> Status: grounded chat, the DADA pack published at 1.0.0, the DADA exam bank published at 1.0.0, lesson mode live behind `OWL_LESSON_MODE`, and the professor persona live behind `OWL_PERSONA`. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; questions outside the pack fall back to labelled set-text answers. The bank holds 25 MCQ and 25 short-answer items, hybrid grading is built, and the bank eval and judge calibration are recorded; the served paper is next. The next product surface is the served exam paper, plus conversation memory and a second department. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
 
 ---
 
@@ -15,7 +15,7 @@ O.W.L. Online has two product surfaces on one retrieval core:
 | Chat answer | Grounded Q&A with citations | live |
 | Chat practice | On-demand grounded practice question | live |
 | Chat feedback | Formative feedback and a provisional mark | live |
-| Exam bank | Pre-generated 10-question papers stored in a DB, served statically, graded by a hybrid scorer | planned V3 (#178) |
+| Exam bank | 25 MCQ + 25 short-answer bank sampled into 6 MCQ + 4 short-answer papers and graded by a hybrid scorer | bank 1.0.0 published (#190); grading and calibration built (#191/#192); serving next (#193) |
 | Lesson mode | Pack-grounded teaching answers with material and book citations, plus a labelled corpus fallback | live behind `OWL_LESSON_MODE` |
 
 Chat practice and feedback are ephemeral and formative. The exam bank is the
@@ -27,12 +27,14 @@ and score bands are deterministic.
 See [`docs/workplan.md`](docs/workplan.md) for the phase plan, ticket map and
 grading decisions.
 
-The exam bank is not a request-time generator. A batch job produces a paper and
-its rubric, validates both, and stores them. Each question keeps an evidence
-snapshot so regrading stays reproducible after an index rebuild. A paper is 10
-questions by default: a mix of objective, short-answer and long-answer items.
-Objective answers are scored by code; long answers go to a pinned judge with the
-rubric and evidence. The judge never writes the final total or band.
+The exam bank is not a request-time generator. The bank is authored offline,
+validated against the pack and the corpus, and stored with an evidence snapshot
+on every item. A paper samples 6 MCQ and 4 short answers for 50 marks: MCQ
+answers are scored by code, short answers go to a pinned judge with the rubric
+and evidence, and the judge never writes the final total or band. Servable
+attempts and the frontend swap are the next ticket (#193). Questions test the
+subject, not the plot; the scope rule is in
+[`docs/exams/README.md`](docs/exams/README.md).
 
 Exam generation reads from versioned subject knowledge packs: one grounded
 material store per O.W.L. subject, with every material linked to a book chunk,
@@ -70,31 +72,31 @@ A portfolio project that does the two hard things, then wraps them in a served a
 
 ```mermaid
 flowchart TD
-  C[Client] --> API[FastAPI + SSE]
-  API --> G[Chat agent]
-  subgraph G
-    R[Router] --> A[Answer]
-    R --> P[Practice]
-    R --> F[Feedback]
-    R --> L[Lesson]
+  C["Client"] --> API["FastAPI + SSE"]
+  API --> R["Router"]
+  subgraph G["Chat agent"]
+    R --> A["Answer"]
+    R --> P["Practice"]
+    R --> F["Feedback"]
+    R --> L["Lesson"]
   end
-  A --> RET[Retrieve]
+  A --> RET["Retrieve"]
   P --> RET
   F --> RET
-  L --> MAT[(Pack materials)]
-  RET --> RR[Rerank]
-  RET --> VEC[(Vector store)]
-  RET --> BM[(BM25)]
-  RR --> RER[Rerank adapter]
-  A --> LLM[LLM adapter]
+  L --> MAT[("Pack materials")]
+  RET --> RR["Rerank"]
+  RET --> VEC[("Vector store")]
+  RET --> BM[("BM25")]
+  RR --> RER["Rerank adapter"]
+  A --> LLM["LLM adapter"]
   P --> LLM
   F --> LLM
   L --> LLM
-  B[Offline exam builder] --> RET
-  B --> DB[(Exam DB)]
+  B["Offline exam builder"] --> RET
+  B --> DB[("Exam DB")]
   API --> DB
-  API --> SUB[/v1/subjects]
-  G -. trace .-> OBS[Observability]
+  API --> SUB["/v1/subjects"]
+  R -. trace .-> OBS["Observability"]
 ```
 
 Every model call goes through an adapter, so the provider is a config value, not an architecture.
@@ -173,6 +175,28 @@ Generator `qwen/qwen3-30b-a3b-instruct-2507`; judge `deepseek/deepseek-v4.1-flas
 
 Every finished eval run also gets a committed Markdown record under [`docs/runs/`](docs/runs/README.md): run id, configuration, per-slice tables, reading notes, and the raw summary. The record is the strategy history; timestamped CSVs stay local.
 
+### Exam-bank evaluation
+
+The exam bank has a separate evaluation surface in `eval/exam/`, run with
+`uv run python scripts/run_exam_eval.py`. It is not a second RAG retrieval
+benchmark: it does not add a Hit@k or generation slice. It checks the published
+bank and the short-answer judge:
+
+- deterministic bank checks: grounding, MCQ options, trivial and negative stems,
+  answer positions, short-answer length and rubrics, duplicates, coverage and an
+  option-length gate;
+- independent model checks: a second model solves each MCQ without the key,
+  judges every option, and checks every short-answer golden answer;
+- judge calibration: 24 committed student-style answers over 8 short questions
+  with owner-reviewed marks; exact and adjacent agreement, mean absolute error,
+  per-criterion agreement, retry rate and length bias.
+
+The latest record is `docs/runs/2026-11-09-191-dada-bank-eval.md`: 25/25 MCQ
+keys, 0 ambiguities, 25/25 golden answers, adjacent agreement 0.9167, mean
+absolute error 0.5000 and gate PASS. The bank and corpus are host data, so the
+live exam eval runs on the host; CI runs its offline tests. The chat RAG
+baseline above remains the retrieval evaluation.
+
 ---
 
 ## Roadmap
@@ -189,7 +213,7 @@ Execution is phased:
 | V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval + rerank, cited generation with abstention, API, mini-eval, deployed | shipped (https://api.monitus.org) |
 | V2 - Deepening | guardrails, chat intents (LangGraph), Bedrock Llm adapter, cost controls, local eval gate, retrieval foundation, multi-book answer path, professor persona | chat foundation, retrieval foundation, held-out set, CI gate, persona and the stateless lesson slice delivered; #105 flag-off and time-boxed; voice work #176 |
 | V2.5 - Subject packs | taxonomy, material packs, source refs, validation, lesson mode | DADA 1.0.0 published; Charms content #128 |
-| V3 - Exam bank and continuity | exam bank, hybrid grading, memory, threads, lesson continuity, progress | exam bank next (#178); continuity after |
+| V3 - Exam bank and continuity | exam bank, hybrid grading, memory, threads, lesson continuity, progress | exam bank 1.0.0 published; grading and calibration built (#191/#192); serving next (#193); continuity after |
 | V4 - Identity (optional) | Google auth, per-user chat and exam history, progress tracking, long-term memory | last, if needed |
 
 ---
@@ -214,7 +238,7 @@ This repository is developed with AI coding agents under human review.
 
 This project is developed with AI coding agents under human review, and that usage is recorded per ticket.
 
-- AI drafted most implementation code and tests: provider adapters and probes, retrieval and reranking, generation and verification, the API and SSE surface, the agent graph and router, the persona and lore layer, ingest and index, the eval harness and CI gate, the deploy files, and the entire frontend (`web/`, tickets #132, #134-#137, #141, #143, #145), including a read-only reviewer agent that checked each frontend ticket against its acceptance criteria before merge. It also drafted the DADA subject-pack materials and the lesson-table audit that produced pack 1.0.0 and `GET /v1/subjects`.
+- AI drafted most implementation code and tests: provider adapters and probes, retrieval and reranking, generation and verification, the API and SSE surface, the agent graph and router, the persona and lore layer, ingest and index, the eval harness and CI gate, the deploy files, and the entire frontend (`web/`, tickets #132, #134-#137, #141, #143, #145), including a read-only reviewer agent that checked each frontend ticket against its acceptance criteria before merge. It also drafted the DADA subject-pack materials and the lesson-table audit that produced pack 1.0.0 and `GET /v1/subjects`, the DADA exam bank 1.0.0 (25 MCQ + 25 short answers), which an independent Mistral Small verifier checked, the hybrid grading path (#192), and the bank evaluation and judge calibration (#191).
 - The human set the contracts, provider abstraction, eval discipline and scope boundaries; chose the defaults, degradation policies and flag states; froze the held-out sets; approved the DADA prose and lesson-table scope on 2026-11-08; and reviewed and owns every line.
 - AI assisted with documentation, issue text and run records; the human reviewed the published text.
 
