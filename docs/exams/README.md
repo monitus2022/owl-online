@@ -107,8 +107,9 @@ JSONL:
 | `GET /v1/attempts/{attempt_id}` | the same persisted view on a reload |
 | `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one judge call, then the deterministic band |
 
-The paper id is `<subject>-<version>`, so the served DADA paper is
-`dada-1.0.0`. A sampled MCQ serves the correct option and three random
+The paper id is `<subject>-<version>`, so the served papers are `dada-1.0.0`
+and `charms-1.0.0`. Each venue requests its own subject; the API default stays
+`OWL_EXAM_SUBJECT`. A sampled MCQ serves the correct option and three random
 distractors in a shuffled order; the correct option id stays on the persisted
 attempt and is never in the pre-submission view. The attempt view contains no
 golden answer, rubric or evidence either.

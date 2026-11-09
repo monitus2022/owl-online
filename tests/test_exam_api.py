@@ -97,6 +97,35 @@ def _bank_6_4() -> ExamBank:
     return ExamBank(manifest=manifest, items=[*mcqs, *shorts])
 
 
+def _charms_bank() -> ExamBank:
+    bank = _bank_6_4()
+    manifest = bank.manifest.model_copy(update={"subject": "charms"})
+    items = [
+        item.model_copy(
+            update={
+                "subject": "charms",
+                "item_id": item.item_id.replace("dada", "charms"),
+            }
+        )
+        for item in bank.items
+    ]
+    return ExamBank(manifest=manifest, items=items)
+
+
+def test_exams_route_lists_a_second_subject(tmp_path) -> None:
+    store = ExamStore(tmp_path / "exams.db")
+    store.replace_bank(_charms_bank())
+    with _client(store, _Judge()) as client:
+        assert client.get("/v1/exams").json() == []
+        papers = client.get("/v1/exams?subject=charms").json()
+        assert [paper["paper_id"] for paper in papers] == ["charms-1.0.0"]
+        assert papers[0]["subject"] == "charms"
+
+        attempt = client.post("/v1/exams/charms-1.0.0/attempts")
+        assert attempt.status_code == 201
+        assert attempt.json()["subject"] == "charms"
+
+
 def _setup(tmp_path) -> tuple[ExamStore, _Judge]:
     store = ExamStore(tmp_path / "exams.db")
     store.replace_bank(_bank_6_4())

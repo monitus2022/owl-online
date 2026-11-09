@@ -61,6 +61,7 @@ class SubjectsResponse(BaseModel):
     lesson_subject: str = ""
     lesson_fallback: bool = True
     persona: bool = False
+    persona_subject: str = ""
 
 
 class ExamPaper(BaseModel):

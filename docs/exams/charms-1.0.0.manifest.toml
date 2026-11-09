@@ -1,0 +1,17 @@
+subject = "charms"
+tier = "owl"
+version = "1.0.0"
+status = "published"
+built_at = "2026-11-09T19:07:36Z"
+reviewed_at = "2026-11-09T19:07:36Z"
+pack_version = "1.0.0"
+pack_fingerprint = "12e1ee2fe077a004"
+index_text_hash = "aca4c57462d449f5"
+generator_model = "deepseek/deepseek-v4.1-flash"
+generator_temperature = 0.0
+generator_prompt_version = "charms-bank-authoring-v1"
+judge_model = "mistralai/mistral-small-3.2-24b-instruct"
+judge_temperature = 0.0
+judge_prompt_version = "dada-bank-judge-v2"
+mcq_count = 25
+short_answer_count = 25

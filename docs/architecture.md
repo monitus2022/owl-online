@@ -14,7 +14,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
 | Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper and the curated concept-title/alias matcher; the DADA and Charms packs are published; pack wiring and the remaining subjects remain on #128 |
-| Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); the DADA bank 1.0.0 is published (#190) |
+| Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); the DADA (#190) and Charms (#213) banks 1.0.0 are published |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -582,11 +582,13 @@ flowchart LR
   DB --> API[Exam serving API]
 ```
 
-The DADA bank 1.0.0 is published under `data/exams/dada` with 25 MCQ and 25
-short-answer items. `docs/exams/dada-1.0.0.md` is the structure-only record and
-`docs/exams/dada-1.0.0.manifest.toml` holds the version and pins. The serving
-API is built (#193): it samples a paper per attempt from the imported bank and
-serves it without a model call.
+The DADA and Charms banks 1.0.0 are published under `data/exams/dada` and
+`data/exams/charms`, each with 25 MCQ and 25 short-answer items.
+`docs/exams/dada-1.0.0.md` and `docs/exams/charms-1.0.0.md` are the structure-only
+records; the matching `.manifest.toml` snapshots hold the versions and pins. The
+serving API is built (#193): it samples a paper per attempt from the imported
+bank and serves it without a model call, and `GET /v1/exams?subject=charms`
+selects the second bank.
 
 A pack contains subjects, topics, concepts, materials and source refs. Every
 material points to a chunk id, book, chapter, quote, text hash and index hash.

@@ -608,6 +608,7 @@ def test_subjects_empty_without_packs():
         "lesson_subject": "",
         "lesson_fallback": True,
         "persona": False,
+        "persona_subject": "",
     }
 
 
@@ -837,6 +838,7 @@ def test_subjects_reports_lesson_and_persona_flags():
     assert body["lesson_subject"] == "dada"
     assert body["lesson_fallback"] is True
     assert body["persona"] is True
+    assert body["persona_subject"] == "dada"
     assert body["subjects"] == []
 
 

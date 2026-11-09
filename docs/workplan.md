@@ -74,13 +74,13 @@ page describes what comes next and why.
   source-ref prefill, chapter-to-subject lesson table) has the Charms 1.0.0
   pack published; pack wiring and the other subjects remain with the
   extraction pipeline; the #87 pack schema and validator landed with PR #153.
-- The served exam paper (#193) is built; DADA packs and the DADA bank 1.0.0 are
-  delivered, mixed-scope lesson answers are delivered (#177, PR #199), and the
-  answer path is settled, and the lesson voice is delivered (#176). The bank blueprint (#188)
+- The served exam paper (#193) is built; DADA and Charms packs and both banks
+  1.0.0 are delivered, mixed-scope lesson answers are delivered (#177, PR #199),
+  and the answer path is settled, and the lesson voice is delivered (#176). The bank blueprint (#188)
   fixes a target of 25 MCQ and 25 short-answer items. The bank schema, validator
   and SQLite import are in #189, the DADA bank 1.0.0 is published in #190, the
-  hybrid grader is built in #192, the bank eval and judge calibration are
-  recorded in #191, and served attempts are in #193.
+  Charms bank 1.0.0 is published in #213, the hybrid grader is built in #192, the
+  bank eval and judge calibration are recorded in #191, and served attempts are in #193.
 
 ## Product shape
 
@@ -251,8 +251,8 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
 ## Phase B: Subject packs and exam bank
 
-Status: DADA and Charms packs delivered; the DADA bank 1.0.0 is published, the hybrid
-grader is built, the bank eval and judge calibration are recorded (#191), and
+Status: DADA and Charms packs delivered; both banks 1.0.0 are published, the hybrid
+grader is built, the DADA bank eval and judge calibration are recorded (#191), and
 served attempts are built (#193).
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
@@ -502,7 +502,9 @@ Tickets:
 | #40 | Exam and grading evaluation |
 
 The DADA bank line is #187 (sub-issues #188-#193): 25 MCQ and 25 short-answer
-items, 50 in total. The blueprint is `docs/exams/dada-bank-blueprint.md`.
+items, 50 in total. The blueprint is `docs/exams/dada-bank-blueprint.md`. The
+Charms bank line is #213 on the same schema and grader; it publishes
+`charms-1.0.0` and opens the Charms venue.
 
 Exit criteria (met by #190-#193):
 
@@ -593,6 +595,7 @@ persists exam attempts and chat history.
 |---|---|---|
 | #178 | Exam bank one-paper vertical slice (tracker for #38/#39/#40/#41/#42) | V3 - Product |
 | #187 | DADA bank: 25 MCQ + 25 short answer, 50 items total (#188-#193) | V3 - Product |
+| #213 | Charms bank: 25 MCQ + 25 short answer, 50 items total | V3 - Product |
 | #206 | Session-scoped attempt history without accounts | V3 - Product |
 | #38/#39/#40/#41/#42 | Exam model, generator, evaluation, grader and endpoints | V3 - Product |
 | #162/#163 | Starter prompts and routing contract | V3 - Product |

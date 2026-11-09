@@ -6,9 +6,8 @@ O.W.L. Online - a grounded, agentic RAG application. Read this before making cha
 
 A retrieval-augmented question-answering engine with two surfaces: a chat that
 answers, sets practice and gives formative feedback, and a static exam bank with
-offline generation and hybrid grading. The DADA and Charms packs are published
-at 1.0.0, and the DADA exam bank is published at 1.0.0; the professor persona is
-live behind `OWL_PERSONA`; lesson mode is live behind `OWL_LESSON_MODE` with a
+offline generation and hybrid grading. The DADA and Charms packs and exam banks
+are published at 1.0.0; the professor persona is live behind `OWL_PERSONA`; lesson mode is live behind `OWL_LESSON_MODE` with a
 labelled corpus fallback when the pack is thin; hybrid grading is built, the bank
 eval and judge calibration are recorded, and served papers are live; attempt
 history is session-scoped, and per-user history waits on auth (#35). The
@@ -58,7 +57,7 @@ Layout:
 - `app/agent/` - LangGraph chat graph, node functions, state (V2); lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
 - `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts) and the Charms pack at 1.0.0 (50 materials, 49 concepts); DADA feeds lesson mode through a derived in-memory material selector (#166); pack wiring and the remaining subjects remain on #128
 - `app/storage/` - SQLite bank store (#189) plus attempt persistence, session ownership and grading records (#193/#206)
-- `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the bank eval and judge calibration are in `eval/exam/` (#191); served attempts are #193
+- `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the bank eval and judge calibration are in `eval/exam/` (#191); served attempts are #193; the same grader serves the Charms bank (#213)
 - `data/subjects/` - local subject packs; the DADA and Charms packs are published; source text stays out of git
 - `app/schemas.py` - domain data (`Chunk`)
 - `app/config.py` - settings (env-based, `OWL_` prefix)
@@ -66,7 +65,7 @@ Layout:
 - `docs/architecture.md` - living diagrams (contracts, module deps, chat flows, exam-bank boundary); update when a contract, an adapter, or the top-level flow changes
 - `docs/workplan.md` - phase plan, ticket map, grading and memory decisions
 - `docs/routing-contracts.md` - contract and authority routing plan (#216): policy, closed facts and teaching; gates, citation types and the residual measurement bar
-- `docs/exams/` - DADA bank blueprint, artifact rules, serving contract, published bank record, manifest snapshot and grading probe (#188-#193)
+- `docs/exams/` - bank blueprint, artifact rules, serving contract, published bank records, manifest snapshots and the DADA grading probe (#188-#193, #213)
 - `docs/lexicon-canon-index.md` - plan of record for the hp-lexicon canon index (#125-#128); update it when a parse rule, an artifact contract or the source policy changes
 - `docs/runs/` - one committed Markdown record per eval run, plus the template and index
 - `eval/` - harness, gold set, thresholds; `eval/exam/` holds the DADA bank evaluation and judge calibration (#191)

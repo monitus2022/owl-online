@@ -192,7 +192,8 @@ Response `200`:
   "lesson": true,
   "lesson_subject": "dada",
   "lesson_fallback": true,
-  "persona": true
+  "persona": true,
+  "persona_subject": "dada"
 }
 ```
 
@@ -203,14 +204,17 @@ scope the mode to the right venue. `lesson_fallback` mirrors
 `OWL_LESSON_FALLBACK`, so the room copy can say whether outside-the-notes
 questions are answered from the set texts or refused. `persona` mirrors
 `OWL_PERSONA`, so the frontend can stop hardcoding whether the professor's voice
-is live.
+is live. `persona_subject` names the subject that persona belongs to
+(`OWL_LORE_SUBJECT`) when `persona` is true; a room for another subject shows
+the rehearsal copy instead of claiming a live professor.
 
 ### Exam serving
 
 The exam room reads the published bank through four routes. A paper id is
-`<subject>-<version>`, for example `dada-1.0.0`. Nothing is generated at request
-time: the server samples a stored bank, persists the attempt, and grades it
-later.
+`<subject>-<version>`, for example `dada-1.0.0` or `charms-1.0.0`. Nothing is
+generated at request time: the server samples a stored bank, persists the
+attempt, and grades it later. The banks are independent, so the Charms venue
+requests `subject=charms` explicitly; the default remains `OWL_EXAM_SUBJECT`.
 
 `GET /v1/exams?subject=dada&version=1.0.0` returns the published paper
 descriptors. `subject` defaults to `OWL_EXAM_SUBJECT` and `version` to the

@@ -81,10 +81,12 @@ export function VenuePage() {
   // pack keeps the room usable on the corpus path. Opening a statically
   // "soon" department is a product change with its own professor copy.
   const isOpen = subject.status === "open";
+  // The persona flag is site-wide today, but only the home subject has a card.
+  // Keep every other room honest until the per-subject registry (#195/#97) lands.
   const personaState =
     department === null
       ? subject.personaState
-      : department.persona
+      : department.persona && department.persona_subject === subject.apiSubject
         ? "live"
         : "rehearsal";
   const room: Subject = {
