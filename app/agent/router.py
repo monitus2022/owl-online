@@ -1,4 +1,6 @@
-"""Deterministic chat-intent router: answer | practice | feedback | meta | personal.
+"""Deterministic chat-intent router.
+
+Intents: answer | practice | feedback | meta | personal | lesson.
 
 These are chat intents, not product modes. Practice is an ephemeral, grounded
 question or two. Feedback is formative and provisional. The formal exam bank is

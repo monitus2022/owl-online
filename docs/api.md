@@ -16,7 +16,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 |---|---|---|
 | `GET` | `/health` | liveness; returns `{"status": "ok"}` |
 | `GET` | `/` | the static chat page |
-| `GET` | `/v1/subjects` | published subject packs |
+| `GET` | `/v1/subjects` | published subject packs plus the `lesson` and `persona` flags |
 | `POST` | `/ask` | one-shot grounded answer |
 | `POST` | `/ask/stream` | chat over server-sent events |
 
@@ -145,7 +145,8 @@ Response `200`:
 }
 ```
 
-`lesson` is true only when lesson mode is enabled and a selector loaded.
+`lesson` is true only when lesson mode is enabled, a selector loaded, and the
+configured subject (`OWL_LORE_SUBJECT`) is among the selector's subjects.
 `persona` mirrors `OWL_PERSONA`, so the frontend can stop hardcoding whether the
 professor's voice is live.
 

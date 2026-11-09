@@ -324,9 +324,14 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     def subjects(request: Request) -> SubjectsResponse:
         """Published packs only; drafts stay invisible to the frontend."""
         runtime = request.app.state.runtime
+        lesson = (
+            app_settings.lesson_mode
+            and runtime.lesson is not None
+            and app_settings.lore_subject in runtime.lesson.subjects()
+        )
         return SubjectsResponse(
             subjects=list(runtime.packs),
-            lesson=app_settings.lesson_mode and runtime.lesson is not None,
+            lesson=lesson,
             persona=app_settings.persona,
         )
 

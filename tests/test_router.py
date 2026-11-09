@@ -66,6 +66,15 @@ def test_lesson_is_an_answer_path_hint():
         classify("How are you feeling today?", requested_mode="lesson", persona=True)
         == "lesson"
     )
+    assert (
+        classify(
+            "I feel stressed about the exam.",
+            requested_mode="lesson",
+            persona=True,
+        )
+        == "personal"
+    )
+    assert classify("Who are you?", requested_mode="lesson", persona=False) == "lesson"
 
 
 def test_route_returns_a_state_update():

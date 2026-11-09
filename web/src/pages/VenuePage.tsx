@@ -29,16 +29,21 @@ export function VenuePage() {
   const subject = getSubject(slug);
   const [tab, setTab] = useState<Tab>("chat");
   const [department, setDepartment] = useState<SubjectsPayload | null>(null);
+  const [departmentChecked, setDepartmentChecked] = useState(false);
 
   useEffect(() => {
     let active = true;
     fetchSubjects()
       .then((payload) => {
-        if (active) setDepartment(payload);
+        if (active) {
+          setDepartment(payload);
+          setDepartmentChecked(true);
+        }
       })
       .catch(() => {
         // Keep the static stand-in when the API is unreachable; chat will
         // report the connection failure on the first question.
+        if (active) setDepartmentChecked(true);
       });
     return () => {
       active = false;
@@ -86,7 +91,9 @@ export function VenuePage() {
     status: isOpen ? "open" : "soon",
     personaState,
   };
-  const lesson = Boolean(department?.lesson && isOpen);
+  const lesson = Boolean(
+    department?.lesson && isOpen && subject.apiSubject === "dada",
+  );
 
   if (room.status === "soon") {
     return (
@@ -161,7 +168,12 @@ export function VenuePage() {
         aria-labelledby="tab-chat"
         hidden={tab !== "chat"}
       >
-        <ChatPanel subject={room} lesson={lesson} />
+        <ChatPanel
+          key={room.slug}
+          subject={room}
+          lesson={lesson}
+          ready={departmentChecked}
+        />
       </div>
       <div
         id="panel-exam"
