@@ -76,10 +76,11 @@ export function VenuePage() {
   const summary = department?.subjects.find(
     (entry) => entry.subject === subject.apiSubject,
   );
-  const isOpen =
-    department === null
-      ? subject.status === "open"
-      : summary?.status === "published";
+  // The static list is the product decision for open/soon. The API supplies
+  // the pack and the lesson/persona flags for an open department; an absent
+  // pack keeps the room usable on the corpus path. Opening a statically
+  // "soon" department is a product change with its own professor copy.
+  const isOpen = subject.status === "open";
   const personaState =
     department === null
       ? subject.personaState
@@ -94,8 +95,13 @@ export function VenuePage() {
   const lesson = Boolean(
     department?.lesson &&
       department.lesson_subject === subject.apiSubject &&
+      summary?.status === "published" &&
       isOpen,
   );
+  const packMissing =
+    department !== null &&
+    subject.status === "open" &&
+    summary?.status !== "published";
 
   if (room.status === "soon") {
     return (
@@ -145,6 +151,12 @@ export function VenuePage() {
         <Crest crest={room.crest} className="venue-crest" />
       </header>
       <ArchBackdrop crest={room.crest} />
+      {packMissing && tab === "chat" && (
+        <p className="venue-note" role="status" aria-live="polite">
+          The department's reviewed notes are not loaded on the server; answers
+          come from the set texts until they are available.
+        </p>
+      )}
       <div className="tabs" role="tablist" aria-label="Room" onKeyDown={moveTab}>
         {TABS.map((entry) => (
           <button
