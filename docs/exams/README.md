@@ -88,11 +88,16 @@ O at least 90 percent, E at least 80, A at least 70, P at least 50, D at least
 hash, rubric content and judge configuration under
 `data/exam_judge_cache.jsonl` (gitignored).
 
-The published bank's live probe is
+The published DADA bank's live probe is
 `docs/exams/dada-1.0.0-grading-probe.md`. The bank eval and judge calibration
 are `eval/exam/` (#191), run with
 `uv run python scripts/run_exam_eval.py`; the record is
 `docs/runs/2026-11-09-191-dada-bank-eval.md`.
+
+The Charms bank 1.0.0 is recorded at `docs/exams/charms-1.0.0.md`. It pins the
+same judge model and prompt version as DADA; the prompt id keeps its original
+`dada-` prefix because the rubric judge contract is shared and the grader
+rejects a different pin.
 
 ## Serving
 

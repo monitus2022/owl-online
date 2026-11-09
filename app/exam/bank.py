@@ -494,10 +494,34 @@ def write_exam_bank(bank: ExamBank, directory: Path) -> None:
     (directory / "bank.jsonl").write_text(body + "\n" if body else "", encoding="utf-8")
 
 
+def _option_length_metrics(bank: ExamBank) -> tuple[float, float, int]:
+    """Correct-option length bias and mean gap, the same measure as the eval."""
+    longest = 0
+    gaps: list[int] = []
+    for item in bank.items:
+        if item.kind != "mcq" or item.correct_option_id is None:
+            continue
+        lengths = {option.option_id: len(option.text.split()) for option in item.options}
+        correct = lengths.get(item.correct_option_id, 0)
+        other = max(
+            (length for option_id, length in lengths.items()
+             if option_id != item.correct_option_id),
+            default=0,
+        )
+        gaps.append(correct - other)
+        if correct > other:
+            longest += 1
+    total = len(gaps)
+    fraction = longest / total if total else 0.0
+    mean_gap = sum(gaps) / total if total else 0.0
+    return fraction, mean_gap, total
+
+
 def structure_record(bank: ExamBank, validation: BankValidation) -> str:
     """Structure-only Markdown record: ids and counts, never prompt or quote text."""
     manifest = bank.manifest
     counts = bank.counts()
+    longest_fraction, mean_gap, mcq_total = _option_length_metrics(bank)
     lines = [
         f"# Bank record: {manifest.subject} {manifest.version}",
         "",
@@ -565,8 +589,17 @@ def structure_record(bank: ExamBank, validation: BankValidation) -> str:
     )
     for position, count in sorted(validation.coverage.answer_positions.items()):
         lines.append(f"| {position} | {count} |")
+    longest_count = round(longest_fraction * mcq_total)
     lines.extend(
         [
+            "",
+            "## Option lengths",
+            "",
+            "| Metric | Value |",
+            "|---|---:|",
+            f"| Correct option strictly longest | {longest_fraction:.1%} "
+            f"({longest_count}/{mcq_total}) |",
+            f"| Mean gap over the longest distractor | {mean_gap:.2f} words |",
             "",
             "## Items",
             "",

@@ -83,10 +83,12 @@ export function VenuePage() {
   const isOpen = subject.status === "open";
   // The persona flag is site-wide today, but only the home subject has a card.
   // Keep every other room honest until the per-subject registry (#195/#97) lands.
+  // The lesson subject is the fallback while an older API lacks persona_subject.
+  const personaSubject = department?.persona_subject || department?.lesson_subject;
   const personaState =
     department === null
       ? subject.personaState
-      : department.persona && department.persona_subject === subject.apiSubject
+      : department.persona && personaSubject === subject.apiSubject
         ? "live"
         : "rehearsal";
   const room: Subject = {

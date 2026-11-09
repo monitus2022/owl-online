@@ -115,8 +115,8 @@ export function ExamPanel({ subject }: { subject: Subject }) {
     return (
       <section className="exam" aria-label="Exam room">
         <div className="notice">
-          Practice paper from the published DADA bank. The result is provisional
-          and is not an official O.W.L. record.
+          Practice paper from the published {subject.name} bank. The result is
+          provisional and is not an official O.W.L. record.
         </div>
         <ResultsCard best={best} failed={bestFailed} />
         {error && <p className="exam-error">{error}</p>}

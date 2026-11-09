@@ -598,6 +598,19 @@ def test_subjects_lists_published_packs():
     ]
 
 
+def test_persona_subject_is_independent_of_lore_subject():
+    app = create_app(
+        app_settings=Settings(persona=True, lesson_mode=False, lore_subject="charms"),
+        runtime=Runtime(retriever=_Retriever(), llm=_Llm()),
+    )
+    with TestClient(app) as client:
+        body = client.get("/v1/subjects").json()
+    assert body["persona"] is True
+    assert body["persona_subject"] == "dada"
+    assert body["lesson"] is False
+    assert body["lesson_subject"] == ""
+
+
 def test_subjects_empty_without_packs():
     with _client() as client:
         response = client.get("/v1/subjects")

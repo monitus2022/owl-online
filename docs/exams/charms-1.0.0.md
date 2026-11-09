@@ -1,8 +1,8 @@
 # Bank record: charms 1.0.0
 
 - Status: `published`
-- Built at: `2026-11-09T19:07:36Z`
-- Reviewed at: `2026-11-09T19:07:36Z`
+- Built at: `2026-11-09T19:29:14Z`
+- Reviewed at: `2026-11-09T19:29:14Z`
 - Pack: `1.0.0` / `12e1ee2fe077a004`
 - Index text hash: `aca4c57462d449f5`
 - Generator: `deepseek/deepseek-v4.1-flash` / `charms-bank-authoring-v1` / temperature 0.0
@@ -97,6 +97,13 @@
 | 4 | 4 |
 | 5 | 4 |
 
+## Option lengths
+
+| Metric | Value |
+|---|---:|
+| Correct option strictly longest | 48.0% (12/25) |
+| Mean gap over the longest distractor | 0.72 words |
+
 ## Items
 
 | Item | Kind | Topic | Material | Review |
@@ -157,3 +164,22 @@
 - Errors: 0
 - Warnings: 0
 - Detailed messages stay in the CLI output; this record is structure only.
+
+## Near-duplicate check
+
+- Token Jaccard over the 50 prompts: maximum 0.6500; 0 pairs at or above 0.75.
+- Embedding cosine (`qwen3-embedding:0.6b`): maximum 0.8628; 0 pairs at or above 0.90.
+- Full report path is local and gitignored under `data/exams/charms/`.
+
+## Independent verification
+
+- Model: `mistralai/mistral-small-3.2-24b-instruct`, temperature `0.0`.
+- MCQ solver: 25/25 selected the stored key; 0 items had a second option judged correct.
+- Short-answer judge: 25/25 golden answers judged correct and complete; 0 missing required points.
+- Full report path is local and gitignored under `data/exams/charms/`.
+
+## Review
+
+- The owner reviewed the item set and approved the final concept-only bank.
+- Every prompt, option, golden answer and rubric was checked against the no-character, no-scene, no-exam/lesson rule.
+- Reviewer notes: two earlier drafts were rejected for story-dependent items, then for exam-administration and classroom-pedagogy items.

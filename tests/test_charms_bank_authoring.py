@@ -86,5 +86,20 @@ def test_exam_and_lesson_questions_are_rejected() -> None:
         _check_prose(_spec(prompt="What do students learn in a Charms lesson?"))
 
 
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Which house is Gryffindor?",
+        "What happened in the Chamber of Secrets?",
+        "What is on the exam paper?",
+        "When is the homework due?",
+        "What did the professor teach?",
+    ],
+)
+def test_story_and_pedagogy_variants_are_rejected(prompt: str) -> None:
+    with pytest.raises(SystemExit):
+        _check_prose(_spec(prompt=prompt))
+
+
 def test_concept_only_prose_is_accepted() -> None:
     _check_prose(_spec(prompt="What does the Banishing Charm do to a target?"))

@@ -45,7 +45,7 @@ SUBJECT = "charms"
 DRAFT_VERSION = "0.1.0"
 PUBLISH_VERSION = "1.0.0"
 OUT = REPO / "data" / "exams" / SUBJECT
-PROMPT_VERSION = "charms-bank-v1"
+PROMPT_VERSION = "charms-bank-authoring-v1"
 GENERATOR_MODEL = "deepseek/deepseek-v4.1-flash"
 JUDGE_MODEL = "mistralai/mistral-small-3.2-24b-instruct"
 JUDGE_PROMPT_VERSION = "dada-bank-judge-v2"
@@ -118,7 +118,7 @@ ITEMS: list[dict] = [
             "A backward wave over the shoulder.",
         ],
         "correct": 2,
-        "rationale": "The swish-and-flick wrist movement is the taught form for the charm.",
+        "rationale": "The swish-and-flick wrist movement is the standard form for the charm.",
     },
     {
         "item_id": "charms-mcq-005",
@@ -501,7 +501,7 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-002",
         "kind": "short_answer",
         "material_id": "charms-foundation-charm-vs-transfiguration",
-        "prompt": "Explain how a charm differs from a Transfiguration spell, using a made object as the example.",
+        "prompt": "A pineapple is made to tap-dance and a mouse is turned into a snuffbox. Explain which change is a charm and which is Transfiguration, and why.",
         "difficulty": "comparison",
         "model_answer": "A charm gives an object or creature a new action, quality or movement without changing what it fundamentally is. Transfiguration changes what the thing is, so a pineapple made to tap-dance is still a pineapple, while a mouse turned into a snuffbox is not. The boundary matters because the two subjects test different kinds of change.",
         "required_points": ["charm", "transfiguration"],
@@ -531,7 +531,7 @@ ITEMS: list[dict] = [
         "prompt": "Describe the Growth Charm and explain how it differs from a generic intention to make something bigger.",
         "difficulty": "application",
         "model_answer": "The Growth Charm makes an object or creature larger and has its own incantation. It is a distinct charm, so a caster who mixes its incantation with a color-change spell can produce an oversized target instead of the intended color. The mistake shows that Growth must be learned as a specific spell, not treated as a vague wish to enlarge something.",
-        "required_points": ["larger", "badger"],
+        "required_points": ["larger", "incantation"],
         "rubric": [
             ("correctness", "States the effect of the Growth Charm and that it has its own incantation.", 4),
             ("completeness", "Explains the confusion with a color-change spell and the resulting oversized target.", 4),
@@ -568,7 +568,7 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-007",
         "kind": "short_answer",
         "material_id": "charms-bluebell-flames",
-        "prompt": "Describe Bluebell Flames and explain what makes them useful as a charm-produced fire.",
+        "prompt": "Describe Bluebell Flames and explain why they are useful against a light-shy plant.",
         "difficulty": "application",
         "model_answer": "Bluebell Flames are a charm-produced fire that gives light and warmth without needing wood. They can be cast quickly and used as a tool in a crisis, for example to drive back a light-shy plant. They behave like fire for that purpose, but they are created by the charm rather than fuelled by a material.",
         "required_points": ["bluebell", "warmth"],
@@ -581,7 +581,7 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-008",
         "kind": "short_answer",
         "material_id": "charms-fountain-of-wine",
-        "prompt": "Describe the Fountain of Wine and explain what its effect shows about charm work.",
+        "prompt": "Describe the Fountain of Wine and explain how a conjured liquid effect can be used to test a wand.",
         "difficulty": "explanation",
         "model_answer": "The Fountain of Wine is a conjuring charm that produces a controlled stream of liquid from the wand tip. It is not a combat spell; it demonstrates controlled production and can show that a wand is responding. The effect shows that charm work can serve demonstration and verification as well as combat or household tasks.",
         "required_points": ["fountain", "verification"],
@@ -594,7 +594,7 @@ ITEMS: list[dict] = [
         "item_id": "charms-short-009",
         "kind": "short_answer",
         "material_id": "charms-orchideous",
-        "prompt": "Describe Orchideous and explain what its effect shows about charm work.",
+        "prompt": "Describe Orchideous and explain how a small conjured effect can be used to test a wand.",
         "difficulty": "explanation",
         "model_answer": "Orchideous produces a bunch of flowers from the wand tip. It is a simple conjuration that creates a small, harmless object rather than changing an existing one. A quick effect of this kind can serve as a functional test, showing that the wand is responding.",
         "required_points": ["flowers", "conjuration"],
@@ -623,7 +623,7 @@ ITEMS: list[dict] = [
         "material_id": "charms-countercharm-hiccups",
         "prompt": "Explain the principle of a counter-charm using the countercharm for hiccups as the example.",
         "difficulty": "explanation",
-        "model_answer": "A counter-charm targets a particular unwanted effect rather than undoing all magic. The countercharm for hiccups is a small, specific counter-charm, and it is taught as the model for the principle: a counter must match the effect it answers. Its narrowness is the point: it does not disable every spell, only the effect it is designed to answer.",
+        "model_answer": "A counter-charm targets a particular unwanted effect rather than undoing all magic. The countercharm for hiccups is a small, specific counter-charm, and it serves as the model for the principle: a counter must match the effect it answers. Its narrowness is the point: it does not disable every spell, only the effect it is designed to answer.",
         "required_points": ["hiccups", "counter-charm"],
         "rubric": [
             ("correctness", "Explains that a counter-charm is specific to one effect.", 4),
@@ -638,7 +638,7 @@ ITEMS: list[dict] = [
         "prompt": "Describe Densaugeo and explain the risk a local hex creates when it misses.",
         "difficulty": "application",
         "model_answer": "Densaugeo enlarges the target's front teeth. The effect is local and specific, but a missed jet can ricochet and strike someone other than the intended target. That risk distinguishes a precise hex from a broad effect and makes aim and line of sight important.",
-        "required_points": ["teeth", "ricochets"],
+        "required_points": ["teeth", "local"],
         "rubric": [
             ("correctness", "Describes the local effect on the target's front teeth.", 4),
             ("completeness", "Explains the ricochet and the risk it creates for bystanders.", 4),
@@ -651,7 +651,7 @@ ITEMS: list[dict] = [
         "prompt": "Describe Furnunculus and explain why aim and line of sight matter when casting a hex.",
         "difficulty": "application",
         "model_answer": "Furnunculus covers the target in boils, and the Pimple Jinx is a hex with a clear, unpleasant effect. A missed hex can ricochet off a surface and strike an ally instead of the intended target. Aim and line of sight therefore matter as much as the incantation in a crowded space.",
-        "required_points": ["boils", "ricochets"],
+        "required_points": ["boils", "ally"],
         "rubric": [
             ("correctness", "Describes the boils produced by the Pimple Jinx.", 4),
             ("completeness", "Explains the ricochet and why aim and line of sight matter.", 4),
@@ -769,7 +769,7 @@ ITEMS: list[dict] = [
         "material_id": "charms-spell-failure",
         "prompt": "Explain why charm failure is usually a problem of technique rather than power, using two examples.",
         "difficulty": "explanation",
-        "model_answer": "Charm failure usually comes from wrong movement, wrong emphasis, wrong incantation or too much force. A learner who prods the target instead of performing the movement may set it alight, while a learner who shouts and waves the arm can still be saying the incantation wrongly. The pattern repeats when one charm's incantation is confused with another and the wrong effect appears.",
+        "model_answer": "Charm failure is usually a matter of technique: wrong movement, wrong emphasis, wrong incantation or too much force. A learner who prods the target instead of performing the movement may set it alight, while a learner who shouts and waves the arm can still be saying the incantation wrongly. The pattern repeats when one charm's incantation is confused with another and the wrong effect appears.",
         "required_points": ["technique", "movement"],
         "rubric": [
             ("correctness", "Names technique errors as the cause of failure.", 4),
@@ -834,6 +834,13 @@ def _validate_specs() -> None:
                 raise SystemExit(f"{spec['item_id']}: needs two rubric criteria")
             if sum(marks for _, _, marks in spec["rubric"]) != 8:
                 raise SystemExit(f"{spec['item_id']}: rubric must sum to 8")
+            answer = spec["model_answer"].lower()
+            for point in spec["required_points"]:
+                if point.lower() not in answer:
+                    raise SystemExit(
+                        f"{spec['item_id']}: required point {point!r} is missing "
+                        "from the golden answer"
+                    )
         _check_prose(spec)
 
 
@@ -842,24 +849,40 @@ def _validate_specs() -> None:
 _FORBIDDEN_CHARACTERS = (
     "harry", "ron", "hermione", "malfoy", "neville", "seamus", "cedric",
     "ollivander", "tonks", "angelina", "bagman", "dumbledore", "hagrid",
-    "krum", "fleur", "goyle", "flitwick", "mcgonagall", "snape", "dolohov",
-    "ginny", "george", "fred", "luna", "sirius", "lupin", "voldemort",
-    "quirrell", "lockhart", "umbridge", "slughorn", "crouch", "fudge",
-    "skeeter", "cho", "dean", "lavender", "parvati", "dobby", "kreacher",
-    "buckbeak", "hedwig", "crookshanks", "scabbers", "norbert", "aragog",
+    "krum", "fleur", "goyle", "crabbe", "flitwick", "mcgonagall", "snape",
+    "dolohov", "ginny", "george", "fred", "luna", "sirius", "lupin",
+    "voldemort", "quirrell", "lockhart", "umbridge", "slughorn", "crouch",
+    "fudge", "skeeter", "cho", "dean", "lavender", "parvati", "dobby",
+    "kreacher", "buckbeak", "hedwig", "crookshanks", "scabbers", "norbert",
+    "aragog", "myrtle", "filch", "trelawney", "baruffio", "bellatrix",
+    "lucius", "narcissa", "pettigrew", "wormtail", "moody", "kingsley",
+    "shacklebolt", "pomfrey", "sprout", "vector", "binns", "hooch",
+    "dudley", "vernon", "petunia", "riddle", "aberforth", "regulus",
+    "karkaroff", "maxime", "grindelwald", "parkinson", "zabini", "chang",
+    "diggory", "johnson", "spinnet", "alicia", "katie",
+    "percy", "bill", "charlie", "arthur", "molly", "nymphadora",
 )
+_FORBIDDEN_HOUSES = ("gryffindor", "slytherin", "ravenclaw", "hufflepuff")
 _FORBIDDEN_SCENES = (
     "privet drive", "third-floor", "duelling club", "bathroom", "train "
     "compartment", "quidditch", "triwizard", "grimmauld", "ministry of magic",
     "little whinging", "diagon alley", "hogwarts", "d.a.", "dumbledore's army",
     "chamber of secrets", "room of requirement", "burrow", "spinner's end",
+    "library", "great hall", "whomping willow", "forbidden forest", "azkaban",
+    "hogsmeade", "hogwarts express", "platform nine", "leaky cauldron",
+    "gringotts", "shrieking shack", "department of mysteries",
+    "quidditch pitch", "malfoy manor", "godric's hollow", "little hangleton",
+    "philosopher's stone", "sorcerer's stone", "prisoner of azkaban",
+    "goblet of fire", "order of the phoenix", "half-blood prince",
+    "deathly hallows",
 )
 # Exam administration and classroom pedagogy are not charm concepts. A paper
 # that asks about the exam while the student is sitting it is a bad item.
 _FORBIDDEN_PEDAGOGY = (
     "exam", "exams", "lesson", "lessons", "classroom", "syllabus", "revision",
     "curriculum", "student", "students", "teacher", "teachers", "pupil",
-    "pupils",
+    "pupils", "paper", "papers", "school", "professor", "taught", "homework",
+    "schoolwork", "practical examination", "written paper", "theory paper",
 )
 
 
@@ -889,6 +912,12 @@ def _check_prose(spec: dict) -> None:
             if re.search(rf"\b{re.escape(term)}\b", lowered):
                 raise SystemExit(
                     f"{spec['item_id']}: {name} names a character ({term!r}); "
+                    "questions must stand without story knowledge"
+                )
+        for term in _FORBIDDEN_HOUSES:
+            if re.search(rf"\b{re.escape(term)}\b", lowered):
+                raise SystemExit(
+                    f"{spec['item_id']}: {name} names a house ({term!r}); "
                     "questions must stand without story knowledge"
                 )
         for term in _FORBIDDEN_SCENES:
@@ -1016,7 +1045,7 @@ def main() -> int:
         index_text_hash=index_hash,
         generator_model=GENERATOR_MODEL,
         generator_temperature=0.0,
-        generator_prompt_version="charms-bank-authoring-v1",
+        generator_prompt_version=PROMPT_VERSION,
         judge_model=JUDGE_MODEL,
         judge_temperature=0.0,
         judge_prompt_version=JUDGE_PROMPT_VERSION,

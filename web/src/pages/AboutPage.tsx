@@ -73,8 +73,8 @@ export function AboutPage() {
           <li>six multiple-choice questions at 3 marks and four short answers at
             8 marks, 50 marks in total;</li>
           <li>
-            every question comes from the published DADA bank and cites the
-            reviewed material and book passages behind it; the bank is
+            every question comes from that subject's published bank and cites
+            the reviewed material and book passages behind it; each bank is
             authored offline, not generated in the exam room;
           </li>
           <li>
@@ -128,7 +128,7 @@ export function AboutPage() {
               <td>Exam papers and marks</td>
               <td className="truth-real">Real, practice</td>
               <td>
-                The exam room serves a paper sampled from the published DADA
+                The exam room serves a paper sampled from the subject's published
                 bank. The server keeps the MCQ key, scores objective answers by
                 code and sends the short answers to a pinned judge; totals and
                 bands are deterministic. A result is practice, not an official
@@ -156,12 +156,14 @@ export function AboutPage() {
               </td>
             </tr>
             <tr>
-              <td>Four closed departments</td>
+              <td>Three closed departments</td>
               <td className="truth-not">Not built yet</td>
               <td>
-                Potions, Transfiguration, Charms and Herbology open only
-                when their subject packs pass validation; before that a
-                closed door shows no invented professor and no content.
+                Potions, Transfiguration and Herbology open only when their
+                subject packs pass validation; before that a closed door shows
+                no invented professor and no content. Charms is open with a
+                published pack and exam bank, but its professor post is still
+                vacant.
               </td>
             </tr>
           </tbody>

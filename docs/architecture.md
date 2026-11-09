@@ -235,11 +235,13 @@ Two interfaces keep the boundary between the UI and the services:
 | `ResultsStore` | `web/src/api/results.ts` | `HttpResultsStore` reads `GET /v1/attempts` for the signed session; records are provisional | #35 moves history to a user id |
 
 The static subject list decides which departments are open. The venue fetches
-`GET /v1/subjects` for the published pack and the live `persona` and `lesson`
-flags, so the DADA room sends `mode=lesson` only when the API says the selector
-is loaded and the voice copy follows the API flag. A statically open department
-with no pack stays on the corpus path with a note; a statically "soon"
-department stays furnished until its product entry is opened. The static
+`GET /v1/subjects` for the published pack and the live `persona`, `persona_subject`
+and `lesson` flags, so the DADA room sends `mode=lesson` only when the API says
+the selector is loaded. `persona_subject` names the home subject of the live
+card, so only that room takes the live voice copy; every other open room keeps
+the rehearsal copy even when the site-wide persona flag is on. A statically open
+department with no pack stays on the corpus path with a note; a statically
+"soon" department stays furnished until its product entry is opened. The static
 persona state is only the fallback when the API is unreachable. The `build`
 check of the `web` workflow runs the Pages build on
 every pull request and push to main, and deploy-preview origins are covered by
@@ -539,7 +541,9 @@ he does not claim private knowledge of the people named in the book chunks.
 
 The persona is DADA-only. The lore pack already carries the five founders and
 departments, but the chatbot speaks only for Defense; other subject personas are
-deferred. The card and the doc change together; `tests/test_persona.py` asserts
+deferred. `persona_subject` (default `dada`, `OWL_PERSONA_SUBJECT`) carries that
+home subject to the frontend, so opening another department does not claim a
+live professor there. The flag itself stays site-wide until the registry lands. The card and the doc change together; `tests/test_persona.py` asserts
 every meta topic exists. The scripted meta, personal and abstention replies carry
 a reviewed variant bank; one phrasing is chosen at random per request, and the
 facts, boundaries and `abstained` flag are identical across variants.

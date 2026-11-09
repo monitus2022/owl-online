@@ -205,7 +205,7 @@ scope the mode to the right venue. `lesson_fallback` mirrors
 questions are answered from the set texts or refused. `persona` mirrors
 `OWL_PERSONA`, so the frontend can stop hardcoding whether the professor's voice
 is live. `persona_subject` names the subject that persona belongs to
-(`OWL_LORE_SUBJECT`) when `persona` is true; a room for another subject shows
+(`OWL_PERSONA_SUBJECT`) when `persona` is true; a room for another subject shows
 the rehearsal copy instead of claiming a live professor.
 
 ### Exam serving

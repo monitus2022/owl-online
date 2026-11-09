@@ -173,6 +173,7 @@ control the non-secret runtime toggles. The workflow passes them with `-e`, and
 | `OWL_LESSON_MODE` | `false` | enable pack-grounded lesson answers |
 | `OWL_LESSON_FALLBACK` | `true` | answer from labelled set texts when the pack does not cover the question |
 | `OWL_PERSONA` | `false` | enable the professor voice |
+| `OWL_PERSONA_SUBJECT` | `dada` | subject whose professor card is live; independent of `OWL_LORE_SUBJECT` |
 
 Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
 `/data/subjects/dada/pack.toml` exists on the volume, then run the deploy
