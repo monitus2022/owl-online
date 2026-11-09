@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: grounded chat, the DADA pack published at 1.0.0, and the professor persona live behind `OWL_PERSONA`. Lesson mode is implemented behind `OWL_LESSON_MODE` and needs the pack on the host volume. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; a missing pack falls back to labelled corpus chat. The next product surface is the exam bank with hybrid grading, plus mixed-scope answers, conversation memory and a second department. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
+> Status: grounded chat, the DADA pack published at 1.0.0, the DADA exam bank published at 1.0.0, and the professor persona live behind `OWL_PERSONA`. Lesson mode is implemented behind `OWL_LESSON_MODE` and needs the pack on the host volume. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; a missing pack falls back to labelled corpus chat. The bank holds 25 MCQ and 25 short-answer items; the served paper and hybrid grading are next. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
 
 ---
 
@@ -15,7 +15,7 @@ O.W.L. Online has two product surfaces on one retrieval core:
 | Chat answer | Grounded Q&A with citations | live |
 | Chat practice | On-demand grounded practice question | live |
 | Chat feedback | Formative feedback and a provisional mark | live |
-| Exam bank | Pre-generated 10-question papers stored in a DB, served statically, graded by a hybrid scorer | planned V3 (#178) |
+| Exam bank | 25 MCQ + 25 short-answer bank sampled into 6 MCQ + 4 short-answer papers and graded by a hybrid scorer | bank 1.0.0 published (#190); serving and grading next (#192/#193) |
 | Lesson mode | Pack-grounded teaching answers with material and book citations | implemented behind `OWL_LESSON_MODE`; needs the pack on the host volume |
 
 Chat practice and feedback are ephemeral and formative. The exam bank is the
@@ -27,12 +27,12 @@ and score bands are deterministic.
 See [`docs/workplan.md`](docs/workplan.md) for the phase plan, ticket map and
 grading decisions.
 
-The exam bank is not a request-time generator. A batch job produces a paper and
-its rubric, validates both, and stores them. Each question keeps an evidence
-snapshot so regrading stays reproducible after an index rebuild. A paper is 10
-questions by default: a mix of objective, short-answer and long-answer items.
-Objective answers are scored by code; long answers go to a pinned judge with the
-rubric and evidence. The judge never writes the final total or band.
+The exam bank is not a request-time generator. The bank is authored offline,
+validated against the pack and the corpus, and stored with an evidence snapshot
+on every item. A paper samples 6 MCQ and 4 short answers for 50 marks: MCQ
+answers are scored by code, short answers go to a pinned judge with the rubric
+and evidence, and the judge never writes the final total or band. Servable
+attempts and the production grader are the next tickets (#192/#193).
 
 Exam generation and lesson mode read from versioned subject knowledge packs:
 one grounded material store per O.W.L. subject, with every material linked to a

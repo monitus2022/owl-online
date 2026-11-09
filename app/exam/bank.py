@@ -495,6 +495,7 @@ def structure_record(bank: ExamBank, validation: BankValidation) -> str:
         "",
         f"- Status: `{manifest.status}`",
         f"- Built at: `{manifest.built_at}`",
+        f"- Review date: `{manifest.built_at[:10]}`",
         f"- Pack: `{manifest.pack_version}` / `{manifest.pack_fingerprint}`",
         f"- Index text hash: `{manifest.index_text_hash}`",
         f"- Generator: `{manifest.generator_model}` / `{manifest.generator_prompt_version}`",
@@ -511,6 +512,17 @@ def structure_record(bank: ExamBank, validation: BankValidation) -> str:
     ]
     for topic, counts in sorted(validation.coverage.per_topic_kind.items()):
         lines.append(f"| `{topic}` | {counts.get('mcq', 0)} | {counts.get('short_answer', 0)} |")
+    lines.extend(
+        [
+            "",
+            "## Concept coverage",
+            "",
+            "| Concept | Items |",
+            "|---|---:|",
+        ]
+    )
+    for concept, count in sorted(validation.coverage.per_concept.items()):
+        lines.append(f"| `{concept}` | {count} |")
     lines.extend(
         [
             "",

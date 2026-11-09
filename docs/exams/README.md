@@ -14,11 +14,14 @@ data/exams/exams.db SQLite serving copy imported from the validated JSONL
 
 docs/exams/<subject>-<version>.md
     structure-only record: counts, ids, coverage and validation summary
+docs/exams/<subject>-<version>.manifest.toml
+    committed snapshot of the published manifest (no prose)
 ```
 
 The JSONL is the authoring source. The SQLite store is a deterministic import,
 not a second source of truth. Both live under `/data`; question prose and
-evidence quotes are not committed.
+evidence quotes are not committed. The published snapshot under `docs/exams/`
+is structure only.
 
 ## Records
 
@@ -41,6 +44,15 @@ Short-answer items store a 2-3 sentence, 25-80 word golden answer, 2-3 required
 points and a rubric that sums to 8 marks. The rubric must include `correctness`
 and `completeness` criteria. The judge compares the student answer with the
 golden answer and the rubric.
+
+## Question scope
+
+Questions test the subject, not the plot. They ask about spells, creatures,
+defences, mechanisms, limits, comparisons and application: what a spell does,
+when it works, what it cannot do, and what danger it protects against. They do
+not ask about plot events, character biography or classroom anecdotes. A scene
+can supply the evidence for a concept question, but the question must stand on
+the subject concept and the evidence, not on knowing the story.
 
 ## Status flow
 
@@ -97,5 +109,5 @@ schema validator reports coverage but does not hardcode the DADA target.
 - The Lexicon is discovery only; it is never a source ref and its prose is
   never copied.
 
-Related tickets: #187 (epic), #188 (blueprint), #189 (this schema), #190
-(authoring), #191 (quality), #192 (grading), #193 (serving).
+Related tickets: #187 (epic), #188 (blueprint), #189 (schema), #190 (this
+bank), #191 (quality), #192 (grading), #193 (serving).

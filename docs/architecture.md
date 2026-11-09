@@ -14,7 +14,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
 | Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166); the DADA pack is published; pack wiring and Charms content remain on #128 |
-| Exam bank | `app/exam/`, `app/storage/` | bank records and pack/corpus validator; SQLite import for the serving store (#189) |
+| Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator and SQLite import; the DADA bank 1.0.0 is published (#190) |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -540,6 +540,11 @@ flowchart LR
   EXAM --> DB[(Exam store)]
   DB --> API[Static exam API]
 ```
+
+The DADA bank 1.0.0 is published under `data/exams/dada` with 25 MCQ and 25
+short-answer items. `docs/exams/dada-1.0.0.md` is the structure-only record and
+`docs/exams/dada-1.0.0.manifest.toml` holds the version and pins. The serving
+API and grader are still planned (#192/#193).
 
 A pack contains subjects, topics, concepts, materials and source refs. Every
 material points to a chunk id, book, chapter, quote, text hash and index hash.

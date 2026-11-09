@@ -470,6 +470,9 @@ def test_structure_record_has_ids_not_prompts() -> None:
     assert "dada-mcq-001" in record
     assert "Which charm turns a boggart" not in record
     assert "Riddikulus" not in record
+    assert "## Concept coverage" in record
+    assert "`dada-creature-boggart`" in record
+    assert f"`{bank.manifest.built_at[:10]}`" in record
 
 
 def test_structure_record_failure_omits_item_messages() -> None:

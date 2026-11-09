@@ -274,6 +274,15 @@ topic gets at least two items per type.
 | Short-answer length | 2-3 sentences, 25-80 words |
 | Short-answer required points | 2-3 points, all supported by the cited material |
 
+### Question scope
+
+Every item tests the subject, not the plot. The focus is the spell, creature,
+defence, mechanism, limit or comparison: what it does, when it works, what it
+cannot do, and what danger it answers. Plot events, character biography and
+classroom anecdotes are not examinable on their own. A scene may supply the
+evidence for a concept question, but the question must stand without story
+knowledge.
+
 ### MCQ rules
 
 - Exactly 6 options: 1 correct and 5 plausible distractors from the same DADA family.

@@ -76,7 +76,8 @@ page describes what comes next and why.
 - The exam bank (#178) follows; DADA packs are delivered and the answer path is
   settled except the voice work (#176). The bank blueprint (#188) fixes a
   target of 25 MCQ and 25 short-answer items. The bank schema, validator and
-  SQLite import are in #189; authoring (#190) follows.
+  SQLite import are in #189. The DADA bank 1.0.0 is published in #190; quality
+  evaluation (#191), grading (#192) and serving (#193) follow.
 
 ## Product shape
 
@@ -247,7 +248,8 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
 ## Phase B: Subject packs and exam bank
 
-Status: DADA packs delivered; the exam bank is next (#178).
+Status: DADA packs delivered; the DADA bank 1.0.0 is published; grading and
+serving are next (#192/#193).
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
 bank and hybrid grader on top of them.
