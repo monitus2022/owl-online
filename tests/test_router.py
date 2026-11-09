@@ -170,7 +170,10 @@ def test_persona_card_name_drives_the_identity_cue():
         "What does DADA stand for?",
         "What does Defence Against the Dark Arts mean?",
         "What is DADA short for?",
+        "What's DADA short for?",
+        "What is the meaning of DADA?",
         "Define DADA",
+        "Explain the Defence Against the Dark Arts",
         "What is the DADA subject?",
         "What is the DADA department?",
         "What is this subject?",
@@ -219,3 +222,14 @@ def test_subject_possessive_forms_do_not_steal_other_topics():
     assert meta_topic("What is DADA's grading scale?") == "grading"
     assert classify("What is DADA's exam at Hogwarts?", persona=True) == "answer"
     assert classify("What is on the O.W.L. exam?", persona=True) == "answer"
+
+
+def test_exam_room_questions_stay_on_the_answer_path():
+    assert classify("What is the exam room?", persona=True) == "answer"
+    assert (
+        classify(
+            "What is the exam room in the Department of Mysteries?",
+            persona=True,
+        )
+        == "answer"
+    )

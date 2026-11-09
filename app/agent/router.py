@@ -90,7 +90,8 @@ _META_CUES: dict[str, re.Pattern[str]] = {
     ),
     "exam": re.compile(
         r"\b(exam(?:ination)? format|what(?:'s| is) on the exam|"
-        r"what is on the test|what is (?:the )?(?:.* )?exam)\b",
+        r"what is on the test|what is (?:the )?(?:.* )?exam"
+        r"(?: (?:format|contents|date|schedule))?(?=\s*[?.!]*\s*$))\b",
         re.IGNORECASE,
     ),
     "syllabus": re.compile(
@@ -102,8 +103,9 @@ _META_CUES: dict[str, re.Pattern[str]] = {
         rf"^\s*(?:"
         rf"what(?:'s| is) (?:the )?{_SUBJECT_NAME}(?: (?:subject|department|class))?"
         rf"|what does {_SUBJECT_NAME} (?:mean|stand for)"
-        rf"|what is {_SUBJECT_NAME} short for"
-        rf"|(?:define|explain) {_SUBJECT_NAME}"
+        rf"|what(?:'s| is) {_SUBJECT_NAME} short for"
+        rf"|(?:define|explain) (?:the )?{_SUBJECT_NAME}"
+        rf"|what(?:'s| is) (?:the )?meaning of {_SUBJECT_NAME}"
         rf"|(?:the )?meaning of {_SUBJECT_NAME}"
         rf"|{_SUBJECT_NAME} meaning"
         rf"|tell me about (?:the )?{_SUBJECT_NAME}"
