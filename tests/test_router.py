@@ -157,3 +157,37 @@ def test_persona_card_name_drives_the_identity_cue():
     assert classify(f"Tell me about {PERSONA.name}", persona=True) == "meta"
     assert meta_topic(f"Tell me about {PERSONA.name}") == "professor"
     assert classify(f"Who is {PERSONA.address}?", persona=True) == "meta"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "What is DADA?",
+        "What is Defence Against the Dark Arts?",
+        "What is Defense Against the Dark Arts?",
+        "What does DADA mean?",
+        "What is the DADA subject?",
+        "Tell me about DADA",
+    ],
+)
+def test_subject_definition_routes_to_meta(question):
+    assert classify(question, persona=True) == "meta"
+    assert meta_topic(question) == "subject"
+
+
+def test_subject_definition_with_book_context_stays_answer():
+    assert classify("What is DADA at Hogwarts?", persona=True) == "answer"
+
+
+def test_subject_definition_needs_persona():
+    assert classify("What is DADA?", persona=False) == "answer"
+
+
+def test_scope_question_still_routes_to_scope():
+    assert classify("What subjects do you teach?", persona=True) == "meta"
+    assert meta_topic("What subjects do you teach?") == "scope"
+
+
+def test_subject_curriculum_routes_to_syllabus():
+    assert classify("What is the DADA curriculum?", persona=True) == "meta"
+    assert meta_topic("What is the DADA curriculum?") == "syllabus"

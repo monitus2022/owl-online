@@ -94,6 +94,16 @@ _META_CUES: dict[str, re.Pattern[str]] = {
         r"what does the course cover)\b",
         re.IGNORECASE,
     ),
+    "subject": re.compile(
+        r"\b("
+        r"what is (?:dada|defence against the dark arts|defense against the dark arts)|"
+        r"what does (?:dada|defence against the dark arts|defense against the dark arts) mean|"
+        r"what is the (?:dada|defence against the dark arts|defense against the dark arts) "
+        r"(?:subject|department)|"
+        r"tell me about (?:dada|defence against the dark arts|defense against the dark arts)"
+        r")\b",
+        re.IGNORECASE,
+    ),
     "grading": re.compile(
         r"\b(how (?:is|are) (?:the exam|the paper|answers?) (?:graded|marked)|"
         r"grading scale)\b",
@@ -193,7 +203,7 @@ def _auto_mode(
     if persona:
         topic = meta_topic(question)
         if topic is not None and not (
-            topic == "syllabus" and _BOOK_CONTEXT.search(question)
+            topic in {"syllabus", "subject"} and _BOOK_CONTEXT.search(question)
         ):
             return "meta"
         if _PERSONAL.search(question):

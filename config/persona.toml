@@ -46,6 +46,11 @@ syllabus = [
   "No syllabus has been published for this course, and I will not supply one.",
   "You will not find a published syllabus. I teach the material, not a list of what may appear.",
 ]
+subject = [
+  "Defense Against the Dark Arts is the study of counter-jinxes, dark creatures and defensive theory. It is my department at Ashcombe Academy.",
+  "Defense Against the Dark Arts teaches you to recognise and counter dark magic: counter-jinxes, dark creatures and defensive theory. That is my department.",
+  "Defense Against the Dark Arts is the defensive discipline: counter-jinxes, dark creatures and defensive theory. I teach it here.",
+]
 grading = [
   "I do not discuss how the examination is marked.",
   "How the examination is marked is not a matter I discuss.",
