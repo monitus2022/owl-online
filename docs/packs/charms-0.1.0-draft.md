@@ -7,7 +7,7 @@
 - Materials: 50
 - Concepts: 49
 - Topics: 7
-- Source refs: 114
+- Source refs: 116
 - Index text hash: `aca4c57462d449f5`
 - Fingerprint: `fe100e5eb5dc0755`
 - Review: pending maintainer prose pass
@@ -53,7 +53,7 @@ The warnings are the expected `review_status=draft` notices.
 | `charms-diffindo` | `charms-utility` | `charms-magic-diffindo` | `spell` | 2 |
 | `charms-drought` | `charms-elements` | `charms-magic-drought-charm` | `spell` | 1 |
 | `charms-finite-incantatem` | `charms-foundations` | `charms-magic-finite-incantatem` | `spell` | 2 |
-| `charms-flitwick` | `charms-practice` | `charms-character-flitwick` | `character` | 6 |
+| `charms-flitwick` | `charms-practice` | `charms-character-flitwick` | `character` | 7 |
 | `charms-foundation-charm-definition` | `charms-foundations` | `charms-definition-charm` | `definition` | 2 |
 | `charms-foundation-charm-vs-transfiguration` | `charms-foundations` | `charms-definition-charm-vs-transfiguration` | `definition` | 4 |
 | `charms-foundation-concentration` | `charms-foundations` | `charms-procedure-concentration` | `procedure` | 2 |
@@ -67,7 +67,7 @@ The warnings are the expected `review_status=draft` notices.
 | `charms-hover` | `charms-utility` | `charms-magic-hover` | `spell` | 2 |
 | `charms-impediment` | `charms-jinxes` | `charms-magic-impediment-curse-jinx` | `spell` | 2 |
 | `charms-impervius` | `charms-utility` | `charms-magic-impervius` | `spell` | 1 |
-| `charms-incendio` | `charms-elements` | `charms-magic-incendio` | `spell` | 1 |
+| `charms-incendio` | `charms-elements` | `charms-magic-incendio` | `spell` | 2 |
 | `charms-jelly-legs` | `charms-jinxes` | `charms-magic-jelly-legs` | `spell` | 2 |
 | `charms-leg-locker` | `charms-jinxes` | `charms-magic-leg-locker-curse` | `spell` | 1 |
 | `charms-levicorpus` | `charms-jinxes` | `charms-magic-levicorpus` | `spell` | 3 |
