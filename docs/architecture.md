@@ -414,10 +414,11 @@ When the classification would otherwise be `answer` and the request mode is
 `lesson` with `OWL_LESSON_MODE` on, the graph routes to `lesson_node` instead of
 `answer`. The derived selector scores the in-memory material vectors and the
 prompt carries the selected materials. A deterministic coverage check compares
-the question's content terms with the material prose. If the pack covers the
-question, the draft must cite `[mat:<id>]` and the branch makes no retrieval
-call. If the pack is empty or leaves terms uncovered, the branch retrieves the
-corpus as a labelled second tier (`OWL_LESSON_FALLBACK`, default true), builds
+the question's content terms with the material prose and the concept
+titles/aliases. If the pack covers the question, the draft must cite `[mat:<id>]`
+and the branch makes no retrieval call. If the pack is empty or leaves terms
+uncovered, the branch retrieves the corpus as a labelled second tier
+(`OWL_LESSON_FALLBACK`, default true), builds
 "Lesson notes (this department)" and "Set-text excerpts (outside this
 department)" sections, and requires the matching citation space. `scope` is
 `in_pack`, `mixed`, `off_pack` or `abstained`; an off-pack answer starts with
@@ -425,7 +426,9 @@ department)" sections, and requires the matching citation space. `scope` is
 The final payload carries `material_citations`, book `citations` and `scope`.
 With the fallback off, a question with no material above the floor abstains
 with `no_evidence`; a selected material that leaves terms uncovered stays
-pack-only. The fallback is lesson-only: exam generation and authoritative grading must use pack
+pack-only. With the fallback on, an uncovered term with no corpus evidence also
+abstains rather than returning a partial `in_pack` answer. The fallback is
+lesson-only: exam generation and authoritative grading must use pack
 materials and their source refs, never the corpus fallback.
 
 ## Model routing

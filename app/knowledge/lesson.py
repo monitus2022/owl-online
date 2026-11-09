@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from dataclasses import dataclass, field
 
 from app.knowledge.materials import Material
@@ -40,6 +41,22 @@ def _embedding_text(pack: SubjectPack, material: Material) -> str:
     title = concept.title if concept is not None else material.concept
     aliases = " ".join(concept.aliases) if concept is not None else ""
     return f"{title}. {aliases}. {material.text}".strip()
+
+
+# One-word concept titles that are also ordinary adjectives or nouns. A bare
+# lexical hit is not enough; require a determiner or a capitalised occurrence.
+_AMBIGUOUS_ONE_WORD = frozenset({"grim"})
+
+
+def _has_ambiguous_context(question: str, word: str) -> bool:
+    return bool(
+        re.search(
+            rf"\b(?:a|an|the)\s+{re.escape(word)}\b",
+            question,
+            re.IGNORECASE,
+        )
+        or re.search(rf"\b{re.escape(word.capitalize())}\b", question)
+    )
 
 
 def _cosine(left: tuple[float, ...], right: tuple[float, ...]) -> float:
@@ -110,6 +127,17 @@ class LessonSelector:
     def subjects(self) -> tuple[str, ...]:
         return tuple(sorted(self.vectors))
 
+    def coverage_text(self, subject: str, materials: list[Material]) -> str:
+        """Title, aliases and prose for the coverage check.
+
+        A concept title can answer a question even when the material prose uses
+        a different noun, so coverage must include the curated vocabulary.
+        """
+        pack = self.store.get(subject)
+        if pack is None:
+            return " ".join(material.text for material in materials)
+        return " ".join(_embedding_text(pack, material) for material in materials)
+
     def select_lexical(
         self,
         question: str,
@@ -139,6 +167,12 @@ class LessonSelector:
                 continue
             score = 0
             for phrase in (concept.title, *concept.aliases):
+                if (
+                    len(phrase.split()) == 1
+                    and phrase.lower() in _AMBIGUOUS_ONE_WORD
+                    and not _has_ambiguous_context(question, phrase.lower())
+                ):
+                    continue
                 score += phrase_match_score(phrase, question_terms)
             if score:
                 scored.append((score, material.material_id, material))

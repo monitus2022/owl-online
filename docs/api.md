@@ -121,10 +121,10 @@ match can still add a material when a comparison question embeds weakly, so
 
 | `scope` | Meaning |
 |---|---|
-| `in_pack` | The selected materials cover the question; the answer cites `[mat:]` and the materials' source refs. |
+| `in_pack` | The selected materials and their concept titles/aliases cover the question; the answer cites `[mat:]` and the materials' source refs. |
 | `mixed` | The materials cover part and the corpus covers the rest; the answer cites both `[mat:]` and book chunk ids, and labels the set-text part. |
 | `off_pack` | No material is selected; the corpus answers, the answer starts "This is not in the department's notes", and `material_citations` is empty. |
-| `abstained` | Neither the pack nor the corpus has evidence. |
+| `abstained` | Neither the pack nor the corpus has evidence, including a pack-only partial whose uncovered terms have no corpus evidence. |
 
 With `OWL_LESSON_FALLBACK=true` (default), a question the pack does not cover
 retrieves the corpus as a labelled second tier instead of abstaining. Set

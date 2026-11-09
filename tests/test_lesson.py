@@ -77,7 +77,14 @@ class StaticRetriever:
         return self.chunks[:top_k]
 
 
-def _chunk(chunk_id: str, text: str, *, book: int = 3, chapter: int = 7) -> Chunk:
+def _chunk(
+    chunk_id: str,
+    text: str,
+    *,
+    book: int = 3,
+    chapter: int = 7,
+    score: float = 10.0,
+) -> Chunk:
     return Chunk(
         id=chunk_id,
         text=text,
@@ -87,7 +94,7 @@ def _chunk(chunk_id: str, text: str, *, book: int = 3, chapter: int = 7) -> Chun
             book_name=f"Book {book}",
             chapter_name=f"Chapter {chapter}",
         ),
-        score=10.0,
+        score=score,
     )
 
 
@@ -178,7 +185,11 @@ def _disarming_pack() -> SubjectPack:
             status="published",
             index_text_hash="fedcba9876543210",
         ),
-        topics=[Topic(topic_id="dueling", subject="dada", title="Dueling")],
+        topics=[
+            Topic(topic_id="dueling", subject="dada", title="Dueling"),
+            Topic(topic_id="dark-arts", subject="dada", title="Dark arts"),
+            Topic(topic_id="dark-creatures", subject="dada", title="Dark creatures"),
+        ],
         concepts=[
             Concept(
                 concept_id="dada-magic-disarming-charm",
@@ -186,7 +197,28 @@ def _disarming_pack() -> SubjectPack:
                 kind="spell",
                 title="Disarming Charm",
                 aliases=("Expelliarmus",),
-            )
+            ),
+            Concept(
+                concept_id="dada-magic-killing-curse",
+                subject="dada",
+                kind="spell",
+                title="Killing Curse",
+                aliases=("Avada Kedavra",),
+            ),
+            Concept(
+                concept_id="dada-creature-grim",
+                subject="dada",
+                kind="creature",
+                title="Grim",
+                aliases=(),
+            ),
+            Concept(
+                concept_id="dada-creature-werewolf",
+                subject="dada",
+                kind="creature",
+                title="Werewolves",
+                aliases=(),
+            ),
         ],
         materials=[
             Material(
@@ -198,7 +230,37 @@ def _disarming_pack() -> SubjectPack:
                 text="Expelliarmus is the Disarming Charm. It removes a wand from the hand.",
                 review_status="reviewed",
                 source_refs=[_ref("b2-c11-0029")],
-            )
+            ),
+            Material(
+                material_id="dada-dark-arts-killing-curse",
+                subject="dada",
+                topic="dark-arts",
+                concept="dada-magic-killing-curse",
+                kind="spell",
+                text="This curse is one of the Unforgivable Curses.",
+                review_status="reviewed",
+                source_refs=[_ref("b4-c14-0020")],
+            ),
+            Material(
+                material_id="dada-dark-creatures-grim",
+                subject="dada",
+                topic="dark-creatures",
+                concept="dada-creature-grim",
+                kind="creature",
+                text="This omen takes the form of a large black dog.",
+                review_status="reviewed",
+                source_refs=[_ref("b3-c06-0010")],
+            ),
+            Material(
+                material_id="dada-dark-creatures-werewolves",
+                subject="dada",
+                topic="dark-creatures",
+                concept="dada-creature-werewolf",
+                kind="creature",
+                text="This creature is dangerous at the full moon.",
+                review_status="reviewed",
+                source_refs=[_ref("b3-c07-0050")],
+            ),
         ],
     )
 
@@ -847,3 +909,102 @@ async def test_selector_lexical_match_handles_a_plural_title():
     assert [m.material_id for m in selected] == [
         "dada-dark-creatures-boggarts-nature"
     ]
+
+
+@pytest.mark.asyncio
+async def test_coverage_includes_concept_titles_and_aliases():
+    selector = await LessonSelector.build(_disarming_store(), ZeroEmbedder())
+
+    for question, material_id in (
+        ("What is Expelliarmus?", "dada-dueling-disarming-charm"),
+        ("What is the Killing Curse?", "dada-dark-arts-killing-curse"),
+        (
+            "What is the name of the Disarming Charm?",
+            "dada-dueling-disarming-charm",
+        ),
+    ):
+        materials = selector.select_lexical(question, subject="dada")
+        assert [material.material_id for material in materials] == [material_id]
+        coverage = selector.coverage_text("dada", materials)
+        assert uncovered_terms(question, materials, coverage=coverage) == set()
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_answers_a_title_only_term_from_the_pack():
+    selector = await LessonSelector.build(_disarming_store(), ZeroEmbedder())
+    llm = StaticLlm(
+        "The Killing Curse is unforgivable [mat:dada-dark-arts-killing-curse]."
+    )
+
+    result = await ask_lesson(
+        "What is the Killing Curse?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        retriever=StaticRetriever([]),
+    )
+
+    assert result.abstained is False
+    assert result.scope == "in_pack"
+    assert result.material_citations == ["dada-dark-arts-killing-curse"]
+
+
+@pytest.mark.asyncio
+async def test_selector_lexical_does_not_match_the_grim_adjective():
+    selector = await LessonSelector.build(_disarming_store(), ZeroEmbedder())
+
+    assert selector.select_lexical("Why is the war so grim?", subject="dada") == []
+
+    selected = selector.select_lexical("What is the Grim?", subject="dada")
+    assert [material.material_id for material in selected] == [
+        "dada-dark-creatures-grim"
+    ]
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_abstains_when_an_uncovered_term_has_no_corpus_evidence():
+    selector = await LessonSelector.build(_store(), ZeroEmbedder())
+    retriever = StaticRetriever(
+        [_chunk("b3-c07-0099", "A hippogriff is a proud creature.", score=0.0)]
+    )
+
+    result = await ask_lesson(
+        "Compare a boggart with a hippogriff",
+        selector=selector,
+        subject="dada",
+        llm=StaticLlm("A boggart takes your fear's shape."),
+        retriever=retriever,
+    )
+
+    assert result.abstained is True
+    assert result.abstain_reason == "no_evidence"
+    assert result.scope == "abstained"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "draft",
+    [
+        "The lesson notes do not contain the answer. [b1-c01-0000]",
+        "The set-text excerpts do not contain the answer. [b1-c01-0000]",
+        "Neither source contains the answer. [b1-c01-0000]",
+        "This is not in the department’s notes, so I cannot answer that. [b1-c01-0000]",
+    ],
+)
+async def test_ask_lesson_treats_source_refusals_as_refusals(draft):
+    retriever = StaticRetriever(
+        [_chunk("b1-c01-0000", "A book passage.", book=1, chapter=1)]
+    )
+
+    result = await ask_lesson(
+        "How do I brew a potion?",
+        selector=EmptySelector(),
+        subject="dada",
+        llm=StaticLlm(draft),
+        retriever=retriever,
+        max_retries=0,
+    )
+
+    assert result.abstained is True
+    assert result.abstain_reason == "refused"
+    assert result.scope == "abstained"

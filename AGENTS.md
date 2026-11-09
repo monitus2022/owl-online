@@ -33,7 +33,7 @@ imports them. The runtime image installs base only (`uv sync
 
 - Run the eval gate before considering a change done.
 - CI runs `uv run ruff check .`, `uv run pytest tests` and `uv run pytest eval/` on every pull request (`.github/workflows/eval.yml`). The `web` workflow runs `npm ci` and `npm run build` in `web/` on every pull request; pick its `build` check as required alongside `lint-and-tests` after the first green run. The `docker` workflow builds the API image on every pull request without pushing, so a broken Dockerfile cannot reach the deploy workflow. The live gate runs on the host before merge because the corpus is not in git.
-- After any run of `scripts/run_eval.py`, write a run record in `docs/runs/` before the change is done.
+- After any full run of `scripts/run_eval.py`, write a run record in `docs/runs/` before the change is done. `--check` gates an existing run and needs no record.
 - Do not regress retrieval or faithfulness beyond the noise band.
 - Do not merge a change that fails the eval gate.
 

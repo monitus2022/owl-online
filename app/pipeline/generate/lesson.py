@@ -105,10 +105,17 @@ _ID_SEPARATOR = re.compile(r"[,\s;]+")
 _CHUNK_ID = re.compile(r"^b\d+-c\d+-\d+$")
 
 
-def uncovered_terms(question: str, materials: list[Material]) -> set[str]:
-    """Question terms the selected material prose does not state."""
-    coverage = content_terms(" ".join(material.text for material in materials))
-    return content_terms(question) - coverage
+def uncovered_terms(
+    question: str,
+    materials: list[Material],
+    *,
+    coverage: str | None = None,
+) -> set[str]:
+    """Question terms the selected materials and their curated vocabulary omit."""
+    text = coverage if coverage is not None else " ".join(
+        material.text for material in materials
+    )
+    return content_terms(question) - content_terms(text)
 
 
 def render_materials(materials: list[Material]) -> str:
@@ -214,7 +221,7 @@ def _drop_unknown_lesson_citations(
 
 
 def _starts_with_any(answer: str, prefixes: tuple[str, ...]) -> bool:
-    lowered = answer.strip().lower()
+    lowered = answer.strip().lower().replace("’", "'")
     return any(lowered.startswith(prefix) for prefix in prefixes)
 
 
@@ -242,9 +249,10 @@ def _label_answer(answer: str, scope: LessonScope) -> str:
 
 _LABEL_PREFIX = re.compile(
     r"^(?:"
-    r"this is (?:not|outside) (?:in )?the department'?s notes[^.]*\.?\s*|"
-    r"this question is not covered by the department'?s notes[^.]*\.?\s*|"
-    r"the department'?s notes cover part of this question[^.]*\.?\s*"
+    r"this is (?:not|outside) (?:in )?the department['’]s notes[,.;:]?\s*|"
+    r"this question is not covered by the department['’]s notes[,.;:]?\s*|"
+    r"the department['’]s notes cover part of this question; "
+    r"the set texts cover the rest[,.;:]?\s*"
     r")",
     re.IGNORECASE,
 )
@@ -372,7 +380,13 @@ async def ask_lesson(
             # top-k filler.
             keep = max(0, top_k - len(extras))
             materials = (materials[:keep] + extras)[:top_k]
-    uncovered = uncovered_terms(question, materials) if materials else set()
+    coverage_fn = getattr(selector, "coverage_text", None)
+    coverage = coverage_fn(subject, materials) if callable(coverage_fn) else None
+    uncovered = (
+        uncovered_terms(question, materials, coverage=coverage)
+        if materials
+        else set()
+    )
     chunks: list[Chunk] = []
     if fallback and retriever is not None and (not materials or uncovered):
         chunks = await _retrieve_corpus(
@@ -383,6 +397,15 @@ async def ask_lesson(
     if materials and chunks:
         scope = "mixed"
     elif materials:
+        if uncovered and fallback:
+            # The pack covers only part of the question and the corpus found
+            # no evidence for the rest. Do not label a partial answer in_pack.
+            return AskResult(
+                ABSTAIN_MESSAGE,
+                abstained=True,
+                abstain_reason="no_evidence",
+                scope="abstained",
+            )
         scope = "in_pack"
     elif chunks:
         scope = "off_pack"

@@ -118,6 +118,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     lesson_subject=app_settings.lore_subject,
                     lesson_top_k=app_settings.lesson_top_k,
                     lesson_min_score=app_settings.lesson_min_score,
+                    lesson_fallback=app_settings.lesson_fallback,
                 ),
             )
         app.state.runtime = built

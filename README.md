@@ -34,11 +34,13 @@ questions by default: a mix of objective, short-answer and long-answer items.
 Objective answers are scored by code; long answers go to a pinned judge with the
 rubric and evidence. The judge never writes the final total or band.
 
-Exam generation and lesson mode read from versioned subject knowledge packs:
-one grounded material store per O.W.L. subject, with every material linked to a
-book chunk, quote and text hash. A question or lesson section that cannot cite a
-pack material is rejected before publication. External references such as the
-Harry Potter Lexicon are stored as attributed links for discovery and
+Exam generation reads from versioned subject knowledge packs: one grounded
+material store per O.W.L. subject, with every material linked to a book chunk,
+quote and text hash. A generated exam question or pack-backed lesson section
+that cannot cite a pack material is rejected before publication. A labelled
+off-pack lesson section cites set-text chunk ids instead; exam generation and
+authoritative grading never consume that fallback. External references such as
+the Harry Potter Lexicon are stored as attributed links for discovery and
 cross-checking; they are not copied into the packs and are not the canonical
 source.
 
