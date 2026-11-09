@@ -141,14 +141,16 @@ Response `200`:
     }
   ],
   "lesson": true,
+  "lesson_subject": "dada",
   "persona": true
 }
 ```
 
 `lesson` is true only when lesson mode is enabled, a selector loaded, and the
 configured subject (`OWL_LORE_SUBJECT`) is among the selector's subjects.
-`persona` mirrors `OWL_PERSONA`, so the frontend can stop hardcoding whether the
-professor's voice is live.
+`lesson_subject` names that subject when `lesson` is true, so the frontend can
+scope the mode to the right venue. `persona` mirrors `OWL_PERSONA`, so the
+frontend can stop hardcoding whether the professor's voice is live.
 
 ## Errors
 

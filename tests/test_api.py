@@ -550,6 +550,7 @@ def test_subjects_lists_published_packs():
     assert response.status_code == 200
     body = response.json()
     assert body["lesson"] is False
+    assert body["lesson_subject"] == ""
     assert body["persona"] is False
     assert body["subjects"] == [
         {
@@ -571,7 +572,12 @@ def test_subjects_empty_without_packs():
     with _client() as client:
         response = client.get("/v1/subjects")
     assert response.status_code == 200
-    assert response.json() == {"subjects": [], "lesson": False, "persona": False}
+    assert response.json() == {
+        "subjects": [],
+        "lesson": False,
+        "lesson_subject": "",
+        "persona": False,
+    }
 
 
 # Lesson mode: pack-grounded answers use an explicit mode, gated by settings.
@@ -753,6 +759,7 @@ def test_subjects_reports_lesson_and_persona_flags():
     with TestClient(app) as client:
         body = client.get("/v1/subjects").json()
     assert body["lesson"] is True
+    assert body["lesson_subject"] == "dada"
     assert body["persona"] is True
     assert body["subjects"] == []
 
@@ -780,7 +787,12 @@ def test_subjects_reports_lesson_false_when_the_configured_subject_is_absent():
     app = create_app(app_settings=Settings(lesson_mode=True), runtime=runtime)
     with TestClient(app) as client:
         body = client.get("/v1/subjects").json()
+        rejected = client.post(
+            "/ask/stream", json={"question": "Teach me", "mode": "lesson"}
+        )
     assert body["lesson"] is False
+    assert body["lesson_subject"] == ""
+    assert rejected.status_code == 400
 
 
 def test_subjects_reports_lesson_false_without_a_selector():

@@ -92,7 +92,9 @@ export function VenuePage() {
     personaState,
   };
   const lesson = Boolean(
-    department?.lesson && isOpen && subject.apiSubject === "dada",
+    department?.lesson &&
+      department.lesson_subject === subject.apiSubject &&
+      isOpen,
   );
 
   if (room.status === "soon") {

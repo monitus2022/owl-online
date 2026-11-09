@@ -57,4 +57,5 @@ class SubjectsResponse(BaseModel):
 
     subjects: list[PackSummary]
     lesson: bool = False
+    lesson_subject: str = ""
     persona: bool = False

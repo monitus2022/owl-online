@@ -32,9 +32,8 @@ const MODE_LABELS: Record<ChatMode, string> = {
 };
 
 // The server emits meta and personal only when OWL_PERSONA is on. The badge
-// reads "Professor" when the department's voice is actually live; should the
-// flag turn on before this local switch is flipped, the badge stays on the
-// neutral wording rather than asserting authorship.
+// reads "Professor" when the venue's API-derived persona state is live; the
+// static subject value is only the fallback when /v1/subjects is unreachable.
 function modeLabel(mode: ChatMode, personaState: PersonaState): string {
   if ((mode === "meta" || mode === "personal") && personaState === "live") {
     return "Professor";
@@ -167,6 +166,7 @@ export function ChatPanel({
           // reflected without rewriting transcript state.
           const bodyText =
             message.id === 0 ? welcome(subject, lesson) : message.text;
+          const modeIsLesson = message.mode === "lesson";
           const body = (
             <>
               {message.role === "professor" && message.mode && (
@@ -200,10 +200,10 @@ export function ChatPanel({
               {message.abstained && (
                 <p className="abstain-note">
                   {subject.personaState === "live"
-                    ? lesson
+                    ? modeIsLesson
                       ? "The professor could not ground this in the department's notes, so he will not guess."
                       : "The professor could not ground this in the texts, so he will not guess."
-                    : lesson
+                    : modeIsLesson
                       ? "The reviewed notes could not confirm this, and nothing is guessed."
                       : "The texts could not confirm this, and nothing is guessed."}
                 </p>

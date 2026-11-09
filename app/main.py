@@ -27,7 +27,7 @@ from app.agent.persona import PERSONA
 from app.agent.router import classify
 from app.api.cache import AnswerCache, cache_key
 from app.api.limits import ChatLimiter, Decision
-from app.api.runtime import Runtime, build_runtime
+from app.api.runtime import Runtime, build_runtime, lesson_available
 from app.api.schemas import AskRequest, AskResponse, StreamRequest, SubjectsResponse
 from app.config import Settings, settings
 from app.knowledge import LORE_SELECTION_VERSION
@@ -324,14 +324,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     def subjects(request: Request) -> SubjectsResponse:
         """Published packs only; drafts stay invisible to the frontend."""
         runtime = request.app.state.runtime
-        lesson = (
-            app_settings.lesson_mode
-            and runtime.lesson is not None
-            and app_settings.lore_subject in runtime.lesson.subjects()
-        )
+        lesson = lesson_available(app_settings, runtime)
         return SubjectsResponse(
             subjects=list(runtime.packs),
             lesson=lesson,
+            lesson_subject=app_settings.lore_subject if lesson else "",
             persona=app_settings.persona,
         )
 
@@ -454,9 +451,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         agent = runtime.agent
         if agent is None:
             raise RuntimeError("agent graph was not built")
-        if body.mode == "lesson" and (
-            not app_settings.lesson_mode or runtime.lesson is None
-        ):
+        if body.mode == "lesson" and not lesson_available(app_settings, runtime):
             raise HTTPException(status_code=400, detail="lesson mode is not enabled")
         session = request.state.session_id
         limiter: ChatLimiter = app.state.limiter

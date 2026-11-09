@@ -47,6 +47,30 @@ class Runtime:
                 await close()
 
 
+def lesson_available(settings: Settings, runtime: Runtime) -> bool:
+    """One definition for the payload flag and the request gate.
+
+    Lesson is available only when the feature is on, a selector exists, and the
+    configured subject is one the selector can actually serve.
+    """
+    return (
+        settings.lesson_mode
+        and runtime.lesson is not None
+        and settings.lore_subject in runtime.lesson.subjects()
+    )
+
+    async def aclose(self) -> None:
+        """Release provider clients on shutdown (embedder pool, model client)."""
+        seen: set[int] = set()
+        for component in (self.retriever, self.llm, self.small_llm):
+            if component is None or id(component) in seen:
+                continue
+            seen.add(id(component))
+            close = getattr(component, "aclose", None)
+            if close is not None:
+                await close()
+
+
 async def build_runtime(settings: Settings) -> Runtime:
     """Load the local hybrid index and build the configured model adapters."""
     reranker = (

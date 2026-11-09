@@ -21,6 +21,7 @@ export interface SubjectSummary {
 export interface SubjectsPayload {
   subjects: SubjectSummary[];
   lesson: boolean;
+  lesson_subject: string;
   persona: boolean;
 }
 
@@ -35,6 +36,8 @@ export async function fetchSubjects(): Promise<SubjectsPayload> {
   return {
     subjects: Array.isArray(payload.subjects) ? payload.subjects : [],
     lesson: Boolean(payload.lesson),
+    lesson_subject:
+      typeof payload.lesson_subject === "string" ? payload.lesson_subject : "",
     persona: Boolean(payload.persona),
   };
 }
