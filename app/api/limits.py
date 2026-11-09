@@ -1,8 +1,8 @@
 """In-process chat limits, usage accounting and the daily spend guard.
 
 One API process on one host, so memory is enough; a restart resets the windows.
-Chat only: exam routes will use their own dependency, so degrading chat never
-takes them down.
+Chat and exam routes have separate limiters, so degrading chat never takes exam
+serving down.
 
 Sessions are server-issued and signed in the API layer; this module only keys on
 the value it is given. Releases use a per-admission token, so a double release
@@ -222,3 +222,75 @@ class ChatLimiter:
             for key, window in self._ip_windows.items()
             if window.day == day and (window.minute_count or window.day_count)
         }
+
+
+class ExamAttemptLimiter:
+    """Per-session and per-IP daily attempt caps.
+
+    The signed-in limit is reserved for auth (#35); until then the route admits
+    every caller as anonymous. The IP cap stops a cleared cookie from minting a
+    fresh allowance on every request.
+    """
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        now_utc: Callable[[], datetime] | None = None,
+    ) -> None:
+        self._settings = settings
+        self._now_utc = now_utc or (lambda: datetime.now(UTC))
+        self._counts: dict[str, tuple[str, int]] = {}
+        self._ip_counts: dict[str, tuple[str, int]] = {}
+        self._admits = 0
+
+    def admit(
+        self,
+        identity: str,
+        *,
+        signed_in: bool = False,
+        client_ip: str | None = None,
+    ) -> Decision:
+        """Count one attempt or return the daily limit decision."""
+        day = self._now_utc().strftime("%Y-%m-%d")
+        self._admits += 1
+        if self._admits % 512 == 0:
+            self._prune(day)
+        limit = (
+            self._settings.exam_attempts_per_day_signed_in
+            if signed_in
+            else self._settings.exam_attempts_per_day_anonymous
+        )
+        current_day, count = self._counts.get(identity, (day, 0))
+        if current_day != day:
+            count = 0
+        if count >= limit:
+            return Decision("rate_limited", "exam_day", self._to_midnight())
+        ip_count = 0
+        if client_ip is not None:
+            ip_day, ip_count = self._ip_counts.get(client_ip, (day, 0))
+            if ip_day != day:
+                ip_count = 0
+            if ip_count >= self._settings.exam_attempts_per_day_ip:
+                return Decision("rate_limited", "exam_ip_day", self._to_midnight())
+            if len(self._ip_counts) >= 20_000 and client_ip not in self._ip_counts:
+                return Decision("rate_limited", "capacity", self._to_midnight())
+        if len(self._counts) >= 20_000 and identity not in self._counts:
+            return Decision("rate_limited", "capacity", self._to_midnight())
+        self._counts[identity] = (day, count + 1)
+        if client_ip is not None:
+            self._ip_counts[client_ip] = (day, ip_count + 1)
+        return Decision("ok")
+
+    def _prune(self, day: str) -> None:
+        self._counts = {
+            key: value for key, value in self._counts.items() if value[0] == day
+        }
+        self._ip_counts = {
+            key: value for key, value in self._ip_counts.items() if value[0] == day
+        }
+
+    def _to_midnight(self) -> int:
+        now = self._now_utc()
+        seconds = 24 * 3600 - (now.hour * 3600 + now.minute * 60 + now.second)
+        return max(60, seconds)

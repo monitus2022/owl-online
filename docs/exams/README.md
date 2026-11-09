@@ -1,7 +1,7 @@
 # Exam bank artifacts
 
-The exam bank is the offline pool a paper is sampled from. It is separate from
-the paper and attempt records in #38.
+The exam bank is the offline pool a paper is sampled from. The paper and attempt
+records are served from the same SQLite store (#193), not from #38.
 
 ## Layout
 
@@ -10,7 +10,8 @@ data/exams/<subject>/
     manifest.toml   bank version, pack pins, generator and judge config, counts
     bank.jsonl      one BankItem per line
 
-data/exams/exams.db SQLite serving copy imported from the validated JSONL
+data/exams/exams.db SQLite serving copy imported from the validated JSONL,
+    plus the attempts and attempt_questions tables written at serve time
 
 docs/exams/<subject>-<version>.md
     structure-only record: counts, ids, coverage and validation summary
@@ -79,6 +80,46 @@ The published bank's live probe is
 are `eval/exam/` (#191), run with
 `uv run python scripts/run_exam_eval.py`; the record is
 `docs/runs/2026-11-09-191-dada-bank-eval.md`.
+
+## Serving
+
+The serving routes read the published bank from `data/exams/exams.db`, never the
+JSONL:
+
+| Route | Behaviour |
+|---|---|
+| `GET /v1/exams` | paper descriptor: 10 questions, 6 MCQ, 4 short answers, 50 marks, 60 minutes |
+| `POST /v1/exams/{paper_id}/attempts` | sample 6 MCQ and 4 short answers, persist them, return the attempt view |
+| `GET /v1/attempts/{attempt_id}` | the same persisted view on a reload |
+| `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one judge call, then the deterministic band |
+
+The paper id is `<subject>-<version>`, so the served DADA paper is
+`dada-1.0.0`. A sampled MCQ serves the correct option and three random
+distractors in a shuffled order; the correct option id stays on the persisted
+attempt and is never in the pre-submission view. The attempt view contains no
+golden answer, rubric or evidence either.
+
+The attempt is persisted before it is returned, so a reload is stable and a
+repeated grade returns the stored result without a second judge call. Grading
+also stores the submitted answers with the grade so a result can be audited.
+The grade response carries the MCQ key, per-question marks, model answer,
+feedback, criteria and the band. An unresolved judge result sets
+`needs_review` and leaves the total and band null.
+
+Attempts are capped per session at three per day anonymous and five per day
+signed-in, with a separate nine-per-day per-IP cap; over a cap is `429` with
+`Retry-After`. The signed-in path is reserved for auth (#35), so the route
+currently admits everyone as anonymous. The exam limiter is separate from the
+chat limiter. The exam judge is built when a published bank exists; a missing
+judge configuration is caught at startup, so papers still serve and grading
+returns `503`. A provider failure during grading is `502`.
+
+Serving settings: `OWL_EXAM_STORE_PATH` (default `data/exams/exams.db`),
+`OWL_EXAM_SUBJECT` (default `dada`), `OWL_EXAM_MCQ_COUNT` (6),
+`OWL_EXAM_SHORT_COUNT` (4), `OWL_EXAM_DURATION_MINUTES` (60),
+`OWL_EXAM_ATTEMPTS_PER_DAY_ANONYMOUS` (3),
+`OWL_EXAM_ATTEMPTS_PER_DAY_SIGNED_IN` (5) and
+`OWL_EXAM_ATTEMPTS_PER_DAY_IP` (9).
 
 ## Bank 1.0.0 quality notes
 

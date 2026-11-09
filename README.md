@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: grounded chat, the DADA pack published at 1.0.0, the DADA exam bank published at 1.0.0, lesson mode live behind `OWL_LESSON_MODE`, and the professor persona live behind `OWL_PERSONA`. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; questions outside the pack fall back to labelled set-text answers. The bank holds 25 MCQ and 25 short-answer items, hybrid grading is built, and the bank eval and judge calibration are recorded; the served paper is next. The next product surface is the served exam paper, plus conversation memory and a second department. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
+> Status: grounded chat, the DADA pack published at 1.0.0, the DADA exam bank published at 1.0.0, lesson mode live behind `OWL_LESSON_MODE`, and the professor persona live behind `OWL_PERSONA`. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; questions outside the pack fall back to labelled set-text answers. The bank holds 25 MCQ and 25 short-answer items, hybrid grading is built, the bank eval and judge calibration are recorded, and served papers are live; result history stays device-local until auth (#35). The next product surface is conversation memory and a second department. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
 
 ---
 
@@ -15,7 +15,7 @@ O.W.L. Online has two product surfaces on one retrieval core:
 | Chat answer | Grounded Q&A with citations | live |
 | Chat practice | On-demand grounded practice question | live |
 | Chat feedback | Formative feedback and a provisional mark | live |
-| Exam bank | 25 MCQ + 25 short-answer bank sampled into 6 MCQ + 4 short-answer papers and graded by a hybrid scorer | bank 1.0.0 published (#190); grading and calibration built (#191/#192); serving next (#193) |
+| Exam bank | 25 MCQ + 25 short-answer bank sampled into 6 MCQ + 4 short-answer papers and graded by a hybrid scorer | bank 1.0.0 published; served attempts and hybrid grading built (#190-#193); history after #35 |
 | Lesson mode | Pack-grounded teaching answers with material and book citations, plus a labelled corpus fallback | live behind `OWL_LESSON_MODE` |
 
 Chat practice and feedback are ephemeral and formative. The exam bank is the
@@ -29,11 +29,13 @@ grading decisions.
 
 The exam bank is not a request-time generator. The bank is authored offline,
 validated against the pack and the corpus, and stored with an evidence snapshot
-on every item. A paper samples 6 MCQ and 4 short answers for 50 marks: MCQ
-answers are scored by code, short answers go to a pinned judge with the rubric
-and evidence, and the judge never writes the final total or band. Servable
-attempts and the frontend swap are the next ticket (#193). Questions test the
-subject, not the plot; the scope rule is in
+on every item. A served attempt samples 6 MCQ and 4 short answers for 50 marks:
+the server keeps the MCQ key, the client gets the correct option plus three
+distractors, MCQ answers are scored by code, short answers go to a pinned judge
+with the rubric and evidence, and the judge never writes the final total or band.
+The exam room takes a served paper through `POST /v1/exams/{paper_id}/attempts`
+and submits it for grading; result history stays device-local until auth (#35).
+Questions test the subject, not the plot; the scope rule is in
 [`docs/exams/README.md`](docs/exams/README.md).
 
 Exam generation reads from versioned subject knowledge packs: one grounded
@@ -101,7 +103,7 @@ flowchart TD
 
 Every model call goes through an adapter, so the provider is a config value, not an architecture.
 
-See [`docs/architecture.md`](docs/architecture.md) for the current contracts, module dependencies, and the `/ask` and `/ask/stream` request flows. The exam-bank pipeline is planned and documented there as a separate boundary, not as a chat intent.
+See [`docs/architecture.md`](docs/architecture.md) for the current contracts, module dependencies, and the `/ask` and `/ask/stream` request flows. The exam-bank pipeline is documented there as a separate served boundary, not as a chat intent.
 
 ---
 
@@ -213,7 +215,7 @@ Execution is phased:
 | V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval + rerank, cited generation with abstention, API, mini-eval, deployed | shipped (https://api.monitus.org) |
 | V2 - Deepening | guardrails, chat intents (LangGraph), Bedrock Llm adapter, cost controls, local eval gate, retrieval foundation, multi-book answer path, professor persona | chat foundation, retrieval foundation, held-out set, CI gate, persona and the stateless lesson slice delivered; #105 flag-off and time-boxed; voice work #176 |
 | V2.5 - Subject packs | taxonomy, material packs, source refs, validation, lesson mode | DADA 1.0.0 published; Charms content #128 |
-| V3 - Exam bank and continuity | exam bank, hybrid grading, memory, threads, lesson continuity, progress | exam bank 1.0.0 published; grading and calibration built (#191/#192); serving next (#193); continuity after |
+| V3 - Exam bank and continuity | exam bank, hybrid grading, memory, threads, lesson continuity, progress | exam bank 1.0.0 published; grading, calibration and serving built (#191-#193); continuity after |
 | V4 - Identity (optional) | Google auth, per-user chat and exam history, progress tracking, long-term memory | last, if needed |
 
 ---
@@ -238,7 +240,7 @@ This repository is developed with AI coding agents under human review.
 
 This project is developed with AI coding agents under human review, and that usage is recorded per ticket.
 
-- AI drafted most implementation code and tests: provider adapters and probes, retrieval and reranking, generation and verification, the API and SSE surface, the agent graph and router, the persona and lore layer, ingest and index, the eval harness and CI gate, the deploy files, and the entire frontend (`web/`, tickets #132, #134-#137, #141, #143, #145), including a read-only reviewer agent that checked each frontend ticket against its acceptance criteria before merge. It also drafted the DADA subject-pack materials and the lesson-table audit that produced pack 1.0.0 and `GET /v1/subjects`, the DADA exam bank 1.0.0 (25 MCQ + 25 short answers), which an independent Mistral Small verifier checked, the hybrid grading path (#192), and the bank evaluation and judge calibration (#191).
+- AI drafted most implementation code and tests: provider adapters and probes, retrieval and reranking, generation and verification, the API and SSE surface, the agent graph and router, the persona and lore layer, ingest and index, the eval harness and CI gate, the deploy files, and the entire frontend (`web/`, tickets #132, #134-#137, #141, #143, #145), including a read-only reviewer agent that checked each frontend ticket against its acceptance criteria before merge. It also drafted the DADA subject-pack materials and the lesson-table audit that produced pack 1.0.0 and `GET /v1/subjects`, the DADA exam bank 1.0.0 (25 MCQ + 25 short answers), which an independent Mistral Small verifier checked, the hybrid grading path (#192), the bank evaluation and judge calibration (#191), and the served exam API and frontend swap (#193).
 - The human set the contracts, provider abstraction, eval discipline and scope boundaries; chose the defaults, degradation policies and flag states; froze the held-out sets; approved the DADA prose and lesson-table scope on 2026-11-08; and reviewed and owns every line.
 - AI assisted with documentation, issue text and run records; the human reviewed the published text.
 

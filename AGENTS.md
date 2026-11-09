@@ -9,9 +9,10 @@ answers, sets practice and gives formative feedback, and a static exam bank with
 offline generation and hybrid grading. The DADA pack and exam bank are published
 at 1.0.0; the professor persona is live behind `OWL_PERSONA`; lesson mode is live
 behind `OWL_LESSON_MODE` with a labelled corpus fallback when the pack is thin;
-hybrid grading is built, and the bank eval and judge calibration are recorded;
-the served paper is the next product slice. The project's point is the evaluation
-discipline and the full-stack agent, not the corpus.
+hybrid grading is built, the bank eval and judge calibration are recorded, and
+served papers are live; per-user attempt history waits on auth (#35). The
+project's point is the evaluation discipline and the full-stack agent, not the
+corpus.
 
 ## Commands
 
@@ -50,20 +51,20 @@ imports them. The runtime image installs base only (`uv sync
 
 Layout:
 
-- `app/api/` - FastAPI HTTP surface (`/ask`, `/ask/stream`, `/v1/subjects`; exam endpoints are planned)
+- `app/api/` - FastAPI HTTP surface (`/ask`, `/ask/stream`, `/v1/subjects`, and the `/v1/exams` and `/v1/attempts` serving routes)
 - `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam build is planned; `ingest/lexicon/` holds the hp-lexicon canon-index harvester (spike grammar and parsers plus the #126 discovery/fetch/harvest modules)
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
 - `app/agent/` - LangGraph chat graph, node functions, state (V2); lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
 - `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts) and feeds lesson mode through a derived in-memory material selector (#166); pack wiring and Charms content remain on #128
-- `app/storage/` - SQLite bank store (#189); the attempt and paper repository follows #193
-- `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the bank eval and judge calibration are in `eval/exam/` (#191); the served paper is #193
+- `app/storage/` - SQLite bank store (#189) plus attempt persistence and grading records (#193)
+- `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the bank eval and judge calibration are in `eval/exam/` (#191); served attempts are #193
 - `data/subjects/` - local subject packs; the DADA pack is published; source text stays out of git
 - `app/schemas.py` - domain data (`Chunk`)
 - `app/config.py` - settings (env-based, `OWL_` prefix)
 - `app/logging.py` - logging setup: one formatter, level from settings, per-request id
 - `docs/architecture.md` - living diagrams (contracts, module deps, chat flows, exam-bank boundary); update when a contract, an adapter, or the top-level flow changes
 - `docs/workplan.md` - phase plan, ticket map, grading and memory decisions
-- `docs/exams/` - DADA bank blueprint, artifact rules, published bank record, manifest snapshot and grading probe (#188-#192)
+- `docs/exams/` - DADA bank blueprint, artifact rules, serving contract, published bank record, manifest snapshot and grading probe (#188-#193)
 - `docs/lexicon-canon-index.md` - plan of record for the hp-lexicon canon index (#125-#128); update it when a parse rule, an artifact contract or the source policy changes
 - `docs/runs/` - one committed Markdown record per eval run, plus the template and index
 - `eval/` - harness, gold set, thresholds; `eval/exam/` holds the DADA bank evaluation and judge calibration (#191)
@@ -72,11 +73,12 @@ Layout:
 Every model call goes through an adapter; the provider is a config value.
 
 Chat has three intents: answer, practice and feedback. Practice and feedback are
-ephemeral and formative. The exam bank is a separate planned surface: papers are
-generated offline, validated, versioned and stored. Objective answers are scored
-deterministically; free-text answers are judged by a pinned LLM against the
-stored rubric and evidence; totals and bands are deterministic. Do not route
-formal exam generation or authoritative grading through the chat graph.
+ephemeral and formative. The exam bank is a separate served surface: papers are
+sampled from a bank that was generated offline, validated, versioned and stored.
+Objective answers are scored deterministically; free-text answers are judged by a
+pinned LLM against the stored rubric and evidence; totals and bands are
+deterministic. Do not route formal exam generation or authoritative grading
+through the chat graph.
 
 Subject knowledge packs are the source of truth for exam generation and
 pack-backed lesson content. Every material has source refs; every generated exam

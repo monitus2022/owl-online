@@ -16,9 +16,10 @@ embedder. Read the two constraints before picking a host.
    startup, so mount it writable (or copy it to a writable path) rather than
    read-only. The published subject packs live under
    `/data/subjects/` (`OWL_SUBJECTS_PATH`); `GET /v1/subjects` serves the valid
-   published packs and skips drafts or broken ones. The planned exam database
-   lives under `/data/`; both stay on the same mounted volume and out of the
-   image.
+   published packs and skips drafts or broken ones. The exam database lives at
+   `/data/exams/exams.db` (`OWL_EXAM_STORE_PATH`) and holds the imported bank
+   plus the persisted attempts and grades, so that path must be writable. Both
+   stay on the same mounted volume and out of the image.
 
 2. A query-time embedder. Retrieval embeds every question. There are two
    providers, and the index must be built with the same one:

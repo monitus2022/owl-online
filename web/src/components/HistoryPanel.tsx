@@ -40,7 +40,7 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
     <section className="history" aria-label="Your papers">
       <h2>Your papers</h2>
       <div className="notice notice-mock">
-        Demonstration marks, recorded on this device only. School accounts
+        Practice marks, recorded on this device only. School accounts
         (#35) will move this history to the Academy.
       </div>
       <div aria-live="polite">
