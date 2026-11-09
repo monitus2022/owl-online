@@ -76,9 +76,9 @@ page describes what comes next and why.
 - The exam bank (#178) follows; DADA packs are delivered and the answer path is
   settled except the voice work (#176). The bank blueprint (#188) fixes a
   target of 25 MCQ and 25 short-answer items. The bank schema, validator and
-  SQLite import are in #189. The DADA bank 1.0.0 is published in #190 and the
-  hybrid grader is built in #192; quality calibration (#191) and serving (#193)
-  follow.
+  SQLite import are in #189. The DADA bank 1.0.0 is published in #190, the
+  hybrid grader is built in #192, and the bank eval and judge calibration are
+  recorded in #191; serving (#193) follows.
 
 ## Product shape
 
@@ -249,8 +249,9 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
 ## Phase B: Subject packs and exam bank
 
-Status: DADA packs delivered; the DADA bank 1.0.0 is published and the hybrid
-grader is built; quality calibration (#191) and serving (#193) are next.
+Status: DADA packs delivered; the DADA bank 1.0.0 is published, the hybrid
+grader is built and the bank eval and judge calibration are recorded (#191);
+serving (#193) is next.
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
 bank and hybrid grader on top of them.
@@ -432,8 +433,8 @@ B1 exit criteria:
 
 ### B2: Exam bank
 
-Status: bank 1.0.0 published (#190); hybrid grading built (#192); quality
-calibration and serving next (#191/#193).
+Status: bank 1.0.0 published (#190); hybrid grading built (#192); bank eval and
+judge calibration recorded (#191); serving next (#193).
 
 A paper is 10 questions: 6 MCQ at 3 marks and 4 short answers at 8 marks, 50
 marks total. That is long enough to feel like a paper and short enough to finish
@@ -507,7 +508,9 @@ Exit criteria:
 - free-text answers are judged once per attempt with per-question structured output;
 - invalid judge output is retried once and then flagged, never silently zeroed;
 - totals and bands are deterministic;
-- a human-marked calibration set reports score agreement and mean absolute error.
+- an owner-reviewed calibration set (AI-proposed marks adopted by the owner)
+  reports score agreement and mean absolute error
+  (`docs/runs/2026-11-09-191-dada-bank-eval.md`).
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 
@@ -703,7 +706,8 @@ Exam generation adds:
 
 Grading adds:
 
-- agreement with a human-marked calibration set;
+- agreement with an owner-reviewed calibration set (AI-proposed marks adopted
+  by the owner);
 - exact and adjacent agreement;
 - mean absolute error;
 - per-criterion agreement;
