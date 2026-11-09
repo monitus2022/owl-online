@@ -8,8 +8,8 @@ a separate offline pipeline with stored mark schemes and deterministic scoring.
 """
 
 import re
-from difflib import get_close_matches
 
+from app.agent.persona import PERSONA
 from app.agent.state import AgentState, Mode, RequestedMode
 from app.trace import current_tracer
 
@@ -59,13 +59,24 @@ _BOOK_CONTEXT = re.compile(
     re.IGNORECASE,
 )
 # Persona meta cues. Keep them narrow: "who teaches Defense" is an answer
-# question, not an identity question.
+# question, not an identity question. The name and title come from the card so
+# a persona edit cannot silently break routing.
+_PERSONA_TOKENS = tuple(
+    token.lower() for token in PERSONA.name.split() if token.isalpha()
+)
+_PERSONA_LAST = _PERSONA_TOKENS[-1]
+_PERSONA_FIRST = " ".join(_PERSONA_TOKENS[:-1]) or _PERSONA_LAST
+_PERSONA_TITLE = PERSONA.address.split()[0].lower()
+_FIRST = re.escape(_PERSONA_FIRST)
+_LAST = re.escape(_PERSONA_LAST)
+_TITLE = re.escape(_PERSONA_TITLE)
+_NAME = rf"(?:{_TITLE} |{_TITLE[:4]}\.? )?(?:{_FIRST} )?{_LAST}"
 _META_CUES: dict[str, re.Pattern[str]] = {
     "identity": re.compile(
-        r"\b("
-        r"who are you|what(?:'s| is) your name|introduce yourself|"
-        r"who(?:'s| is| are) (?:professor |prof\.? )?(?:alistair )?crane(?!['’]s\b)"
-        r")\b",
+        rf"\b("
+        rf"who are you|what(?:'s| is) your name|introduce yourself|"
+        rf"who(?:'s| is| are) {_NAME}(?!['’]s\b)"
+        rf")\b",
         re.IGNORECASE,
     ),
     "scope": re.compile(
@@ -93,13 +104,12 @@ _META_CUES: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "professor": re.compile(
-        r"\b("
-        r"your background|were you an auror|tell me about yourself|your experience|"
-        r"tell me about (?:professor |prof\.? )?(?:alistair )?crane|"
-        r"(?:professor |prof\.? )?(?:alistair )?crane(?:'s|’s)? (?:background|story|experience)|"
-        r"what (?:is|was) (?:professor |prof\.? )?(?:alistair )?crane"
-        r"(?:'s|’s)? (?:background|story)"
-        r")\b",
+        rf"\b("
+        rf"your background|were you an auror|tell me about yourself|your experience|"
+        rf"tell me about {_NAME}(?!['’]s\b)|"
+        rf"{_NAME}(?:'s|’s)? (?:background|story|experience)|"
+        rf"what (?:is|was) {_NAME}(?:'s|’s)? (?:background|story)"
+        rf")\b",
         re.IGNORECASE,
     ),
     "auror": re.compile(
@@ -124,25 +134,25 @@ _PERSONAL = re.compile(
 )
 
 
-# The professor's name is typed by hand. Normalise near matches before the
-# deterministic cues: this stays rule-based, only tokens close to a known name
-# are rewritten, and the cue patterns still decide the intent.
-_NAME_TOKEN = re.compile(r"[A-Za-z]+")
-_NAME_VARIANTS = {
-    "crane": ("crane",),
-    "alistair": ("alistair", "alister"),
-    "professor": ("professor", "profesor", "proffesor"),
+# The professor's name is typed by hand. Normalise known spelling variants
+# before the deterministic cues; only a fixed alias table is rewritten, so an
+# ordinary word is never rewritten into a name.
+_KNOWN_ALIASES = {
+    "crane": ("crain", "cran", "craine"),
+    "alistair": ("alister", "alistar"),
+    "professor": ("profesor", "proffesor"),
 }
+_NAME_ALIASES = {
+    token: (token, *_KNOWN_ALIASES.get(token, ()))
+    for token in {_PERSONA_LAST, _PERSONA_FIRST, _PERSONA_TITLE}
+}
+_NAME_TOKEN = re.compile(r"[A-Za-z]+")
 
 
 def _canonical_name(token: str) -> str:
     lowered = token.lower()
-    for canonical, variants in _NAME_VARIANTS.items():
+    for canonical, variants in _NAME_ALIASES.items():
         if lowered in variants:
-            return canonical
-        if len(lowered) >= 4 and get_close_matches(
-            lowered, [canonical], n=1, cutoff=0.8
-        ):
             return canonical
     return token
 

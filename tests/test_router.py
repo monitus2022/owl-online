@@ -1,4 +1,4 @@
-"""Router fixture: the three chat intents classify correctly and overrides win."""
+"""Router fixture: the chat intents classify correctly and overrides win."""
 
 import pytest
 
@@ -115,3 +115,41 @@ def test_professor_background_variants_route_to_professor(question):
 def test_book_professors_and_persona_off_stay_on_the_answer_path():
     assert classify("Who is Professor Snape?", persona=True) == "answer"
     assert classify("Who is Professor Crane?", persona=False) == "answer"
+
+
+def test_possessive_professor_questions_stay_on_the_answer_path():
+    assert classify("Tell me about Professor Crane's assistant", persona=True) == "answer"
+    assert classify("Who is Professor Crane's assistant?", persona=True) == "answer"
+    assert classify("Tell me about cranes", persona=True) == "answer"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Tell me about Professor Snape's background",
+        "Who is Professor McGonagall?",
+        "Who is Professor Lupin?",
+        "Who teaches Defense Against the Dark Arts?",
+    ],
+)
+def test_book_questions_stay_on_the_answer_path(question):
+    assert classify(question, persona=True) == "answer"
+
+
+def test_book_context_does_not_override_persona_identity():
+    # The books do not contain Crane; a setting question about him stays meta.
+    assert classify("In the books, who is Professor Crane?", persona=True) == "meta"
+    assert meta_topic("In the books, who is Professor Crane?") == "identity"
+
+
+def test_professor_background_needs_persona():
+    assert classify("Tell me about Professor Crane", persona=False) == "answer"
+
+
+def test_persona_card_name_drives_the_identity_cue():
+    from app.agent.persona import PERSONA
+
+    assert classify(f"Who is {PERSONA.name}?", persona=True) == "meta"
+    assert meta_topic(f"Who is {PERSONA.name}?") == "identity"
+    assert classify(f"Tell me about {PERSONA.name}", persona=True) == "meta"
+    assert meta_topic(f"Tell me about {PERSONA.name}") == "professor"
