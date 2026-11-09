@@ -17,10 +17,12 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from dataclasses import dataclass, field
 
 from app.knowledge.materials import Material
 from app.knowledge.packs import PackStore, SubjectPack
+from app.knowledge.terms import content_terms, phrase_match_score
 from app.providers.contracts import Embedder
 
 logger = logging.getLogger(__name__)
@@ -39,6 +41,23 @@ def _embedding_text(pack: SubjectPack, material: Material) -> str:
     title = concept.title if concept is not None else material.concept
     aliases = " ".join(concept.aliases) if concept is not None else ""
     return f"{title}. {aliases}. {material.text}".strip()
+
+
+# One-word concept titles that are also ordinary adjectives or nouns. A bare
+# lexical hit is not enough; require a plural noun or a mid-sentence proper noun.
+_AMBIGUOUS_ONE_WORD = frozenset({"grim"})
+
+
+def _has_ambiguous_context(question: str, word: str) -> bool:
+    """A plural noun or a mid-sentence proper noun."""
+    lowered = question.lower()
+    if re.search(rf"\b{re.escape(word)}s\b", lowered):
+        return True
+    for match in re.finditer(rf"\b{re.escape(word.capitalize())}\b", question):
+        prefix = question[: match.start()].rstrip()
+        if prefix and prefix[-1] not in ".!?":
+            return True
+    return False
 
 
 def _cosine(left: tuple[float, ...], right: tuple[float, ...]) -> float:
@@ -108,6 +127,88 @@ class LessonSelector:
 
     def subjects(self) -> tuple[str, ...]:
         return tuple(sorted(self.vectors))
+
+    def coverage_text(self, subject: str, materials: list[Material]) -> str:
+        """Title, aliases and prose for the coverage check.
+
+        A concept title can answer a question even when the material prose uses
+        a different noun, so coverage must include the curated vocabulary.
+        """
+        pack = self.store.get(subject)
+        if pack is None:
+            return " ".join(material.text for material in materials)
+        return " ".join(_embedding_text(pack, material) for material in materials)
+
+    def filter_ambiguous(
+        self,
+        subject: str,
+        question: str,
+        materials: list[Material],
+    ) -> list[Material]:
+        """Drop a one-word ambiguous title used as an ordinary word.
+
+        The embedding selector can return the Grim material for "Was it a grim
+        war?"; the curated matcher already guards this, but the embedding path
+        must be guarded too.
+        """
+        pack = self.store.get(subject)
+        if pack is None:
+            return materials
+        kept: list[Material] = []
+        for material in materials:
+            concept = next(
+                (c for c in pack.concepts if c.concept_id == material.concept),
+                None,
+            )
+            if (
+                concept is not None
+                and concept.title.lower() in _AMBIGUOUS_ONE_WORD
+                and not _has_ambiguous_context(question, concept.title.lower())
+            ):
+                continue
+            kept.append(material)
+        return kept
+
+    def select_lexical(
+        self,
+        question: str,
+        *,
+        subject: str,
+        top_k: int = DEFAULT_TOP_K,
+    ) -> list[Material]:
+        """Curated concept-title and alias matches, for a weak embedding query.
+
+        A comparison question such as "Compare Expelliarmus with Avifors"
+        embeds poorly because the off-pack half dominates the vector. Matching
+        the pack's reviewed concept vocabulary keeps the in-pack half in the
+        prompt. Only full titles and aliases match: the generic word "charm"
+        does not pull in "Disarming Charm".
+        """
+        pack = self.store.get(subject)
+        if pack is None:
+            return []
+        question_terms = content_terms(question)
+        scored: list[tuple[int, str, Material]] = []
+        for material in pack.materials:
+            concept = next(
+                (c for c in pack.concepts if c.concept_id == material.concept),
+                None,
+            )
+            if concept is None:
+                continue
+            score = 0
+            for phrase in (concept.title, *concept.aliases):
+                if (
+                    len(phrase.split()) == 1
+                    and phrase.lower() in _AMBIGUOUS_ONE_WORD
+                    and not _has_ambiguous_context(question, phrase.lower())
+                ):
+                    continue
+                score += phrase_match_score(phrase, question_terms)
+            if score:
+                scored.append((score, material.material_id, material))
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return [material for _, _, material in scored[: max(1, top_k)]]
 
     async def select(
         self,

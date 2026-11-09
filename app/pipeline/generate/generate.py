@@ -121,7 +121,10 @@ _CLAUSE_SPLIT = re.compile(
 
 TokenSink = Callable[[str], None]
 StageSink = Callable[[str], None]
-AbstainReason = Literal["no_evidence", "uncited", "refused"]
+AbstainReason = Literal[
+    "no_evidence", "uncited", "refused", "missing_scope_citation"
+]
+LessonScope = Literal["in_pack", "mixed", "off_pack", "abstained"]
 
 
 @dataclass(frozen=True)
@@ -153,6 +156,8 @@ class AskResult:
     # Exact prompt size when the path knows it (lesson mode). The corpus path
     # stays 0 so usage accounting keeps its existing estimate.
     prompt_chars: int = 0
+    # Lesson scope: where the evidence came from. None on the corpus path.
+    scope: LessonScope | None = None
 
 
 def retrieval_floor(

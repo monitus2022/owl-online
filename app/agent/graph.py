@@ -40,6 +40,7 @@ def build_graph(
     lesson_subject: str = "dada",
     lesson_top_k: int = LESSON_TOP_K,
     lesson_min_score: float = LESSON_MIN_SCORE,
+    lesson_fallback: bool = True,
 ) -> CompiledStateGraph:
     """Build the stateless per-request graph; no checkpointer in D4."""
     graph = StateGraph(AgentState)
@@ -101,12 +102,14 @@ def build_graph(
             partial(
                 lesson_node,
                 selector=lesson,
+                retriever=retriever,
                 llm=llm,
                 subject=lesson_subject,
                 top_k=lesson_top_k,
                 min_score=lesson_min_score,
                 max_retries=max_retries,
                 persona=persona,
+                fallback=lesson_fallback,
             ),
         )
         graph.add_edge("lesson", END)

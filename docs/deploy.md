@@ -170,6 +170,7 @@ control the non-secret runtime toggles. The workflow passes them with `-e`, and
 |---|---|---|
 | `OWL_SUBJECTS_PATH` | `/data/subjects` | pack directory inside the container |
 | `OWL_LESSON_MODE` | `false` | enable pack-grounded lesson answers |
+| `OWL_LESSON_FALLBACK` | `true` | answer from labelled set texts when the pack does not cover the question |
 | `OWL_PERSONA` | `false` | enable the professor voice |
 
 Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
@@ -177,7 +178,7 @@ Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
 workflow. `docker restart` does not re-read env; the workflow recreates the
 container with the variables.
 
-The workflow always injects these three keys (the repository variable or its
+The workflow always injects these four keys (the repository variable or its
 default), so they override `owl.env` even when no repository variable is set.
 The file entries are only for manual `docker run` or Compose.
 `OWL_LESSON_MODE` also needs a valid published pack for `OWL_LORE_SUBJECT`
@@ -315,16 +316,17 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_TRACE_FILE=/data/traces.jsonl
    OWL_AWS_REGION=ap-northeast-1
    OWL_CORS_ORIGINS=https://your-chat-page.pages.dev
-   # The deploy workflow injects these three with -e; set the repository
+   # The deploy workflow injects these four with -e; set the repository
    # variables to true to enable lesson and persona. The file entries are for
    # manual docker run or Compose use.
    OWL_LESSON_MODE=false
+   OWL_LESSON_FALLBACK=true
    OWL_PERSONA=false
    ```
 
-   The workflow always injects `OWL_SUBJECTS_PATH`, `OWL_LESSON_MODE` and
-   `OWL_PERSONA` (repository variable or default), so they override the file
-   even when no variable is set.
+   The workflow always injects `OWL_SUBJECTS_PATH`, `OWL_LESSON_MODE`,
+   `OWL_LESSON_FALLBACK` and `OWL_PERSONA` (repository variable or default), so
+   they override the file even when no variable is set.
 
 3. The data at `/data`: `chunks.jsonl`, the index built with the same
    embedder, `lore/` and `subjects/`. Build the Titan index locally, then

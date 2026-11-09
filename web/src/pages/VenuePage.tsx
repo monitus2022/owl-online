@@ -98,6 +98,7 @@ export function VenuePage() {
       summary?.status === "published" &&
       isOpen,
   );
+  const lessonFallback = Boolean(department?.lesson_fallback ?? true);
   const packMissing =
     department !== null &&
     subject.status === "open" &&
@@ -186,6 +187,7 @@ export function VenuePage() {
           key={room.slug}
           subject={room}
           lesson={lesson}
+          lessonFallback={lessonFallback}
           ready={departmentChecked}
         />
       </div>

@@ -7,12 +7,11 @@ O.W.L. Online - a grounded, agentic RAG application. Read this before making cha
 A retrieval-augmented question-answering engine with two surfaces: a chat that
 answers, sets practice and gives formative feedback, and a static exam bank with
 offline generation and hybrid grading. The DADA pack and exam bank are published
-at 1.0.0; the professor persona is live behind `OWL_PERSONA`; lesson mode is
-implemented behind `OWL_LESSON_MODE` and needs the pack on the host volume;
+at 1.0.0; the professor persona is live behind `OWL_PERSONA`; lesson mode is live
+behind `OWL_LESSON_MODE` with a labelled corpus fallback when the pack is thin;
 hybrid grading is built, and the bank eval and judge calibration are recorded;
-the served paper is the next product slice. The project's point is the
-evaluation discipline and
-the full-stack agent, not the corpus.
+the served paper is the next product slice. The project's point is the evaluation
+discipline and the full-stack agent, not the corpus.
 
 ## Commands
 
@@ -35,7 +34,7 @@ imports them. The runtime image installs base only (`uv sync
 
 - Run the eval gate before considering a change done.
 - CI runs `uv run ruff check .`, `uv run pytest tests` and `uv run pytest eval/` on every pull request (`.github/workflows/eval.yml`). The `web` workflow runs `npm ci` and `npm run build` in `web/` on every pull request; pick its `build` check as required alongside `lint-and-tests` after the first green run. The `docker` workflow builds the API image on every pull request without pushing, so a broken Dockerfile cannot reach the deploy workflow. The live gate runs on the host before merge because the corpus is not in git.
-- After any run of `scripts/run_eval.py`, write a run record in `docs/runs/` before the change is done.
+- After any full run of `scripts/run_eval.py`, write a run record in `docs/runs/` before the change is done. `--check` gates an existing run and needs no record.
 - Do not regress retrieval or faithfulness beyond the noise band.
 - Do not merge a change that fails the eval gate.
 
@@ -79,10 +78,13 @@ deterministically; free-text answers are judged by a pinned LLM against the
 stored rubric and evidence; totals and bands are deterministic. Do not route
 formal exam generation or authoritative grading through the chat graph.
 
-Subject knowledge packs are the source of truth for exam generation and lesson
-mode. Every material has source refs; every generated question or lesson section
-must cite a material and source ref. Do not generate exam or lesson content from
-free model memory or from an unvalidated pack.
+Subject knowledge packs are the source of truth for exam generation and
+pack-backed lesson content. Every material has source refs; every generated exam
+question and pack-backed lesson section must cite a material and source ref. A
+labelled off-pack lesson section cites set-text chunk ids instead. Exam
+generation and authoritative grading never consume the off-pack fallback. Do not
+generate exam or pack-backed lesson content from free model memory or from an
+unvalidated pack.
 
 Chat controls (#88) enforce per-session and per-IP minute, day and concurrency
 caps through a signed session cookie, an exact cache for corpus-only answers, and

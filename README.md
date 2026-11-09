@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: grounded chat, the DADA pack published at 1.0.0, the DADA exam bank published at 1.0.0, and the professor persona live behind `OWL_PERSONA`. Lesson mode is implemented behind `OWL_LESSON_MODE` and needs the pack on the host volume. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; a missing pack falls back to labelled corpus chat. The bank holds 25 MCQ and 25 short-answer items, hybrid grading is built, and the bank eval and judge calibration are recorded; the served paper is next. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
+> Status: grounded chat, the DADA pack published at 1.0.0, the DADA exam bank published at 1.0.0, lesson mode live behind `OWL_LESSON_MODE`, and the professor persona live behind `OWL_PERSONA`. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; questions outside the pack fall back to labelled set-text answers. The bank holds 25 MCQ and 25 short-answer items, hybrid grading is built, and the bank eval and judge calibration are recorded; the served paper is next. The next product surface is the served exam paper, plus conversation memory and a second department. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
 
 ---
 
@@ -16,7 +16,7 @@ O.W.L. Online has two product surfaces on one retrieval core:
 | Chat practice | On-demand grounded practice question | live |
 | Chat feedback | Formative feedback and a provisional mark | live |
 | Exam bank | 25 MCQ + 25 short-answer bank sampled into 6 MCQ + 4 short-answer papers and graded by a hybrid scorer | bank 1.0.0 published (#190); grading and calibration built (#191/#192); serving next (#193) |
-| Lesson mode | Pack-grounded teaching answers with material and book citations | implemented behind `OWL_LESSON_MODE`; needs the pack on the host volume |
+| Lesson mode | Pack-grounded teaching answers with material and book citations, plus a labelled corpus fallback | live behind `OWL_LESSON_MODE` |
 
 Chat practice and feedback are ephemeral and formative. The exam bank is the
 authoritative surface: papers are generated offline, validated, versioned and
@@ -36,11 +36,13 @@ attempts and the frontend swap are the next ticket (#193). Questions test the
 subject, not the plot; the scope rule is in
 [`docs/exams/README.md`](docs/exams/README.md).
 
-Exam generation and lesson mode read from versioned subject knowledge packs:
-one grounded material store per O.W.L. subject, with every material linked to a
-book chunk, quote and text hash. A question or lesson section that cannot cite a
-pack material is rejected before publication. External references such as the
-Harry Potter Lexicon are stored as attributed links for discovery and
+Exam generation reads from versioned subject knowledge packs: one grounded
+material store per O.W.L. subject, with every material linked to a book chunk,
+quote and text hash. A generated exam question or pack-backed lesson section
+that cannot cite a pack material is rejected before publication. A labelled
+off-pack lesson section cites set-text chunk ids instead; exam generation and
+authoritative grading never consume that fallback. External references such as
+the Harry Potter Lexicon are stored as attributed links for discovery and
 cross-checking; they are not copied into the packs and are not the canonical
 source.
 

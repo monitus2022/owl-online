@@ -20,6 +20,7 @@ class AgentState(TypedDict, total=False):
     citations: list[str]
     lore_citations: list[str]
     material_citations: list[str]
+    scope: str | None
     abstained: bool
     needs_input: bool
     attempts: int

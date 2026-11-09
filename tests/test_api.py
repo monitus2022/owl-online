@@ -600,6 +600,7 @@ def test_subjects_empty_without_packs():
         "subjects": [],
         "lesson": False,
         "lesson_subject": "",
+        "lesson_fallback": True,
         "persona": False,
     }
 
@@ -695,6 +696,7 @@ def test_lesson_mode_returns_material_and_source_citations():
     modes = [data for name, data in events if name == "mode"]
     finals = [data for name, data in events if name == "final"]
     assert modes[0]["mode"] == "lesson"
+    assert finals[0]["scope"] == "in_pack"
     assert finals[0]["material_citations"] == ["dada-test-material"]
     assert finals[0]["citations"] == ["b1-c01-0000"]
     assert finals[0]["abstained"] is False
@@ -708,7 +710,7 @@ class _EmptyLessonSelector:
         return ("dada",)
 
 
-def _empty_lesson_runtime() -> Runtime:
+def _empty_lesson_runtime(*, fallback: bool = True) -> Runtime:
     selector = _EmptyLessonSelector()
     graph = build_graph(
         _Retriever(),
@@ -716,10 +718,29 @@ def _empty_lesson_runtime() -> Runtime:
         lesson=selector,
         lesson_subject="dada",
         lesson_top_k=3,
+        lesson_fallback=fallback,
     )
     return Runtime(
         retriever=_Retriever(),
         llm=_LessonLlm(),
+        agent=graph,
+        lesson=selector,
+    )
+
+
+def _fallback_lesson_runtime() -> Runtime:
+    """No pack material, but the corpus retriever answers with a book citation."""
+    selector = _EmptyLessonSelector()
+    graph = build_graph(
+        _Retriever(),
+        _Llm(),
+        lesson=selector,
+        lesson_subject="dada",
+        lesson_top_k=3,
+    )
+    return Runtime(
+        retriever=_Retriever(),
+        llm=_Llm(),
         agent=graph,
         lesson=selector,
     )
@@ -754,10 +775,10 @@ def test_lesson_mode_rejects_a_student_answer():
     assert response.status_code == 422
 
 
-def test_lesson_mode_abstains_when_no_material_matches():
+def test_lesson_mode_abstains_when_no_material_matches_and_fallback_is_off():
     app = create_app(
-        app_settings=Settings(lesson_mode=True),
-        runtime=_empty_lesson_runtime(),
+        app_settings=Settings(lesson_mode=True, lesson_fallback=False),
+        runtime=_empty_lesson_runtime(fallback=False),
     )
     with TestClient(app) as client:
         with client.stream(
@@ -771,8 +792,32 @@ def test_lesson_mode_abstains_when_no_material_matches():
     events = _parse_sse(body)
     finals = [data for name, data in events if name == "final"]
     assert finals[0]["abstained"] is True
+    assert finals[0]["scope"] == "abstained"
     assert finals[0]["material_citations"] == []
     assert finals[0]["citations"] == []
+
+
+def test_lesson_mode_falls_back_to_corpus_when_no_material_matches():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True),
+        runtime=_fallback_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "Who is Professor Lupin?", "mode": "lesson"},
+        ) as response:
+            assert response.status_code == 200
+            body = "".join(response.iter_text())
+
+    events = _parse_sse(body)
+    finals = [data for name, data in events if name == "final"]
+    assert finals[0]["abstained"] is False
+    assert finals[0]["scope"] == "off_pack"
+    assert finals[0]["citations"] == ["b1-c01-0000"]
+    assert finals[0]["material_citations"] == []
+    assert "not in the department's notes" in finals[0]["answer"]
 
 
 def test_subjects_reports_lesson_and_persona_flags():
@@ -784,6 +829,7 @@ def test_subjects_reports_lesson_and_persona_flags():
         body = client.get("/v1/subjects").json()
     assert body["lesson"] is True
     assert body["lesson_subject"] == "dada"
+    assert body["lesson_fallback"] is True
     assert body["persona"] is True
     assert body["subjects"] == []
 

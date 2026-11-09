@@ -15,11 +15,14 @@ export type ChatMode =
   | "personal"
   | "lesson";
 
+export type LessonScope = "in_pack" | "mixed" | "off_pack" | "abstained";
+
 export interface FinalPayload {
   answer: string;
   citations: string[];
   lore_citations?: string[];
   material_citations?: string[];
+  scope?: LessonScope | null;
   abstained: boolean;
   needs_input?: boolean;
   attempts?: number;

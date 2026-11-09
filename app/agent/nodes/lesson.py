@@ -8,19 +8,21 @@ from app.agent.persona import Persona
 from app.agent.state import AgentState
 from app.knowledge.lesson import LessonSelector
 from app.pipeline.generate.lesson import ask_lesson
-from app.providers.contracts import Llm
+from app.providers.contracts import Llm, Retriever
 
 
 async def lesson_node(
     state: AgentState,
     *,
     selector: LessonSelector,
+    retriever: Retriever,
     llm: Llm,
     subject: str,
     top_k: int,
     min_score: float | None = None,
     max_retries: int = 1,
     persona: Persona | None = None,
+    fallback: bool = True,
 ) -> dict[str, object]:
     writer = get_stream_writer()
 
@@ -35,6 +37,8 @@ async def lesson_node(
         selector=selector,
         subject=subject,
         llm=llm,
+        retriever=retriever,
+        fallback=fallback,
         top_k=top_k,
         min_score=min_score,
         on_token=emit,
@@ -50,6 +54,7 @@ async def lesson_node(
         "answer": result.answer,
         "citations": result.citations,
         "material_citations": result.material_citations,
+        "scope": result.scope,
         "abstained": result.abstained,
         "attempts": result.attempts,
         "model_calls": result.model_calls,

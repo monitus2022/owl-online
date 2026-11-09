@@ -695,6 +695,14 @@ main {
   color: var(--ink-dim);
 }
 
+.scope-note {
+  font-size: 0.7rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin: 0 0 0.45rem;
+}
+
 .abstain-note {
   font-size: 0.8rem;
   color: var(--ink-dim);

@@ -22,6 +22,7 @@ export interface SubjectsPayload {
   subjects: SubjectSummary[];
   lesson: boolean;
   lesson_subject: string;
+  lesson_fallback: boolean;
   persona: boolean;
 }
 
@@ -38,6 +39,7 @@ export async function fetchSubjects(): Promise<SubjectsPayload> {
     lesson: Boolean(payload.lesson),
     lesson_subject:
       typeof payload.lesson_subject === "string" ? payload.lesson_subject : "",
+    lesson_fallback: payload.lesson_fallback !== false,
     persona: Boolean(payload.persona),
   };
 }
