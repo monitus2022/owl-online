@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.agent.router import classify, route
+from app.agent.router import classify, meta_topic, route
 
 
 @pytest.mark.parametrize(
@@ -80,3 +80,38 @@ def test_lesson_is_an_answer_path_hint():
 def test_route_returns_a_state_update():
     state = {"question": "Who is the Head of Gryffindor House?"}
     assert route(state) == {"mode": "answer"}
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Who is Professor Alistair Crane?",
+        "Who is Professor Crane?",
+        "Who is Alistair Crane?",
+        "Who is Profesor Alister Crane?",
+        "Who is Proffesor Alistair Crain?",
+        "Who's Crane?",
+    ],
+)
+def test_professor_name_variants_route_to_identity(question):
+    assert classify(question, persona=True) == "meta"
+    assert meta_topic(question) == "identity"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Tell me about Professor Crane",
+        "Tell me about Prof. Cran",
+        "What is Professor Crane's background?",
+        "Professor Crane's story",
+    ],
+)
+def test_professor_background_variants_route_to_professor(question):
+    assert classify(question, persona=True) == "meta"
+    assert meta_topic(question) == "professor"
+
+
+def test_book_professors_and_persona_off_stay_on_the_answer_path():
+    assert classify("Who is Professor Snape?", persona=True) == "answer"
+    assert classify("Who is Professor Crane?", persona=False) == "answer"

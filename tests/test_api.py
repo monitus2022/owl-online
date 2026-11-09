@@ -831,6 +831,7 @@ def test_lesson_mode_still_routes_meta_and_practice():
     with TestClient(app) as client:
         for question, expected in (
             ("Who are you?", "meta"),
+            ("Who is Professor Crane?", "meta"),
             ("Give me a practice question", "practice"),
         ):
             with client.stream(

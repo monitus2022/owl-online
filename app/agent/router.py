@@ -8,6 +8,7 @@ a separate offline pipeline with stored mark schemes and deterministic scoring.
 """
 
 import re
+from difflib import get_close_matches
 
 from app.agent.state import AgentState, Mode, RequestedMode
 from app.trace import current_tracer
@@ -61,7 +62,10 @@ _BOOK_CONTEXT = re.compile(
 # question, not an identity question.
 _META_CUES: dict[str, re.Pattern[str]] = {
     "identity": re.compile(
-        r"\b(who are you|what(?:'s| is) your name|introduce yourself)\b",
+        r"\b("
+        r"who are you|what(?:'s| is) your name|introduce yourself|"
+        r"who(?:'s| is| are) (?:professor |prof\.? )?(?:alistair )?crane(?!['’]s\b)"
+        r")\b",
         re.IGNORECASE,
     ),
     "scope": re.compile(
@@ -89,8 +93,13 @@ _META_CUES: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "professor": re.compile(
-        r"\b(your background|were you an auror|tell me about yourself|"
-        r"your experience)\b",
+        r"\b("
+        r"your background|were you an auror|tell me about yourself|your experience|"
+        r"tell me about (?:professor |prof\.? )?(?:alistair )?crane|"
+        r"(?:professor |prof\.? )?(?:alistair )?crane(?:'s|’s)? (?:background|story|experience)|"
+        r"what (?:is|was) (?:professor |prof\.? )?(?:alistair )?crane"
+        r"(?:'s|’s)? (?:background|story)"
+        r")\b",
         re.IGNORECASE,
     ),
     "auror": re.compile(
@@ -115,10 +124,38 @@ _PERSONAL = re.compile(
 )
 
 
+# The professor's name is typed by hand. Normalise near matches before the
+# deterministic cues: this stays rule-based, only tokens close to a known name
+# are rewritten, and the cue patterns still decide the intent.
+_NAME_TOKEN = re.compile(r"[A-Za-z]+")
+_NAME_VARIANTS = {
+    "crane": ("crane",),
+    "alistair": ("alistair", "alister"),
+    "professor": ("professor", "profesor", "proffesor"),
+}
+
+
+def _canonical_name(token: str) -> str:
+    lowered = token.lower()
+    for canonical, variants in _NAME_VARIANTS.items():
+        if lowered in variants:
+            return canonical
+        if len(lowered) >= 4 and get_close_matches(
+            lowered, [canonical], n=1, cutoff=0.8
+        ):
+            return canonical
+    return token
+
+
+def _normalise_names(question: str) -> str:
+    return _NAME_TOKEN.sub(lambda match: _canonical_name(match.group(0)), question)
+
+
 def meta_topic(question: str) -> str | None:
     """The first persona meta topic the question matches, if any."""
+    normalised = _normalise_names(question)
     for topic, pattern in _META_CUES.items():
-        if pattern.search(question):
+        if pattern.search(normalised):
             return topic
     return None
 
