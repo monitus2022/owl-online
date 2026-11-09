@@ -32,6 +32,7 @@ async def answer_node(
     def reset() -> None:
         writer({"type": "reset", "reason": "retry"})
 
+    active_persona = persona if state.get("persona_enabled", True) else None
     result = await ask(
         state["question"],
         retriever=retriever,
@@ -42,13 +43,15 @@ async def answer_node(
         on_reset=reset,
         max_retries=max_retries,
         multi_book=multi_book,
-        persona_suffix=persona.answer_suffix() if persona is not None else None,
+        persona_suffix=(
+            active_persona.answer_suffix() if active_persona is not None else None
+        ),
         lore=lore,
         subject=lore_subject,
     )
-    if result.abstained and persona is not None:
+    if result.abstained and active_persona is not None:
         # Keep the abstention contract; only the user-facing line changes.
-        result = replace(result, answer=persona.abstain_response())
+        result = replace(result, answer=active_persona.abstain_response())
     return {
         "chunks": result.chunks,
         "answer": result.answer,

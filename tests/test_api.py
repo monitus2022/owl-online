@@ -45,6 +45,16 @@ class _Llm:
             yield piece
 
 
+class _CaptureStreamLlm(_Llm):
+    def __init__(self) -> None:
+        self.systems: list[str] = []
+
+    async def stream(self, system: str, prompt: str, *, context=None):
+        self.systems.append(system)
+        async for piece in super().stream(system, prompt, context=context):
+            yield piece
+
+
 class _BoomLlm:
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
         raise ProviderError("upstream down")
@@ -838,6 +848,41 @@ def test_lesson_mode_falls_back_to_corpus_when_no_material_matches():
     assert finals[0]["citations"] == ["b1-c01-0000"]
     assert finals[0]["material_citations"] == []
     assert "not in the department's notes" in finals[0]["answer"]
+
+
+def test_persona_is_scoped_to_the_home_subject():
+    llm = _CaptureStreamLlm()
+    app = create_app(
+        app_settings=Settings(persona=True, persona_subject="dada"),
+        runtime=Runtime(retriever=_Retriever(), llm=llm),
+    )
+    with TestClient(app) as client:
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "Who are you?", "subject": "charms"},
+        ) as response:
+            body = "".join(response.iter_text())
+        charms_events = _parse_sse(body)
+        charms_modes = [
+            data["mode"] for name, data in charms_events if name == "mode"
+        ]
+        charms_systems = list(llm.systems)
+
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "Who are you?", "subject": "dada"},
+        ) as response:
+            body = "".join(response.iter_text())
+        dada_events = _parse_sse(body)
+        dada_modes = [data["mode"] for name, data in dada_events if name == "mode"]
+        dada_finals = [data for name, data in dada_events if name == "final"]
+
+    assert charms_modes[-1] == "answer"
+    assert dada_modes[-1] == "meta"
+    assert all("Professor Crane" not in system for system in charms_systems)
+    assert "Crane" in dada_finals[0]["answer"]
 
 
 def test_subjects_reports_lesson_and_persona_flags():

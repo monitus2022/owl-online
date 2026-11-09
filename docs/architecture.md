@@ -543,7 +543,10 @@ The persona is DADA-only. The lore pack already carries the five founders and
 departments, but the chatbot speaks only for Defense; other subject personas are
 deferred. `persona_subject` (default `dada`, `OWL_PERSONA_SUBJECT`) carries that
 home subject to the frontend, so opening another department does not claim a
-live professor there. The flag itself stays site-wide until the registry lands. The card and the doc change together; `tests/test_persona.py` asserts
+live professor there. The chat request also carries a `subject`; the server
+enables the card only when that subject matches the home subject, so a Charms
+request is not answered in Crane's voice. The flag itself stays site-wide until
+the registry lands. The card and the doc change together; `tests/test_persona.py` asserts
 every meta topic exists. The scripted meta, personal and abstention replies carry
 a reviewed variant bank; one phrasing is chosen at random per request, and the
 facts, boundaries and `abstained` flag are identical across variants.

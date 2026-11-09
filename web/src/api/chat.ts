@@ -42,6 +42,7 @@ export class ChatError extends Error {}
 export async function* askStream(
   question: string,
   personaState: PersonaState,
+  subject: string,
   mode: "auto" | "lesson" = "auto",
 ): AsyncGenerator<StreamEvent> {
   let response: Response;
@@ -50,7 +51,7 @@ export async function* askStream(
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, mode }),
+      body: JSON.stringify({ question, mode, subject }),
     });
   } catch {
     throw new ChatError("Could not reach the Academy. Is the server running?");
