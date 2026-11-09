@@ -74,6 +74,10 @@ so on.
 | 2026-11-08 | #87 | `20261107T184204Z` | `pinned` | 0.76 | 0.31 | 13/15 | [Subject-pack gate](2026-11-08-87-subject-packs-gate.md) |
 | 2026-11-08 | #97 | `20261108T080558Z` | `pinned` (persona off, reproduction) | 0.76 | 0.31 | 13/15 | [Persona eval wiring](2026-11-08-97-persona-eval-wiring.md) |
 | 2026-11-08 | #97 | `20261108T080720Z` | `pinned-persona` | 0.76 | 0.29 | 12/14 | [Persona eval wiring](2026-11-08-97-persona-eval-wiring.md) |
+| 2026-11-09 | #191 | `exam-20261109-c0d00cb0` | `dada-bank-exam` | n/a | n/a | n/a | [DADA bank eval](2026-11-09-191-dada-bank-eval.md) |
+
+Exam-bank runs use `n/a` for the chat metrics; the deterministic, independent
+and calibration tables are in the record.
 
 ## Template
 

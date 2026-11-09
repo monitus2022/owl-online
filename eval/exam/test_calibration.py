@@ -1,0 +1,177 @@
+"""Short-answer calibration tests with a scripted judge, no network."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from eval.exam.calibration import load_calibration, run_calibration
+from eval.exam.fixtures import build_bank
+
+
+class _ScriptedLlm:
+    def __init__(self, *answers: str) -> None:
+        self.answers = list(answers)
+        self.calls = 0
+
+    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        self.calls += 1
+        if not self.answers:
+            raise AssertionError("unexpected judge call")
+        return self.answers.pop(0)
+
+    def stream(self, system: str, prompt: str, *, context=None):
+        raise AssertionError("stream is not used")
+
+
+def _judge_json(item_id: str, correctness: int, completeness: int) -> str:
+    return json.dumps(
+        {
+            "results": {
+                item_id: {
+                    "criteria": [
+                        {
+                            "criterion_id": "correctness",
+                            "awarded": correctness,
+                            "max_marks": 4,
+                            "reason": "Correctness.",
+                        },
+                        {
+                            "criterion_id": "completeness",
+                            "awarded": completeness,
+                            "max_marks": 4,
+                            "reason": "Completeness.",
+                        },
+                    ],
+                    "total": correctness + completeness,
+                    "feedback": "Assessed against the rubric.",
+                    "evidence_ids": ["b3-c07-0001"],
+                }
+            }
+        }
+    )
+
+
+def _case(
+    variant: str,
+    pass_name: str,
+    answer: str,
+    correctness: int,
+    completeness: int,
+) -> dict:
+    return {
+        "item_id": "dada-short-001",
+        "variant": variant,
+        "pass": pass_name,
+        "answer": answer,
+        "marks": {"correctness": correctness, "completeness": completeness},
+    }
+
+
+def _write(path: Path, cases: list[dict]) -> Path:
+    path.write_text(
+        "\n".join(json.dumps(case) for case in cases) + "\n", encoding="utf-8"
+    )
+    return path
+
+
+async def test_calibration_metrics(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "A full answer.", 4, 4),
+            _case("partial", "partial", "A partial answer.", 3, 2),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 3, 2),
+    )
+    report = await run_calibration(bank, cases, llm, set_sha256="test")
+    assert report.ok
+    assert report.n == 2
+    assert report.exact == 1.0
+    assert report.adjacent == 1.0
+    assert report.mae == 0.0
+    assert report.per_criterion == {"correctness": 1.0, "completeness": 1.0}
+    assert report.calls == 2
+    assert report.passes == 2
+    assert report.retries == 0
+    assert report.needs_review == 0
+
+
+async def test_calibration_counts_a_retry(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "A full answer.", 4, 4),
+            _case("partial", "partial", "A partial answer.", 3, 2),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        "not json",
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 3, 2),
+    )
+    report = await run_calibration(bank, cases, llm)
+    assert report.calls == 3
+    assert report.passes == 2
+    assert report.retries == 1
+    assert report.ok
+
+
+async def test_calibration_needs_review_is_not_ok(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "A full answer.", 4, 4),
+            _case("partial", "partial", "A partial answer.", 3, 2),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        "not json",
+        "still not json",
+        _judge_json("dada-short-001", 3, 2),
+    )
+    report = await run_calibration(bank, cases, llm)
+    assert report.needs_review == 1
+    assert not report.ok
+    assert report.details[0].judge is None
+
+
+async def test_calibration_reports_verbosity_bias(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "Short answer.", 4, 4),
+            _case("verbose", "verbose", "A much longer answer with more words.", 4, 4),
+            _case("partial", "partial", "Partial answer.", 3, 2),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 3, 2),
+    )
+    report = await run_calibration(bank, cases, llm)
+    assert report.verbose_delta == 0.0
+
+
+async def test_calibration_marks_must_match_the_rubric(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    row = _case("full", "full", "A full answer.", 4, 4)
+    row["marks"] = {"correctness": 4}
+    path = _write(tmp_path / "calibration.jsonl", [row])
+    cases = load_calibration(path, min_items=1)
+    with pytest.raises(ValueError, match="marks must name exactly"):
+        await run_calibration(bank, cases, _ScriptedLlm())

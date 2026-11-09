@@ -75,8 +75,10 @@ hash, rubric content and judge configuration under
 `data/exam_judge_cache.jsonl` (gitignored).
 
 The published bank's live probe is
-`docs/exams/dada-1.0.0-grading-probe.md`; the calibration set and agreement
-metrics are #191.
+`docs/exams/dada-1.0.0-grading-probe.md`. The bank eval and judge calibration
+are `eval/exam/` (#191), run with
+`uv run python scripts/run_exam_eval.py`; the record is
+`docs/runs/2026-11-09-191-dada-bank-eval.md`.
 
 ## Status flow
 

@@ -1,0 +1,136 @@
+"""Run the DADA bank evaluation (#191): deterministic, independent, calibration."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from app.exam.bank import load_exam_bank
+from app.grading import judge_llm_from_bank
+from app.knowledge.packs import load_subject_pack
+from app.pipeline.index.builder import load_chunks, text_hash
+from app.providers.factory import make_embedder
+from eval.exam.calibration import file_sha256, load_calibration, run_calibration
+from eval.exam.checks import run_deterministic_checks
+from eval.exam.independent import run_independent_checks
+from eval.exam.models import ExamEvalReport
+
+
+async def run_exam_eval(
+    *,
+    bank_path: Path,
+    subjects_path: Path,
+    chunks_path: Path,
+    calibration_path: Path,
+    embedder_provider: str = "local",
+    embedder_model: str | None = None,
+    concurrency: int = 4,
+    independent: bool = True,
+    calibration: bool = True,
+) -> ExamEvalReport:
+    """Load the published bank and run the selected checks."""
+    bank = load_exam_bank(bank_path)
+    pack = load_subject_pack(subjects_path / bank.manifest.subject)
+    chunks = load_chunks(chunks_path)
+    index_hash = text_hash(chunks)
+    embedder = make_embedder(embedder_provider, model=embedder_model)
+    deterministic = await run_deterministic_checks(
+        bank,
+        pack,
+        {chunk.id: chunk for chunk in chunks},
+        index_hash,
+        embedder=embedder,
+    )
+    independent_report = None
+    calibration_report = None
+    if independent or calibration:
+        llm = judge_llm_from_bank(bank)
+        try:
+            if independent:
+                independent_report = await run_independent_checks(
+                    bank, pack, llm, concurrency=concurrency
+                )
+            if calibration:
+                cases = load_calibration(calibration_path)
+                calibration_report = await run_calibration(
+                    bank,
+                    cases,
+                    llm,
+                    set_sha256=file_sha256(calibration_path),
+                )
+        finally:
+            await llm.aclose()
+    return ExamEvalReport(
+        bank_version=bank.manifest.version,
+        deterministic=deterministic,
+        independent=independent_report,
+        calibration=calibration_report,
+    )
+
+
+def render_report(report: ExamEvalReport) -> str:
+    """Render the structure-only summary that goes into the run record."""
+    lines = [f"exam eval: dada {report.bank_version}", "", "Deterministic checks:"]
+    for check in report.deterministic.checks:
+        gate = "" if check.gated else " (diagnostic)"
+        status = "PASS" if check.ok else ("WARN" if not check.gated else "FAIL")
+        lines.append(f"  {check.name:22} {status}{gate}  {check.detail}")
+    metrics = report.deterministic.metrics
+    lines.extend(
+        [
+            "",
+            "Deterministic metrics:",
+            f"  max_jaccard={metrics.get('max_jaccard')}",
+            f"  max_cosine={metrics.get('max_cosine')}",
+            f"  option_length_bias={metrics.get('option_length_bias')}",
+            f"  option_length_mean_gap={metrics.get('option_length_mean_gap')}",
+            f"  answer_positions={metrics.get('answer_positions')}",
+        ]
+    )
+    if report.independent is not None:
+        independent = report.independent
+        lines.extend(
+            [
+                "",
+                "Independent checks:",
+                f"  model={independent.model} temperature={independent.temperature} "
+                f"prompt={independent.prompt_version}",
+                f"  MCQ key matches={independent.mcq_key_matches}/{independent.mcq_total}",
+                f"  MCQ ambiguities={independent.mcq_ambiguities}",
+                f"  Short golden={independent.short_golden_ok}/{independent.short_total}",
+                f"  Short missing points={independent.short_missing_points}",
+                f"  Errors={len(independent.errors)}",
+            ]
+        )
+    if report.calibration is not None:
+        calibration = report.calibration
+        lines.extend(
+            [
+                "",
+                "Calibration:",
+                f"  model={calibration.model} provider={calibration.provider} "
+                f"temperature={calibration.temperature} "
+                f"prompt={calibration.prompt_version}",
+                f"  set_sha256={calibration.set_sha256}",
+                f"  n={calibration.n} exact={calibration.exact:.4f} "
+                f"adjacent={calibration.adjacent:.4f} MAE={calibration.mae}",
+                f"  per_criterion={calibration.per_criterion}",
+                f"  calls={calibration.calls} passes={calibration.passes} "
+                f"retries={calibration.retries} needs_review={calibration.needs_review}",
+                f"  verbose_delta={calibration.verbose_delta} "
+                f"word_count_correlation={calibration.word_count_correlation}",
+                "",
+                "Calibration cases:",
+                "| Item | Variant | Human | Judge | Delta | Needs review |",
+                "|---|---|---:|---:|---:|---|",
+            ]
+        )
+        for detail in calibration.details:
+            lines.append(
+                f"| `{detail.item_id}` | {detail.variant} | {detail.human} | "
+                f"{detail.judge} | {detail.delta} | {detail.needs_review} |"
+            )
+    lines.extend(["", f"gate: {'PASS' if report.ok else 'FAIL'}"])
+    return "\n".join(lines)
+
+
+__all__ = ["render_report", "run_exam_eval"]
