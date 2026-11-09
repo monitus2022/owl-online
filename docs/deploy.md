@@ -160,6 +160,21 @@ ECR repository, instance id, container name, host port, env-file path, data
 dir). Trigger it by pushing to `main`, or run it manually with
 `workflow_dispatch`.
 
+Repository variables (Settings > Secrets and variables > Actions > Variables)
+control the non-secret runtime toggles. The workflow passes them with `-e`, and
+`-e` overrides the same key in `owl.env`:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `OWL_SUBJECTS_PATH` | `/data/subjects` | pack directory inside the container |
+| `OWL_LESSON_MODE` | `false` | enable pack-grounded lesson answers |
+| `OWL_PERSONA` | `false` | enable the professor voice |
+
+Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
+`/data/subjects/dada/pack.toml` exists on the volume, then run the deploy
+workflow. `docker restart` does not re-read env; the workflow recreates the
+container with the variables.
+
 The instance pulls the image with its own role
 (`AmazonEC2ContainerRegistryReadOnly`) and calls Bedrock with its own role, so
 no keys live on the host. The container binds `127.0.0.1:8000`; nginx terminates
@@ -268,6 +283,7 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_OPENROUTER_API_KEY=...
    OWL_EMBEDDER_PROVIDER=bedrock
    OWL_CHUNKS_PATH=/data/chunks.jsonl
+   OWL_SUBJECTS_PATH=/data/subjects
    OWL_LORE_PATH=/data/lore
    OWL_INDEX_DIR=/data/index/titan
    OWL_RERANK_PROVIDER=bedrock
@@ -282,7 +298,13 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_TRACE_FILE=/data/traces.jsonl
    OWL_AWS_REGION=ap-northeast-1
    OWL_CORS_ORIGINS=https://your-chat-page.pages.dev
+   OWL_LESSON_MODE=true
+   OWL_PERSONA=true
    ```
+
+   The deploy workflow injects `OWL_SUBJECTS_PATH`, `OWL_LESSON_MODE` and
+   `OWL_PERSONA` with `-e` from repository variables; those override the file.
+   Keep the file entries for manual `docker run` or Compose use.
 
 3. The data at `/data`: `chunks.jsonl` plus the index built with the same
    embedder. Build the Titan index locally, then upload both:

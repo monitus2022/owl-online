@@ -26,6 +26,11 @@ env:
   HOST_PORT: "127.0.0.1:8000"
   ENV_FILE: /home/ec2-user/owl.env
   DATA_DIR: /data
+  # Non-secret lesson/persona toggles. Set repository variables to override;
+  # `-e` takes precedence over the host env file for these keys.
+  OWL_SUBJECTS_PATH: ${{ vars.OWL_SUBJECTS_PATH || '/data/subjects' }}
+  OWL_LESSON_MODE: ${{ vars.OWL_LESSON_MODE || 'false' }}
+  OWL_PERSONA: ${{ vars.OWL_PERSONA || 'false' }}
 
 jobs:
   build-and-push:
@@ -102,6 +107,9 @@ jobs:
             --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
             -p __HOST_PORT__:8000 \
             --env-file __ENV_FILE__ \
+            -e OWL_SUBJECTS_PATH="__OWL_SUBJECTS_PATH__" \
+            -e OWL_LESSON_MODE="__OWL_LESSON_MODE__" \
+            -e OWL_PERSONA="__OWL_PERSONA__" \
             -v __DATA_DIR__:/data \
             __IMAGE__
           for i in $(seq 1 30); do
@@ -126,6 +134,9 @@ jobs:
           SCRIPT="${SCRIPT//__HOST_PORT__/$HOST_PORT}"
           SCRIPT="${SCRIPT//__ENV_FILE__/$ENV_FILE}"
           SCRIPT="${SCRIPT//__DATA_DIR__/$DATA_DIR}"
+          SCRIPT="${SCRIPT//__OWL_SUBJECTS_PATH__/$OWL_SUBJECTS_PATH}"
+          SCRIPT="${SCRIPT//__OWL_LESSON_MODE__/$OWL_LESSON_MODE}"
+          SCRIPT="${SCRIPT//__OWL_PERSONA__/$OWL_PERSONA}"
 
           jq -n --arg c "$SCRIPT" '{commands: [$c]}' > /tmp/ssm-params.json
           command_id=$(aws ssm send-command \
