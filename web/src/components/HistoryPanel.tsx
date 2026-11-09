@@ -37,7 +37,13 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
   }, [active, subject.apiSubject]);
 
   const isBest = (attempt: StoredAttempt): boolean =>
-    best !== null && attempt.id === best.id && attempt.gradedAt === best.gradedAt;
+    best !== null &&
+    attempt.band !== null &&
+    best.band !== null &&
+    attempt.total !== null &&
+    best.total !== null &&
+    attempt.id === best.id &&
+    attempt.gradedAt === best.gradedAt;
 
   return (
     <section className="history" aria-label="Your papers">

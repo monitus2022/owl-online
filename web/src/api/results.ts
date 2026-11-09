@@ -78,10 +78,17 @@ class HttpResultsStore implements ResultsStore {
 
   async best(subject: string): Promise<StoredAttempt | null> {
     const attempts = await this.history(subject);
+    if (attempts.length === 0) return null;
     const resolved = attempts.filter(isResolved);
-    if (resolved.length === 0) return null;
-    return resolved.reduce((top, attempt) =>
-      attempt.total * top.max > top.total * attempt.max ? attempt : top,
+    if (resolved.length > 0) {
+      return resolved.reduce((top, attempt) =>
+        attempt.total * top.max > top.total * attempt.max ? attempt : top,
+      );
+    }
+    // No resolved sitting: surface the latest unresolved one so the review
+    // state is visible instead of claiming no paper was sat.
+    return attempts.reduce((latest, attempt) =>
+      attempt.gradedAt > latest.gradedAt ? attempt : latest,
     );
   }
 }
