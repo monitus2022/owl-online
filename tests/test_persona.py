@@ -57,6 +57,12 @@ def test_choices_are_reproducible():
 _FACTS = {
     "identity": ("Professor Crane", "Defense Against the Dark Arts", "Ashcombe"),
     "scope": ("Defense Against the Dark Arts", "four"),
+    "subject": (
+        "Defense Against the Dark Arts",
+        "counter-jinxes",
+        "dark creatures",
+        "defensive theory",
+    ),
     "exam": ("examination",),
     "syllabus": ("syllabus",),
     "grading": ("examination",),
@@ -331,6 +337,7 @@ def _minimal_card(meta_identity: str = "I am X.", boundaries: dict | None = None
         "scope",
         "exam",
         "syllabus",
+        "subject",
         "grading",
         "school",
         "professor",

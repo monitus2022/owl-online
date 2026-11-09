@@ -18,6 +18,7 @@ META_TOPICS = (
     "scope",
     "exam",
     "syllabus",
+    "subject",
     "grading",
     "school",
     "professor",

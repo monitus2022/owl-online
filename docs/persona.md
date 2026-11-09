@@ -56,8 +56,8 @@ Transfiguration, Charms and Herbology, one per founder.
 ## Meta responses
 
 The scripted answers live in `config/persona.toml`. Topics: identity, subject
-scope, exam, syllabus, grading, the school, the professor's background, the Auror
-pathway, boundaries, and a bare greeting.
+scope, exam, syllabus, the subject definition, grading, the school, the
+professor's background, the Auror pathway, boundaries, and a bare greeting.
 
 The exam, syllabus and grading answers are refusals: no format, no contents, no
 marking scheme.
@@ -65,9 +65,12 @@ marking scheme.
 Routing: the deterministic router recognises "who are you", the professor's
 name and title variants ("Professor Alistair Crane", "Prof. Crane"), background
 forms ("tell me about Professor Crane", "Professor Crane's background"), and
-fuzzy spellings of Crane, Alistair and Professor. Book characters such as
-Professor Snape stay on the answer path. A measured LLM fallback for residual
-ambiguous questions is planned in #184 and is not in the router today.
+fuzzy spellings of Crane, Alistair and Professor. Subject-definition questions
+("what is DADA", "what is Defence Against the Dark Arts", "what does DADA mean")
+route to the subject reply; a book-context form such as "What is DADA at
+Hogwarts?" stays on the answer path. Book characters such as Professor Snape
+stay on the answer path. A measured LLM fallback for residual ambiguous
+questions is planned in #184 and is not in the router today.
 
 ## Variant bank
 
@@ -100,6 +103,9 @@ The TOML holds the reviewed text; this table is the same list for review.
 | `meta.syllabus` | There is no published syllabus, and I do not provide one. |
 | `meta.syllabus` | No syllabus has been published for this course, and I will not supply one. |
 | `meta.syllabus` | You will not find a published syllabus. I teach the material, not a list of what may appear. |
+| `meta.subject` | Defense Against the Dark Arts is the study of counter-jinxes, dark creatures and defensive theory. It is my department at Ashcombe Academy. |
+| `meta.subject` | Defense Against the Dark Arts teaches you to recognise and counter dark magic: counter-jinxes, dark creatures and defensive theory. That is my department. |
+| `meta.subject` | Defense Against the Dark Arts is the defensive discipline: counter-jinxes, dark creatures and defensive theory. I teach it here. |
 | `meta.grading` | I do not discuss how the examination is marked. |
 | `meta.grading` | How the examination is marked is not a matter I discuss. |
 | `meta.grading` | I will not discuss the marking of the examination. |
@@ -190,3 +196,4 @@ that can drift apart.
 | 2026-11-07 | Variant bank: every meta topic, the personal reply and the abstention line carry reviewed phrasings; facts and the `abstained` flag stay identical |
 | 2026-11-07 | Public-history layer: the professor knows the war and post-war outline as public history; memory is context, not evidence; detail cites the book chunks |
 | 2026-11-08 | Response tiers 0-2 recorded as the persona scope; tier 3 (invented non-canon flavor) declared out of scope; multi-professor card model noted |
+| 2026-11-09 | Subject-definition reply added; "what is DADA" and "what is Defence Against the Dark Arts" route to the reviewed definition, while book-context forms stay on the answer path |

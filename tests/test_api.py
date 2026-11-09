@@ -902,6 +902,7 @@ def test_lesson_mode_still_routes_meta_and_practice():
         for question, expected in (
             ("Who are you?", "meta"),
             ("Who is Professor Crane?", "meta"),
+            ("What is DADA?", "meta"),
             ("Give me a practice question", "practice"),
         ):
             with client.stream(
@@ -912,3 +913,31 @@ def test_lesson_mode_still_routes_meta_and_practice():
                 body = "".join(response.iter_text())
             modes = [data["mode"] for name, data in _parse_sse(body) if name == "mode"]
             assert modes[0] == expected
+
+
+def test_lesson_mode_routes_subject_definition_to_meta():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True, persona=True),
+        runtime=_persona_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        for question in (
+            "What is DADA?",
+            "What is Defence Against the Dark Arts?",
+        ):
+            with client.stream(
+                "POST",
+                "/ask/stream",
+                json={"question": question, "mode": "lesson"},
+            ) as response:
+                body = "".join(response.iter_text())
+            events = _parse_sse(body)
+            modes = [data["mode"] for name, data in events if name == "mode"]
+            finals = [data for name, data in events if name == "final"]
+            tokens = [data for name, data in events if name == "token"]
+            assert modes[0] == "meta"
+            assert finals[0]["answer"] in PERSONA.meta_variants("subject")
+            assert finals[0]["citations"] == []
+            assert tokens == []
+    assert app.state.limiter.tokens_used == 0
+    assert len(app.state.cache) == 0
