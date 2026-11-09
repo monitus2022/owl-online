@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { askStream, ChatError } from "../api/chat";
-import type { ChatMode } from "../api/chat";
+import type { ChatMode, LessonScope } from "../api/chat";
 import type { PersonaState, Subject } from "../data/subjects";
 import { Silhouette } from "./Silhouette";
 
@@ -18,6 +18,7 @@ interface Message {
   mode?: ChatMode;
   citations?: string[];
   materials?: string[];
+  scope?: LessonScope;
   abstained?: boolean;
   failed?: boolean;
 }
@@ -44,8 +45,8 @@ function modeLabel(mode: ChatMode, personaState: PersonaState): string {
 function welcome(subject: Subject, lesson: boolean): string {
   if (lesson) {
     return subject.personaState === "live"
-      ? `Welcome to the ${subject.name} revision room. I teach from the department's reviewed notes; ask about the set topics, or say the word if you want to be tested. Questions outside the notes are refused honestly until the wider book fallback lands.`
-      : `Welcome to the ${subject.name} revision room. Answers come from the department's reviewed notes, and questions outside them are refused honestly. The professor's voice is still in rehearsal.`;
+      ? `Welcome to the ${subject.name} revision room. I teach from the department's reviewed notes; ask about the set topics, or say the word if you want to be tested. Questions outside the notes are answered from the set texts and labelled.`
+      : `Welcome to the ${subject.name} revision room. Answers come from the department's reviewed notes, and questions outside them are answered from the set texts with a label. The professor's voice is still in rehearsal.`;
   }
   return subject.personaState === "live"
     ? `Welcome to the ${subject.name} revision room. Ask ${subject.professor} about the set texts, or say the word if you want to be tested.`
@@ -116,6 +117,7 @@ export function ChatPanel({
             citations?: string[];
             lore_citations?: string[];
             material_citations?: string[];
+            scope?: LessonScope | null;
             abstained: boolean;
             mode?: ChatMode;
           };
@@ -128,6 +130,7 @@ export function ChatPanel({
             text: data.answer,
             materials: data.material_citations ?? [],
             citations: chips,
+            scope: data.scope ?? undefined,
             abstained: data.abstained,
             mode: data.mode ?? draft.mode,
           }));
@@ -172,6 +175,14 @@ export function ChatPanel({
               {message.role === "professor" && message.mode && (
                 <span className="mode-badge">{modeLabel(message.mode, subject.personaState)}</span>
               )}
+              {modeIsLesson &&
+                (message.scope === "mixed" || message.scope === "off_pack") && (
+                  <p className="scope-note">
+                    {message.scope === "mixed"
+                      ? "Department notes and set texts"
+                      : "Set texts, outside the department's notes"}
+                  </p>
+                )}
               <p className={message.failed ? "chat-text chat-failed" : "chat-text"}>
                 {bodyText || (message.role === "professor" ? "…" : "")}
               </p>
@@ -201,10 +212,10 @@ export function ChatPanel({
                 <p className="abstain-note">
                   {subject.personaState === "live"
                     ? modeIsLesson
-                      ? "The professor could not ground this in the department's notes, so he will not guess."
+                      ? "The professor could not ground this in the department's notes or the set texts, so he will not guess."
                       : "The professor could not ground this in the texts, so he will not guess."
                     : modeIsLesson
-                      ? "The reviewed notes could not confirm this, and nothing is guessed."
+                      ? "The reviewed notes and the set texts could not confirm this, and nothing is guessed."
                       : "The texts could not confirm this, and nothing is guessed."}
                 </p>
               )}

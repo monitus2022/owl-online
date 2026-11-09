@@ -18,7 +18,9 @@ from app.knowledge.packs import (
 from app.pipeline.generate.lesson import (
     ask_lesson,
     ground_lesson_answer,
+    uncovered_terms,
 )
+from app.schemas import Chunk, ChunkMetadata
 
 
 class KeywordEmbedder:
@@ -56,6 +58,37 @@ class StaticLlm:
             yield self.draft
 
         return gen()
+
+
+class EmptySelector:
+    async def select(self, question, **kwargs):
+        return []
+
+
+class StaticRetriever:
+    """A fixed corpus result; records whether the fallback was consulted."""
+
+    def __init__(self, chunks: list[Chunk]) -> None:
+        self.chunks = chunks
+        self.calls = 0
+
+    async def retrieve(self, query: str, top_k: int) -> list[Chunk]:
+        self.calls += 1
+        return self.chunks[:top_k]
+
+
+def _chunk(chunk_id: str, text: str, *, book: int = 3, chapter: int = 7) -> Chunk:
+    return Chunk(
+        id=chunk_id,
+        text=text,
+        metadata=ChunkMetadata(
+            book_num=book,
+            chapter_num=chapter,
+            book_name=f"Book {book}",
+            chapter_name=f"Chapter {chapter}",
+        ),
+        score=10.0,
+    )
 
 
 def _ref(chunk_id: str) -> SourceRef:
@@ -372,3 +405,227 @@ def test_pack_store_serves_summaries_and_scope():
     assert summary.fingerprint == "fp"
     assert summary.materials == 2
     assert summary.concepts == 2
+
+
+def test_uncovered_terms_only_flags_terms_the_material_does_not_state():
+    materials = _pack().materials
+
+    assert uncovered_terms("How does a boggart work?", materials) == set()
+    assert "hippogriff" in uncovered_terms(
+        "Compare a boggart with a hippogriff", materials
+    )
+
+
+def test_ground_lesson_answer_keeps_both_citation_spaces():
+    chunks = [_chunk("b3-c07-0099", "A hippogriff is a proud creature.")]
+
+    result = ground_lesson_answer(
+        "A boggart takes your fear's shape "
+        "[mat:dada-dark-creatures-boggarts-nature]. "
+        "A hippogriff is proud [b3-c07-0099].",
+        _pack().materials,
+        chunks,
+        scope="mixed",
+    )
+
+    assert result.scope == "mixed"
+    assert result.material_citations == ["dada-dark-creatures-boggarts-nature"]
+    assert result.citations == ["b3-c07-0099", "b3-c07-0050"]
+
+
+def test_ground_lesson_answer_off_pack_rejects_a_material_only_draft():
+    chunks = [_chunk("b3-c07-0099", "A hippogriff is a proud creature.")]
+
+    result = ground_lesson_answer(
+        "A hippogriff is proud [mat:dada-dark-creatures-boggarts-nature].",
+        [],
+        chunks,
+        scope="off_pack",
+    )
+
+    assert result.abstained is True
+    assert result.abstain_reason == "uncited"
+
+
+def test_ground_lesson_answer_off_pack_accepts_a_book_citation():
+    chunks = [_chunk("b3-c07-0099", "A hippogriff is a proud creature.")]
+
+    result = ground_lesson_answer(
+        "A hippogriff is proud [b3-c07-0099].",
+        [],
+        chunks,
+        scope="off_pack",
+    )
+
+    assert result.abstained is False
+    assert result.citations == ["b3-c07-0099"]
+    assert result.material_citations == []
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_falls_back_to_the_corpus_when_the_pack_is_empty():
+    retriever = StaticRetriever(
+        [_chunk("b1-c01-0000", "A potion is brewed in a cauldron.", book=1, chapter=1)]
+    )
+    llm = StaticLlm("A potion is brewed in a cauldron [b1-c01-0000].")
+
+    result = await ask_lesson(
+        "How do I brew a potion?",
+        selector=EmptySelector(),
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+    )
+
+    assert result.abstained is False
+    assert result.scope == "off_pack"
+    assert result.citations == ["b1-c01-0000"]
+    assert result.material_citations == []
+    assert "not in the department's notes" in result.answer
+    assert retriever.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_mixed_uses_both_sources():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    retriever = StaticRetriever(
+        [_chunk("b3-c07-0099", "A hippogriff is a proud creature.")]
+    )
+    llm = StaticLlm(
+        "A boggart takes your fear's shape "
+        "[mat:dada-dark-creatures-boggarts-nature]. "
+        "A hippogriff is proud [b3-c07-0099]."
+    )
+
+    result = await ask_lesson(
+        "Compare a boggart with a hippogriff",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+    )
+
+    assert result.abstained is False
+    assert result.scope == "mixed"
+    assert result.material_citations == ["dada-dark-creatures-boggarts-nature"]
+    assert "b3-c07-0099" in result.citations
+    assert "set texts" in result.answer.lower()
+    assert retriever.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_mixed_retries_when_only_the_pack_is_cited():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    retriever = StaticRetriever(
+        [_chunk("b3-c07-0099", "A hippogriff is a proud creature.")]
+    )
+    llm = SequencedLlm(
+        [
+            "A boggart takes your fear's shape "
+            "[mat:dada-dark-creatures-boggarts-nature].",
+            "A boggart takes your fear's shape "
+            "[mat:dada-dark-creatures-boggarts-nature]. "
+            "A hippogriff is proud [b3-c07-0099].",
+        ]
+    )
+    resets: list[int] = []
+
+    result = await ask_lesson(
+        "Compare a boggart with a hippogriff",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+        on_reset=lambda: resets.append(1),
+        max_retries=1,
+    )
+
+    assert result.attempts == 2
+    assert result.scope == "mixed"
+    assert result.material_citations == ["dada-dark-creatures-boggarts-nature"]
+    assert "b3-c07-0099" in result.citations
+    assert resets == [1]
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_off_pack_abstains_without_a_book_citation():
+    retriever = StaticRetriever(
+        [_chunk("b1-c01-0000", "A potion is brewed in a cauldron.", book=1, chapter=1)]
+    )
+    llm = StaticLlm(
+        "A potion is brewed in a cauldron "
+        "[mat:dada-dark-creatures-boggarts-nature]."
+    )
+
+    result = await ask_lesson(
+        "How do I brew a potion?",
+        selector=EmptySelector(),
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+        max_retries=0,
+    )
+
+    assert result.abstained is True
+    assert result.abstain_reason == "uncited"
+    assert result.scope == "abstained"
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_fallback_can_be_disabled():
+    retriever = StaticRetriever(
+        [_chunk("b1-c01-0000", "A potion is brewed in a cauldron.", book=1, chapter=1)]
+    )
+    llm = StaticLlm("A potion is brewed in a cauldron [b1-c01-0000].")
+
+    result = await ask_lesson(
+        "How do I brew a potion?",
+        selector=EmptySelector(),
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+        fallback=False,
+    )
+
+    assert result.abstained is True
+    assert result.abstain_reason == "no_evidence"
+    assert result.scope == "abstained"
+    assert retriever.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_in_pack_does_not_call_the_corpus():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    retriever = StaticRetriever(
+        [_chunk("b3-c07-0099", "A hippogriff is a proud creature.")]
+    )
+    llm = StaticLlm(
+        "A boggart takes your fear's shape "
+        "[mat:dada-dark-creatures-boggarts-nature]."
+    )
+
+    result = await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+    )
+
+    assert result.abstained is False
+    assert result.scope == "in_pack"
+    assert retriever.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_selector_lexical_match_keeps_a_pack_term_in_a_comparison():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+
+    selected = selector.select_lexical(
+        "Compare a boggart with a hippogriff", subject="dada"
+    )
+
+    assert [m.material_id for m in selected] == [
+        "dada-dark-creatures-boggarts-nature"
+    ]
+    assert selector.select_lexical("What is a charm spell?", subject="dada") == []

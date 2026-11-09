@@ -157,6 +157,7 @@ async def build_runtime(settings: Settings) -> Runtime:
             lesson_subject=settings.lore_subject,
             lesson_top_k=settings.lesson_top_k,
             lesson_min_score=settings.lesson_min_score,
+            lesson_fallback=settings.lesson_fallback,
         ),
         small_llm=small_llm,
         packs=packs,

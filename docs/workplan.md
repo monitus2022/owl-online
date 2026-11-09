@@ -73,10 +73,10 @@ page describes what comes next and why.
   authoring review. #128 (pack wiring: concept seeding, reference and
   source-ref prefill, chapter-to-subject lesson table) remains for Charms and
   the extraction pipeline; the #87 pack schema and validator landed with PR #153.
-- The exam bank (#178) follows; DADA packs are delivered and the answer path is
-  settled except the voice work (#176). The bank blueprint (#188) fixes a
-  target of 25 MCQ and 25 short-answer items; authoring follows the bank schema
-  (#189).
+- The exam bank (#178) follows; DADA packs are delivered, mixed-scope lesson
+  answers are delivered (#177), and the answer path is settled except the voice
+  work (#176). The bank blueprint (#188) fixes a target of 25 MCQ and 25
+  short-answer items; authoring follows the bank schema (#189).
 
 ## Product shape
 
@@ -575,7 +575,6 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #177 | Lesson mixed-scope answers with labelled corpus fallback | V3 - Product |
 | #178 | Exam bank one-paper vertical slice (tracker for #38/#39/#40/#41/#42) | V3 - Product |
 | #187 | DADA bank: 25 MCQ + 25 short answer, 50 items total (#188-#193) | V3 - Product |
 | #38/#39/#40/#41/#42 | Exam model, generator, evaluation, grader and endpoints | V3 - Product |
@@ -628,7 +627,7 @@ persists exam attempts and chat history.
 | Ingest | #113 |
 | CI gate | #16 |
 | Frontend surfaces | #132, #134, #135, #136, #137, #141, #143, #145, #157 |
-| Lesson mode and persona | #120, #166, #168 (the #97 thin slice is delivered; #97 stays open for the voice work, #176) |
+| Lesson mode and persona | #120, #166, #168, #177 (the #97 thin slice is delivered; #97 stays open for the voice work, #176) |
 | Venue fallback | #172 (PR #173) |
 | Deploy hardening | #170, #174 (PR #175) |
 
@@ -640,7 +639,7 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The next work is the Now set: #177, #178, #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
+The next work is the Now set: #178, #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
 (#127 closed); #128 carries the pack wiring and Charms content. The
 #87 schema, validator and DADA 1.0.0 pack are delivered. #16, #120, #170, #172,
 #174 and #127 are closed. #107 is deferred and likely superseded by the

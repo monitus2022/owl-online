@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from dataclasses import dataclass, field
 
 from app.knowledge.materials import Material
@@ -39,6 +40,19 @@ def _embedding_text(pack: SubjectPack, material: Material) -> str:
     title = concept.title if concept is not None else material.concept
     aliases = " ".join(concept.aliases) if concept is not None else ""
     return f"{title}. {aliases}. {material.text}".strip()
+
+
+_PHRASE_SPLIT = re.compile(r"[^a-z0-9]+")
+
+
+def _normalise_phrase(text: str) -> str:
+    return " ".join(_PHRASE_SPLIT.split(text.lower())).strip()
+
+
+def _phrase_present(phrase: str, text: str) -> bool:
+    if not phrase:
+        return False
+    return re.search(rf"\b{re.escape(phrase)}\b", text) is not None
 
 
 def _cosine(left: tuple[float, ...], right: tuple[float, ...]) -> float:
@@ -108,6 +122,43 @@ class LessonSelector:
 
     def subjects(self) -> tuple[str, ...]:
         return tuple(sorted(self.vectors))
+
+    def select_lexical(
+        self,
+        question: str,
+        *,
+        subject: str,
+        top_k: int = DEFAULT_TOP_K,
+    ) -> list[Material]:
+        """Curated concept-title and alias matches, for a weak embedding query.
+
+        A comparison question such as "Compare Expelliarmus with Avifors"
+        embeds poorly because the off-pack half dominates the vector. Matching
+        the pack's reviewed concept vocabulary keeps the in-pack half in the
+        prompt. Only full titles and aliases match: the generic word "charm"
+        does not pull in "Disarming Charm".
+        """
+        pack = self.store.get(subject)
+        if pack is None:
+            return []
+        text = _normalise_phrase(question)
+        scored: list[tuple[int, str, Material]] = []
+        for material in pack.materials:
+            concept = next(
+                (c for c in pack.concepts if c.concept_id == material.concept),
+                None,
+            )
+            if concept is None:
+                continue
+            score = 0
+            for phrase in (concept.title, *concept.aliases):
+                normalised = _normalise_phrase(phrase)
+                if _phrase_present(normalised, text):
+                    score += len(normalised.split())
+            if score:
+                scored.append((score, material.material_id, material))
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return [material for _, _, material in scored[: max(1, top_k)]]
 
     async def select(
         self,

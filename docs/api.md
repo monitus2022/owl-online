@@ -78,7 +78,7 @@ The response is `text/event-stream`. Events:
 | `mode` | `{"mode": "answer"}` | after the router; can be `answer`, `practice`, `feedback`, `meta`, `personal` or `lesson` |
 | `token` | `{"text": "..."}` | each streamed token |
 | `reset` | `{}` or `{"reason": "retry"}` / `{"reason": "fallback"}` | clear the draft before a retry, a fallback, an error, or an abstained final |
-| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `scope`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | terminal; always preceded by `reset` |
 
 `final` is the authoritative payload. A client should replace the draft on
@@ -97,6 +97,7 @@ excerpts:
   "citations": ["b4-c14-0006", "b4-c14-0009"],
   "lore_citations": [],
   "material_citations": ["dada-countering-countercurse-doctrine"],
+  "scope": "in_pack",
   "abstained": false
 }
 ```
@@ -109,10 +110,32 @@ derived at startup by embedding the material texts in memory; no second index is
 built or stored. The subject is `OWL_LORE_SUBJECT` until the request `subject`
 field ships. Lesson answers are never cached.
 
-The best-match cosine must clear `OWL_LESSON_MIN_SCORE` (default 0.58,
-calibrated for the local `qwen3-embedding:0.6b`: related questions 0.598-0.791,
-off-topic 0.160-0.549). Below the floor the selector returns nothing and the
-request abstains with the usual in-world line.
+The embedding selector's best-match cosine must clear `OWL_LESSON_MIN_SCORE`
+(default 0.58, calibrated for the local `qwen3-embedding:0.6b`: related
+questions 0.598-0.791, off-topic 0.160-0.549). A curated concept-title or alias
+match can still add a material when a comparison question embeds weakly, so
+"Compare Expelliarmus with Avifors" keeps the Disarming Charm note.
+
+`scope` says where the evidence came from:
+
+| `scope` | Meaning |
+|---|---|
+| `in_pack` | The selected materials cover the question; the answer cites `[mat:]` and the materials' source refs. |
+| `mixed` | The materials cover part and the corpus covers the rest; the answer cites both `[mat:]` and book chunk ids, and labels the set-text part. |
+| `off_pack` | No material is selected; the corpus answers, the answer starts "This is not in the department's notes", and `material_citations` is empty. |
+| `abstained` | Neither the pack nor the corpus has evidence. |
+
+With `OWL_LESSON_FALLBACK=true` (default), a question the pack does not cover
+retrieves the corpus as a labelled second tier instead of abstaining. Set
+`OWL_LESSON_FALLBACK=false` to restore pack-only lesson mode. The fallback is
+lesson-only: exam generation and authoritative grading must use pack materials
+and their source refs, never the lesson fallback. `scope` is `null` on the
+corpus answer path.
+
+The lesson prompt has two labelled sections: "Lesson notes (this department)"
+and "Set-text excerpts (outside this department)". A mixed answer must cite at
+least one material and at least one book chunk; a pack-only or corpus-only
+answer must cite its own space.
 
 ### `GET /v1/subjects`
 
@@ -180,8 +203,8 @@ bounded, because a legitimate stream can outlive the deadline.
   API process and reset on restart.
 - Corpus-only answers use an exact answer cache. Practice, feedback, meta,
   personal and lesson are never cached. The cache scope includes the lore pack
-  version and, when lesson mode is on, the pack fingerprints and selector
-  settings.
+  version and, when lesson mode is on, the pack fingerprints, selector settings
+  and the lesson fallback setting.
 - The lore pack is loaded from `OWL_LORE_PATH` (a Markdown directory or a JSONL
   file). Absent means the answer path stays book-only.
 

@@ -211,7 +211,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         )
         lesson_scope = (
             f"{runtime.pack_store.scope()}|{app_settings.lesson_top_k}|"
-            f"{app_settings.lesson_min_score}|{app_settings.lore_subject}"
+            f"{app_settings.lesson_min_score}|{app_settings.lesson_fallback}|"
+            f"{app_settings.lore_subject}"
             if app_settings.lesson_mode and runtime.pack_store is not None
             else "off"
         )
@@ -522,6 +523,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                                 "citations": cached.citations,
                                 "lore_citations": cached.lore_citations,
                                 "material_citations": cached.material_citations,
+                                "scope": cached.scope,
                                 "abstained": cached.abstained,
                                 "needs_input": False,
                                 "attempts": cached.attempts,
@@ -596,6 +598,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 citations=list(final.get("citations", [])),
                 lore_citations=list(final.get("lore_citations", [])),
                 material_citations=list(final.get("material_citations", [])),
+                scope=final.get("scope"),
                 prompt_chars=int(final.get("prompt_chars") or 0),
                 lore_chars=int(final.get("lore_chars") or 0),
                 abstained=bool(final.get("abstained", False)),
@@ -627,6 +630,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         "citations": final.get("citations", []),
                         "lore_citations": final.get("lore_citations", []),
                         "material_citations": final.get("material_citations", []),
+                        "scope": final.get("scope"),
                         "abstained": final.get("abstained", False),
                         "needs_input": final.get("needs_input", False),
                         "attempts": final.get("attempts", 1),

@@ -170,6 +170,7 @@ control the non-secret runtime toggles. The workflow passes them with `-e`, and
 |---|---|---|
 | `OWL_SUBJECTS_PATH` | `/data/subjects` | pack directory inside the container |
 | `OWL_LESSON_MODE` | `false` | enable pack-grounded lesson answers |
+| `OWL_LESSON_FALLBACK` | `true` | answer from labelled set texts when the pack does not cover the question |
 | `OWL_PERSONA` | `false` | enable the professor voice |
 
 Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
@@ -319,12 +320,14 @@ The pipeline ships only the image. Do these once on the instance:
    # variables to true to enable lesson and persona. The file entries are for
    # manual docker run or Compose use.
    OWL_LESSON_MODE=false
+   OWL_LESSON_FALLBACK=true
    OWL_PERSONA=false
    ```
 
    The workflow always injects `OWL_SUBJECTS_PATH`, `OWL_LESSON_MODE` and
    `OWL_PERSONA` (repository variable or default), so they override the file
-   even when no variable is set.
+   even when no variable is set. `OWL_LESSON_FALLBACK` is not injected; it
+   defaults to true and is read from the env file.
 
 3. The data at `/data`: `chunks.jsonl`, the index built with the same
    embedder, `lore/` and `subjects/`. Build the Titan index locally, then

@@ -388,7 +388,7 @@ SSE events:
 | `mode` | `{"mode": "answer"}` | after the router update |
 | `token` | `{"text": "..."}` | for each streamed token |
 | `reset` | `{"reason": "retry"}` before a retry draft, `{"reason": "fallback"}` before a routing fallback; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
-| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `scope`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
@@ -412,12 +412,20 @@ arrive as an `error` event because HTTP headers are already sent.
 
 When the classification would otherwise be `answer` and the request mode is
 `lesson` with `OWL_LESSON_MODE` on, the graph routes to `lesson_node` instead of
-`answer`. The derived selector scores the in-memory material vectors, the prompt
-carries only the selected materials, the draft must cite `[mat:<id>]` from that
-set, and the final payload carries `material_citations` plus the materials' book
-`source_refs` as `citations`. This branch makes no retrieval or reranker call.
-Below the selector's best-match floor it returns nothing and the request
-abstains with `no_evidence`.
+`answer`. The derived selector scores the in-memory material vectors and the
+prompt carries the selected materials. A deterministic coverage check compares
+the question's content terms with the material prose. If the pack covers the
+question, the draft must cite `[mat:<id>]` and the branch makes no retrieval
+call. If the pack is empty or leaves terms uncovered, the branch retrieves the
+corpus as a labelled second tier (`OWL_LESSON_FALLBACK`, default true), builds
+"Lesson notes (this department)" and "Set-text excerpts (outside this
+department)" sections, and requires the matching citation space. `scope` is
+`in_pack`, `mixed`, `off_pack` or `abstained`; an off-pack answer starts with
+"This is not in the department's notes" and a mixed answer cites both spaces.
+The final payload carries `material_citations`, book `citations` and `scope`.
+With the fallback off, an uncovered question abstains with `no_evidence`. The
+fallback is lesson-only: exam generation and authoritative grading must use pack
+materials and their source refs, never the corpus fallback.
 
 ## Model routing
 
@@ -470,10 +478,11 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
 | `meta` | persona on; identity, subject scope, exam (non-disclosure), syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
-| `lesson` | classification would be answer, explicit `mode=lesson`, `OWL_LESSON_MODE` on | teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs | no | no |
+| `lesson` | classification would be answer, explicit `mode=lesson`, `OWL_LESSON_MODE` on | teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
 
-Lesson mode is the one intent grounded in a subject pack rather than the corpus.
-The selector is derived at startup by embedding material texts in memory and
+Lesson mode is the one intent grounded in a subject pack first; the corpus is a
+labelled fallback when the pack is thin. The selector is derived at startup by
+embedding material texts in memory and
 scoring a question by cosine; the corpus join through `source_refs` remains the
 grounding check, not the selector. A lesson answer cites material ids in
 `material_citations` and their book chunks in `citations`. With the flag off the
@@ -650,8 +659,8 @@ Corpus-only answers pass through an in-process exact cache keyed by prompt
 version, index text hash, retrieval settings, embedder and reranker config,
 model, normalised question, the persona flag, a hash of the persona suffix, the
 lore pack version, the lore selection version, and (when lesson mode is on) the
-pack fingerprints, lesson top-k, floor and subject. Practice, feedback, meta,
-personal and lesson never read or write it: feedback is personalised by the
+pack fingerprints, lesson top-k, floor, fallback setting and subject. Practice,
+feedback, meta, personal and lesson never read or write it: feedback is personalised by the
 student answer, practice is meant to vary, meta/personal are scripted, and
 lesson answers are pack-scoped. Usage is logged for
 each processed request, cache hits included; a 429, 502, 503 or 504 does not

@@ -7,10 +7,10 @@ O.W.L. Online - a grounded, agentic RAG application. Read this before making cha
 A retrieval-augmented question-answering engine with two surfaces: a chat that
 answers, sets practice and gives formative feedback, and a static exam bank with
 offline generation and hybrid grading. The DADA pack is published at 1.0.0;
-the professor persona is live behind `OWL_PERSONA`; lesson mode is implemented
-behind `OWL_LESSON_MODE` and needs the pack on the host volume; the exam bank is
-the next product surface. The project's point is the evaluation discipline and
-the full-stack agent, not the corpus.
+the professor persona is live behind `OWL_PERSONA`; lesson mode is live behind
+`OWL_LESSON_MODE` with a labelled corpus fallback when the pack is thin; the exam
+bank is the next product surface. The project's point is the evaluation
+discipline and the full-stack agent, not the corpus.
 
 ## Commands
 

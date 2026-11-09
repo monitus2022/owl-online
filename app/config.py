@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     # qwen3-embedding:0.6b on the DADA pack (related 0.598-0.791, off-topic
     # 0.160-0.549); recalibrate when the embedder changes.
     lesson_min_score: float = Field(default=0.58, ge=0.0, le=1.0)
+    # When the pack does not cover the question, answer from the corpus with a
+    # labelled second tier instead of abstaining. Off restores pack-only lesson.
+    lesson_fallback: bool = True
 
     # Deadline for one /ask request (retrieve plus generate). /ask/stream is not
     # bounded because a legitimate stream can outlive it.

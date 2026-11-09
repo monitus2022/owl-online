@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: grounded chat, the DADA pack published at 1.0.0, and the professor persona live behind `OWL_PERSONA`. Lesson mode is implemented behind `OWL_LESSON_MODE` and needs the pack on the host volume. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; a missing pack falls back to labelled corpus chat. The next product surface is the exam bank with hybrid grading, plus mixed-scope answers, conversation memory and a second department. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
+> Status: grounded chat, the DADA pack published at 1.0.0, lesson mode live behind `OWL_LESSON_MODE`, and the professor persona live behind `OWL_PERSONA`. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; questions outside the pack fall back to labelled set-text answers. The next product surface is the exam bank with hybrid grading, plus conversation memory and a second department. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
 
 ---
 
@@ -16,7 +16,7 @@ O.W.L. Online has two product surfaces on one retrieval core:
 | Chat practice | On-demand grounded practice question | live |
 | Chat feedback | Formative feedback and a provisional mark | live |
 | Exam bank | Pre-generated 10-question papers stored in a DB, served statically, graded by a hybrid scorer | planned V3 (#178) |
-| Lesson mode | Pack-grounded teaching answers with material and book citations | implemented behind `OWL_LESSON_MODE`; needs the pack on the host volume |
+| Lesson mode | Pack-grounded teaching answers with material and book citations, plus a labelled corpus fallback | live behind `OWL_LESSON_MODE` (stateless pack slice) |
 
 Chat practice and feedback are ephemeral and formative. The exam bank is the
 authoritative surface: papers are generated offline, validated, versioned and
