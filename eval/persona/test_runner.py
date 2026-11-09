@@ -171,3 +171,38 @@ async def test_candidate_improves_voice_without_losing_citations():
     assert report.candidate.boundary_violations == 0
     assert report.candidate.style_violations == 0
     assert report.ok, report.gate_reasons()
+
+
+@pytest.mark.asyncio
+async def test_abstention_on_a_citation_expected_scenario_is_a_miss():
+    pack = _pack()
+    selector = await LessonSelector.build(
+        PackStore(packs={"dada": pack}, fingerprints={"dada": "fp"}),
+        KeywordEmbedder(),
+    )
+    scenarios = [
+        PersonaScenario(
+            scenario_id="s4",
+            question="What is the capital of France?",
+            route="lesson",
+            category="off_topic",
+            citation="material",
+            scopes=("abstained",),
+        )
+    ]
+    stack = PersonaEvalStack(
+        persona=PERSONA,
+        selector=selector,
+        retriever=EmptyRetriever(),
+        llm_for_sample=lambda sample: VoiceLlm(),
+        judge=VoiceJudge(),
+        pack=pack,
+        chunks_by_id={CHUNK_ID: _chunk()},
+    )
+    report = await run_persona_eval(scenarios, stack, samples=1)
+    sample = report.candidate.samples[0]
+    assert sample.abstained
+    assert report.candidate.abstention_accuracy == 1.0
+    assert report.candidate.citation_retention == 0.0
+    assert report.candidate.persona_pass_rate == 0.0
+    assert report.candidate.expected_judged == 1

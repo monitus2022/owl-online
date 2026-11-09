@@ -191,8 +191,8 @@ evidence link for the note citation; the material source refs still resolve on
 the response.
 
 The conformance fixture is `eval/persona/fixtures/conformance.jsonl`. It is
-separate from the factual gold set: 29 scenarios across in-pack, mixed,
-off-pack, meta, personal, off-topic and adversarial prompts. Deterministic
+separate from the factual gold set: 30 scenarios across in-pack, in-pack
+gap, mixed, off-pack, meta, personal, off-topic and adversarial prompts. Deterministic
 checks run before the judge: citations resolve, source refs and hashes resolve,
 abstention is the in-world line, no exam disclosure, no private knowledge, no
 advice outside the role, no slang, emoji or deadlines, and the length budget.
@@ -206,7 +206,7 @@ uv run python scripts/run_persona_eval.py
 The 2026-11-09 run raised the persona pass rate from 0.00 to 0.40, with a Wilson
 lower bound of 0.29, citation retention 0.79 and no boundary or style
 violations. The record is
-`docs/runs/2026-11-09-176-persona-lesson-voice.md`.
+`docs/runs/2026-11-10-176-persona-lesson-voice-r2.md`.
 
 ## Multiple professors
 
