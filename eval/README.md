@@ -537,12 +537,11 @@ deterministic checks run first:
 - no exam disclosure, mark scheme, private knowledge or out-of-role advice;
 - no slang, emoji, deadlines or countdowns, and the length budget holds.
 
-The pinned judge (`deepseek-v4.1-flash-1017`, temperature 0) scores voice and
+The pinned judge (`deepseek/deepseek-v4.1-flash-1017`, temperature 0) scores voice and
 teaching shape only and never sees the condition. Calibration uses ten
-AI-proposed examples that span the 0-2 bands; the owner adopts the labels in
-review. The report gives exact and adjacent agreement, MAE, the pass rate and
+owner-adopted examples that span the 0-2 bands. The report gives exact and adjacent agreement, MAE, the pass rate and
 its Wilson lower bound, and the per-scenario variance across samples.
 
 The 2026-11-09 run is `docs/runs/2026-11-09-176-persona-lesson-voice.md`: pass
-rate 0.00 to 0.52, Wilson lower bound 0.39, citation retention 1.00, no boundary
+rate 0.00 to 0.40, Wilson lower bound 0.29, citation retention 0.79, no boundary
 or style violations, and the corpus gate unchanged.

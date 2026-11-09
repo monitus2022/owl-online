@@ -555,8 +555,8 @@ slice uses `eval/fixtures/lore/` (one Markdown entry per file, TOML front matter
 Lore-grounded answers and `[lore:<id>]` citations are wired (#118): the answer
 path selects up to three setting notes, validates the two citation spaces
 separately, and abstains only when neither has a citation. The real pack is
-published at 1.0.0; the lore eval follows (#97) and the lesson voice follows
-(#176).
+published at 1.0.0; the lore eval follows (#97) and the lesson voice is
+delivered (#176).
 
 The exam bank is a separate, offline surface. It is not a chat intent and it does
 not run inside `/ask` or `/ask/stream`. Exam generation reads from versioned

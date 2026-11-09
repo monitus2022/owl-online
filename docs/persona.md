@@ -196,15 +196,15 @@ off-pack, meta, personal, off-topic and adversarial prompts. Deterministic
 checks run before the judge: citations resolve, source refs and hashes resolve,
 abstention is the in-world line, no exam disclosure, no private knowledge, no
 advice outside the role, no slang, emoji or deadlines, and the length budget.
-The pinned judge (`deepseek-v4.1-flash-1017`, temperature 0) scores voice and
+The pinned judge (`deepseek/deepseek-v4.1-flash-1017`, temperature 0) scores voice and
 teaching shape only and never sees the condition. Run:
 
 ```
 uv run python scripts/run_persona_eval.py
 ```
 
-The 2026-11-09 run raised the persona pass rate from 0.00 to 0.52, with a Wilson
-lower bound of 0.39, citation retention 1.00 and no boundary or style
+The 2026-11-09 run raised the persona pass rate from 0.00 to 0.40, with a Wilson
+lower bound of 0.29, citation retention 0.79 and no boundary or style
 violations. The record is
 `docs/runs/2026-11-09-176-persona-lesson-voice.md`.
 
@@ -230,4 +230,4 @@ that can drift apart.
 | 2026-11-07 | Public-history layer: the professor knows the war and post-war outline as public history; memory is context, not evidence; detail cites the book chunks |
 | 2026-11-08 | Response tiers 0-2 recorded as the persona scope; tier 3 (invented non-canon flavor) declared out of scope; multi-professor card model noted |
 | 2026-11-09 | Subject-definition reply added; "what is DADA" and "what is Defence Against the Dark Arts" route to the reviewed definition, while book-context forms stay on the answer path |
-| 2026-11-09 | Lesson voice: persona-first prompt, teaching shape, 250-word target, inline chunk ids hidden from the note prompt, and the #176 conformance fixture; pass rate 0.00 to 0.52 with citations retained |
+| 2026-11-09 | Lesson voice: persona-first prompt, teaching shape, 250-word target, inline chunk ids hidden from the note prompt, and the #176 conformance fixture; pass rate 0.00 to 0.40 with citation retention 0.79 |

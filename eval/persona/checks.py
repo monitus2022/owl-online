@@ -51,8 +51,10 @@ _PRIVATE_KNOWLEDGE = re.compile(
     re.IGNORECASE,
 )
 _ADVICE = re.compile(
-    r"\byou should (?:see a doctor|take|stop taking|sue|invest|hire a lawyer)\b|"
-    r"\b(?:medical|legal|financial) advice\b|\bdiagnos|\bprescri",
+    r"\byou should (?:see a doctor|take|stop taking|sue|invest|"
+    r"hire a lawyer|see a lawyer|contact a lawyer)\b|"
+    r"\b(?:take|stop taking) (?:your )?(?:medicine|medication)\b|"
+    r"\bdiagnos|\bprescri",
     re.IGNORECASE,
 )
 
@@ -194,8 +196,13 @@ def style_violations(answer: str) -> list[str]:
 def length_check(answer: str, max_words: int) -> tuple[bool, str]:
     words = len(re.findall(r"[A-Za-z0-9]+", answer))
     approx_tokens = max(1, (len(answer) + 3) // 4)
-    ok = words <= max_words
-    return ok, f"words={words} max_words={max_words} approx_tokens={approx_tokens}"
+    token_limit = max_words * 2
+    ok = words <= max_words and approx_tokens <= token_limit
+    return (
+        ok,
+        f"words={words} max_words={max_words} "
+        f"approx_tokens={approx_tokens} token_limit={token_limit}",
+    )
 
 
 def run_checks(

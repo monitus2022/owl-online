@@ -45,11 +45,13 @@ class CalibrationReport:
     mae: float
     parse_failures: int
     details: tuple[CalibrationDetail, ...]
+    labels_adopted: bool = False
 
     @property
     def ok(self) -> bool:
         return (
             self.n > 0
+            and self.labels_adopted
             and self.parse_failures == 0
             and self.adjacent >= 0.9
             and self.mae <= 0.5
@@ -144,6 +146,9 @@ async def run_calibration(
         mae=total_delta / scored if scored else 0.0,
         parse_failures=parse_failures,
         details=tuple(details),
+        labels_adopted=all(
+            case.label_source == "owner-adopted" for case in cases
+        ),
     )
 
 

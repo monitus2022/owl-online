@@ -76,7 +76,7 @@ def legacy_persona_suffix(persona: Persona) -> str:
     return (
         f"You are {persona.address}, a {persona.role}. "
         f"Speak in this register: {persona.tone}. "
-        f"{persona.stance} {persona.pacing}. "
+        f"{persona.stance}. {persona.pacing}. "
         "Use every name, place and title exactly as it appears in the "
         "excerpts; never rename or relocate it. "
         "Keep the citation and abstention rules above exactly. "

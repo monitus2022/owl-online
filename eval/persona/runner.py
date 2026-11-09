@@ -60,7 +60,8 @@ class SampleResult:
     scope: str | None
     expected_scopes: tuple[str, ...]
     abstained: bool
-    citation_required: bool
+    citation_expected: bool
+    judge_expected: bool
     answer: str
     checks: tuple[Check, ...]
     judge_score: int | None = None
@@ -95,6 +96,14 @@ class SampleResult:
     @property
     def length_ok(self) -> bool:
         return self.check("length")
+
+    @property
+    def citation_ok(self) -> bool:
+        return (
+            self.citation_expected
+            and not self.abstained
+            and self.check("citations")
+        )
 
     @property
     def persona_pass(self) -> bool:
@@ -152,20 +161,16 @@ class ConditionReport:
 
     @property
     def citation_checked(self) -> int:
-        return sum(1 for sample in self.samples if sample.citation_required)
+        return sum(1 for sample in self.samples if sample.citation_expected)
 
     @property
     def citation_retention(self) -> float:
-        return (
-            sum(
-                sample.check("citations")
-                for sample in self.samples
-                if sample.citation_required
-            )
-            / self.citation_checked
-            if self.citation_checked
-            else 1.0
+        if not self.citation_checked:
+            return 1.0
+        passed = sum(
+            1 for sample in self.samples if sample.citation_ok
         )
+        return passed / self.citation_checked
 
     @property
     def abstention_checked(self) -> int:
@@ -199,16 +204,26 @@ class ConditionReport:
         return sum(1 for sample in self.samples if sample.judge_score is not None)
 
     @property
+    def expected_judged(self) -> int:
+        return sum(1 for sample in self.samples if sample.judge_expected)
+
+    @property
     def persona_passes(self) -> int:
         return sum(1 for sample in self.samples if sample.persona_pass)
 
     @property
     def persona_pass_rate(self) -> float:
-        return self.persona_passes / self.judged if self.judged else 0.0
+        # The denominator is the full expected set, not only the answered
+        # samples, so an abstention cannot shrink it and inflate the rate.
+        return (
+            self.persona_passes / self.expected_judged
+            if self.expected_judged
+            else 0.0
+        )
 
     @property
     def persona_wilson_lb(self) -> float:
-        return wilson_lower_bound(self.persona_passes, self.judged)
+        return wilson_lower_bound(self.persona_passes, self.expected_judged)
 
     @property
     def mean_score(self) -> float:
@@ -447,7 +462,8 @@ async def _run_scenario(
             scope=scope,
             expected_scopes=scenario.scopes,
             abstained=abstained,
-            citation_required=scenario.citation != "none" and not abstained,
+            citation_expected=scenario.citation != "none",
+            judge_expected=route == "lesson" and scenario.citation != "none",
             answer=answer,
             checks=tuple(checks),
             judge_score=judge_score,
@@ -466,7 +482,8 @@ async def _run_scenario(
             scope=scope,
             expected_scopes=scenario.scopes,
             abstained=abstained,
-            citation_required=scenario.citation != "none" and not abstained,
+            citation_expected=scenario.citation != "none",
+            judge_expected=route == "lesson" and scenario.citation != "none",
             answer=answer,
             checks=tuple(checks),
             error=f"{type(error).__name__}: {error}",
@@ -541,6 +558,7 @@ def render_report(report: PersonaEvalReport) -> str:
     row("persona Wilson LB", f"{b.persona_wilson_lb:.4f}", f"{c.persona_wilson_lb:.4f}")
     row("mean voice score", f"{b.mean_score:.4f}", f"{c.mean_score:.4f}")
     row("score variance", f"{b.score_variance:.4f}", f"{c.score_variance:.4f}")
+    row("expected judged samples", b.expected_judged, c.expected_judged)
     row("judged samples", b.judged, c.judged)
     row("judge parse failures", b.judge_parse_failures, c.judge_parse_failures)
     row("errors", b.errors, c.errors)
@@ -554,7 +572,8 @@ def render_report(report: PersonaEvalReport) -> str:
                 f"exact={getattr(calibration, 'exact', 0.0):.4f} "
                 f"adjacent={getattr(calibration, 'adjacent', 0.0):.4f} "
                 f"MAE={getattr(calibration, 'mae', 0.0):.4f} "
-                f"parse_failures={getattr(calibration, 'parse_failures', 0)}",
+                f"parse_failures={getattr(calibration, 'parse_failures', 0)} "
+                f"labels_adopted={getattr(calibration, 'labels_adopted', False)}",
             ]
         )
         for detail in getattr(calibration, "details", ()):

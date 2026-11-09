@@ -66,15 +66,15 @@ def test_load_calibration_fixture():
     )
     assert len(cases) == 10
     assert {case.human_score for case in cases} == {0, 1, 2}
-    assert all(case.label_source == "ai-proposed" for case in cases)
+    assert all(case.label_source == "owner-adopted" for case in cases)
 
 
 @pytest.mark.asyncio
 async def test_calibration_aggregation():
     cases = [
-        CalibrationCase("c1", "q1", "a1", 2, "shape", "", "ai-proposed"),
-        CalibrationCase("c2", "q2", "a2", 1, "shape", "", "ai-proposed"),
-        CalibrationCase("c3", "q3", "a3", 0, "shape", "", "ai-proposed"),
+        CalibrationCase("c1", "q1", "a1", 2, "shape", "", "owner-adopted"),
+        CalibrationCase("c2", "q2", "a2", 1, "shape", "", "owner-adopted"),
+        CalibrationCase("c3", "q3", "a3", 0, "shape", "", "owner-adopted"),
     ]
     judge = StubJudge(
         {

@@ -17,6 +17,7 @@ def test_fixture_covers_the_required_categories():
     categories = {scenario.category for scenario in scenarios}
     assert {
         "in_pack",
+        "in_pack_gap",
         "mixed",
         "off_pack",
         "meta",

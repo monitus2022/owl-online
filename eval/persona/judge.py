@@ -16,27 +16,28 @@ from app.agent.persona import Persona
 from app.providers.contracts import Llm
 from eval.persona.fixtures import PersonaScenario
 
-PROMPT_VERSION = "persona-voice-v1"
+PROMPT_VERSION = "persona-voice-v2"
 
-JUDGE_SYSTEM = (
-    "You review a teaching answer for voice and teaching shape only. Do not "
-    "grade factual accuracy or citations; a separate deterministic check owns "
-    "those. Ignore bracketed citation markers entirely when judging voice. "
-    "The persona is Professor Alistair Crane, a Defense Against the "
-    "Dark Arts professor. Register: friendly yet formal, warm, patient and "
-    "precise; never chummy, no slang, no emojis. Stance: Defense is serious and "
-    "dangerous; caution and correct technique come before action. No deadlines "
-    "or countdowns; the student sets the pace. A conforming answer speaks to "
-    "the student as the professor, answers directly first, says why the point "
-    "matters, gives one concrete example, adds one caution, finishes with one "
-    "short check the student can answer, and stays within a few short "
-    "paragraphs. Reply with JSON only, no prose: "
-    '{"score": 0 | 1 | 2, "reason": "one sentence"}. '
-    "2 = fully conforms. 1 = partly conforms, for example grounded and clear "
-    "but third-person, encyclopedic, or missing most of the teaching shape. "
-    "0 = does not conform: generic assistant or encyclopedia voice, slang, "
-    "emoji, deadline, or a boundary violation."
-)
+
+def judge_system(persona: Persona) -> str:
+    """The rubric, built from the same card the prompt uses."""
+    return (
+        "You review a teaching answer for voice and teaching shape only. Do not "
+        "grade factual accuracy or citations; a separate deterministic check "
+        "owns those. Ignore bracketed citation markers entirely when judging "
+        f"voice. The persona is {persona.address}, a {persona.role}. "
+        f"Register: {persona.tone}. Stance: {persona.stance}. "
+        f"Pacing: {persona.pacing}. "
+        "A conforming answer speaks to the student as the professor, answers "
+        "directly first, says why the point matters, gives one concrete "
+        "example, adds one caution, finishes with one short check the student "
+        "can answer, and stays within a few short paragraphs. Reply with JSON "
+        'only, no prose: {"score": 0 | 1 | 2, "reason": "one sentence"}. '
+        "2 = fully conforms. 1 = partly conforms, for example grounded and "
+        "clear but third-person, encyclopedic, or missing most of the teaching "
+        "shape. 0 = does not conform: generic assistant or encyclopedia voice, "
+        "slang, emoji, deadline, or a boundary violation."
+    )
 
 
 @dataclass(frozen=True)
@@ -95,7 +96,7 @@ async def judge_reply(
         f"Anchors for this scenario: {anchors}.\n\n"
         f"Answer:\n{answer}"
     )
-    raw = await judge.generate(JUDGE_SYSTEM, prompt)
+    raw = await judge.generate(judge_system(persona), prompt)
     score, reason = parse_score(raw)
     return JudgeVerdict(
         scenario_id="",
@@ -141,10 +142,11 @@ def wilson_lower_bound(successes: int, n: int, z: float = 1.96) -> float:
 
 
 __all__ = [
-    "JUDGE_SYSTEM",
     "PROMPT_VERSION",
     "JudgeVerdict",
     "judge_answer",
+    "judge_reply",
+    "judge_system",
     "parse_score",
     "wilson_lower_bound",
 ]

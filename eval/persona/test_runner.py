@@ -149,8 +149,8 @@ async def test_candidate_improves_voice_without_losing_citations():
             question="What is the capital of France?",
             route="lesson",
             category="off_topic",
-            citation="book",
-            scopes=("off_pack", "abstained"),
+            citation="none",
+            scopes=("abstained",),
         ),
     ]
     stack = PersonaEvalStack(
@@ -165,6 +165,7 @@ async def test_candidate_improves_voice_without_losing_citations():
     report = await run_persona_eval(scenarios, stack, samples=3)
     assert report.baseline.persona_pass_rate == 0.0
     assert report.candidate.persona_pass_rate == 1.0
+    assert report.candidate.expected_judged == 3
     assert report.candidate.citation_retention == 1.0
     assert report.candidate.abstention_accuracy == 1.0
     assert report.candidate.boundary_violations == 0
