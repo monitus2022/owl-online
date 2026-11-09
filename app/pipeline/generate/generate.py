@@ -121,7 +121,9 @@ _CLAUSE_SPLIT = re.compile(
 
 TokenSink = Callable[[str], None]
 StageSink = Callable[[str], None]
-AbstainReason = Literal["no_evidence", "uncited", "refused"]
+AbstainReason = Literal[
+    "no_evidence", "uncited", "refused", "missing_scope_citation"
+]
 LessonScope = Literal["in_pack", "mixed", "off_pack", "abstained"]
 
 

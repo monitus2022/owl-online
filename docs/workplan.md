@@ -74,8 +74,8 @@ page describes what comes next and why.
   source-ref prefill, chapter-to-subject lesson table) remains for Charms and
   the extraction pipeline; the #87 pack schema and validator landed with PR #153.
 - The exam bank (#178) follows; DADA packs are delivered, mixed-scope lesson
-  answers are delivered (#177), and the answer path is settled except the voice
-  work (#176). The bank blueprint (#188) fixes a target of 25 MCQ and 25
+  answers are in review (PR #199, #177), and the answer path is settled except
+  the voice work (#176). The bank blueprint (#188) fixes a target of 25 MCQ and 25
   short-answer items; authoring follows the bank schema (#189).
 
 ## Product shape
@@ -273,8 +273,9 @@ Lesson mode's stateless first slice (#166) answers from the pack behind
 the answer cites `[mat:<id>]` and resolves the materials' book `source_refs`.
 The measured corpus answer path is unchanged while the flag is off.
 
-A pack is the single source of truth for one O.W.L. subject. Exam generation and
-lesson mode read from packs, not from free model memory.
+A pack is the single source of truth for one O.W.L. subject. Exam generation
+reads from packs; lesson mode reads from packs first and may use a labelled
+corpus fallback. Neither uses free model memory.
 
 The taxonomy covers Astronomy, Charms, Defence Against the Dark Arts, Herbology,
 History of Magic, Potions, Transfiguration, Ancient Runes, Arithmancy, Divination,
@@ -294,8 +295,9 @@ Rules:
 
 - every material has at least one source ref;
 - every source ref resolves to an existing chunk with a matching text hash;
-- every generated question or lesson section must cite a material id and a
-  source ref;
+- every generated exam question and pack-backed lesson section must cite a
+  material id and a source ref; a labelled off-pack lesson section cites book
+  chunk ids;
 - a pack rebuild is reproducible from its manifest;
 - source text lives in `/data`, not in git.
 
@@ -525,7 +527,8 @@ Exit criteria:
 - recent turns and a rolling summary fit a token budget;
 - the professor persona is consistent across a thread;
 - lesson mode can teach a topic and use practice questions as checkpoints;
-- every lesson section cites a subject material and a source ref.
+- pack-backed lesson sections cite a subject material and a source ref; an
+  off-pack section is labelled and cites set-text chunk ids.
 
 Anonymous threads are enough here. Auth is not a dependency.
 
@@ -575,6 +578,7 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
+| #177 | Lesson mixed-scope answers with labelled corpus fallback (in review, PR #199) | V3 - Product |
 | #178 | Exam bank one-paper vertical slice (tracker for #38/#39/#40/#41/#42) | V3 - Product |
 | #187 | DADA bank: 25 MCQ + 25 short answer, 50 items total (#188-#193) | V3 - Product |
 | #38/#39/#40/#41/#42 | Exam model, generator, evaluation, grader and endpoints | V3 - Product |
@@ -627,7 +631,7 @@ persists exam attempts and chat history.
 | Ingest | #113 |
 | CI gate | #16 |
 | Frontend surfaces | #132, #134, #135, #136, #137, #141, #143, #145, #157 |
-| Lesson mode and persona | #120, #166, #168, #177 (the #97 thin slice is delivered; #97 stays open for the voice work, #176) |
+| Lesson mode and persona | #120, #166, #168 (the #97 thin slice is delivered; #97 stays open for the voice work, #176; #177 is in review, PR #199) |
 | Venue fallback | #172 (PR #173) |
 | Deploy hardening | #170, #174 (PR #175) |
 
@@ -639,7 +643,7 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The next work is the Now set: #178, #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
+The next work is the Now set: #177 (in review), #178, #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
 (#127 closed); #128 carries the pack wiring and Charms content. The
 #87 schema, validator and DADA 1.0.0 pack are delivered. #16, #120, #170, #172,
 #174 and #127 are closed. #107 is deferred and likely superseded by the
@@ -707,8 +711,9 @@ Grading adds:
 
 Lesson mode adds:
 
-- every lesson section cites a material id and source ref;
-- no concept is taught without a pack material;
+- every pack-backed lesson section cites a material id and source ref;
+- an off-pack section is labelled and cites book chunk ids; exam generation and
+  grading never consume it;
 - comprehension checks use the same subject pack.
 
 ## Out of scope

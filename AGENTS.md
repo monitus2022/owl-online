@@ -76,10 +76,13 @@ deterministically; free-text answers are judged by a pinned LLM against the
 stored rubric and evidence; totals and bands are deterministic. Do not route
 formal exam generation or authoritative grading through the chat graph.
 
-Subject knowledge packs are the source of truth for exam generation and lesson
-mode. Every material has source refs; every generated question or lesson section
-must cite a material and source ref. Do not generate exam or lesson content from
-free model memory or from an unvalidated pack.
+Subject knowledge packs are the source of truth for exam generation and
+pack-backed lesson content. Every material has source refs; every generated exam
+question and pack-backed lesson section must cite a material and source ref. A
+labelled off-pack lesson section cites set-text chunk ids instead. Exam
+generation and authoritative grading never consume the off-pack fallback. Do not
+generate exam or pack-backed lesson content from free model memory or from an
+unvalidated pack.
 
 Chat controls (#88) enforce per-session and per-IP minute, day and concurrency
 caps through a signed session cookie, an exact cache for corpus-only answers, and

@@ -16,7 +16,7 @@ O.W.L. Online has two product surfaces on one retrieval core:
 | Chat practice | On-demand grounded practice question | live |
 | Chat feedback | Formative feedback and a provisional mark | live |
 | Exam bank | Pre-generated 10-question papers stored in a DB, served statically, graded by a hybrid scorer | planned V3 (#178) |
-| Lesson mode | Pack-grounded teaching answers with material and book citations, plus a labelled corpus fallback | live behind `OWL_LESSON_MODE` (stateless pack slice) |
+| Lesson mode | Pack-grounded teaching answers with material and book citations, plus a labelled corpus fallback | live behind `OWL_LESSON_MODE` |
 
 Chat practice and feedback are ephemeral and formative. The exam bank is the
 authoritative surface: papers are generated offline, validated, versioned and

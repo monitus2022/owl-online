@@ -330,6 +330,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             subjects=list(runtime.packs),
             lesson=lesson,
             lesson_subject=app_settings.lore_subject if lesson else "",
+            lesson_fallback=app_settings.lesson_fallback,
             persona=app_settings.persona,
         )
 

@@ -17,11 +17,11 @@ from __future__ import annotations
 
 import logging
 import math
-import re
 from dataclasses import dataclass, field
 
 from app.knowledge.materials import Material
 from app.knowledge.packs import PackStore, SubjectPack
+from app.knowledge.terms import content_terms, phrase_match_score
 from app.providers.contracts import Embedder
 
 logger = logging.getLogger(__name__)
@@ -40,19 +40,6 @@ def _embedding_text(pack: SubjectPack, material: Material) -> str:
     title = concept.title if concept is not None else material.concept
     aliases = " ".join(concept.aliases) if concept is not None else ""
     return f"{title}. {aliases}. {material.text}".strip()
-
-
-_PHRASE_SPLIT = re.compile(r"[^a-z0-9]+")
-
-
-def _normalise_phrase(text: str) -> str:
-    return " ".join(_PHRASE_SPLIT.split(text.lower())).strip()
-
-
-def _phrase_present(phrase: str, text: str) -> bool:
-    if not phrase:
-        return False
-    return re.search(rf"\b{re.escape(phrase)}\b", text) is not None
 
 
 def _cosine(left: tuple[float, ...], right: tuple[float, ...]) -> float:
@@ -141,7 +128,7 @@ class LessonSelector:
         pack = self.store.get(subject)
         if pack is None:
             return []
-        text = _normalise_phrase(question)
+        question_terms = content_terms(question)
         scored: list[tuple[int, str, Material]] = []
         for material in pack.materials:
             concept = next(
@@ -152,9 +139,7 @@ class LessonSelector:
                 continue
             score = 0
             for phrase in (concept.title, *concept.aliases):
-                normalised = _normalise_phrase(phrase)
-                if _phrase_present(normalised, text):
-                    score += len(normalised.split())
+                score += phrase_match_score(phrase, question_terms)
             if score:
                 scored.append((score, material.material_id, material))
         scored.sort(key=lambda item: (-item[0], item[1]))

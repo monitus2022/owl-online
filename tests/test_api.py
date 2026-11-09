@@ -600,6 +600,7 @@ def test_subjects_empty_without_packs():
         "subjects": [],
         "lesson": False,
         "lesson_subject": "",
+        "lesson_fallback": True,
         "persona": False,
     }
 
@@ -828,6 +829,7 @@ def test_subjects_reports_lesson_and_persona_flags():
         body = client.get("/v1/subjects").json()
     assert body["lesson"] is True
     assert body["lesson_subject"] == "dada"
+    assert body["lesson_fallback"] is True
     assert body["persona"] is True
     assert body["subjects"] == []
 

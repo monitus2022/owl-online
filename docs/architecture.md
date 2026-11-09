@@ -13,7 +13,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
-| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166); the DADA pack is published; pack wiring and Charms content remain on #128 |
+| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper and the curated concept-title/alias matcher; the DADA pack is published; pack wiring and Charms content remain on #128 |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -27,7 +27,7 @@ Pipeline stages, in order:
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
-| Generate | `app/pipeline/generate/` | `ask`, `ask_lesson`, `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
+| Generate | `app/pipeline/generate/` | `ask`, `ask_lesson` (pack-first scope with a labelled corpus fallback), `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
 | Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node`, `lesson_node` |
 
 `parse_chapters` drops the front matter before book 1 and trims the previous
@@ -378,7 +378,7 @@ sequenceDiagram
   end
   G-->>API: final state
   API-->>C: event: reset when abstained
-  API-->>C: event: final {answer, citations, lore_citations, material_citations, abstained, needs_input, attempts, mode}
+  API-->>C: event: final {answer, citations, lore_citations, material_citations, scope, abstained, needs_input, attempts, mode}
 ```
 
 SSE events:
@@ -423,8 +423,9 @@ department)" sections, and requires the matching citation space. `scope` is
 `in_pack`, `mixed`, `off_pack` or `abstained`; an off-pack answer starts with
 "This is not in the department's notes" and a mixed answer cites both spaces.
 The final payload carries `material_citations`, book `citations` and `scope`.
-With the fallback off, an uncovered question abstains with `no_evidence`. The
-fallback is lesson-only: exam generation and authoritative grading must use pack
+With the fallback off, a question with no material above the floor abstains
+with `no_evidence`; a selected material that leaves terms uncovered stays
+pack-only. The fallback is lesson-only: exam generation and authoritative grading must use pack
 materials and their source refs, never the corpus fallback.
 
 ## Model routing
@@ -482,11 +483,12 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 
 Lesson mode is the one intent grounded in a subject pack first; the corpus is a
 labelled fallback when the pack is thin. The selector is derived at startup by
-embedding material texts in memory and
-scoring a question by cosine; the corpus join through `source_refs` remains the
-grounding check, not the selector. A lesson answer cites material ids in
-`material_citations` and their book chunks in `citations`. With the flag off the
-request is rejected and the measured corpus path is unchanged.
+embedding material texts in memory and scoring a question by cosine; the corpus join through `source_refs` remains the
+grounding check, not the selector. A pack-backed lesson answer cites material ids
+in `material_citations` and their book chunks in `citations`; an off-pack answer
+has empty `material_citations` and cites the retrieved book chunks directly.
+With the flag off the request is rejected and the measured corpus path is
+unchanged.
 
 ## Persona layer
 
@@ -534,8 +536,9 @@ published at 1.0.0; the lore eval follows (#97) and the lesson voice follows
 (#176).
 
 The exam bank is a separate, offline surface. It is not a chat intent and it does
-not run inside `/ask` or `/ask/stream`. Generation and lesson mode read from
-versioned subject knowledge packs, not from free model memory:
+not run inside `/ask` or `/ask/stream`. Exam generation reads from versioned
+subject knowledge packs; lesson mode reads from packs first and may use the
+labelled corpus fallback:
 
 ```mermaid
 flowchart LR
@@ -544,14 +547,17 @@ flowchart LR
   LEX -. seeds concepts and source-ref candidates .-> PACK
   PACK --> EXAM[Exam builder]
   PACK --> LESSON[Lesson builder]
+  CORP -. labelled off-pack fallback .-> LESSON
   EXAM --> DB[(Exam store)]
   DB --> API[Static exam API]
 ```
 
 A pack contains subjects, topics, concepts, materials and source refs. Every
 material points to a chunk id, book, chapter, quote, text hash and index hash.
-Every generated question or lesson section must cite a material id and source
-ref; the validator rejects anything else before publication. Secondary
+Every generated exam question and every pack-backed lesson section must cite a
+material id and source ref; the validator rejects anything else before
+publication. A labelled off-pack lesson section cites set-text chunk ids instead;
+exam generation and authoritative grading never consume that fallback. Secondary
 references such as a Lexicon entry may be stored as links for discovery and
 attribution, but they are not the canonical source and are never copied into
 the pack. The item/concept-to-chapter index that seeds those links is built
@@ -662,7 +668,7 @@ lore pack version, the lore selection version, and (when lesson mode is on) the
 pack fingerprints, lesson top-k, floor, fallback setting and subject. Practice,
 feedback, meta, personal and lesson never read or write it: feedback is personalised by the
 student answer, practice is meant to vary, meta/personal are scripted, and
-lesson answers are pack-scoped. Usage is logged for
+lesson answers are pack-first and scope-tagged. Usage is logged for
 each processed request, cache hits included; a 429, 502, 503 or 504 does not
 produce a line. The line carries estimated input/output tokens,
 model, intent, cache hit, cost and latency; a client that disconnects before the
@@ -687,8 +693,8 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, lore_chars, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, lore_citations, material_citations, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, scope, lore_chars, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, lore_citations, material_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

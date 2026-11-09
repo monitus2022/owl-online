@@ -18,12 +18,16 @@ from dataclasses import replace
 
 from app.knowledge.lesson import (
     DEFAULT_MIN_SCORE,
-    DEFAULT_TOP_K,
     LessonSelector,
 )
+from app.knowledge.lesson import (
+    DEFAULT_TOP_K as LESSON_TOP_K,
+)
 from app.knowledge.materials import Material
+from app.knowledge.terms import content_terms
 from app.pipeline.generate.generate import (
     ABSTAIN_MESSAGE,
+    DEFAULT_TOP_K,
     AskResult,
     LessonScope,
     TokenSink,
@@ -96,209 +100,15 @@ MIXED_LABEL = (
     "the rest."
 )
 
-_MATERIAL_CITATION = re.compile(r"\[mat:([^\]]+)\]")
 _CITATION = re.compile(r"\[([^\]]+)\]")
-_ID_SEPARATOR = re.compile(r"[,\s]+")
-_WORD = re.compile(r"[a-z0-9]+")
-
-# Coverage is checked against the prose the model actually sees, not against
-# the embedding text. A term the material never states is a term the note
-# cannot answer; the corpus tier is then allowed to speak.
-_STOPWORDS = frozenset(
-    {
-        "about",
-        "after",
-        "again",
-        "against",
-        "all",
-        "also",
-        "an",
-        "and",
-        "any",
-        "are",
-        "as",
-        "at",
-        "be",
-        "because",
-        "been",
-        "before",
-        "being",
-        "between",
-        "book",
-        "books",
-        "both",
-        "but",
-        "by",
-        "can",
-        "compare",
-        "comparison",
-        "could",
-        "department",
-        "describe",
-        "did",
-        "difference",
-        "do",
-        "does",
-        "doing",
-        "done",
-        "each",
-        "event",
-        "events",
-        "explain",
-        "for",
-        "from",
-        "give",
-        "had",
-        "has",
-        "have",
-        "having",
-        "he",
-        "her",
-        "here",
-        "hers",
-        "him",
-        "his",
-        "how",
-        "i",
-        "if",
-        "in",
-        "into",
-        "is",
-        "it",
-        "its",
-        "just",
-        "know",
-        "lesson",
-        "lessons",
-        "like",
-        "look",
-        "looking",
-        "looks",
-        "magic",
-        "magical",
-        "may",
-        "me",
-        "mean",
-        "meaning",
-        "means",
-        "might",
-        "more",
-        "most",
-        "must",
-        "my",
-        "no",
-        "not",
-        "note",
-        "notes",
-        "of",
-        "on",
-        "once",
-        "one",
-        "only",
-        "or",
-        "other",
-        "our",
-        "ours",
-        "out",
-        "over",
-        "please",
-        "prof",
-        "professor",
-        "same",
-        "say",
-        "says",
-        "said",
-        "school",
-        "she",
-        "should",
-        "similar",
-        "so",
-        "some",
-        "student",
-        "students",
-        "such",
-        "teacher",
-        "tell",
-        "text",
-        "texts",
-        "than",
-        "that",
-        "the",
-        "their",
-        "theirs",
-        "them",
-        "then",
-        "there",
-        "these",
-        "they",
-        "this",
-        "those",
-        "through",
-        "to",
-        "too",
-        "under",
-        "until",
-        "up",
-        "us",
-        "use",
-        "used",
-        "using",
-        "versus",
-        "very",
-        "vs",
-        "was",
-        "we",
-        "were",
-        "what",
-        "when",
-        "where",
-        "which",
-        "while",
-        "who",
-        "whom",
-        "whose",
-        "why",
-        "will",
-        "with",
-        "wizard",
-        "wizards",
-        "wizarding",
-        "work",
-        "worked",
-        "working",
-        "works",
-        "world",
-        "would",
-        "you",
-        "your",
-        "yours",
-    }
-)
-
-
-def _stem(word: str) -> str:
-    """A small, deterministic plural fold; enough for boggart/boggarts."""
-    if len(word) > 4 and word.endswith("ies"):
-        return word[:-3] + "y"
-    if len(word) > 4 and word.endswith("es"):
-        return word[:-2]
-    if len(word) > 3 and word.endswith("s") and not word.endswith("ss"):
-        return word[:-1]
-    return word
-
-
-def _content_terms(text: str) -> set[str]:
-    return {
-        _stem(word)
-        for word in _WORD.findall(text.lower())
-        if len(word) >= 3 and word not in _STOPWORDS
-    }
+_ID_SEPARATOR = re.compile(r"[,\s;]+")
+_CHUNK_ID = re.compile(r"^b\d+-c\d+-\d+$")
 
 
 def uncovered_terms(question: str, materials: list[Material]) -> set[str]:
     """Question terms the selected material prose does not state."""
-    coverage = _content_terms(" ".join(material.text for material in materials))
-    return _content_terms(question) - coverage
+    coverage = content_terms(" ".join(material.text for material in materials))
+    return content_terms(question) - coverage
 
 
 def render_materials(materials: list[Material]) -> str:
@@ -331,13 +141,41 @@ def build_lesson_prompt(
     return "\n\n".join(parts) + f"\n\nQuestion: {question}\n\nAnswer:"
 
 
+def _classify_bracket(raw: str) -> list[tuple[str, str]]:
+    """Classify every token in one bracket as a material id or a book chunk.
+
+    A bracket that starts with ``mat:`` keeps its unprefixed companions as
+    materials (the legacy ``[mat:a; b]`` form); a chunk-shaped token is always
+    a book chunk, so ``[mat:a, b1-c01-0000]`` works in either order.
+    """
+    parts = [part for part in _ID_SEPARATOR.split(raw.strip()) if part]
+    leading_material = bool(parts) and parts[0].startswith("mat:")
+    classified: list[tuple[str, str]] = []
+    for part in parts:
+        if part.startswith("mat:"):
+            classified.append(("material", part[4:]))
+        elif _CHUNK_ID.match(part):
+            classified.append(("book", part))
+        elif leading_material:
+            classified.append(("material", part))
+        else:
+            classified.append(("book", part))
+    return classified
+
+
+def _citation_parts(answer: str) -> list[tuple[str, str]]:
+    parts: list[tuple[str, str]] = []
+    for raw in _CITATION.findall(answer):
+        parts.extend(_classify_bracket(raw))
+    return parts
+
+
 def cited_material_ids(answer: str) -> list[str]:
     """Every material id the answer cites, in order, unique."""
     seen: list[str] = []
-    for raw in _MATERIAL_CITATION.findall(answer):
-        for part in _ID_SEPARATOR.split(raw.strip()):
-            if part and part not in seen:
-                seen.append(part)
+    for kind, value in _citation_parts(answer):
+        if kind == "material" and value and value not in seen:
+            seen.append(value)
     return seen
 
 
@@ -345,10 +183,9 @@ def cited_book_ids(answer: str, chunks: list[Chunk]) -> list[str]:
     """Every retrieved chunk id the answer cites, in order, unique."""
     allowed = {chunk.id for chunk in chunks}
     seen: list[str] = []
-    for raw in _CITATION.findall(answer):
-        for part in _ID_SEPARATOR.split(raw.strip()):
-            if part in allowed and part not in seen:
-                seen.append(part)
+    for kind, value in _citation_parts(answer):
+        if kind == "book" and value in allowed and value not in seen:
+            seen.append(value)
     return seen
 
 
@@ -357,33 +194,69 @@ def _drop_unknown_lesson_citations(
     allowed_materials: set[str],
     allowed_chunks: set[str],
 ) -> str:
-    """Remove citations the model invented; keep both valid citation spaces."""
+    """Remove citations the model invented; keep both valid citation spaces.
+
+    Like the corpus path, an unknown bracket is removed entirely: the model may
+    use brackets for emphasis, but only validated ids survive.
+    """
 
     def keep(raw: str) -> str:
         kept: list[str] = []
-        for token in _ID_SEPARATOR.split(raw.strip()):
-            if token.startswith("mat:"):
-                if token[4:] in allowed_materials:
-                    kept.append(token)
-            elif token in allowed_chunks:
-                kept.append(token)
+        for kind, value in _classify_bracket(raw):
+            if kind == "material":
+                if value in allowed_materials:
+                    kept.append(f"mat:{value}")
+            elif value in allowed_chunks:
+                kept.append(value)
         return f"[{', '.join(kept)}]" if kept else ""
 
     return _CITATION.sub(lambda match: keep(match.group(1)), answer).strip()
 
 
+def _starts_with_any(answer: str, prefixes: tuple[str, ...]) -> bool:
+    lowered = answer.strip().lower()
+    return any(lowered.startswith(prefix) for prefix in prefixes)
+
+
 def _label_answer(answer: str, scope: LessonScope) -> str:
     """Deterministic prose label; the model is not trusted to add it."""
-    lowered = answer.lower()
-    if scope == "off_pack" and "not in the department" not in lowered:
+    if scope == "off_pack" and not _starts_with_any(
+        answer,
+        (
+            "this is not in the department",
+            "this is outside the department",
+            "this question is not covered by the department",
+        ),
+    ):
         return f"{OFF_PACK_LABEL}\n\n{answer}"
-    if (
-        scope == "mixed"
-        and "outside the department" not in lowered
-        and "set texts" not in lowered
+    if scope == "mixed" and not _starts_with_any(
+        answer,
+        (
+            "the department's notes cover part of this question",
+            "outside the department",
+        ),
     ):
         return f"{MIXED_LABEL}\n\n{answer}"
     return answer
+
+
+_LABEL_PREFIX = re.compile(
+    r"^(?:"
+    r"this is (?:not|outside) (?:in )?the department'?s notes[^.]*\.?\s*|"
+    r"this question is not covered by the department'?s notes[^.]*\.?\s*|"
+    r"the department'?s notes cover part of this question[^.]*\.?\s*"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _strip_lesson_labels(draft: str) -> str:
+    """Drop a leading deterministic label before the refusal check.
+
+    The off-pack prompt tells the model to open with "This is not in the
+    department's notes"; that sentence must not hide a following refusal.
+    """
+    return _LABEL_PREFIX.sub("", draft.strip(), count=1)
 
 
 def ground_lesson_answer(
@@ -463,7 +336,7 @@ async def ask_lesson(
     llm: Llm,
     retriever: Retriever | None = None,
     fallback: bool = True,
-    top_k: int = DEFAULT_TOP_K,
+    top_k: int = LESSON_TOP_K,
     min_score: float | None = None,
     on_token: TokenSink | None = None,
     on_reset: Callable[[], None] | None = None,
@@ -491,16 +364,20 @@ async def ask_lesson(
     lexical = getattr(selector, "select_lexical", None)
     if callable(lexical):
         extras = lexical(question, subject=subject, top_k=top_k)
+        seen = {material.material_id for material in materials}
+        extras = [material for material in extras if material.material_id not in seen]
         if extras:
-            seen = {material.material_id for material in materials}
-            materials = (
-                materials
-                + [material for material in extras if material.material_id not in seen]
-            )[:top_k]
+            # Curated title/alias hits outrank the weakest embedding hit; a
+            # comparison question must not lose its in-pack half to a generic
+            # top-k filler.
+            keep = max(0, top_k - len(extras))
+            materials = (materials[:keep] + extras)[:top_k]
     uncovered = uncovered_terms(question, materials) if materials else set()
     chunks: list[Chunk] = []
     if fallback and retriever is not None and (not materials or uncovered):
-        chunks = await _retrieve_corpus(retriever, question, top_k)
+        chunks = await _retrieve_corpus(
+            retriever, question, max(top_k, DEFAULT_TOP_K)
+        )
 
     scope: LessonScope
     if materials and chunks:
@@ -539,7 +416,8 @@ async def ask_lesson(
             and (not require_book or book_cited)
         )
         refusal = is_refusal(
-            draft, cited=bool(result.material_citations or result.citations)
+            _strip_lesson_labels(draft),
+            cited=bool(result.material_citations or result.citations),
         )
         if has_required or refusal or attempt > max_retries:
             break
@@ -560,23 +438,25 @@ async def ask_lesson(
         )
     elif result.abstained:
         result = replace(result, scope="abstained")
+    elif not has_required:
+        result = AskResult(
+            ABSTAIN_MESSAGE,
+            abstained=True,
+            abstain_reason="missing_scope_citation",
+            scope="abstained",
+        )
     else:
-        final_scope: LessonScope = scope
-        if scope == "mixed":
-            if not result.material_citations:
-                final_scope = "off_pack"
-            elif not book_cited:
-                final_scope = "in_pack"
         result = replace(
             result,
-            answer=_label_answer(result.answer, final_scope),
-            scope=final_scope,
+            answer=_label_answer(result.answer, scope),
+            scope=scope,
         )
 
+    final_system = system if attempt == 1 else retry_system
     return replace(
         result,
         attempts=attempt,
         retry_reason=retry_reason,
         model_calls=attempt,
-        prompt_chars=len(system) + len(prompt),
+        prompt_chars=len(final_system) + len(prompt),
     )

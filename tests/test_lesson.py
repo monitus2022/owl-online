@@ -161,6 +161,54 @@ def _store() -> PackStore:
     return PackStore(packs={"dada": _pack()}, fingerprints={"dada": "fp"})
 
 
+class ZeroEmbedder:
+    """Every vector is zero, so only the curated lexical match can select."""
+
+    name = "fake/zero"
+
+    async def embed(self, texts):
+        return [[0.0, 0.0, 0.0, 0.0] for _ in texts]
+
+
+def _disarming_pack() -> SubjectPack:
+    return SubjectPack(
+        manifest=PackManifest(
+            subject="dada",
+            version="1.0.0",
+            status="published",
+            index_text_hash="fedcba9876543210",
+        ),
+        topics=[Topic(topic_id="dueling", subject="dada", title="Dueling")],
+        concepts=[
+            Concept(
+                concept_id="dada-magic-disarming-charm",
+                subject="dada",
+                kind="spell",
+                title="Disarming Charm",
+                aliases=("Expelliarmus",),
+            )
+        ],
+        materials=[
+            Material(
+                material_id="dada-dueling-disarming-charm",
+                subject="dada",
+                topic="dueling",
+                concept="dada-magic-disarming-charm",
+                kind="spell",
+                text="Expelliarmus is the Disarming Charm. It removes a wand from the hand.",
+                review_status="reviewed",
+                source_refs=[_ref("b2-c11-0029")],
+            )
+        ],
+    )
+
+
+def _disarming_store() -> PackStore:
+    return PackStore(
+        packs={"dada": _disarming_pack()}, fingerprints={"dada": "fp"}
+    )
+
+
 @pytest.mark.asyncio
 async def test_selector_prefers_the_matching_material():
     selector = await LessonSelector.build(_store(), KeywordEmbedder())
@@ -629,3 +677,173 @@ async def test_selector_lexical_match_keeps_a_pack_term_in_a_comparison():
         "dada-dark-creatures-boggarts-nature"
     ]
     assert selector.select_lexical("What is a charm spell?", subject="dada") == []
+
+
+@pytest.mark.asyncio
+async def test_selector_lexical_match_uses_an_alias_not_a_generic_title_word():
+    selector = await LessonSelector.build(_disarming_store(), ZeroEmbedder())
+
+    selected = selector.select_lexical(
+        "Compare Expelliarmus with Avifors", subject="dada"
+    )
+
+    assert [m.material_id for m in selected] == ["dada-dueling-disarming-charm"]
+    assert selector.select_lexical("What is a charm spell?", subject="dada") == []
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_lexical_alias_produces_mixed():
+    selector = await LessonSelector.build(_disarming_store(), ZeroEmbedder())
+    retriever = StaticRetriever(
+        [_chunk("b3-c07-0099", "Avifors turns an object into a bird.")]
+    )
+    llm = StaticLlm(
+        "Expelliarmus is the Disarming Charm "
+        "[mat:dada-dueling-disarming-charm]. Avifors is a different spell "
+        "[b3-c07-0099]."
+    )
+
+    result = await ask_lesson(
+        "Compare Expelliarmus with Avifors",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+    )
+
+    assert result.abstained is False
+    assert result.scope == "mixed"
+    assert result.material_citations == ["dada-dueling-disarming-charm"]
+    assert "b3-c07-0099" in result.citations
+    assert "set texts" in result.answer.lower()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Who is Professor Lupin",
+        "Who is Lupin",
+        "what is a charm spell",
+        "Who is harry potter",
+    ],
+)
+async def test_production_questions_are_off_pack(question):
+    selector = await LessonSelector.build(_disarming_store(), ZeroEmbedder())
+    retriever = StaticRetriever(
+        [_chunk("b1-c01-0000", "A book passage.", book=1, chapter=1)]
+    )
+    llm = StaticLlm("A book answer [b1-c01-0000].")
+
+    result = await ask_lesson(
+        question,
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+    )
+
+    assert result.abstained is False
+    assert result.scope == "off_pack"
+    assert result.material_citations == []
+    assert result.citations == ["b1-c01-0000"]
+    assert "not in the department's notes" in result.answer
+
+
+def test_uncovered_terms_handles_common_plurals():
+    material = Material(
+        material_id="test-plurals",
+        subject="dada",
+        topic="dark-creatures",
+        concept="dada-creature-boggart",
+        kind="creature",
+        text="Werewolves and pixies are dangerous creatures.",
+        review_status="reviewed",
+        source_refs=[],
+    )
+
+    assert uncovered_terms(
+        "What is a werewolf, a pixie and a creature?", [material]
+    ) == set()
+
+
+def test_ground_lesson_answer_parses_grouped_citations_in_either_order():
+    chunks = [_chunk("b3-c07-0099", "A hippogriff is a proud creature.")]
+    for answer in (
+        "[b3-c07-0099, mat:dada-dark-creatures-boggarts-nature]",
+        "[mat:dada-dark-creatures-boggarts-nature, b3-c07-0099]",
+    ):
+        result = ground_lesson_answer(
+            answer,
+            _pack().materials,
+            chunks,
+            scope="mixed",
+        )
+        assert result.material_citations == [
+            "dada-dark-creatures-boggarts-nature"
+        ]
+        assert result.citations == ["b3-c07-0099", "b3-c07-0050"]
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_treats_a_labelled_refusal_as_a_refusal():
+    retriever = StaticRetriever(
+        [_chunk("b1-c01-0000", "A potion is brewed in a cauldron.", book=1, chapter=1)]
+    )
+    llm = StaticLlm(
+        "This is not in the department's notes. I cannot answer that. "
+        "[b1-c01-0000]."
+    )
+
+    result = await ask_lesson(
+        "How do I brew a potion?",
+        selector=EmptySelector(),
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+        max_retries=0,
+    )
+
+    assert result.abstained is True
+    assert result.abstain_reason == "refused"
+    assert result.scope == "abstained"
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_mixed_abstains_when_a_required_space_is_missing():
+    selector = await LessonSelector.build(_disarming_store(), ZeroEmbedder())
+    retriever = StaticRetriever(
+        [_chunk("b3-c07-0099", "Avifors turns an object into a bird.")]
+    )
+    llm = SequencedLlm(
+        [
+            "Expelliarmus is the Disarming Charm "
+            "[mat:dada-dueling-disarming-charm].",
+            "Expelliarmus is the Disarming Charm "
+            "[mat:dada-dueling-disarming-charm].",
+        ]
+    )
+
+    result = await ask_lesson(
+        "Compare Expelliarmus with Avifors",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+        max_retries=1,
+    )
+
+    assert result.abstained is True
+    assert result.abstain_reason == "missing_scope_citation"
+    assert result.scope == "abstained"
+
+
+@pytest.mark.asyncio
+async def test_selector_lexical_match_handles_a_plural_title():
+    selector = await LessonSelector.build(_store(), ZeroEmbedder())
+
+    selected = selector.select_lexical("What are boggarts?", subject="dada")
+
+    assert [m.material_id for m in selected] == [
+        "dada-dark-creatures-boggarts-nature"
+    ]

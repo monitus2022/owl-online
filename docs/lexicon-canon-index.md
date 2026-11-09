@@ -203,7 +203,7 @@ Parsing notes, settled by the spike (see Spike findings above):
 | Consumer | How it uses the index |
 |---|---|
 | #87 subject packs | seeds the Concept list per subject from entry type and magic type (for example Charms: every Summoning-type spell with books citations); pre-fills references entries with title, url, publisher, accessed; pre-fills candidate source_refs (chunk ids and hashes) so an author writes grounded text against known evidence instead of hunting chapters by hand |
-| Lesson mode (#43) | per-topic evidence ranges: which chapters teach a concept; every lesson section still cites material ids and source refs, the index only guides authoring |
+| Lesson mode (#43) | per-topic evidence ranges: which chapters teach a concept; every pack-backed lesson section still cites material ids and source refs, and a labelled off-pack section cites set-text chunk ids; the index only guides authoring |
 | Exam bank (#39) | question targeting: pick concepts whose primary coverage lands in the books/tiers the paper scopes to; coverage report gates publishing a thin subject |
 | Retrieval (later, optional) | chapter-level concept lists as a side table for scoped retrieval or filter hints; measured retrieval-only first under the #96/#105 discipline before anything is wired; the flag stays off until it passes |
 | Eval | gold-set authors can cite chapters with the same code grammar (OP29, GF6) and the resolver checks that the quoted passage exists in those chapters |

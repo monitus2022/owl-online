@@ -42,11 +42,18 @@ function modeLabel(mode: ChatMode, personaState: PersonaState): string {
   return MODE_LABELS[mode];
 }
 
-function welcome(subject: Subject, lesson: boolean): string {
+function welcome(
+  subject: Subject,
+  lesson: boolean,
+  lessonFallback: boolean,
+): string {
   if (lesson) {
+    const outside = lessonFallback
+      ? "Questions outside the notes are answered from the set texts and labelled."
+      : "Questions outside the notes are refused honestly.";
     return subject.personaState === "live"
-      ? `Welcome to the ${subject.name} revision room. I teach from the department's reviewed notes; ask about the set topics, or say the word if you want to be tested. Questions outside the notes are answered from the set texts and labelled.`
-      : `Welcome to the ${subject.name} revision room. Answers come from the department's reviewed notes, and questions outside them are answered from the set texts with a label. The professor's voice is still in rehearsal.`;
+      ? `Welcome to the ${subject.name} revision room. I teach from the department's reviewed notes; ask about the set topics, or say the word if you want to be tested. ${outside}`
+      : `Welcome to the ${subject.name} revision room. Answers come from the department's reviewed notes. ${outside} The professor's voice is still in rehearsal.`;
   }
   return subject.personaState === "live"
     ? `Welcome to the ${subject.name} revision room. Ask ${subject.professor} about the set texts, or say the word if you want to be tested.`
@@ -56,10 +63,12 @@ function welcome(subject: Subject, lesson: boolean): string {
 export function ChatPanel({
   subject,
   lesson,
+  lessonFallback,
   ready,
 }: {
   subject: Subject;
   lesson: boolean;
+  lessonFallback: boolean;
   ready: boolean;
 }) {
   const [messages, setMessages] = useState<Message[]>([
@@ -168,7 +177,9 @@ export function ChatPanel({
           // the API's persona/lesson flags, which arrive after mount, are
           // reflected without rewriting transcript state.
           const bodyText =
-            message.id === 0 ? welcome(subject, lesson) : message.text;
+            message.id === 0
+              ? welcome(subject, lesson, lessonFallback)
+              : message.text;
           const modeIsLesson = message.mode === "lesson";
           const body = (
             <>
@@ -180,7 +191,7 @@ export function ChatPanel({
                   <p className="scope-note">
                     {message.scope === "mixed"
                       ? "Department notes and set texts"
-                      : "Set texts, outside the department's notes"}
+                      : "Set texts"}
                   </p>
                 )}
               <p className={message.failed ? "chat-text chat-failed" : "chat-text"}>
@@ -212,10 +223,14 @@ export function ChatPanel({
                 <p className="abstain-note">
                   {subject.personaState === "live"
                     ? modeIsLesson
-                      ? "The professor could not ground this in the department's notes or the set texts, so he will not guess."
+                      ? lessonFallback
+                        ? "The professor could not ground this in the department's notes or the set texts, so he will not guess."
+                        : "The professor could not ground this in the department's notes, so he will not guess."
                       : "The professor could not ground this in the texts, so he will not guess."
                     : modeIsLesson
-                      ? "The reviewed notes and the set texts could not confirm this, and nothing is guessed."
+                      ? lessonFallback
+                        ? "The reviewed notes and the set texts could not confirm this, and nothing is guessed."
+                        : "The reviewed notes could not confirm this, and nothing is guessed."
                       : "The texts could not confirm this, and nothing is guessed."}
                 </p>
               )}

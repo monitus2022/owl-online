@@ -88,8 +88,8 @@ provider failure is an `error` event, not an HTTP status.
 ### Lesson mode
 
 With `OWL_LESSON_MODE=true` and a published pack loaded, a request with
-`"mode": "lesson"` answers from reviewed pack materials instead of raw book
-excerpts:
+`"mode": "lesson"` answers from reviewed pack materials first. When the pack is
+thin it adds a labelled corpus tier instead of refusing:
 
 ```json
 {
@@ -103,9 +103,10 @@ excerpts:
 ```
 
 `material_citations` are `[mat:<material_id>]` ids, validated against the
-materials selected for that answer. `citations` are the book chunk ids those
-materials resolve to through their `source_refs`, so the lesson answer still
-points at canon. The selector is
+materials selected for that answer. For a pack-backed answer, `citations` are the
+book chunk ids those materials resolve to through their `source_refs`. A mixed or
+off-pack answer also cites the retrieved set-text chunks; `off_pack` has empty
+`material_citations`. The selector is
 derived at startup by embedding the material texts in memory; no second index is
 built or stored. The subject is `OWL_LORE_SUBJECT` until the request `subject`
 field ships. Lesson answers are never cached.
@@ -165,6 +166,7 @@ Response `200`:
   ],
   "lesson": true,
   "lesson_subject": "dada",
+  "lesson_fallback": true,
   "persona": true
 }
 ```
@@ -172,8 +174,11 @@ Response `200`:
 `lesson` is true only when lesson mode is enabled, a selector loaded, and the
 configured subject (`OWL_LORE_SUBJECT`) is among the selector's subjects.
 `lesson_subject` names that subject when `lesson` is true, so the frontend can
-scope the mode to the right venue. `persona` mirrors `OWL_PERSONA`, so the
-frontend can stop hardcoding whether the professor's voice is live.
+scope the mode to the right venue. `lesson_fallback` mirrors
+`OWL_LESSON_FALLBACK`, so the room copy can say whether outside-the-notes
+questions are answered from the set texts or refused. `persona` mirrors
+`OWL_PERSONA`, so the frontend can stop hardcoding whether the professor's voice
+is live.
 
 ## Errors
 
