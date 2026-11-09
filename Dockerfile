@@ -4,7 +4,11 @@
 # copyrighted, so they are provided at runtime via a mounted volume (see
 # docs/deploy.md). Secrets come from the environment only, never the image.
 
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+# One interpreter version for the base tag and uv. .python-version carries the
+# same value for local and CI runs.
+ARG OWL_PYTHON=3.12
+FROM ghcr.io/astral-sh/uv:0.13.1-python${OWL_PYTHON}-trixie-slim
+ARG OWL_PYTHON
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -14,11 +18,12 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# The base image already carries Python 3.12. Pin uv to it: the project's
+# The base image already carries the interpreter. Pin uv to it: the project's
 # `python-preference = "only-managed"` would otherwise make uv download the
 # newest managed interpreter from GitHub during the image build.
 COPY pyproject.toml uv.lock .python-version ./
-RUN uv sync --frozen --no-default-groups --no-cache --python python3.12
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-default-groups --python "python${OWL_PYTHON}"
 
 COPY app ./app
 # The persona card is loaded at import time, so it must be in the image even
