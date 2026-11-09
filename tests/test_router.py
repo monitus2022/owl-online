@@ -1,8 +1,8 @@
-"""Router fixture: the three chat intents classify correctly and overrides win."""
+"""Router fixture: the chat intents classify correctly and overrides win."""
 
 import pytest
 
-from app.agent.router import classify, route
+from app.agent.router import classify, meta_topic, route
 
 
 @pytest.mark.parametrize(
@@ -80,3 +80,80 @@ def test_lesson_is_an_answer_path_hint():
 def test_route_returns_a_state_update():
     state = {"question": "Who is the Head of Gryffindor House?"}
     assert route(state) == {"mode": "answer"}
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Who is Professor Alistair Crane?",
+        "Who is Professor Crane?",
+        "Who is Alistair Crane?",
+        "Who is Profesor Alister Crane?",
+        "Who is Proffesor Alistair Crain?",
+        "Who's Crane?",
+    ],
+)
+def test_professor_name_variants_route_to_identity(question):
+    assert classify(question, persona=True) == "meta"
+    assert meta_topic(question) == "identity"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Tell me about Professor Crane",
+        "Tell me about Prof. Crain",
+        "What is Professor Crane's background?",
+        "Professor Crane's story",
+    ],
+)
+def test_professor_background_variants_route_to_professor(question):
+    assert classify(question, persona=True) == "meta"
+    assert meta_topic(question) == "professor"
+
+
+def test_book_professors_and_persona_off_stay_on_the_answer_path():
+    assert classify("Who is Professor Snape?", persona=True) == "answer"
+    assert classify("Who is Professor Crane?", persona=False) == "answer"
+
+
+def test_possessive_professor_questions_stay_on_the_answer_path():
+    assert classify("Tell me about Professor Crane's assistant", persona=True) == "answer"
+    assert classify("Who is Professor Crane's assistant?", persona=True) == "answer"
+    assert classify("Tell me about cranes", persona=True) == "answer"
+    assert classify("Tell me about cran", persona=True) == "answer"
+    assert classify("Who is Professor Crane-Smith?", persona=True) == "answer"
+    assert classify("Tell me about Professor Crane-Smith", persona=True) == "answer"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Tell me about Professor Snape's background",
+        "Who is Professor McGonagall?",
+        "Who is Professor Lupin?",
+        "Who teaches Defense Against the Dark Arts?",
+    ],
+)
+def test_book_questions_stay_on_the_answer_path(question):
+    assert classify(question, persona=True) == "answer"
+
+
+def test_book_context_does_not_override_persona_identity():
+    # The books do not contain Crane; a setting question about him stays meta.
+    assert classify("In the books, who is Professor Crane?", persona=True) == "meta"
+    assert meta_topic("In the books, who is Professor Crane?") == "identity"
+
+
+def test_professor_background_needs_persona():
+    assert classify("Tell me about Professor Crane", persona=False) == "answer"
+
+
+def test_persona_card_name_drives_the_identity_cue():
+    from app.agent.persona import PERSONA
+
+    assert classify(f"Who is {PERSONA.name}?", persona=True) == "meta"
+    assert meta_topic(f"Who is {PERSONA.name}?") == "identity"
+    assert classify(f"Tell me about {PERSONA.name}", persona=True) == "meta"
+    assert meta_topic(f"Tell me about {PERSONA.name}") == "professor"
+    assert classify(f"Who is {PERSONA.address}?", persona=True) == "meta"

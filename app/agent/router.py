@@ -9,6 +9,7 @@ a separate offline pipeline with stored mark schemes and deterministic scoring.
 
 import re
 
+from app.agent.persona import PERSONA
 from app.agent.state import AgentState, Mode, RequestedMode
 from app.trace import current_tracer
 
@@ -58,10 +59,25 @@ _BOOK_CONTEXT = re.compile(
     re.IGNORECASE,
 )
 # Persona meta cues. Keep them narrow: "who teaches Defense" is an answer
-# question, not an identity question.
+# question, not an identity question. The name and title come from the card so
+# a persona edit cannot silently break routing. The router reads the
+# module-level PERSONA; per-subject cards are not wired yet.
+_PERSONA_TOKENS = tuple(
+    token.lower() for token in PERSONA.name.split() if token.isalpha()
+)
+_PERSONA_LAST = _PERSONA_TOKENS[-1]
+_PERSONA_FIRST = " ".join(_PERSONA_TOKENS[:-1]) or _PERSONA_LAST
+_PERSONA_TITLE = PERSONA.address.split()[0].lower()
+_FIRST = re.escape(_PERSONA_FIRST)
+_LAST = re.escape(_PERSONA_LAST)
+_TITLE = re.escape(_PERSONA_TITLE)
+_NAME = rf"(?:{_TITLE} |{_TITLE[:4]}\.? )?(?:{_FIRST} )?{_LAST}"
 _META_CUES: dict[str, re.Pattern[str]] = {
     "identity": re.compile(
-        r"\b(who are you|what(?:'s| is) your name|introduce yourself)\b",
+        rf"\b("
+        rf"who are you|what(?:'s| is) your name|introduce yourself|"
+        rf"who(?:'s| is| are) {_NAME}(?![\w-])(?!['’]s\b)"
+        rf")\b",
         re.IGNORECASE,
     ),
     "scope": re.compile(
@@ -89,8 +105,12 @@ _META_CUES: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "professor": re.compile(
-        r"\b(your background|were you an auror|tell me about yourself|"
-        r"your experience)\b",
+        rf"\b("
+        rf"your background|were you an auror|tell me about yourself|your experience|"
+        rf"tell me about {_NAME}(?![\w-])(?!['’]s\b)|"
+        rf"{_NAME}(?![\w-])(?:'s|’s)? (?:background|story|experience)|"
+        rf"what (?:is|was) {_NAME}(?![\w-])(?:'s|’s)? (?:background|story)"
+        rf")\b",
         re.IGNORECASE,
     ),
     "auror": re.compile(
@@ -115,10 +135,38 @@ _PERSONAL = re.compile(
 )
 
 
+# The professor's name is typed by hand. Normalise known spelling variants
+# before the deterministic cues; only a fixed alias table is rewritten, so an
+# ordinary word is never rewritten into a name.
+_KNOWN_ALIASES = {
+    "crane": ("crain", "craine"),
+    "alistair": ("alister", "alistar"),
+    "professor": ("profesor", "proffesor"),
+}
+_NAME_ALIASES = {
+    token: (token, *_KNOWN_ALIASES.get(token, ()))
+    for token in {_PERSONA_LAST, _PERSONA_FIRST, _PERSONA_TITLE}
+}
+_NAME_TOKEN = re.compile(r"[A-Za-z]+")
+
+
+def _canonical_name(token: str) -> str:
+    lowered = token.lower()
+    for canonical, variants in _NAME_ALIASES.items():
+        if lowered in variants:
+            return canonical
+    return token
+
+
+def _normalise_names(question: str) -> str:
+    return _NAME_TOKEN.sub(lambda match: _canonical_name(match.group(0)), question)
+
+
 def meta_topic(question: str) -> str | None:
     """The first persona meta topic the question matches, if any."""
+    normalised = _normalise_names(question)
     for topic, pattern in _META_CUES.items():
-        if pattern.search(question):
+        if pattern.search(normalised):
             return topic
     return None
 

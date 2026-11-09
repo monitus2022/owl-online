@@ -461,6 +461,30 @@ def test_ask_stream_routes_meta_to_the_scripted_reply():
     assert app.state.limiter.tokens_used == 0
 
 
+def test_ask_stream_routes_professor_name_to_meta():
+    from app.agent.persona import PERSONA
+
+    app = create_app(
+        app_settings=Settings(persona=True),
+        runtime=Runtime(retriever=_Retriever(), llm=_Llm()),
+    )
+    with TestClient(app) as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who is Professor Crane?"}
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    modes = [data for name, data in events if name == "mode"]
+    finals = [data for name, data in events if name == "final"]
+    tokens = [data for name, data in events if name == "token"]
+    assert modes[0]["mode"] == "meta"
+    assert finals[0]["answer"] in PERSONA.meta_variants("identity")
+    assert finals[0]["citations"] == []
+    assert tokens == []
+    assert len(app.state.cache) == 0
+    assert app.state.limiter.tokens_used == 0
+
+
 def test_ask_persona_abstention_uses_the_in_world_line():
     from app.agent.persona import PERSONA
 
@@ -831,6 +855,7 @@ def test_lesson_mode_still_routes_meta_and_practice():
     with TestClient(app) as client:
         for question, expected in (
             ("Who are you?", "meta"),
+            ("Who is Professor Crane?", "meta"),
             ("Give me a practice question", "practice"),
         ):
             with client.stream(

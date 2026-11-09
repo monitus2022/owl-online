@@ -399,6 +399,8 @@ meta and personal cues route to scripted replies before the answer path.
 `mode=lesson` is a preference, not an override: it applies only when the
 classification would otherwise be `answer`; practice, feedback, meta and
 personal keep their routes, so a lesson-default venue still greets and tests.
+Name variants and fuzzy spellings of the professor are normalised before the
+persona cues; book professors such as Snape stay on the answer path.
 Meta and personal skip retrieval and the model, so they stream no tokens. Tokens
 are a draft. Citation validation runs on the complete answer, so an ungrounded
 stream emits `reset` before the authoritative `final` event. A failed

@@ -62,6 +62,13 @@ pathway, boundaries, and a bare greeting.
 The exam, syllabus and grading answers are refusals: no format, no contents, no
 marking scheme.
 
+Routing: the deterministic router recognises "who are you", the professor's
+name and title variants ("Professor Alistair Crane", "Prof. Crane"), background
+forms ("tell me about Professor Crane", "Professor Crane's background"), and
+fuzzy spellings of Crane, Alistair and Professor. Book characters such as
+Professor Snape stay on the answer path. A measured LLM fallback for residual
+ambiguous questions is planned in #184 and is not in the router today.
+
 ## Variant bank
 
 Every meta topic, the personal reply and the abstention line can be one string
