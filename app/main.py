@@ -15,12 +15,11 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 from starlette.background import BackgroundTask
 
@@ -54,8 +53,6 @@ from app.trace import TraceSink, current_tracer, end_trace, start_trace
 
 logger = logging.getLogger(__name__)
 
-_INDEX_HTML = Path(__file__).parent / "api" / "static" / "index.html"
-_INDEX_HTML_TEXT = _INDEX_HTML.read_text(encoding="utf-8")
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 _SUBJECT_TITLES = dict(SUBJECTS)
 
@@ -401,9 +398,20 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             persona=app_settings.persona,
         )
 
-    @app.get("/", response_class=HTMLResponse)
-    def chat_page() -> HTMLResponse:
-        return HTMLResponse(_INDEX_HTML_TEXT)
+    @app.get("/")
+    def service_root() -> dict[str, str]:
+        """A JSON descriptor, not a chat page.
+
+        The academy frontend is the Cloudflare Pages build. The API host used
+        to serve a single-file chat page; it was removed so the API origin
+        cannot be used as a second chat surface.
+        """
+        return {
+            "service": "owl-online-api",
+            "status": "ok",
+            "health": "/health",
+            "subjects": "/v1/subjects",
+        }
 
     @app.post("/ask", response_model=AskResponse)
     async def ask_endpoint(

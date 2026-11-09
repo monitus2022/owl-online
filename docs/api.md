@@ -15,7 +15,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/health` | liveness; returns `{"status": "ok"}` |
-| `GET` | `/` | the static chat page |
+| `GET` | `/` | JSON service descriptor; the API host does not serve a chat page |
 | `GET` | `/v1/subjects` | published subject packs plus the `lesson`, `lesson_subject`, `lesson_fallback` and `persona` flags |
 | `POST` | `/ask` | one-shot grounded answer |
 | `POST` | `/ask/stream` | chat over server-sent events |
@@ -24,6 +24,10 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 | `GET` | `/v1/attempts` | graded attempts for the current session, newest first |
 | `GET` | `/v1/attempts/{attempt_id}` | the persisted pre-submission attempt |
 | `POST` | `/v1/attempts/{attempt_id}/grade` | deterministic MCQ scoring plus the pinned rubric judge |
+
+The API host serves only the API. The academy frontend is the Cloudflare Pages
+build; `GET /` is a small JSON descriptor, not a chat page. The old single-file
+chat page was removed so the API origin cannot be used as a second chat surface.
 
 ### `POST /ask`
 

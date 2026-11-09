@@ -2,8 +2,8 @@
 
 The Ashcombe Academy site: the gate, the cloister of five doors, and the
 study venues. React + Vite + TypeScript, deployed as a static site on
-Cloudflare Pages. The API stays separate; `app/api/static/index.html` remains
-the raw test page and is not part of this build.
+Cloudflare Pages. The API stays separate; the API host serves only the API and
+`GET /` is a small JSON descriptor, not a chat page.
 
 ## Layout
 
