@@ -10,10 +10,11 @@ export interface StoredAttempt {
   id: string;
   subject: string;
   paperId: string;
-  total: number;
+  total: number | null;
   max: number;
-  band: Band;
+  band: Band | null;
   gradedAt: string;
+  needsReview: boolean;
 }
 
 export interface ResultsStore {
@@ -36,9 +37,11 @@ interface ApiAttemptSummary {
 }
 
 function isResolved(
-  attempt: ApiAttemptSummary,
-): attempt is ApiAttemptSummary & { total: number; band: Band } {
-  return attempt.total !== null && attempt.band !== null;
+  attempt: StoredAttempt,
+): attempt is StoredAttempt & { total: number; band: Band } {
+  return (
+    !attempt.needsReview && attempt.total !== null && attempt.band !== null
+  );
 }
 
 class HttpResultsStore implements ResultsStore {
@@ -61,7 +64,7 @@ class HttpResultsStore implements ResultsStore {
       throw new Error(`The paper records could not be read (${response.status}).`);
     }
     const attempts = (await response.json()) as ApiAttemptSummary[];
-    return attempts.filter(isResolved).map((attempt) => ({
+    return attempts.map((attempt) => ({
       id: attempt.attempt_id,
       subject: attempt.subject,
       paperId: attempt.paper_id,
@@ -69,13 +72,15 @@ class HttpResultsStore implements ResultsStore {
       max: attempt.max_marks,
       band: attempt.band,
       gradedAt: attempt.graded_at,
+      needsReview: attempt.needs_review,
     }));
   }
 
   async best(subject: string): Promise<StoredAttempt | null> {
     const attempts = await this.history(subject);
-    if (attempts.length === 0) return null;
-    return attempts.reduce((top, attempt) =>
+    const resolved = attempts.filter(isResolved);
+    if (resolved.length === 0) return null;
+    return resolved.reduce((top, attempt) =>
       attempt.total * top.max > top.total * attempt.max ? attempt : top,
     );
   }

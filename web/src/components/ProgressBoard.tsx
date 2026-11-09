@@ -35,7 +35,10 @@ export function ProgressBoard({
           } else if (best === undefined) {
             state = "the records could not be read";
           } else if (best) {
-            state = `best: ${BAND_LABELS[best.band]} (${best.total}/${best.max})`;
+            state =
+              best.band && best.total !== null
+                ? `best: ${BAND_LABELS[best.band]} (${best.total}/${best.max})`
+                : "a paper awaits examiner review";
           } else if (subject.status === "open") {
             state = "the room is furnished, no papers sat yet";
           } else {
@@ -49,13 +52,13 @@ export function ProgressBoard({
             >
               <span
                 className={
-                  best
+                  best && best.band
                     ? `band-chip cell-${bandTone(best.band)}`
                     : "band-chip band-none"
                 }
                 aria-hidden="true"
               >
-                {best ? best.band : "—"}
+                {best && best.band ? best.band : "—"}
               </span>
               <span className="progress-name">{subject.name}</span>
               <span className="progress-state">{state}</span>

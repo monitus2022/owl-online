@@ -13,7 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.exam.bank import ExamBank
-from app.grading import Band
+from app.grading.bands import Band
 from app.grading.models import AttemptGrade
 
 
@@ -87,7 +87,7 @@ class AttemptRecord(_StrictModel):
     subject: str
     bank_version: str
     created_at: str
-    session_id: str = ""
+    session_id: str
     questions: tuple[AttemptQuestion, ...] = Field(min_length=1)
     graded_at: str | None = None
     grade: AttemptGrade | None = None
@@ -167,7 +167,7 @@ def sample_attempt(
     attempt_id: str,
     paper_id: str,
     created_at: str,
-    session_id: str = "",
+    session_id: str,
     mcq_count: int = 6,
     short_count: int = 4,
     rng: random.Random | None = None,

@@ -17,6 +17,7 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
   useEffect(() => {
     if (!active) return;
     let live = true;
+    setFailed(false);
     Promise.all([
       resultsStore.history(subject.apiSubject),
       resultsStore.best(subject.apiSubject),
@@ -74,11 +75,11 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
               >
                 <span className="history-index">{attempts.length - index}</span>
                 <span className="history-date">{new Date(attempt.gradedAt).toLocaleDateString()}</span>
-                <span className={`band-chip cell-${bandTone(attempt.band)}`}>
-                  {BAND_LABELS[attempt.band]}
+                <span className={`band-chip ${attempt.band ? `cell-${bandTone(attempt.band)}` : "band-none"}`}>
+                  {attempt.band ? BAND_LABELS[attempt.band] : "review"}
                 </span>
                 <span className="history-marks">
-                  {attempt.total}/{attempt.max}
+                  {attempt.total === null ? "review" : `${attempt.total}/${attempt.max}`}
                 </span>
                 {isBest(attempt) && <span className="history-best">best</span>}
               </li>

@@ -260,10 +260,11 @@ attempt routes and an empty list from `GET /v1/exams`.
 
 The attempt routes are scoped to the signed `owl_session` cookie. Another
 session cannot fetch or grade an attempt even with its id: both routes return
-`404` rather than confirming that it exists. The cookie is issued when absent,
-lasts 24 hours, and is not refreshed on every request, so the session history
-window runs from first issue. Set `OWL_SESSION_SECRET` in production; without it
-an API restart invalidates every anonymous session.
+`404` rather than confirming that it exists. Attempts created before #206 have
+an empty session id and are `404` for every session. The cookie is issued when
+absent, lasts 24 hours, and is not refreshed on every request, so the session
+history window runs from first issue. Set `OWL_SESSION_SECRET` in production;
+without it an API restart invalidates every anonymous session.
 
 `GET /v1/attempts?subject=dada&limit=20` returns the graded attempts for the
 current session, newest first, capped at 50. `subject` defaults to

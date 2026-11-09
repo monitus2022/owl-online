@@ -713,9 +713,10 @@ that resolves follow-ups. Anonymous threads are enough for a continuous
 professor chat.
 
 Per-user long-term memory is the last optional phase. It needs Google OIDC, a
-users table, ownership checks, and storage for chat threads and exam attempts. It
-also needs retention, export and delete rules. Auth is deliberately not a
-dependency of the exam bank or of short-term chat continuity.
+users table, per-user ownership on top of the session ownership that already
+exists, and storage for chat threads and exam attempts. It also needs retention,
+export and delete rules. Auth is deliberately not a dependency of the exam bank
+or of short-term chat continuity.
 
 See `docs/workplan.md` for phase order and exit criteria.
 
