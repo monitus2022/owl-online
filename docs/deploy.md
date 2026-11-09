@@ -5,14 +5,16 @@ embedder. Read the two constraints before picking a host.
 
 ## Two runtime constraints
 
-1. Corpus, index and lore pack. The source text is copyrighted, so neither `chunks.jsonl`
-   nor the vector index is in the image or the repo. The host must be given both
-   out of band, as a mounted volume or a private bucket, at `OWL_CHUNKS_PATH` and
-   `OWL_INDEX_DIR`. Build the index locally once (`uv run python
-   scripts/build_index.py`) and upload `data/chunks.jsonl` plus
-   `data/index/chroma/`, plus the authored `data/lore/` pack. The index directory must be writable: Chroma opens its
-   SQLite store read-write at startup, so mount it writable (or copy it to a
-   writable path) rather than read-only. The published subject packs live under
+1. Corpus, index, lore and subject packs. The source text is copyrighted, so
+   neither `chunks.jsonl` nor the vector index is in the image or the repo. The
+   host must be given both out of band, as a mounted volume or a private bucket,
+   at `OWL_CHUNKS_PATH` and `OWL_INDEX_DIR`. Build the index locally once
+   (`uv run python scripts/build_index.py`) and upload `data/chunks.jsonl`, the
+   index built with the same embedder (`data/index/titan/` for the Bedrock
+   host), the authored `data/lore/` pack and `data/subjects/`. The index
+   directory must be writable: Chroma opens its SQLite store read-write at
+   startup, so mount it writable (or copy it to a writable path) rather than
+   read-only. The published subject packs live under
    `/data/subjects/` (`OWL_SUBJECTS_PATH`); `GET /v1/subjects` serves the valid
    published packs and skips drafts or broken ones. The planned exam database
    lives under `/data/`; both stay on the same mounted volume and out of the
@@ -332,6 +334,8 @@ The pipeline ships only the image. Do these once on the instance:
    uv run python scripts/build_index.py --provider bedrock --index data/index/titan
    # copy data/chunks.jsonl, data/index/titan/, data/lore/ and data/subjects/ to /data
    ls /data/subjects/dada/pack.toml
+   curl -s https://api.monitus.org/v1/subjects
+   # expect the DADA summary with lesson:true and persona:true
    ```
 
 4. TLS. nginx terminates HTTPS on 443 with the Cloudflare Origin Certificate

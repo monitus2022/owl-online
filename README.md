@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: grounded chat, the DADA subject pack (1.0.0), lesson mode and the professor persona are live behind `OWL_LESSON_MODE` / `OWL_PERSONA`. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; a missing pack falls back to labelled corpus chat. The next product surfaces are the exam bank with hybrid grading, mixed-scope answers, conversation memory and a second department. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
+> Status: grounded chat, the DADA pack published at 1.0.0, and the professor persona live behind `OWL_PERSONA`. Lesson mode is implemented behind `OWL_LESSON_MODE` and needs the pack on the host volume. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; a missing pack falls back to labelled corpus chat. The next product surface is the exam bank with hybrid grading, plus mixed-scope answers, conversation memory and a second department. See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
 
 ---
 
@@ -15,8 +15,8 @@ O.W.L. Online has two product surfaces on one retrieval core:
 | Chat answer | Grounded Q&A with citations | live |
 | Chat practice | On-demand grounded practice question | live |
 | Chat feedback | Formative feedback and a provisional mark | live |
-| Exam bank | Pre-generated 10-question papers stored in a DB, served statically, graded by a hybrid scorer | planned V2.5 |
-| Lesson mode | A future chat intent | future iteration |
+| Exam bank | Pre-generated 10-question papers stored in a DB, served statically, graded by a hybrid scorer | planned V3 (#178) |
+| Lesson mode | Pack-grounded teaching answers with material and book citations | implemented behind `OWL_LESSON_MODE`; needs the pack on the host volume |
 
 Chat practice and feedback are ephemeral and formative. The exam bank is the
 authoritative surface: papers are generated offline, validated, versioned and
@@ -74,10 +74,12 @@ flowchart TD
     R[Router] --> A[Answer]
     R --> P[Practice]
     R --> F[Feedback]
+    R --> L[Lesson]
   end
   A --> RET[Retrieve]
   P --> RET
   F --> RET
+  L --> MAT[(Pack materials)]
   RET --> RR[Rerank]
   RET --> VEC[(Vector store)]
   RET --> BM[(BM25)]
@@ -85,9 +87,11 @@ flowchart TD
   A --> LLM[LLM adapter]
   P --> LLM
   F --> LLM
+  L --> LLM
   B[Offline exam builder] --> RET
   B --> DB[(Exam DB)]
   API --> DB
+  API --> SUB[/v1/subjects]
   G -. trace .-> OBS[Observability]
 ```
 
@@ -181,9 +185,9 @@ Execution is phased:
 | Phase | Scope | Status |
 |---|---|---|
 | V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval + rerank, cited generation with abstention, API, mini-eval, deployed | shipped (https://api.monitus.org) |
-| V2 - Deepening | guardrails, chat intents (LangGraph), Bedrock Llm adapter, cost controls, local eval gate, retrieval foundation, multi-book answer path, professor persona | chat foundation, retrieval foundation, held-out set and deterministic CI gate delivered; #105 flag-off and time-boxed; #97 thin slice implemented, flag off |
-| V2.5 - Exam bank | subject knowledge packs, offline 10-question papers, evidence snapshots, static serving, hybrid grading, grading eval | after #105 and #97 |
-| V3 - Continuity | short-term chat memory, threads, follow-up rewrite, lesson mode | after V2.5 |
+| V2 - Deepening | guardrails, chat intents (LangGraph), Bedrock Llm adapter, cost controls, local eval gate, retrieval foundation, multi-book answer path, professor persona | chat foundation, retrieval foundation, held-out set, CI gate, persona and the stateless lesson slice delivered; #105 flag-off and time-boxed; voice work #176 |
+| V2.5 - Subject packs | taxonomy, material packs, source refs, validation, lesson mode | DADA 1.0.0 published; Charms content #128 |
+| V3 - Exam bank and continuity | exam bank, hybrid grading, memory, threads, lesson continuity, progress | exam bank next (#178); continuity after |
 | V4 - Identity (optional) | Google auth, per-user chat and exam history, progress tracking, long-term memory | last, if needed |
 
 ---

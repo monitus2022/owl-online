@@ -518,8 +518,8 @@ is a text edit plus a reload. A single JSONL file is also accepted. The thin
 slice uses `eval/fixtures/lore/` (one Markdown entry per file, TOML front matter); the real pack stays out of git.
 Lore-grounded answers and `[lore:<id>]` citations are wired (#118): the answer
 path selects up to three setting notes, validates the two citation spaces
-separately, and abstains only when neither has a citation. The real pack and the
-lore eval follow.
+separately, and abstains only when neither has a citation. The real pack is
+published at 1.0.0; the lore eval and the lesson voice follow (#176).
 
 The exam bank is a separate, offline surface. It is not a chat intent and it does
 not run inside `/ask` or `/ask/stream`. Generation and lesson mode read from
