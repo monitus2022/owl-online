@@ -163,11 +163,20 @@ def test_persona_card_name_drives_the_identity_cue():
     "question",
     [
         "What is DADA?",
+        "What's DADA?",
         "What is Defence Against the Dark Arts?",
         "What is Defense Against the Dark Arts?",
         "What does DADA mean?",
+        "What does DADA stand for?",
+        "What does Defence Against the Dark Arts mean?",
+        "What is DADA short for?",
+        "Define DADA",
         "What is the DADA subject?",
+        "What is the DADA department?",
+        "What is this subject?",
+        "What is your subject?",
         "Tell me about DADA",
+        "Tell me about Defence Against the Dark Arts",
     ],
 )
 def test_subject_definition_routes_to_meta(question):
@@ -191,3 +200,22 @@ def test_scope_question_still_routes_to_scope():
 def test_subject_curriculum_routes_to_syllabus():
     assert classify("What is the DADA curriculum?", persona=True) == "meta"
     assert meta_topic("What is the DADA curriculum?") == "syllabus"
+
+
+def test_subject_possessive_forms_do_not_steal_other_topics():
+    assert (
+        classify("What is DADA's role in the Order of the Phoenix?", persona=True)
+        == "answer"
+    )
+    assert (
+        classify("What is DADA in the Department of Mysteries?", persona=True)
+        == "answer"
+    )
+    assert classify("What is DADA's syllabus?", persona=True) == "meta"
+    assert meta_topic("What is DADA's syllabus?") == "syllabus"
+    assert classify("What is DADA's exam?", persona=True) == "meta"
+    assert meta_topic("What is DADA's exam?") == "exam"
+    assert classify("What is DADA's grading scale?", persona=True) == "meta"
+    assert meta_topic("What is DADA's grading scale?") == "grading"
+    assert classify("What is DADA's exam at Hogwarts?", persona=True) == "answer"
+    assert classify("What is on the O.W.L. exam?", persona=True) == "answer"

@@ -55,8 +55,8 @@ Transfiguration, Charms and Herbology, one per founder.
 
 ## Meta responses
 
-The scripted answers live in `config/persona.toml`. Topics: identity, the
-subject definition, subject scope, exam, syllabus, grading, the school, the
+The scripted answers live in `config/persona.toml`. Topics: identity, subject
+scope, exam, syllabus, the subject definition, grading, the school, the
 professor's background, the Auror pathway, boundaries, and a bare greeting.
 
 The exam, syllabus and grading answers are refusals: no format, no contents, no

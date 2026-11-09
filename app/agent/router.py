@@ -55,8 +55,12 @@ _BOOK_CONTEXT = re.compile(
     r"book four|book five|book six|book seven|first year|second year|"
     r"third year|fourth year|fifth year|sixth year|seventh year|"
     r"year (?:one|two|three|four|five|six|seven)|quirrell|lockhart|lupin|"
-    r"moody|umbridge|snape|carrow|crouch)\b",
+    r"moody|umbridge|snape|carrow|crouch|o\.?w\.?l\.?)\b",
     re.IGNORECASE,
+)
+_SUBJECT_NAME = (
+    r"(?:dada|defence against the dark arts|defense against the dark arts|"
+    r"defence against dark arts|defense against dark arts)"
 )
 # Persona meta cues. Keep them narrow: "who teaches Defense" is an answer
 # question, not an identity question. The name and title come from the card so
@@ -86,22 +90,27 @@ _META_CUES: dict[str, re.Pattern[str]] = {
     ),
     "exam": re.compile(
         r"\b(exam(?:ination)? format|what(?:'s| is) on the exam|"
-        r"what is on the test)\b",
+        r"what is on the test|what is (?:the )?(?:.* )?exam)\b",
         re.IGNORECASE,
     ),
     "syllabus": re.compile(
-        r"\b(what is the syllabus|course outline|curriculum|what will we cover|"
-        r"what does the course cover)\b",
+        r"\b(what is (?:the )?(?:.* )?syllabus|course outline|curriculum|"
+        r"what will we cover|what does the course cover)\b",
         re.IGNORECASE,
     ),
     "subject": re.compile(
-        r"\b("
-        r"what is (?:dada|defence against the dark arts|defense against the dark arts)|"
-        r"what does (?:dada|defence against the dark arts|defense against the dark arts) mean|"
-        r"what is the (?:dada|defence against the dark arts|defense against the dark arts) "
-        r"(?:subject|department)|"
-        r"tell me about (?:dada|defence against the dark arts|defense against the dark arts)"
-        r")\b",
+        rf"^\s*(?:"
+        rf"what(?:'s| is) (?:the )?{_SUBJECT_NAME}(?: (?:subject|department|class))?"
+        rf"|what does {_SUBJECT_NAME} (?:mean|stand for)"
+        rf"|what is {_SUBJECT_NAME} short for"
+        rf"|(?:define|explain) {_SUBJECT_NAME}"
+        rf"|(?:the )?meaning of {_SUBJECT_NAME}"
+        rf"|{_SUBJECT_NAME} meaning"
+        rf"|tell me about (?:the )?{_SUBJECT_NAME}"
+        rf"|what is (?:this|your) (?:subject|class|department)"
+        rf"|what (?:subject|class|department) is this"
+        rf"|{_SUBJECT_NAME}"
+        rf")\s*[?.!]*\s*$",
         re.IGNORECASE,
     ),
     "grading": re.compile(
@@ -203,7 +212,7 @@ def _auto_mode(
     if persona:
         topic = meta_topic(question)
         if topic is not None and not (
-            topic in {"syllabus", "subject"} and _BOOK_CONTEXT.search(question)
+            topic in {"exam", "syllabus", "subject"} and _BOOK_CONTEXT.search(question)
         ):
             return "meta"
         if _PERSONAL.search(question):
