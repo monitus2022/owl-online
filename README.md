@@ -173,6 +173,28 @@ Generator `qwen/qwen3-30b-a3b-instruct-2507`; judge `deepseek/deepseek-v4.1-flas
 
 Every finished eval run also gets a committed Markdown record under [`docs/runs/`](docs/runs/README.md): run id, configuration, per-slice tables, reading notes, and the raw summary. The record is the strategy history; timestamped CSVs stay local.
 
+### Exam-bank evaluation
+
+The exam bank has a separate evaluation surface in `eval/exam/`, run with
+`uv run python scripts/run_exam_eval.py`. It is not a second RAG retrieval
+benchmark: it does not add a Hit@k or generation slice. It checks the published
+bank and the short-answer judge:
+
+- deterministic bank checks: grounding, MCQ options, trivial and negative stems,
+  answer positions, short-answer length and rubrics, duplicates, coverage and an
+  option-length gate;
+- independent model checks: a second model solves each MCQ without the key,
+  judges every option, and checks every short-answer golden answer;
+- judge calibration: 24 committed student-style answers over 8 short questions
+  with owner-reviewed marks; exact and adjacent agreement, mean absolute error,
+  per-criterion agreement, retry rate and length bias.
+
+The latest record is `docs/runs/2026-11-09-191-dada-bank-eval.md`: 25/25 MCQ
+keys, 0 ambiguities, 25/25 golden answers, adjacent agreement 0.9167, mean
+absolute error 0.5000 and gate PASS. The bank and corpus are host data, so the
+live exam eval runs on the host; CI runs its offline tests. The chat RAG
+baseline above remains the retrieval evaluation.
+
 ---
 
 ## Roadmap
