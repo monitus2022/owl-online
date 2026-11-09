@@ -13,7 +13,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
-| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166); the DADA pack is published, the extraction build pipeline (#128) and Charms content are in progress |
+| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166); the DADA pack is published; pack wiring and Charms content remain on #128 |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -519,7 +519,8 @@ slice uses `eval/fixtures/lore/` (one Markdown entry per file, TOML front matter
 Lore-grounded answers and `[lore:<id>]` citations are wired (#118): the answer
 path selects up to three setting notes, validates the two citation spaces
 separately, and abstains only when neither has a citation. The real pack is
-published at 1.0.0; the lore eval and the lesson voice follow (#176).
+published at 1.0.0; the lore eval follows (#97) and the lesson voice follows
+(#176).
 
 The exam bank is a separate, offline surface. It is not a chat intent and it does
 not run inside `/ask` or `/ask/stream`. Generation and lesson mode read from
@@ -680,8 +681,8 @@ generate) for the per-call detail.
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 
-Subject-knowledge types (schema landed on #87; the extraction build and DADA
-pack publication landed with #128):
+Subject-knowledge types (schema landed on #87; the DADA pack published with
+#166; the extraction build and pack wiring remain on #128):
 
 | Type | Module | Purpose |
 |---|---|---|

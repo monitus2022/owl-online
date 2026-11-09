@@ -12,7 +12,7 @@ page describes what comes next and why.
 - The V2 chat foundation is delivered: LangGraph intents, verification and retry,
   guardrails, cost controls, tracing and the local eval gate. The deterministic
   PR CI gate is in place (#16); the live gate runs on the host because the
-  corpus is not in git, and the required-check setting is the last #16 step.
+  corpus is not in git.
 - The retrieval foundation #96 is closed: aggregation fixture, deterministic
   router, bounded per-book retrieval and the quota-2 measurement (multi-part
   Hit@5 0.667 to 0.778, judge 14/14, left opt-in). Routed per-book retrieval
@@ -37,8 +37,8 @@ page describes what comes next and why.
   Lore-grounded answers (#118) are wired: setting notes carry `[lore:<id>]`
   citations, validated against the pack. The variant bank (#120) gives every
   scripted meta topic, the personal reply and the abstention line several
-  reviewed phrasings. The real pack is published at 1.0.0; the lore eval and
-  the lesson voice follow (#176). Scope
+  reviewed phrasings. The real pack is published at 1.0.0; the lore eval
+  follows (#97) and the lesson voice follows (#176). Scope
   decision 2026-11-08: persona expression is tiered 0-2 - voiced grounded
   answers, then generative-within-the-record bounded by the lore pack - with
   tier 3 (invented non-canon flavor) explicitly out of scope; tiers and the
@@ -51,7 +51,7 @@ page describes what comes next and why.
   built, and the wizard-hat identity. The venue reads `GET /v1/subjects` for
   the published pack and the live lesson/persona flags, and keeps the static
   status for open/soon; a statically open department with no pack stays on
-  corpus chat with a note (#173). Frontend follow-ups are contract-gated: the
+  corpus chat with a note (#172, PR #173). Frontend follow-ups are contract-gated: the
   exam client swap needs #38/#42; server-side records need #35; starter prompts
   are #162/#163.
 - The deterministic CI gate is merged; #74 and #75 follow. #107 is deferred.
@@ -117,7 +117,7 @@ deterministic CI gate is in place.
 | #79 | Retrieval lexical, abstention, deadline, fabrication checks: tokenizer measured (stemming rejected), floor pinned at 0, /ask deadline, novel-entity signal |
 | #82 | Agent observability: request spans, injection guard, close-out docs; intent routing measured and rejected, flag off |
 | #88 | Cost controls: per-session and per-IP caps, token budget, exact cache, usage accounting, graceful degradation |
-| #77 | Closed as superseded; the remaining work is #16, #74 and #75 |
+| #77 | Closed as superseded; the remaining work is #74 and #75 |
 
 Exit criteria:
 
@@ -242,9 +242,9 @@ Cost controls:
 Ticket #88 covers this work. Auth is not a dependency; anonymous limits use a
 signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
-## Phase B: V2.5 subject packs and exam bank
+## Phase B: Subject packs and exam bank
 
-Status: next.
+Status: DADA packs delivered; the exam bank is next (#178).
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
 bank and hybrid grader on top of them.
@@ -499,7 +499,7 @@ Exit criteria:
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 
-## Phase C: V3 chat continuity
+## Phase C: Chat continuity
 
 Status: after the exam bank.
 

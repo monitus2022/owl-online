@@ -334,9 +334,10 @@ The pipeline ships only the image. Do these once on the instance:
    uv run python scripts/build_index.py --provider bedrock --index data/index/titan
    # copy data/chunks.jsonl, data/index/titan/, data/lore/ and data/subjects/ to /data
    ls /data/subjects/dada/pack.toml
-   curl -s https://api.monitus.org/v1/subjects
-   # expect the DADA summary with lesson:true and persona:true
    ```
+
+   After the next deploy, verify with the `/v1/subjects` check in the CI/CD
+   section; lesson is true only when `OWL_LESSON_MODE` and the pack are set.
 
 4. TLS. nginx terminates HTTPS on 443 with the Cloudflare Origin Certificate
    (`*.monitus.org`, from `s3://monitus-cloudflare-certs`) and proxies to the
