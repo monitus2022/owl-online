@@ -144,5 +144,7 @@
 
 - 25 MCQ keys and 25 short-answer golden answers and rubrics were reviewed.
 - All 25 MCQs and all 25 short answers were checked by the independent model; all 50 prompts were checked for near-duplicates.
+- Sampled distractors and evidence: all 25 MCQs were checked, so every distractor and every cited evidence set was covered; all 25 materials were sampled.
 - Reviewer notes: the authored pool was 25 MCQ and 25 short answers, one per reviewed material. The ~35 + ~35 buffer in #190 is a contingency for rejects; the independent verifier rejected none, so no replacement pool was needed.
 - Rejected items: none.
+- Owner sign-off: the PR approval for #190.

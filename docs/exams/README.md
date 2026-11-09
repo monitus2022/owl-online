@@ -27,7 +27,7 @@ is structure only.
 
 | Record | Purpose |
 |---|---|
-| `BankManifest` | subject, tier, version, status, built_at, pack version and fingerprint, index text hash, generator model and prompt version, judge model and prompt version, MCQ and short-answer counts |
+| `BankManifest` | subject, tier, version, status, built_at, reviewed_at, pack version and fingerprint, index text hash, generator model, temperature and prompt version, judge model, temperature and prompt version, MCQ and short-answer counts |
 | `BankItem` | one question: id, kind, prompt, topic, concepts, material id, source refs, evidence snapshot, difficulty, marks, rubric, required points, model answer, options and correct option id for MCQ, rationale, review status, prompt version |
 | `McqOption` | one stored option: option id and text |
 | `RubricCriterion` | criterion id, description and maximum marks |
@@ -62,11 +62,11 @@ the subject concept and the evidence, not on knowing the story.
 | `validated` | the deterministic validator passes; the importer accepts it |
 | `published` | every item is reviewed, every pin matches, and the bank may be served |
 
-A published bank must have a built_at value, a generator model and prompt
-version and a judge model and prompt version. An unreviewed item in a published
-bank is an error. A published version is immutable in the serving store unless
-the importer is run with `--force`; a paper or attempt may already point at its
-item ids.
+A published bank must have `built_at` and `reviewed_at` values, a generator
+model, temperature and prompt version and a judge model, temperature and prompt
+version. An unreviewed item in a published bank is an error. A published version
+is immutable in the serving store unless the importer is run with `--force`; a
+paper or attempt may already point at its item ids.
 
 ## Validation
 
