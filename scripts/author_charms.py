@@ -149,6 +149,30 @@ def _concept(concept_id: str, spec: dict | None, seeds: dict[str, dict]) -> Conc
     )
 
 
+def _review_status(
+    previous: Material | None,
+    *,
+    text: str,
+    topic: str,
+    concept: str,
+    kind: str,
+    refs: list[SourceRef],
+    references: list[ReferenceLink],
+) -> str:
+    """Preserve a review only when the prose and evidence are unchanged."""
+    if previous is None:
+        return "draft"
+    unchanged = (
+        previous.text == text
+        and previous.topic == topic
+        and previous.concept == concept
+        and previous.kind == kind
+        and previous.source_refs == refs
+        and previous.references == references
+    )
+    return previous.review_status if unchanged else "draft"
+
+
 def main() -> int:
     if not AUTHORING.exists():
         raise SystemExit(
@@ -254,12 +278,15 @@ def main() -> int:
             ReferenceLink(**seed["reference"]) if seed.get("reference") else None
         )
         previous = old_materials.get(material_id)
-        review_status = (
-            "reviewed"
-            if previous is not None
-            and previous.text == text
-            and previous.review_status == "reviewed"
-            else "draft"
+        material_references = [reference] if reference else []
+        review_status = _review_status(
+            previous,
+            text=text,
+            topic=spec["topic"],
+            concept=concept_id,
+            kind=concept.kind,
+            refs=refs,
+            references=material_references,
         )
         material = Material(
             material_id=material_id,
@@ -269,7 +296,7 @@ def main() -> int:
             kind=concept.kind,
             text=text,
             source_refs=refs,
-            references=[reference] if reference else [],
+            references=material_references,
             review_status=review_status,
         )
         concepts[concept_id] = concept

@@ -9,7 +9,7 @@
 - Topics: 7
 - Source refs: 114
 - Index text hash: `aca4c57462d449f5`
-- Fingerprint: `f89315423dd1a43d`
+- Fingerprint: `fe100e5eb5dc0755`
 - Review: pending maintainer prose pass
 
 This record is structure only. Material prose and evidence quotes stay in the
@@ -113,7 +113,7 @@ The warnings are the expected `review_status=draft` notices.
 
 - The pack is O.W.L. tier and books-scoped; every source ref is a primary novel chunk.
 - Foundations, movement, elements, sound, jinxes, everyday utility charms and classroom practice are covered.
-- Stunning is left to the DADA bank; the Charms jinxes cover spells not already in the DADA bank.
+- Stunning is left to the DADA bank; no Charms jinx duplicates a DADA pack concept. Impediment appears in DADA only as evidence, not as a concept.
 - Transfiguration-owned changes of substance are used only as contrast, not as Charms concepts.
 - Coverage is deepest in the seeded Levitation, O.W.L. and jinx chapters; the utility and element additions broaden it, but the pack does not claim every canon charm.
 - The pack is intentionally larger than the DADA 1.0.0 pilot so the bank can draw more varied questions.

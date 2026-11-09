@@ -4,7 +4,72 @@ from __future__ import annotations
 
 import pytest
 
-from scripts.author_charms import _is_sentence_end, quote_for
+from app.knowledge.materials import Material, SourceRef
+from scripts.author_charms import _is_sentence_end, _review_status, quote_for
+
+
+def _material() -> Material:
+    ref = SourceRef(
+        chunk_id="b1-c10-0029",
+        book=1,
+        chapter=10,
+        quote="swish and flick",
+        text_hash="abc123",
+        index_text_hash="def456",
+    )
+    return Material(
+        material_id="charms-test",
+        subject="charms",
+        topic="charms-foundations",
+        concept="charms-definition-charm",
+        kind="definition",
+        text="A grounded test material.",
+        source_refs=[ref],
+        review_status="reviewed",
+    )
+
+
+def test_review_status_survives_only_an_identical_material() -> None:
+    previous = _material()
+    assert (
+        _review_status(
+            previous,
+            text=previous.text,
+            topic=previous.topic,
+            concept=previous.concept,
+            kind=previous.kind,
+            refs=previous.source_refs,
+            references=previous.references,
+        )
+        == "reviewed"
+    )
+    changed_ref = previous.source_refs[0].model_copy(
+        update={"quote": "a different quote"}
+    )
+    assert (
+        _review_status(
+            previous,
+            text=previous.text,
+            topic=previous.topic,
+            concept=previous.concept,
+            kind=previous.kind,
+            refs=[changed_ref],
+            references=previous.references,
+        )
+        == "draft"
+    )
+    assert (
+        _review_status(
+            previous,
+            text="Changed prose.",
+            topic=previous.topic,
+            concept=previous.concept,
+            kind=previous.kind,
+            refs=previous.source_refs,
+            references=previous.references,
+        )
+        == "draft"
+    )
 
 
 def test_sentence_end_handles_dotted_abbreviation() -> None:
