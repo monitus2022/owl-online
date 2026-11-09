@@ -6,12 +6,15 @@ O.W.L. Online - a grounded, agentic RAG application. Read this before making cha
 
 A retrieval-augmented question-answering engine with two surfaces: a chat that
 answers, sets practice and gives formative feedback, and a static exam bank with
-offline generation and hybrid grading. The project's point is the evaluation
-discipline and the full-stack agent, not the corpus.
+offline generation and hybrid grading. The DADA pack is published at 1.0.0;
+the professor persona is live behind `OWL_PERSONA`; lesson mode is implemented
+behind `OWL_LESSON_MODE` and needs the pack on the host volume; the exam bank is
+the next product surface. The project's point is the evaluation discipline and
+the full-stack agent, not the corpus.
 
 ## Commands
 
-Provisional until the code layout exists; update these as the project takes shape.
+Run these from the repository root.
 
 - Install: `uv sync` (installs the dev and ingest groups; LangGraph and SSE are base dependencies)
 - Run API: `uvicorn app.main:app --reload`
@@ -50,7 +53,7 @@ Layout:
 - `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam build is planned; `ingest/lexicon/` holds the hp-lexicon canon-index harvester (spike grammar and parsers plus the #126 discovery/fetch/harvest modules)
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
 - `app/agent/` - LangGraph chat graph, node functions, state (V2); lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
-- `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts) and feeds lesson mode through a derived in-memory material selector (#166); the extraction build pipeline (#128) and Charms content are in progress
+- `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts) and feeds lesson mode through a derived in-memory material selector (#166); pack wiring and Charms content remain on #128
 - `app/storage/` - planned exam store (SQLite models and repository)
 - `app/grading/` - planned hybrid grader: deterministic objective scoring, pinned LLM rubric judge for free text, deterministic score bands
 - `data/subjects/` - local subject packs; the DADA pack is published; source text stays out of git

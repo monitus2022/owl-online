@@ -1,6 +1,6 @@
 # Workplan
 
-Last updated: 2026-11-08.
+Last updated: 2026-11-09.
 
 This page is the plan of record for the V2-V4 work. Update it when a phase,
 boundary or ticket changes. The architecture page describes what is built; this
@@ -12,7 +12,7 @@ page describes what comes next and why.
 - The V2 chat foundation is delivered: LangGraph intents, verification and retry,
   guardrails, cost controls, tracing and the local eval gate. The deterministic
   PR CI gate is in place (#16); the live gate runs on the host because the
-  corpus is not in git, and the required-check setting is the last #16 step.
+  corpus is not in git.
 - The retrieval foundation #96 is closed: aggregation fixture, deterministic
   router, bounded per-book retrieval and the quota-2 measurement (multi-part
   Hit@5 0.667 to 0.778, judge 14/14, left opt-in). Routed per-book retrieval
@@ -37,8 +37,8 @@ page describes what comes next and why.
   Lore-grounded answers (#118) are wired: setting notes carry `[lore:<id>]`
   citations, validated against the pack. The variant bank (#120) gives every
   scripted meta topic, the personal reply and the abstention line several
-  reviewed phrasings. The real pack and the lore eval follow. The full persona
-  voice still follows the real pack and a fixture-driven lore eval. Scope
+  reviewed phrasings. The real pack is published at 1.0.0; the lore eval
+  follows (#97) and the lesson voice follows (#176). Scope
   decision 2026-11-08: persona expression is tiered 0-2 - voiced grounded
   answers, then generative-within-the-record bounded by the lore pack - with
   tier 3 (invented non-canon flavor) explicitly out of scope; tiers and the
@@ -48,13 +48,13 @@ page describes what comes next and why.
   against `/ask/stream` with citation chips and in-world limit copy, the
   demonstration exam room, device-local paper history and the cloister
   noticeboard, an about page stating real versus demonstration versus not
-  built, and the wizard-hat identity. The voice-honesty rule and its single
-  switch are recorded in the Frontend surface section of
-  `docs/architecture.md`. Frontend follow-ups are contract-gated: the four
-  doors open with the #87 taxonomy slugs and `GET /v1/subjects`; the exam
-  client swap needs #38/#42; server-side records need #35.
-- #16's deterministic CI gate is merged; the required-check setting is the last
-  step. #74 and #75 follow. #107 is deferred.
+  built, and the wizard-hat identity. The venue reads `GET /v1/subjects` for
+  the published pack and the live lesson/persona flags, and keeps the static
+  status for open/soon; a statically open department with no pack stays on
+  corpus chat with a note (#172, PR #173). Frontend follow-ups are contract-gated: the
+  exam client swap needs #38/#42; server-side records need #35; starter prompts
+  are #162/#163.
+- The deterministic CI gate is merged; #74 and #75 follow. #107 is deferred.
 - The Lexicon canon index (#125-#128) is the feed for the B1 packs: an
   item/concept-to-chapter mapping harvested as structure only from
   hp-lexicon.org, resolved to chunk candidates in our index. The plan of
@@ -71,9 +71,10 @@ page describes what comes next and why.
   sampled quotes was not recorded before that merge, so the criterion stays
   automated-met / human-pending and is carried into the #128 DADA and Charms
   authoring review. #128 (pack wiring: concept seeding, reference and
-  source-ref prefill, chapter-to-subject lesson table) is the active subject
-  pack step; the #87 pack schema and validator landed with PR #153.
-- V2.5 subject packs and the exam bank follow the answer path and #97.
+  source-ref prefill, chapter-to-subject lesson table) remains for Charms and
+  the extraction pipeline; the #87 pack schema and validator landed with PR #153.
+- The exam bank (#178) follows; DADA packs are delivered and the answer path is
+  settled except the voice work (#176).
 
 ## Product shape
 
@@ -106,8 +107,8 @@ bands are deterministic.
 
 ## Phase A: V2 chat foundation
 
-Status: delivered, except the deploy hardening in #74 and #75 and the
-required-check setting in #16. The deterministic CI gate is in place.
+Status: delivered, except the deploy hardening in #74 and #75. The
+deterministic CI gate is in place.
 
 | Ticket | Scope |
 |---|---|
@@ -116,7 +117,7 @@ required-check setting in #16. The deterministic CI gate is in place.
 | #79 | Retrieval lexical, abstention, deadline, fabrication checks: tokenizer measured (stemming rejected), floor pinned at 0, /ask deadline, novel-entity signal |
 | #82 | Agent observability: request spans, injection guard, close-out docs; intent routing measured and rejected, flag off |
 | #88 | Cost controls: per-session and per-IP caps, token budget, exact cache, usage accounting, graceful degradation |
-| #77 | Closed as superseded; the remaining work is #16, #74 and #75 |
+| #77 | Closed as superseded; the remaining work is #74 and #75 |
 
 Exit criteria:
 
@@ -241,9 +242,9 @@ Cost controls:
 Ticket #88 covers this work. Auth is not a dependency; anonymous limits use a
 signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
-## Phase B: V2.5 subject packs and exam bank
+## Phase B: Subject packs and exam bank
 
-Status: next.
+Status: DADA packs delivered; the exam bank is next (#178).
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
 bank and hybrid grader on top of them.
@@ -260,10 +261,9 @@ and compiled at `config/lessons/` (2026-11-08). The DADA pilot pack is
 authored, reviewed and published: 25 materials, 21 concepts, 4 topics,
 version 1.0.0, fingerprint `e7139cbcc23eaa5c`, and `GET /v1/subjects`
 serves published packs. The pack validation record is
-`docs/packs/dada-1.0.0.md`. Remaining on #87: the extraction build pipeline
-(uses the #127 canon-index resolution to draft candidate source refs -
-ticketed as #128, active), the Charms content pass and the coverage report
-as a script.
+`docs/packs/dada-1.0.0.md`. Remaining on #87: pack wiring and the Charms/multi-subject content passes
+(#128), and coverage maintenance. The canon-index coverage summary is
+`scripts/lexicon_report.py`; per-subject pack coverage remains part of #87.
 
 Lesson mode's stateless first slice (#166) answers from the pack behind
 `OWL_LESSON_MODE`: the selector embeds the material texts in memory at startup,
@@ -499,7 +499,7 @@ Exit criteria:
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 
-## Phase C: V3 chat continuity
+## Phase C: Chat continuity
 
 Status: after the exam bank.
 
@@ -564,40 +564,37 @@ persists exam attempts and chat history.
 
 ## Ticket map
 
-### Now
+### Now - final push
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #16 | Eval CI gate: thresholds and workflow | V2 - Deepening |
-| #97 | Thin professor slice: card, DADA scope, scripted meta, lore schema (flag off) | V2 - Deepening |
-| #120 | Persona variant bank: reviewed phrasings for meta, personal and abstain replies | V2 - Deepening |
-| #87 | Subject packs: DADA 1.0.0 published; extraction build and Charms content open | V3 - Product |
-| #128 | Lexicon canon index: pack wiring and seeding queues; DADA authored, Charms seeded, Charms content open | V3 - Product |
-| #166 | Lesson mode, first slice: pack-grounded answers with a derived material selector (flag off) | V3 - Product |
-| #168 | DADA venue defaults to pack-grounded lesson chat; `/v1/subjects` carries `lesson` and `persona` | V3 - Product |
+| #177 | Lesson mixed-scope answers with labelled corpus fallback | V3 - Product |
+| #178 | Exam bank one-paper vertical slice (tracker for #38/#39/#40/#41/#42) | V3 - Product |
+| #38/#39/#40/#41/#42 | Exam model, generator, evaluation, grader and endpoints | V3 - Product |
+| #162/#163 | Starter prompts and routing contract | V3 - Product |
+| #19/#33 | Cost and latency instrumentation and a minimal dashboard | V3 - Product |
+| #182 | Persona name/background routing with fuzzy spellings | V3 - Product |
 
-### Next
-
-| Ticket | Scope | Milestone |
-|---|---|---|
-| #74 | Move `/data` to a dedicated EBS volume | V2 - Deepening |
-| #75 | Replace static AWS keys with GitHub OIDC | V2 - Deepening |
-
-### Later
+### Next - complete the loop
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #126, #127, #128 | Lexicon canon index: harvester, resolver, pack wiring | V3 - Product |
-| #38, #39 | Exam data model, offline generation and validation | V3 - Product |
-| #41, #42 | Hybrid grading and exam endpoints | V3 - Product |
-| #40 | Exam and grading evaluation | V3 - Product |
-| #43 | Thread-based lesson mode on the continuous chat graph | V3 - Product |
+| #176 | Persona lesson voice and conformance eval | V3 - Product |
 | #30 | Conversation memory and follow-up rewrite | V3 - Product |
-| #35, #44 | Google auth, progress tracking and weak topics | V3 - Product |
-| #19 | Cost and latency p50/p95 instrumentation | V3 - Product |
-| #27 | Answer sufficiency check beyond the bounded retry | V3 - Product |
-| #34 | Semantic cache | V3 - Product |
-| #33 | Dashboards | V3 - Product |
+| #44 | Progress tracking and weak topics | V3 - Product |
+| #35 | Auth, per-user history and limits | V3 - Product |
+| #128 | Pack wiring, Charms materials and coverage maintenance | V3 - Product |
+| #179 | E2E, accessibility and load checks | V3 - Product |
+| #180 | Privacy, retention and data handling | V3 - Product |
+| #181 | Versioned `/v1` chat and OpenAPI | V3 - Product |
+| #184 | Measured fallback classifier for ambiguous persona intent | V3 - Product |
+
+### Later - hardening
+
+| Ticket | Scope | Milestone |
+|---|---|---|
+| #43 | Thread-based continuous lesson mode | V3 - Product |
+| #74/#75 | EBS data volume and GitHub OIDC | V2 - Deepening |
 
 ### Icebox
 
@@ -607,6 +604,8 @@ persists exam attempts and chat history.
 | #8 | Embedding cache (rerank cache is already delivered) | Future / Backlog |
 | #14 | Closed-book control | Future / Backlog |
 | #24 | Perturbation probes | Future / Backlog |
+| #27 | Answer sufficiency check beyond the bounded retry | Future / Backlog |
+| #34 | Semantic cache | Future / Backlog |
 
 ### Delivered
 
@@ -619,24 +618,26 @@ persists exam attempts and chat history.
 | Held-out set | #106 |
 | Multi-book spike | #105 (flag off) |
 | Ingest | #113 |
+| CI gate | #16 |
 | Frontend surfaces | #132, #134, #135, #136, #137, #141, #143, #145, #157 |
+| Lesson mode and persona | #120, #166, #168 (the #97 thin slice is delivered; #97 stays open for the voice work, #176) |
+| Venue fallback | #172 (PR #173) |
+| Deploy hardening | #170, #174 (PR #175) |
 
 ## Backlog policy
 
-- Now holds one implementation ticket and one evaluation ticket.
-- Next is committed only after Now is clear.
-- Later is phase work; it is not active.
-- Icebox is revisited after V2.5.
+- Now is the final-push set: finish it before pulling from Next.
+- Next is the product-complete path; do not start it until the Now set is closed.
+- The Icebox is research and optional experiments, not a delivery commitment.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-Next work: #74 and #75 deploy hardening. #16 is merged; the required-check
-setting is the last step. #105 is complete with the flag off and #113 is merged.
-#96 and #106 are closed. #107 is deferred and likely superseded by the per-book
-path. On the pack line: the canon index is harvested (#125, #126 merged) and
-resolved (#127 open); the courtesy note to the Lexicon is deferred to project
-completion by maintainer decision. #87's schema half is open (PR #153); #128
-wires the resolved index into pack seeding.
+The next work is the Now set: #177, #178, #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
+(#127 closed); #128 carries the pack wiring and Charms content. The
+#87 schema, validator and DADA 1.0.0 pack are delivered. #16, #120, #170, #172,
+#174 and #127 are closed. #107 is deferred and likely superseded by the
+per-book path. The courtesy note to the Lexicon is deferred to project
+completion by maintainer decision.
 
 ## Decisions
 
