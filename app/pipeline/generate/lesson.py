@@ -225,8 +225,8 @@ def _drop_unknown_lesson_citations(
 _OFF_PACK_LABEL_PATTERN = (
     r"this is (?:not|outside) (?:in )?the department['’]s notes\s*[,.;:—–-]?\s*|"
     r"this question is not covered by the department['’]s notes\s*[,.;:—–-]?\s*|"
-    r"this is (?:not|outside) (?:in )?the department(?:\s*[,.;:—–-]|\s*$)\s*|"
-    r"this question is not covered by the department(?:\s*[,.;:—–-]|\s*$)\s*"
+    r"this is (?:not|outside) (?:in )?the department(?:\s*[,.;:—–-]|\n|\s*$)\s*|"
+    r"this question is not covered by the department(?:\s*[,.;:—–-]|\n|\s*$)\s*"
 )
 _MIXED_LABEL_PATTERN = (
     r"the department['’]s notes cover part of this question; "
@@ -299,6 +299,8 @@ def is_lesson_refusal(draft: str, *, cited: bool) -> bool:
     if text.startswith(ABSTAIN_MESSAGE):
         return True
     clean = _CITATION.sub(" ", text).strip()
+    if not clean:
+        return True
     if (
         _LESSON_REFUSAL_PREFIX.match(clean) is None
         and _LESSON_REFUSAL_CLAUSE.match(clean) is None

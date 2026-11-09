@@ -1027,6 +1027,7 @@ async def test_ask_lesson_abstains_when_an_uncovered_term_has_no_corpus_evidence
         "This question is not covered by the department. I cannot answer that. [b1-c01-0000]",
         "This is not in the department's notes — I cannot answer that [b1-c01-0000]",
         "This is not in the department's notes\nI cannot answer that [b1-c01-0000]",
+        "This is outside the department\nI cannot answer that. [b1-c01-0000]",
     ],
 )
 async def test_ask_lesson_treats_source_refusals_as_refusals(draft):
@@ -1169,6 +1170,7 @@ async def test_ask_lesson_alias_and_title_forms_are_in_pack(question):
         "Neither the lesson notes nor the set texts contain it [b1-c01-0000].",
         "This is not in the department's notes — I cannot answer that [b1-c01-0000]",
         "This is not in the department's notes\nI cannot answer that [b1-c01-0000]",
+        "This is outside the department\nI cannot answer that. [b1-c01-0000]",
     ],
 )
 def test_is_lesson_refusal_variants(draft):
@@ -1186,3 +1188,29 @@ def test_is_lesson_refusal_variants(draft):
 )
 def test_is_lesson_refusal_keeps_a_dash_or_newline_partial(draft):
     assert not is_lesson_refusal(draft, cited=True)
+
+
+def test_is_lesson_refusal_label_only_with_citation():
+    assert is_lesson_refusal(
+        "This is not in the department's notes. [b1-c01-0000]", cited=True
+    )
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_rejects_a_label_only_answer():
+    retriever = StaticRetriever(
+        [_chunk("b1-c01-0000", "A book passage.", book=1, chapter=1)]
+    )
+
+    result = await ask_lesson(
+        "How do I brew a potion?",
+        selector=EmptySelector(),
+        subject="dada",
+        llm=StaticLlm("This is not in the department's notes. [b1-c01-0000]"),
+        retriever=retriever,
+        max_retries=0,
+    )
+
+    assert result.abstained is True
+    assert result.abstain_reason == "refused"
+    assert result.scope == "abstained"
