@@ -157,8 +157,8 @@ Repo secrets required:
 
 The workflow settings live in the `env:` block at the top of the file (region,
 ECR repository, instance id, container name, host port, env-file path, data
-dir). Trigger it by pushing to `main`, or run it manually with
-`workflow_dispatch`.
+dir, and the three lesson/persona values in the table below). Trigger it by
+pushing to `main`, or run it manually with `workflow_dispatch`.
 
 Repository variables (Settings > Secrets and variables > Actions > Variables)
 control the non-secret runtime toggles. The workflow passes them with `-e`, and
@@ -174,6 +174,21 @@ Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
 `/data/subjects/dada/pack.toml` exists on the volume, then run the deploy
 workflow. `docker restart` does not re-read env; the workflow recreates the
 container with the variables.
+
+The workflow always injects these three keys (the repository variable or its
+default), so they override `owl.env` even when no repository variable is set.
+The file entries are only for manual `docker run` or Compose.
+`OWL_LESSON_MODE` also needs a valid published pack for `OWL_LORE_SUBJECT`
+(default `dada`).
+
+After the deploy, check:
+
+```
+curl -s https://api.monitus.org/v1/subjects
+```
+
+Expect the DADA summary with `lesson:true` and `persona:true` when the pack is
+present.
 
 The instance pulls the image with its own role
 (`AmazonEC2ContainerRegistryReadOnly`) and calls Bedrock with its own role, so
@@ -298,13 +313,16 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_TRACE_FILE=/data/traces.jsonl
    OWL_AWS_REGION=ap-northeast-1
    OWL_CORS_ORIGINS=https://your-chat-page.pages.dev
-   OWL_LESSON_MODE=true
-   OWL_PERSONA=true
+   # The deploy workflow injects these three with -e; set the repository
+   # variables to true to enable lesson and persona. The file entries are for
+   # manual docker run or Compose use.
+   OWL_LESSON_MODE=false
+   OWL_PERSONA=false
    ```
 
-   The deploy workflow injects `OWL_SUBJECTS_PATH`, `OWL_LESSON_MODE` and
-   `OWL_PERSONA` with `-e` from repository variables; those override the file.
-   Keep the file entries for manual `docker run` or Compose use.
+   The workflow always injects `OWL_SUBJECTS_PATH`, `OWL_LESSON_MODE` and
+   `OWL_PERSONA` (repository variable or default), so they override the file
+   even when no variable is set.
 
 3. The data at `/data`: `chunks.jsonl` plus the index built with the same
    embedder. Build the Titan index locally, then upload both:
