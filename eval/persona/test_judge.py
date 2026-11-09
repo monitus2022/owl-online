@@ -89,3 +89,28 @@ async def test_calibration_aggregation():
     assert report.adjacent == 1.0
     assert report.mae == 0.0
     assert report.ok
+
+
+def test_calibration_requires_owner_adopted_labels():
+    from eval.persona.calibration import CalibrationReport
+
+    proposed = CalibrationReport(
+        n=1,
+        exact=1.0,
+        adjacent=1.0,
+        mae=0.0,
+        parse_failures=0,
+        details=(),
+        labels_adopted=False,
+    )
+    assert not proposed.ok
+    adopted = CalibrationReport(
+        n=1,
+        exact=1.0,
+        adjacent=1.0,
+        mae=0.0,
+        parse_failures=0,
+        details=(),
+        labels_adopted=True,
+    )
+    assert adopted.ok

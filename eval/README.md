@@ -516,8 +516,8 @@ table in `docs/runs/README.md`.
 ## Persona conformance (#176)
 
 `eval/persona/` measures the lesson and persona surfaces separately from the
-factual gold set. The fixture is 29 scenarios across in-pack, mixed, off-pack,
-meta, personal, off-topic and adversarial prompts. Each scenario records the
+factual gold set. The fixture is 30 scenarios across in-pack, in-pack gap,
+mixed, off-pack, meta, personal, off-topic and adversarial prompts. Each scenario records the
 expected route, accepted scopes, citation requirement, boundary and rubric
 anchors. Questions are original; no corpus or pack prose is stored.
 
@@ -542,6 +542,6 @@ teaching shape only and never sees the condition. Calibration uses ten
 owner-adopted examples that span the 0-2 bands. The report gives exact and adjacent agreement, MAE, the pass rate and
 its Wilson lower bound, and the per-scenario variance across samples.
 
-The 2026-11-09 run is `docs/runs/2026-11-09-176-persona-lesson-voice.md`: pass
+The latest run is `docs/runs/2026-11-10-176-persona-lesson-voice-r2.md`: pass
 rate 0.00 to 0.40, Wilson lower bound 0.29, citation retention 0.79, no boundary
 or style violations, and the corpus gate unchanged.

@@ -184,3 +184,11 @@ def test_length_budget():
     assert "words=3" in detail
     ok, _ = length_check(" ".join(["word"] * 6), 5)
     assert not ok
+
+
+def test_token_budget_catches_long_tokens():
+    # Five words fit the word cap, but the approximate token count does not.
+    answer = " ".join(["x" * 100] * 5)
+    ok, detail = length_check(answer, 5)
+    assert not ok
+    assert "token_limit=10" in detail
