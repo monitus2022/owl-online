@@ -118,3 +118,16 @@ def test_exam_attempt_limiter_anonymous_and_signed_in() -> None:
     for _ in range(5):
         assert limiter.admit("signed-in", signed_in=True).allowed
     assert not limiter.admit("signed-in", signed_in=True).allowed
+
+
+def test_exam_attempt_limiter_ip_cap() -> None:
+    now = datetime(2026, 11, 9, 12, 0, tzinfo=UTC)
+    limiter = ExamAttemptLimiter(
+        Settings(exam_attempts_per_day_ip=2), now_utc=lambda: now
+    )
+    assert limiter.admit("first", client_ip="203.0.113.7").allowed
+    assert limiter.admit("second", client_ip="203.0.113.7").allowed
+    limited = limiter.admit("third", client_ip="203.0.113.7")
+    assert not limited.allowed
+    assert limited.reason == "exam_ip_day"
+    assert limiter.admit("fourth", client_ip="203.0.113.8").allowed

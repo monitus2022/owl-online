@@ -70,25 +70,24 @@ export function AboutPage() {
         </p>
         <ul>
           <li>ten questions per paper, one subject at a time;</li>
-          <li>multiple choice and short answer only;</li>
+          <li>six multiple-choice questions at 3 marks and four short answers at
+            8 marks, 50 marks in total;</li>
           <li>
-            a practical section written as a simulation - incantation, wand
-            movement, intended effect and counter-measure - because no
-            website can watch you cast;
+            every question comes from the published DADA bank and cites the
+            reviewed material and book passages behind it; the bank is
+            authored offline, not generated in the exam room;
           </li>
           <li>
-            the demo paper keeps no clock - the student sets the pace.
-            Papers from the real exam bank, when it ships, carry fixed
-            marks and a fixed duration: that is the authoritative surface,
-            and a demo paper counts for nothing.
+            the paper carries a suggested 60 minutes but keeps no clock: the
+            student sets the pace. It is a practice paper, not the official
+            examination, and counts for nothing.
           </li>
         </ul>
         <p>
-          When the real exam bank ships, papers will be generated offline
-          from validated subject materials - every question citing the book
-          passages it came from, totals computed deterministically, and a
-          separate examiner model for written work. Until then, the exam
-          room runs on a demonstration bank and says so on every screen.
+          The server keeps the MCQ key, scores objective answers by code and
+          sends the short answers to a pinned examiner model against the stored
+          rubric. Totals and bands are computed deterministically. A result is
+          a practice mark, not an official O.W.L. record.
         </p>
       </section>
 

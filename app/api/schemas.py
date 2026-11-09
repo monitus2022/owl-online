@@ -81,8 +81,8 @@ class ExamAnswer(BaseModel):
     """One submitted answer: an option id for MCQ or text for a short answer."""
 
     item_id: str
-    option_id: str | None = None
-    answer_text: str | None = None
+    option_id: str | None = Field(default=None, max_length=64)
+    answer_text: str | None = Field(default=None, max_length=6000)
 
     @field_validator("item_id")
     @classmethod

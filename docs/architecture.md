@@ -184,11 +184,17 @@ flowchart TD
   main --> agent[app/agent]
   main --> pipeline[app/pipeline]
   main --> providers[app/providers]
+  main --> storage[app/storage]
+  main --> exam[app/exam]
+  main --> grading[app/grading]
   main --> config[app/config.py]
   main --> log[app/logging.py]
   api --> agent
   api --> pipeline
   api --> providers
+  api --> storage
+  api --> exam
+  api --> grading
   agent --> pipeline
   pipeline --> knowledge
   agent --> knowledge
@@ -199,6 +205,8 @@ flowchart TD
   pipeline --> providers
   pipeline --> schemas[app/schemas.py]
   providers --> schemas
+  storage --> exam
+  grading --> exam
   providers --> sdk[[openai, boto3, httpx, chromadb]]
 ```
 
@@ -224,7 +232,7 @@ that do not exist yet:
 
 | Interface | Lives in | Today | Swap when |
 |---|---|---|---|
-| `ExamClient` | `web/src/api/exams.ts` | `HttpExamClient` lists papers, starts and reloads an attempt, and submits it for server grading; the browser never sees the MCQ key before the grade response | device-local result records move server-side with #35 |
+| `ExamClient` | `web/src/api/exams.ts` | `HttpExamClient` lists papers, starts an attempt, can reload one, and submits it for server grading; the browser never sees the MCQ key before the grade response | device-local result records move server-side with #35 |
 | `ResultsStore` | `web/src/api/results.ts` | device-local localStorage records, labelled provisional | #35 moves history server-side |
 
 The static subject list decides which departments are open. The venue fetches
@@ -617,7 +625,7 @@ sequenceDiagram
   C->>A: POST /v1/attempts/{id}/grade
   A->>S: load the persisted attempt
   A->>J: one call for all short answers
-  A->>S: save the grade
+  A->>S: save the grade and submitted answers
   A-->>C: per-question marks, feedback and band
 ```
 

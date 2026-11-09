@@ -49,7 +49,7 @@ export function ExamPanel({ subject }: { subject: Subject }) {
   async function startPaper() {
     setError(null);
     try {
-      const papers = await examClient.listPapers(subject.slug);
+      const papers = await examClient.listPapers(subject.apiSubject);
       const chosen = papers[0];
       if (!chosen) {
         setError("This department has no papers yet.");
@@ -125,6 +125,7 @@ export function ExamPanel({ subject }: { subject: Subject }) {
     );
     return (
       <section className="exam" aria-label="Exam room">
+        {error && <p className="exam-error">{error}</p>}
         <div className="result-head">
           {result.band ? (
             <BandSeal

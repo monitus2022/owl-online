@@ -60,10 +60,8 @@ _SUBJECT_TITLES = dict(SUBJECTS)
 
 
 def _parse_paper_id(paper_id: str) -> tuple[str, str]:
-    """A paper id is `<subject>-<version>`; the version never contains a hyphen."""
-    if "-" not in paper_id:
-        raise HTTPException(status_code=404, detail="paper not found")
-    subject, _, version = paper_id.rpartition("-")
+    """A paper id is `<subject>-<version>`; the subject key has no hyphen."""
+    subject, _, version = paper_id.partition("-")
     if not subject or not version:
         raise HTTPException(status_code=404, detail="paper not found")
     return subject, version
@@ -762,7 +760,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         if bank is None:
             raise HTTPException(status_code=404, detail="paper not found")
         limiter: ExamAttemptLimiter = app.state.exam_limiter
-        decision = limiter.admit(request.state.session_id)
+        decision = limiter.admit(
+            request.state.session_id, client_ip=_client_ip(request, trusted)
+        )
         if not decision.allowed:
             return exam_limit_response(decision)
         try:
@@ -774,13 +774,17 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 .replace(microsecond=0)
                 .isoformat()
                 .replace("+00:00", "Z"),
-                mcq_count=app_settings.exam_mcq_count,
-                short_count=app_settings.exam_short_count,
+                mcq_count=min(app_settings.exam_mcq_count, bank.manifest.mcq_count),
+                short_count=min(
+                    app_settings.exam_short_count, bank.manifest.short_answer_count
+                ),
                 rng=random.Random(secrets.randbits(64)),
             )
             store.create_attempt(record)
         except ValueError as error:
-            raise HTTPException(status_code=503, detail=str(error)) from error
+            raise HTTPException(
+                status_code=503, detail="exam bank cannot serve this paper"
+            ) from error
         return record.view()
 
     @app.get("/v1/attempts/{attempt_id}", response_model=AttemptView)
@@ -867,12 +871,14 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 cache=runtime.exam_cache,
             )
         except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error)) from error
+            raise HTTPException(
+                status_code=503, detail="grading unavailable"
+            ) from error
         except ProviderError as error:
             raise HTTPException(
                 status_code=502, detail="model provider unavailable"
             ) from error
-        store.save_grade(attempt_id, grade)
+        store.save_grade(attempt_id, grade, answers)
         return grade_response(record, grade)
 
     return app

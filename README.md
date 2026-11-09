@@ -103,7 +103,7 @@ flowchart TD
 
 Every model call goes through an adapter, so the provider is a config value, not an architecture.
 
-See [`docs/architecture.md`](docs/architecture.md) for the current contracts, module dependencies, and the `/ask` and `/ask/stream` request flows. The exam-bank pipeline is planned and documented there as a separate boundary, not as a chat intent.
+See [`docs/architecture.md`](docs/architecture.md) for the current contracts, module dependencies, and the `/ask` and `/ask/stream` request flows. The exam-bank pipeline is documented there as a separate served boundary, not as a chat intent.
 
 ---
 

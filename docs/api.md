@@ -291,7 +291,7 @@ response is `200`:
       "max_marks": 3,
       "correct": true,
       "correct_option_id": "b",
-      "model_answer": null,
+      "model_answer": "The text of the correct option",
       "criteria": [],
       "feedback": "Correct.",
       "evidence_ids": ["b4-c14-0006"]
@@ -324,10 +324,11 @@ is never a silent zero. A missing judge configuration is `503`; a provider
 failure is `502`.
 
 Attempt limits are per session: three per day anonymous, five per day
-signed-in. Over the cap is `429` with `Retry-After`. The signed-in path is
-reserved for auth (#35); anonymous sessions use the lower limit. The exam
-limiter is separate from the chat limiter, so a chat budget or chat rate limit
-does not take exam serving down.
+signed-in, plus a separate nine-per-day per-IP cap. Over a cap is `429` with
+`Retry-After`. The signed-in path is reserved for auth (#35); the route
+currently admits everyone as anonymous. The exam limiter is separate from the
+chat limiter, so a chat budget or chat rate limit does not take exam serving
+down.
 
 ## Errors
 
@@ -356,8 +357,8 @@ bounded, because a legitimate stream can outlive the deadline.
   100/day per-IP cap and a 200k daily token budget. The counters live in the one
   API process and reset on restart.
 - Exam attempts have their own per-session daily cap: 3 anonymous, 5 signed-in
-  (reserved for #35). They are counted by the exam limiter, not the chat
-  limiter.
+  (reserved for #35), plus a 9/day per-IP cap. They are counted by the exam
+  limiter, not the chat limiter.
 - Corpus-only answers use an exact answer cache. Practice, feedback, meta,
   personal and lesson are never cached. The cache scope includes the lore pack
   version and, when lesson mode is on, the pack fingerprints, selector settings

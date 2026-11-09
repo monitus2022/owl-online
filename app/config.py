@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     exam_duration_minutes: int = Field(default=60, ge=1)
     exam_attempts_per_day_anonymous: int = Field(default=3, ge=1)
     exam_attempts_per_day_signed_in: int = Field(default=5, ge=1)
+    exam_attempts_per_day_ip: int = Field(default=9, ge=1)
 
     # Chat cost controls (#88). Anonymous limits; auth later moves them to a
     # user id. The counters live in one process, so a restart resets the windows.

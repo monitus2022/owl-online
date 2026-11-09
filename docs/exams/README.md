@@ -100,23 +100,26 @@ attempt and is never in the pre-submission view. The attempt view contains no
 golden answer, rubric or evidence either.
 
 The attempt is persisted before it is returned, so a reload is stable and a
-repeated grade returns the stored result without a second judge call. The grade
-response carries the MCQ key, per-question marks, model answer, feedback,
-criteria and the band. An unresolved judge result sets `needs_review` and
-leaves the total and band null.
+repeated grade returns the stored result without a second judge call. Grading
+also stores the submitted answers with the grade so a result can be audited.
+The grade response carries the MCQ key, per-question marks, model answer,
+feedback, criteria and the band. An unresolved judge result sets
+`needs_review` and leaves the total and band null.
 
 Attempts are capped per session at three per day anonymous and five per day
-signed-in; over the cap is `429` with `Retry-After`. The signed-in path is
-reserved for auth (#35). The exam limiter is separate from the chat limiter.
-The exam judge is built when a published bank exists; a missing or invalid
-provider credential fails the grading request (`502`) rather than the startup,
-so papers still serve.
+signed-in, with a separate nine-per-day per-IP cap; over a cap is `429` with
+`Retry-After`. The signed-in path is reserved for auth (#35), so the route
+currently admits everyone as anonymous. The exam limiter is separate from the
+chat limiter. The exam judge is built when a published bank exists; a missing
+judge configuration is caught at startup, so papers still serve and grading
+returns `503`. A provider failure during grading is `502`.
 
 Serving settings: `OWL_EXAM_STORE_PATH` (default `data/exams/exams.db`),
 `OWL_EXAM_SUBJECT` (default `dada`), `OWL_EXAM_MCQ_COUNT` (6),
 `OWL_EXAM_SHORT_COUNT` (4), `OWL_EXAM_DURATION_MINUTES` (60),
-`OWL_EXAM_ATTEMPTS_PER_DAY_ANONYMOUS` (3) and
-`OWL_EXAM_ATTEMPTS_PER_DAY_SIGNED_IN` (5).
+`OWL_EXAM_ATTEMPTS_PER_DAY_ANONYMOUS` (3),
+`OWL_EXAM_ATTEMPTS_PER_DAY_SIGNED_IN` (5) and
+`OWL_EXAM_ATTEMPTS_PER_DAY_IP` (9).
 
 ## Bank 1.0.0 quality notes
 

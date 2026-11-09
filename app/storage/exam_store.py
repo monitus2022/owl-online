@@ -9,13 +9,16 @@ persisted here too; the pre-submission view never includes the MCQ key.
 
 from __future__ import annotations
 
+import functools
 import json
 import sqlite3
+import threading
+from collections.abc import Sequence
 from pathlib import Path
 
 from app.exam.attempts import AttemptQuestion, AttemptRecord, ServedOption
 from app.exam.bank import BankItem, BankManifest, ExamBank
-from app.grading.models import AttemptGrade
+from app.grading.models import AttemptAnswer, AttemptGrade
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS banks (
@@ -75,7 +78,8 @@ CREATE TABLE IF NOT EXISTS attempts (
     bank_version TEXT NOT NULL,
     created_at TEXT NOT NULL,
     graded_at TEXT,
-    grade_json TEXT
+    grade_json TEXT,
+    answers_json TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS attempt_questions (
@@ -139,15 +143,29 @@ _ITEM_COLUMNS = (
 )
 
 
+def _locked(method):
+    """Serialise one store operation on the shared SQLite connection."""
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+
+    return wrapper
+
+
 class ExamStore:
     """A small sqlite repository for validated bank manifests and items."""
 
     def __init__(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
-        # FastAPI runs the sync exam routes in a worker thread, while the store
-        # is opened in the lifespan thread. SQLite's serialized mode serialises
-        # the short reads and writes; the connection is process-local.
+        # FastAPI runs the sync exam routes in a worker thread while the grade
+        # handler runs on the event loop. A re-entrant lock serialises the short
+        # reads and writes on the one connection; `check_same_thread=False` only
+        # lifts the thread check, it does not make the connection a transaction
+        # boundary.
+        self._lock = threading.RLock()
         self._conn = sqlite3.connect(str(path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
@@ -155,8 +173,9 @@ class ExamStore:
         self._migrate()
         self._conn.commit()
 
+    @_locked
     def _migrate(self) -> None:
-        """Add manifest columns introduced after the first serving schema."""
+        """Add columns introduced after the first serving and attempt schemas."""
         columns = {
             str(row["name"])
             for row in self._conn.execute("PRAGMA table_info(banks)")
@@ -169,7 +188,16 @@ class ExamStore:
         for name, ddl in additions.items():
             if name not in columns:
                 self._conn.execute(f"ALTER TABLE banks ADD COLUMN {name} {ddl}")
+        attempt_columns = {
+            str(row["name"])
+            for row in self._conn.execute("PRAGMA table_info(attempts)")
+        }
+        if "answers_json" not in attempt_columns:
+            self._conn.execute(
+                "ALTER TABLE attempts ADD COLUMN answers_json TEXT NOT NULL DEFAULT '[]'"
+            )
 
+    @_locked
     def close(self) -> None:
         self._conn.close()
 
@@ -179,6 +207,7 @@ class ExamStore:
     def __exit__(self, *_exc: object) -> None:
         self.close()
 
+    @_locked
     def replace_bank(self, bank: ExamBank, *, force: bool = False) -> None:
         """Replace one subject/version atomically.
 
@@ -220,6 +249,7 @@ class ExamStore:
                     item_rows,
                 )
 
+    @_locked
     def manifest(self, subject: str, version: str | None = None) -> BankManifest | None:
         if version is None:
             row = self._conn.execute(
@@ -233,6 +263,7 @@ class ExamStore:
             ).fetchone()
         return None if row is None else self._manifest_from_row(row)
 
+    @_locked
     def items(
         self,
         subject: str,
@@ -250,6 +281,7 @@ class ExamStore:
         sql += " ORDER BY item_id"
         return [self._item_from_row(row) for row in self._conn.execute(sql, params)]
 
+    @_locked
     def item(
         self,
         item_id: str,
@@ -276,12 +308,14 @@ class ExamStore:
             ).fetchone()
         return None if row is None else self._item_from_row(row)
 
+    @_locked
     def counts(self, subject: str, version: str | None = None) -> dict[str, int]:
         manifest = self.manifest(subject, version)
         if manifest is None:
             return {"mcq": 0, "short_answer": 0}
         return {"mcq": manifest.mcq_count, "short_answer": manifest.short_answer_count}
 
+    @_locked
     def versions(self, subject: str) -> list[str]:
         rows = self._conn.execute(
             "SELECT version FROM banks WHERE subject = ? ORDER BY rowid",
@@ -289,6 +323,7 @@ class ExamStore:
         ).fetchall()
         return [str(row["version"]) for row in rows]
 
+    @_locked
     def published_manifest(
         self, subject: str, version: str | None = None
     ) -> BankManifest | None:
@@ -306,6 +341,7 @@ class ExamStore:
                 return manifest
         return None
 
+    @_locked
     def bank(self, subject: str, version: str | None = None) -> ExamBank | None:
         """A published bank as the serving and grading records expect it."""
         manifest = self.published_manifest(subject, version)
@@ -316,6 +352,7 @@ class ExamStore:
             items=self.items(subject, manifest.version),
         )
 
+    @_locked
     def create_attempt(self, record: AttemptRecord) -> None:
         """Persist one sampled attempt and its server-side question keys."""
         rows = [
@@ -354,6 +391,7 @@ class ExamStore:
                 rows,
             )
 
+    @_locked
     def attempt(self, attempt_id: str) -> AttemptRecord | None:
         row = self._conn.execute(
             "SELECT * FROM attempts WHERE attempt_id = ?", (attempt_id,)
@@ -395,11 +433,25 @@ class ExamStore:
             grade=grade,
         )
 
-    def save_grade(self, attempt_id: str, grade: AttemptGrade) -> None:
+    @_locked
+    def save_grade(
+        self,
+        attempt_id: str,
+        grade: AttemptGrade,
+        answers: Sequence[AttemptAnswer] = (),
+    ) -> None:
         with self._conn:
             self._conn.execute(
-                "UPDATE attempts SET graded_at = ?, grade_json = ? WHERE attempt_id = ?",
-                (grade.graded_at, grade.model_dump_json(), attempt_id),
+                "UPDATE attempts SET graded_at = ?, grade_json = ?, answers_json = ? "
+                "WHERE attempt_id = ?",
+                (
+                    grade.graded_at,
+                    grade.model_dump_json(),
+                    json.dumps(
+                        [answer.model_dump(mode="json") for answer in answers]
+                    ),
+                    attempt_id,
+                ),
             )
 
     @staticmethod

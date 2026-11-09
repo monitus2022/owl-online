@@ -59,9 +59,11 @@ and records results on this device until auth (#35).
   chat with a note, and a statically "soon" department stays furnished. With the
   flags off the copy addresses the professor without claiming he authored a live
   reply.
-- Exam papers, marks and bands are a demo until the exam bank (#38, #42)
-  ships; the UI labels them as such and must keep doing so, on every screen
-  of the flow including the history and noticeboard.
+- Exam papers come from the published bank. The server samples the paper,
+  keeps the MCQ key, scores objective answers by code and judges short answers
+  against the stored rubric. Marks are a practice result, not an official
+  O.W.L. record; the UI labels them as such on every screen of the flow,
+  including the history and noticeboard.
 - Best-so-far and paper history are device-local and provisional until auth
   (#35) and server history exist; unreadable storage says so instead of
   claiming the drawer is empty.
