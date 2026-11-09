@@ -68,31 +68,31 @@ A portfolio project that does the two hard things, then wraps them in a served a
 
 ```mermaid
 flowchart TD
-  C[Client] --> API[FastAPI + SSE]
-  API --> G[Chat agent]
-  subgraph G
-    R[Router] --> A[Answer]
-    R --> P[Practice]
-    R --> F[Feedback]
-    R --> L[Lesson]
+  C["Client"] --> API["FastAPI + SSE"]
+  API --> R["Router"]
+  subgraph G["Chat agent"]
+    R --> A["Answer"]
+    R --> P["Practice"]
+    R --> F["Feedback"]
+    R --> L["Lesson"]
   end
-  A --> RET[Retrieve]
+  A --> RET["Retrieve"]
   P --> RET
   F --> RET
-  L --> MAT[(Pack materials)]
-  RET --> RR[Rerank]
-  RET --> VEC[(Vector store)]
-  RET --> BM[(BM25)]
-  RR --> RER[Rerank adapter]
-  A --> LLM[LLM adapter]
+  L --> MAT[("Pack materials")]
+  RET --> RR["Rerank"]
+  RET --> VEC[("Vector store")]
+  RET --> BM[("BM25")]
+  RR --> RER["Rerank adapter"]
+  A --> LLM["LLM adapter"]
   P --> LLM
   F --> LLM
   L --> LLM
-  B[Offline exam builder] --> RET
-  B --> DB[(Exam DB)]
+  B["Offline exam builder"] --> RET
+  B --> DB[("Exam DB")]
   API --> DB
-  API --> SUB[/v1/subjects]
-  G -. trace .-> OBS[Observability]
+  API --> SUB["/v1/subjects"]
+  R -. trace .-> OBS["Observability"]
 ```
 
 Every model call goes through an adapter, so the provider is a config value, not an architecture.
