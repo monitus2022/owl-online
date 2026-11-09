@@ -60,7 +60,8 @@ _BOOK_CONTEXT = re.compile(
 )
 # Persona meta cues. Keep them narrow: "who teaches Defense" is an answer
 # question, not an identity question. The name and title come from the card so
-# a persona edit cannot silently break routing.
+# a persona edit cannot silently break routing. The router reads the
+# module-level PERSONA; per-subject cards are not wired yet.
 _PERSONA_TOKENS = tuple(
     token.lower() for token in PERSONA.name.split() if token.isalpha()
 )
@@ -75,7 +76,7 @@ _META_CUES: dict[str, re.Pattern[str]] = {
     "identity": re.compile(
         rf"\b("
         rf"who are you|what(?:'s| is) your name|introduce yourself|"
-        rf"who(?:'s| is| are) {_NAME}(?!['’]s\b)"
+        rf"who(?:'s| is| are) {_NAME}(?![\w-])(?!['’]s\b)"
         rf")\b",
         re.IGNORECASE,
     ),
@@ -106,9 +107,9 @@ _META_CUES: dict[str, re.Pattern[str]] = {
     "professor": re.compile(
         rf"\b("
         rf"your background|were you an auror|tell me about yourself|your experience|"
-        rf"tell me about {_NAME}(?!['’]s\b)|"
-        rf"{_NAME}(?:'s|’s)? (?:background|story|experience)|"
-        rf"what (?:is|was) {_NAME}(?:'s|’s)? (?:background|story)"
+        rf"tell me about {_NAME}(?![\w-])(?!['’]s\b)|"
+        rf"{_NAME}(?![\w-])(?:'s|’s)? (?:background|story|experience)|"
+        rf"what (?:is|was) {_NAME}(?![\w-])(?:'s|’s)? (?:background|story)"
         rf")\b",
         re.IGNORECASE,
     ),
@@ -138,7 +139,7 @@ _PERSONAL = re.compile(
 # before the deterministic cues; only a fixed alias table is rewritten, so an
 # ordinary word is never rewritten into a name.
 _KNOWN_ALIASES = {
-    "crane": ("crain", "cran", "craine"),
+    "crane": ("crain", "craine"),
     "alistair": ("alister", "alistar"),
     "professor": ("profesor", "proffesor"),
 }

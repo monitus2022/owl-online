@@ -102,7 +102,7 @@ def test_professor_name_variants_route_to_identity(question):
     "question",
     [
         "Tell me about Professor Crane",
-        "Tell me about Prof. Cran",
+        "Tell me about Prof. Crain",
         "What is Professor Crane's background?",
         "Professor Crane's story",
     ],
@@ -121,6 +121,9 @@ def test_possessive_professor_questions_stay_on_the_answer_path():
     assert classify("Tell me about Professor Crane's assistant", persona=True) == "answer"
     assert classify("Who is Professor Crane's assistant?", persona=True) == "answer"
     assert classify("Tell me about cranes", persona=True) == "answer"
+    assert classify("Tell me about cran", persona=True) == "answer"
+    assert classify("Who is Professor Crane-Smith?", persona=True) == "answer"
+    assert classify("Tell me about Professor Crane-Smith", persona=True) == "answer"
 
 
 @pytest.mark.parametrize(
@@ -153,3 +156,4 @@ def test_persona_card_name_drives_the_identity_cue():
     assert meta_topic(f"Who is {PERSONA.name}?") == "identity"
     assert classify(f"Tell me about {PERSONA.name}", persona=True) == "meta"
     assert meta_topic(f"Tell me about {PERSONA.name}") == "professor"
+    assert classify(f"Who is {PERSONA.address}?", persona=True) == "meta"

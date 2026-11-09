@@ -481,6 +481,7 @@ def test_ask_stream_routes_professor_name_to_meta():
     assert finals[0]["answer"] in PERSONA.meta_variants("identity")
     assert finals[0]["citations"] == []
     assert tokens == []
+    assert len(app.state.cache) == 0
     assert app.state.limiter.tokens_used == 0
 
 
