@@ -2,7 +2,8 @@ import { apiBase } from "./base";
 
 // Client for the served exam bank (#193). The server samples the paper, keeps
 // the MCQ key, and grades after submission; the browser never sees the key
-// before the grade response. Records stay device-local until auth (#35).
+// before the grade response. Records are session-scoped on the server, and
+// auth (#35) will move them across devices.
 
 export type Band = "O" | "E" | "A" | "P" | "D" | "T";
 

@@ -9,7 +9,7 @@ import { bandTone } from "./BandStrip";
 type BestState = StoredAttempt | null | undefined;
 
 // The cloister noticeboard: best band per department, read from the same
-// device-local store as the venue history. Empty states are honest and in
+// session-scoped store as the venue history. Empty states are honest and in
 // the room metaphor: a closed door, an unfurnished classroom, or a best
 // mark once papers have been sat.
 export function ProgressBoard({
@@ -23,7 +23,7 @@ export function ProgressBoard({
     <section className="progress" aria-label="Department noticeboard">
       <h2>The noticeboard</h2>
       <div className="notice notice-mock">
-        Practice marks recorded on this device only until school
+        Practice marks kept for this browser session until school
         accounts arrive (#35).
       </div>
       <ul className="progress-grid" role="list" aria-live="polite">

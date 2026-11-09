@@ -13,8 +13,8 @@ import { BandSeal } from "./BandSeal";
 import { ResultsCard } from "./ResultsCard";
 
 // Exam mode against the served bank. The server samples the paper, keeps the
-// MCQ key, and grades after submission; records stay device-local until auth
-// (#35), so the provisional wording must stay while that is true.
+// MCQ key, and grades after submission; records are session-scoped on the
+// server, and accounts (#35) will move them across devices.
 
 type Phase = "idle" | "answering" | "grading" | "graded";
 
@@ -43,7 +43,7 @@ export function ExamPanel({ subject }: { subject: Subject }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    resultsStore.best(subject.slug).then(setBest);
+    resultsStore.best(subject.apiSubject).then(setBest);
   }, [subject.slug, phase]);
 
   async function startPaper() {

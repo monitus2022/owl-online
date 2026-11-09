@@ -137,11 +137,11 @@ export function AboutPage() {
             </tr>
             <tr>
               <td>Paper history and noticeboard</td>
-              <td className="truth-demo">Device-local</td>
+              <td className="truth-demo">Session-scoped</td>
               <td>
-                Records live in this browser only. Server-side history with
-                accounts (#35) will move them to the Academy, and until
-                then the UI labels them provisional.
+                Records are kept on the server for this browser session
+                (24 hours). Accounts (#35) will carry them across devices,
+                and until then the UI labels them provisional.
               </td>
             </tr>
             <tr>

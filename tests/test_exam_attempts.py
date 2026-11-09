@@ -38,12 +38,13 @@ def _bank_6_4() -> ExamBank:
     return ExamBank(manifest=manifest, items=[*mcqs, *shorts])
 
 
-def _record(bank: ExamBank):
+def _record(bank: ExamBank, *, session_id: str = "session-a"):
     return sample_attempt(
         bank,
         attempt_id="attempt-1",
         paper_id="dada-1.0.0",
         created_at="2026-11-09T00:00:00Z",
+        session_id=session_id,
         rng=random.Random(42),
     )
 
@@ -51,6 +52,7 @@ def _record(bank: ExamBank):
 def test_sample_attempt_serves_four_options_without_the_key() -> None:
     bank = _bank_6_4()
     record = _record(bank)
+    assert record.session_id == "session-a"
     assert len(record.questions) == 10
     mcqs = [question for question in record.questions if question.kind == "mcq"]
     shorts = [question for question in record.questions if question.kind == "short_answer"]
@@ -84,7 +86,20 @@ def test_store_round_trips_an_attempt(tmp_path) -> None:
         loaded = store.attempt(record.attempt_id)
         assert loaded == record
         assert loaded is not None
+        assert loaded.session_id == "session-a"
         assert loaded.view() == record.view()
+    finally:
+        store.close()
+
+
+def test_list_attempts_is_session_scoped_and_graded_only(tmp_path) -> None:
+    bank = _bank_6_4()
+    store = ExamStore(tmp_path / "exams.db")
+    try:
+        store.replace_bank(bank)
+        store.create_attempt(_record(bank, session_id="session-a"))
+        assert store.list_attempts("session-a") == []
+        assert store.list_attempts("session-b") == []
     finally:
         store.close()
 

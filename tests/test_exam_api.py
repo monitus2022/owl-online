@@ -294,6 +294,44 @@ def test_unknown_paper_and_attempt_are_404(tmp_path) -> None:
         assert client.get("/v1/attempts/nope").status_code == 404
 
 
+def test_attempt_list_is_session_scoped(tmp_path) -> None:
+    store, judge = _setup(tmp_path)
+    with _client(store, judge) as client:
+        _, view = _start(client)
+        assert client.get("/v1/attempts?subject=dada").json() == []
+        grade = client.post(
+            f"/v1/attempts/{view['attempt_id']}/grade",
+            json={"answers": _answers(view)},
+        ).json()
+        listed = client.get("/v1/attempts?subject=dada").json()
+        assert len(listed) == 1
+        entry = listed[0]
+        assert entry["attempt_id"] == view["attempt_id"]
+        assert entry["paper_id"] == "dada-1.0.0"
+        assert entry["subject"] == "dada"
+        assert entry["version"] == "1.0.0"
+        assert entry["total"] == grade["total"]
+        assert entry["max_marks"] == 50
+        assert entry["band"] == grade["band"]
+        assert entry["needs_review"] is False
+        text = json.dumps(entry)
+        assert "questions" not in text
+        assert "correct_option_id" not in text
+        assert "answers" not in text
+        assert "rubric" not in text
+        assert "evidence" not in text
+        client.cookies.clear()
+        assert client.get("/v1/attempts?subject=dada").json() == []
+        assert client.get(f"/v1/attempts/{view['attempt_id']}").status_code == 404
+        assert (
+            client.post(
+                f"/v1/attempts/{view['attempt_id']}/grade",
+                json={"answers": []},
+            ).status_code
+            == 404
+        )
+
+
 def test_no_exam_store_returns_empty_and_503() -> None:
     runtime = Runtime(retriever=_Retriever(), llm=_ChatLlm())
     app = create_app(Settings(), runtime=runtime)
@@ -301,6 +339,7 @@ def test_no_exam_store_returns_empty_and_503() -> None:
         assert client.get("/v1/exams").json() == []
         assert client.post("/v1/exams/dada-1.0.0/attempts").status_code == 503
         assert client.get("/v1/attempts/nope").status_code == 503
+        assert client.get("/v1/attempts").status_code == 503
 
 
 def test_paper_id_parses_hyphenated_subjects_and_versions() -> None:

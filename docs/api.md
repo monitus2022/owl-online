@@ -21,6 +21,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 | `POST` | `/ask/stream` | chat over server-sent events |
 | `GET` | `/v1/exams` | published paper descriptors, filtered by subject and version |
 | `POST` | `/v1/exams/{paper_id}/attempts` | sample and persist a paper attempt |
+| `GET` | `/v1/attempts` | graded attempts for the current session, newest first |
 | `GET` | `/v1/attempts/{attempt_id}` | the persisted pre-submission attempt |
 | `POST` | `/v1/attempts/{attempt_id}/grade` | deterministic MCQ scoring plus the pinned rubric judge |
 
@@ -256,6 +257,39 @@ rubric or evidence ids:
 does not reshuffle the options. An unknown attempt is `404`; an unknown or
 unpublished paper is `404`; a host with no exam store returns `503` on the
 attempt routes and an empty list from `GET /v1/exams`.
+
+The attempt routes are scoped to the signed `owl_session` cookie. Another
+session cannot fetch or grade an attempt even with its id: both routes return
+`404` rather than confirming that it exists. The cookie is issued when absent,
+lasts 24 hours, and is not refreshed on every request, so the session history
+window runs from first issue. Set `OWL_SESSION_SECRET` in production; without it
+an API restart invalidates every anonymous session.
+
+`GET /v1/attempts?subject=dada&limit=20` returns the graded attempts for the
+current session, newest first, capped at 50. `subject` defaults to
+`OWL_EXAM_SUBJECT`; `limit` is 1 to 50. The summary carries no answers, option
+keys, golden answers, rubric or evidence:
+
+```json
+[
+  {
+    "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
+    "paper_id": "dada-1.0.0",
+    "subject": "dada",
+    "version": "1.0.0",
+    "created_at": "2026-11-09T12:00:00Z",
+    "graded_at": "2026-11-09T12:05:00Z",
+    "total": 38,
+    "max_marks": 50,
+    "band": "A",
+    "needs_review": false
+  }
+]
+```
+
+Ungraded attempts are excluded from the list; they remain available by id until
+graded. A `needs_review` attempt appears with a null total and band. The frontend
+history and noticeboard read this route, not localStorage.
 
 `POST /v1/attempts/{attempt_id}/grade` submits the answers. Omitted questions
 are left blank. An MCQ answer is an `option_id` from the served four; a short

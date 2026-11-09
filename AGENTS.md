@@ -10,9 +10,9 @@ offline generation and hybrid grading. The DADA pack and exam bank are published
 at 1.0.0; the professor persona is live behind `OWL_PERSONA`; lesson mode is live
 behind `OWL_LESSON_MODE` with a labelled corpus fallback when the pack is thin;
 hybrid grading is built, the bank eval and judge calibration are recorded, and
-served papers are live; per-user attempt history waits on auth (#35). The
-project's point is the evaluation discipline and the full-stack agent, not the
-corpus.
+served papers are live; attempt history is session-scoped, and per-user history
+waits on auth (#35). The project's point is the evaluation discipline and the
+full-stack agent, not the corpus.
 
 ## Commands
 
@@ -56,7 +56,7 @@ Layout:
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
 - `app/agent/` - LangGraph chat graph, node functions, state (V2); lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
 - `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts) and feeds lesson mode through a derived in-memory material selector (#166); pack wiring and Charms content remain on #128
-- `app/storage/` - SQLite bank store (#189) plus attempt persistence and grading records (#193)
+- `app/storage/` - SQLite bank store (#189) plus attempt persistence, session ownership and grading records (#193/#206)
 - `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the bank eval and judge calibration are in `eval/exam/` (#191); served attempts are #193
 - `data/subjects/` - local subject packs; the DADA pack is published; source text stays out of git
 - `app/schemas.py` - domain data (`Chunk`)

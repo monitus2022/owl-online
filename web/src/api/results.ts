@@ -1,10 +1,10 @@
+import { apiBase } from "./base";
 import type { Band } from "./exams";
 
-// Result records. Until auth (#35) and the server-side attempt store exist,
-// records live in localStorage and are provisional: the UI labels them as
-// such and must not present them as an official history. The interface is
-// deliberately async so an HttpResultsStore can replace it without touching
-// the components.
+// Result records are session-scoped on the server (#206). The browser sends the
+// signed owl_session cookie with credentials: "include"; the API returns only
+// this session's graded attempts. Local storage is deliberately not used: the
+// server already persists the grade, and a second browser must not inherit it.
 
 export interface StoredAttempt {
   id: string;
@@ -22,33 +22,54 @@ export interface ResultsStore {
   best(subject: string): Promise<StoredAttempt | null>;
 }
 
-const KEY = "owl.reco…y.v1";
-
-function readAll(): StoredAttempt[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as StoredAttempt[]) : [];
-  } catch {
-    return [];
-  }
+interface ApiAttemptSummary {
+  attempt_id: string;
+  paper_id: string;
+  subject: string;
+  version: string;
+  created_at: string;
+  graded_at: string;
+  total: number | null;
+  max_marks: number;
+  band: Band | null;
+  needs_review: boolean;
 }
 
-class LocalStorageResultsStore implements ResultsStore {
-  async save(attempt: StoredAttempt): Promise<void> {
-    const all = readAll();
-    all.push(attempt);
-    try {
-      localStorage.setItem(KEY, JSON.stringify(all));
-    } catch {
-      // Device-local records are best-effort: quota or private mode must
-      // not break the flow that produced them.
-    }
+function isResolved(
+  attempt: ApiAttemptSummary,
+): attempt is ApiAttemptSummary & { total: number; band: Band } {
+  return attempt.total !== null && attempt.band !== null;
+}
+
+class HttpResultsStore implements ResultsStore {
+  async save(_attempt: StoredAttempt): Promise<void> {
+    // The server writes the grade when the attempt is submitted. The
+    // interface keeps save() so a future offline store can still implement it.
   }
 
   async history(subject: string): Promise<StoredAttempt[]> {
-    return readAll()
-      .filter((attempt) => attempt.subject === subject)
-      .sort((a, b) => b.gradedAt.localeCompare(a.gradedAt));
+    let response: Response;
+    try {
+      response = await fetch(
+        `${apiBase()}/v1/attempts?subject=${encodeURIComponent(subject)}`,
+        { credentials: "include" },
+      );
+    } catch {
+      throw new Error("The paper records could not be reached.");
+    }
+    if (!response.ok) {
+      throw new Error(`The paper records could not be read (${response.status}).`);
+    }
+    const attempts = (await response.json()) as ApiAttemptSummary[];
+    return attempts.filter(isResolved).map((attempt) => ({
+      id: attempt.attempt_id,
+      subject: attempt.subject,
+      paperId: attempt.paper_id,
+      total: attempt.total,
+      max: attempt.max_marks,
+      band: attempt.band,
+      gradedAt: attempt.graded_at,
+    }));
   }
 
   async best(subject: string): Promise<StoredAttempt | null> {
@@ -60,4 +81,4 @@ class LocalStorageResultsStore implements ResultsStore {
   }
 }
 
-export const resultsStore: ResultsStore = new LocalStorageResultsStore();
+export const resultsStore: ResultsStore = new HttpResultsStore();

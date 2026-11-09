@@ -7,14 +7,14 @@ export function ResultsCard({ best }: { best: StoredAttempt | null }) {
   if (!best) {
     return (
       <p className="results-card results-empty">
-        No papers marked for this department on this device yet.
+        No papers marked for this department in this browser session yet.
       </p>
     );
   }
   const date = new Date(best.gradedAt);
   return (
     <p className="results-card">
-      Best so far on this device:{" "}
+      Best so far in this browser session:{" "}
       <strong>
         {BAND_LABELS[best.band]} ({best.total}/{best.max})
       </strong>{" "}

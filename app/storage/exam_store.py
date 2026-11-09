@@ -16,7 +16,12 @@ import threading
 from collections.abc import Sequence
 from pathlib import Path
 
-from app.exam.attempts import AttemptQuestion, AttemptRecord, ServedOption
+from app.exam.attempts import (
+    AttemptQuestion,
+    AttemptRecord,
+    AttemptSummary,
+    ServedOption,
+)
 from app.exam.bank import BankItem, BankManifest, ExamBank
 from app.grading.models import AttemptAnswer, AttemptGrade
 
@@ -77,6 +82,7 @@ CREATE TABLE IF NOT EXISTS attempts (
     subject TEXT NOT NULL,
     bank_version TEXT NOT NULL,
     created_at TEXT NOT NULL,
+    session_id TEXT NOT NULL DEFAULT '',
     graded_at TEXT,
     grade_json TEXT,
     answers_json TEXT NOT NULL DEFAULT '[]'
@@ -196,6 +202,14 @@ class ExamStore:
             self._conn.execute(
                 "ALTER TABLE attempts ADD COLUMN answers_json TEXT NOT NULL DEFAULT '[]'"
             )
+        if "session_id" not in attempt_columns:
+            self._conn.execute(
+                "ALTER TABLE attempts ADD COLUMN session_id TEXT NOT NULL DEFAULT ''"
+            )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS attempts_session "
+            "ON attempts(session_id, created_at)"
+        )
 
     @_locked
     def close(self) -> None:
@@ -373,14 +387,15 @@ class ExamStore:
         with self._conn:
             self._conn.execute(
                 "INSERT INTO attempts "
-                "(attempt_id, paper_id, subject, bank_version, created_at) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "(attempt_id, paper_id, subject, bank_version, created_at, session_id) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     record.attempt_id,
                     record.paper_id,
                     record.subject,
                     record.bank_version,
                     record.created_at,
+                    record.session_id,
                 ),
             )
             self._conn.executemany(
@@ -428,10 +443,50 @@ class ExamStore:
             subject=row["subject"],
             bank_version=row["bank_version"],
             created_at=row["created_at"],
+            session_id=row["session_id"],
             questions=questions,
             graded_at=row["graded_at"],
             grade=grade,
         )
+
+    @_locked
+    def list_attempts(
+        self,
+        session_id: str,
+        subject: str | None = None,
+        limit: int = 50,
+    ) -> list[AttemptSummary]:
+        """Graded attempts for one session, newest first; no question detail."""
+        if not session_id:
+            return []
+        sql = (
+            "SELECT * FROM attempts "
+            "WHERE session_id = ? AND grade_json IS NOT NULL"
+        )
+        params: list[object] = [session_id]
+        if subject is not None:
+            sql += " AND subject = ?"
+            params.append(subject)
+        sql += " ORDER BY created_at DESC, rowid DESC LIMIT ?"
+        params.append(limit)
+        summaries: list[AttemptSummary] = []
+        for row in self._conn.execute(sql, params):
+            grade = AttemptGrade.model_validate(json.loads(row["grade_json"]))
+            summaries.append(
+                AttemptSummary(
+                    attempt_id=row["attempt_id"],
+                    paper_id=row["paper_id"],
+                    subject=row["subject"],
+                    version=row["bank_version"],
+                    created_at=row["created_at"],
+                    graded_at=row["graded_at"],
+                    total=grade.total,
+                    max_marks=grade.max_marks,
+                    band=grade.band,
+                    needs_review=grade.needs_review,
+                )
+            )
+        return summaries
 
     @_locked
     def save_grade(
