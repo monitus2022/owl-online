@@ -29,6 +29,22 @@ The API host serves only the API. The academy frontend is the Cloudflare Pages
 build; `GET /` is a small JSON descriptor, not a chat page. The old single-file
 chat page was removed so the API origin cannot be used as a second chat surface.
 
+### `GET /`
+
+A stable service descriptor. It is a liveness alias for `/health` and a pointer
+to the subject index; it is not a chat surface.
+
+Response `200`:
+
+```json
+{
+  "service": "owl-online-api",
+  "status": "ok",
+  "health": "/health",
+  "subjects": "/v1/subjects"
+}
+```
+
 ### `POST /ask`
 
 Request:

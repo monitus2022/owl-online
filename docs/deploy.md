@@ -396,6 +396,11 @@ origin cannot be used as a second chat surface. CORS still allows
 
 ```
 curl -s https://your-api-host/health
+curl -si https://your-api-host/ | head -n 5
 curl -s https://your-api-host/ask -H 'Content-Type: application/json' \
   -d '{"question":"..."}'
 ```
+
+The root check must show `application/json`, not `text/html`. Cloudflare can
+keep serving the cached HTML at `/` until the edge cache for that path is
+purged; purge it after the deploy if the old page still appears.
