@@ -23,7 +23,7 @@ export function ProgressBoard({
     <section className="progress" aria-label="Department noticeboard">
       <h2>The noticeboard</h2>
       <div className="notice notice-mock">
-        Demonstration marks recorded on this device only until school
+        Practice marks recorded on this device only until school
         accounts arrive (#35).
       </div>
       <ul className="progress-grid" role="list" aria-live="polite">

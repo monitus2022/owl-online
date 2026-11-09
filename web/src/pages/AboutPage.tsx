@@ -127,11 +127,13 @@ export function AboutPage() {
             </tr>
             <tr>
               <td>Exam papers and marks</td>
-              <td className="truth-demo">Demonstration</td>
+              <td className="truth-real">Real, practice</td>
               <td>
-                A mock client runs a small original demo bank and grades
-                on this device until the validated exam bank and the
-                grading service ship.
+                The exam room serves a paper sampled from the published DADA
+                bank. The server keeps the MCQ key, scores objective answers by
+                code and sends the short answers to a pinned judge; totals and
+                bands are deterministic. A result is practice, not an official
+                O.W.L. record.
               </td>
             </tr>
             <tr>

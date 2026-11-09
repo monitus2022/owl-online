@@ -1,11 +1,11 @@
 # API
 
-The served surface is FastAPI. The current contract is unversioned except for
-`GET /v1/subjects`; the remaining planned `/v1` aliases are listed below. The
-academy frontend has already split into its own static build (`web/`, served on
-Cloudflare Pages) and calls the unversioned chat routes today, relying on the
-CORS origin regex and the session cookie; the versioned aliases gate the next
-steps - the per-subject chat field, the exam endpoints, and any custom domain
+The served surface is FastAPI. Chat is unversioned today; `GET /v1/subjects`
+and the exam serving routes are versioned. The remaining planned `/v1` aliases
+are listed below. The academy frontend has already split into its own static
+build (`web/`, served on Cloudflare Pages) and calls the chat routes and the
+served exam bank, relying on the CORS origin regex and the session cookie; the
+remaining versioned aliases gate the per-subject chat field and any custom domain
 that must pin its CORS origin.
 
 Base URL: the deployment origin, for example `https://api.monitus.org`.
@@ -19,6 +19,10 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 | `GET` | `/v1/subjects` | published subject packs plus the `lesson`, `lesson_subject`, `lesson_fallback` and `persona` flags |
 | `POST` | `/ask` | one-shot grounded answer |
 | `POST` | `/ask/stream` | chat over server-sent events |
+| `GET` | `/v1/exams` | published paper descriptors, filtered by subject and version |
+| `POST` | `/v1/exams/{paper_id}/attempts` | sample and persist a paper attempt |
+| `GET` | `/v1/attempts/{attempt_id}` | the persisted pre-submission attempt |
+| `POST` | `/v1/attempts/{attempt_id}/grade` | deterministic MCQ scoring plus the pinned rubric judge |
 
 ### `POST /ask`
 
@@ -180,6 +184,151 @@ questions are answered from the set texts or refused. `persona` mirrors
 `OWL_PERSONA`, so the frontend can stop hardcoding whether the professor's voice
 is live.
 
+### Exam serving
+
+The exam room reads the published bank through four routes. A paper id is
+`<subject>-<version>`, for example `dada-1.0.0`. Nothing is generated at request
+time: the server samples a stored bank, persists the attempt, and grades it
+later.
+
+`GET /v1/exams?subject=dada&version=1.0.0` returns the published paper
+descriptors. `subject` defaults to `OWL_EXAM_SUBJECT` and `version` to the
+latest published bank; an unknown or unpublished bank returns an empty list.
+Response `200`:
+
+```json
+[
+  {
+    "paper_id": "dada-1.0.0",
+    "subject": "dada",
+    "version": "1.0.0",
+    "title": "Defence Against the Dark Arts",
+    "question_count": 10,
+    "mcq_count": 6,
+    "short_answer_count": 4,
+    "marks": 50,
+    "duration_minutes": 60
+  }
+]
+```
+
+`POST /v1/exams/{paper_id}/attempts` samples six MCQ and four short answers,
+shuffles the order, and persists the result. Each served MCQ carries the correct
+option plus three random distractors in a shuffled order. Response `201` is the
+attempt view; it never contains `correct_option_id`, the golden answer, the
+rubric or evidence ids:
+
+```json
+{
+  "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
+  "paper_id": "dada-1.0.0",
+  "subject": "dada",
+  "version": "1.0.0",
+  "created_at": "2026-11-09T12:00:00Z",
+  "marks": 50,
+  "questions": [
+    {
+      "position": 0,
+      "item_id": "dada-mcq-001",
+      "kind": "mcq",
+      "prompt": "Which counter-jinx ...?",
+      "marks": 3,
+      "options": [
+        {"option_id": "a", "text": "..."},
+        {"option_id": "b", "text": "..."},
+        {"option_id": "c", "text": "..."},
+        {"option_id": "d", "text": "..."}
+      ]
+    },
+    {
+      "position": 6,
+      "item_id": "dada-short-001",
+      "kind": "short_answer",
+      "prompt": "Explain ...",
+      "marks": 8,
+      "options": []
+    }
+  ]
+}
+```
+
+`GET /v1/attempts/{attempt_id}` returns the same persisted view, so a reload
+does not reshuffle the options. An unknown attempt is `404`; an unknown or
+unpublished paper is `404`; a host with no exam store returns `503` on the
+attempt routes and an empty list from `GET /v1/exams`.
+
+`POST /v1/attempts/{attempt_id}/grade` submits the answers. Omitted questions
+are left blank. An MCQ answer is an `option_id` from the served four; a short
+answer is `answer_text`:
+
+```json
+{
+  "answers": [
+    {"item_id": "dada-mcq-001", "option_id": "b"},
+    {"item_id": "dada-short-001", "answer_text": "The counter-jinx ..."}
+  ]
+}
+```
+
+MCQ marks are deterministic. All short answers in the attempt are judged in one
+pinned-model call against the stored golden answer, rubric and evidence. The
+response is `200`:
+
+```json
+{
+  "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
+  "paper_id": "dada-1.0.0",
+  "total": 38,
+  "max_marks": 50,
+  "band": "A",
+  "needs_review": false,
+  "graded_at": "2026-11-09T12:05:00Z",
+  "questions": [
+    {
+      "item_id": "dada-mcq-001",
+      "kind": "mcq",
+      "marks_awarded": 3,
+      "max_marks": 3,
+      "correct": true,
+      "correct_option_id": "b",
+      "model_answer": null,
+      "criteria": [],
+      "feedback": "Correct.",
+      "evidence_ids": ["b4-c14-0006"]
+    },
+    {
+      "item_id": "dada-short-001",
+      "kind": "short_answer",
+      "marks_awarded": 7,
+      "max_marks": 8,
+      "correct": null,
+      "correct_option_id": null,
+      "model_answer": "The counter-jinx ...",
+      "criteria": [
+        {"criterion_id": "correctness", "awarded": 4, "max_marks": 4, "reason": "..."},
+        {"criterion_id": "completeness", "awarded": 3, "max_marks": 4, "reason": "..."}
+      ],
+      "feedback": "...",
+      "evidence_ids": ["b4-c14-0006"]
+    }
+  ]
+}
+```
+
+A repeated submission returns the stored grade and makes no second judge call.
+An answer for an item outside the attempt, a duplicate item, an option id that
+was not served, or the wrong answer shape for the question kind is `400`. A
+malformed or incomplete judge response after its one retry sets
+`needs_review` on the affected questions and leaves the total and band null; it
+is never a silent zero. A missing judge configuration is `503`; a provider
+failure is `502`.
+
+Attempt limits are per session: three per day anonymous, five per day
+signed-in. Over the cap is `429` with `Retry-After`. The signed-in path is
+reserved for auth (#35); anonymous sessions use the lower limit. The exam
+limiter is separate from the chat limiter, so a chat budget or chat rate limit
+does not take exam serving down.
+
 ## Errors
 
 | Status | Shape | When |
@@ -206,6 +355,9 @@ bounded, because a legitimate stream can outlive the deadline.
 - Default chat limits: 10 messages per minute, 100 per day, 2 concurrent, plus a
   100/day per-IP cap and a 200k daily token budget. The counters live in the one
   API process and reset on restart.
+- Exam attempts have their own per-session daily cap: 3 anonymous, 5 signed-in
+  (reserved for #35). They are counted by the exam limiter, not the chat
+  limiter.
 - Corpus-only answers use an exact answer cache. Practice, feedback, meta,
   personal and lesson are never cached. The cache scope includes the lore pack
   version and, when lesson mode is on, the pack fingerprints, selector settings
@@ -223,11 +375,11 @@ room and the records.
 | `GET` | `/v1/persona` | planned | persona summary: name, subject, school, boundaries |
 | `POST` | `/v1/chat` | planned alias of `/ask` | one-shot grounded answer |
 | `POST` | `/v1/chat/stream` | planned alias of `/ask/stream` | SSE chat |
-| `GET` | `/v1/exams` | planned | papers, filtered by subject and version |
-| `GET` | `/v1/exams/{paper_id}` | planned | questions, no answers |
-| `POST` | `/v1/exams/{paper_id}/attempts` | planned | start an attempt |
-| `GET` | `/v1/attempts/{attempt_id}` | planned | attempt state |
-| `POST` | `/v1/attempts/{attempt_id}/grade` | planned | deterministic objective scoring plus the pinned rubric judge |
+
+The earlier planned `GET /v1/exams/{paper_id}` shape is superseded: a served
+paper is now an attempt, sampled and persisted by
+`POST /v1/exams/{paper_id}/attempts`, so the client never receives the whole
+bank or the MCQ key.
 
 The chat request gains a `subject` field, default `"dada"`, validated against the
 subject taxonomy. An unsupported subject returns `422`. The cache scope includes

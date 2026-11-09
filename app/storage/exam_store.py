@@ -1,9 +1,10 @@
-"""SQLite serving store for validated exam banks (#189).
+"""SQLite serving store for validated exam banks (#189) and attempts (#193).
 
 The authoring source is `data/exams/<subject>/bank.jsonl`. This store is a
 deterministic import of that file, not a second source of truth. It exposes the
 manifest and items as the Pydantic records from `app.exam.bank` so the serving
-layer never needs the JSONL layout.
+layer never needs the JSONL layout. Sampled attempts and their grades are
+persisted here too; the pre-submission view never includes the MCQ key.
 """
 
 from __future__ import annotations
@@ -12,7 +13,9 @@ import json
 import sqlite3
 from pathlib import Path
 
+from app.exam.attempts import AttemptQuestion, AttemptRecord, ServedOption
 from app.exam.bank import BankItem, BankManifest, ExamBank
+from app.grading.models import AttemptGrade
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS banks (
@@ -64,6 +67,31 @@ CREATE TABLE IF NOT EXISTS bank_items (
 
 CREATE INDEX IF NOT EXISTS bank_items_item_id ON bank_items(item_id);
 CREATE INDEX IF NOT EXISTS bank_items_kind ON bank_items(subject, bank_version, kind);
+
+CREATE TABLE IF NOT EXISTS attempts (
+    attempt_id TEXT PRIMARY KEY,
+    paper_id TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    bank_version TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    graded_at TEXT,
+    grade_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS attempt_questions (
+    attempt_id TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    item_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    marks INTEGER NOT NULL,
+    options_json TEXT NOT NULL,
+    correct_option_id TEXT,
+    PRIMARY KEY (attempt_id, position),
+    FOREIGN KEY (attempt_id) REFERENCES attempts(attempt_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS attempt_questions_item ON attempt_questions(item_id);
 """
 
 _MANIFEST_COLUMNS = (
@@ -117,7 +145,10 @@ class ExamStore:
     def __init__(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
-        self._conn = sqlite3.connect(str(path))
+        # FastAPI runs the sync exam routes in a worker thread, while the store
+        # is opened in the lifespan thread. SQLite's serialized mode serialises
+        # the short reads and writes; the connection is process-local.
+        self._conn = sqlite3.connect(str(path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.executescript(_SCHEMA)
@@ -257,6 +288,119 @@ class ExamStore:
             (subject,),
         ).fetchall()
         return [str(row["version"]) for row in rows]
+
+    def published_manifest(
+        self, subject: str, version: str | None = None
+    ) -> BankManifest | None:
+        """The requested published bank, or the latest published one."""
+        if version is not None:
+            manifest = self.manifest(subject, version)
+            return (
+                manifest
+                if manifest is not None and manifest.status == "published"
+                else None
+            )
+        for candidate in reversed(self.versions(subject)):
+            manifest = self.manifest(subject, candidate)
+            if manifest is not None and manifest.status == "published":
+                return manifest
+        return None
+
+    def bank(self, subject: str, version: str | None = None) -> ExamBank | None:
+        """A published bank as the serving and grading records expect it."""
+        manifest = self.published_manifest(subject, version)
+        if manifest is None:
+            return None
+        return ExamBank(
+            manifest=manifest,
+            items=self.items(subject, manifest.version),
+        )
+
+    def create_attempt(self, record: AttemptRecord) -> None:
+        """Persist one sampled attempt and its server-side question keys."""
+        rows = [
+            (
+                record.attempt_id,
+                question.position,
+                question.item_id,
+                question.kind,
+                question.prompt,
+                question.marks,
+                json.dumps(
+                    [option.model_dump(mode="json") for option in question.options]
+                ),
+                question.correct_option_id,
+            )
+            for question in record.questions
+        ]
+        with self._conn:
+            self._conn.execute(
+                "INSERT INTO attempts "
+                "(attempt_id, paper_id, subject, bank_version, created_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (
+                    record.attempt_id,
+                    record.paper_id,
+                    record.subject,
+                    record.bank_version,
+                    record.created_at,
+                ),
+            )
+            self._conn.executemany(
+                "INSERT INTO attempt_questions "
+                "(attempt_id, position, item_id, kind, prompt, marks, "
+                "options_json, correct_option_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                rows,
+            )
+
+    def attempt(self, attempt_id: str) -> AttemptRecord | None:
+        row = self._conn.execute(
+            "SELECT * FROM attempts WHERE attempt_id = ?", (attempt_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        question_rows = self._conn.execute(
+            "SELECT * FROM attempt_questions WHERE attempt_id = ? ORDER BY position",
+            (attempt_id,),
+        ).fetchall()
+        questions = tuple(
+            AttemptQuestion(
+                position=question["position"],
+                item_id=question["item_id"],
+                kind=question["kind"],
+                prompt=question["prompt"],
+                marks=question["marks"],
+                options=tuple(
+                    ServedOption(**option)
+                    for option in json.loads(question["options_json"])
+                ),
+                correct_option_id=question["correct_option_id"],
+            )
+            for question in question_rows
+        )
+        grade = (
+            AttemptGrade.model_validate(json.loads(row["grade_json"]))
+            if row["grade_json"]
+            else None
+        )
+        return AttemptRecord(
+            attempt_id=row["attempt_id"],
+            paper_id=row["paper_id"],
+            subject=row["subject"],
+            bank_version=row["bank_version"],
+            created_at=row["created_at"],
+            questions=questions,
+            graded_at=row["graded_at"],
+            grade=grade,
+        )
+
+    def save_grade(self, attempt_id: str, grade: AttemptGrade) -> None:
+        with self._conn:
+            self._conn.execute(
+                "UPDATE attempts SET graded_at = ?, grade_json = ? WHERE attempt_id = ?",
+                (grade.graded_at, grade.model_dump_json(), attempt_id),
+            )
 
     @staticmethod
     def _manifest_from_row(row: sqlite3.Row) -> BankManifest:

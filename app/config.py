@@ -67,6 +67,16 @@ class Settings(BaseSettings):
     exam_judge_max_tokens: int = Field(default=2000, ge=1)
     exam_judge_cache_path: Path | None = Path("data/exam_judge_cache.jsonl")
 
+    # Exam serving (#193). The bank is the published SQLite import; a paper
+    # samples six MCQ and four short answers and attempts are capped per day.
+    exam_store_path: Path = Path("data/exams/exams.db")
+    exam_subject: str = "dada"
+    exam_mcq_count: int = Field(default=6, ge=1, le=25)
+    exam_short_count: int = Field(default=4, ge=1, le=25)
+    exam_duration_minutes: int = Field(default=60, ge=1)
+    exam_attempts_per_day_anonymous: int = Field(default=3, ge=1)
+    exam_attempts_per_day_signed_in: int = Field(default=5, ge=1)
+
     # Chat cost controls (#88). Anonymous limits; auth later moves them to a
     # user id. The counters live in one process, so a restart resets the windows.
     chat_per_minute: int = Field(default=10, ge=1)

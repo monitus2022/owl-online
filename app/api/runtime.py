@@ -11,12 +11,15 @@ from langgraph.graph.state import CompiledStateGraph
 from app.agent import build_graph
 from app.agent.persona import PERSONA
 from app.config import Settings
+from app.exam.bank import ExamBank
+from app.grading import JudgeCache, default_judge_cache, judge_llm_from_bank
 from app.knowledge import LoreStore, load_lore
 from app.knowledge.lesson import LessonSelector
 from app.knowledge.packs import PackStore, PackSummary, load_pack_store
 from app.pipeline.retrieve import compose_retriever
 from app.providers.contracts import Llm, Retriever
 from app.providers.factory import make_embedder, make_llm, make_reranker
+from app.storage.exam_store import ExamStore
 
 logger = logging.getLogger(__name__)
 
@@ -34,17 +37,22 @@ class Runtime:
     packs: tuple[PackSummary, ...] = ()
     pack_store: PackStore | None = None
     lesson: LessonSelector | None = None
+    exam_store: ExamStore | None = None
+    exam_judge: Llm | None = None
+    exam_cache: JudgeCache | None = None
 
     async def aclose(self) -> None:
-        """Release provider clients on shutdown (embedder pool, model client)."""
+        """Release provider clients and the serving store on shutdown."""
         seen: set[int] = set()
-        for component in (self.retriever, self.llm, self.small_llm):
+        for component in (self.retriever, self.llm, self.small_llm, self.exam_judge):
             if component is None or id(component) in seen:
                 continue
             seen.add(id(component))
             close = getattr(component, "aclose", None)
             if close is not None:
                 await close()
+        if self.exam_store is not None:
+            self.exam_store.close()
 
 
 def lesson_available(settings: Settings, runtime: Runtime) -> bool:
@@ -58,17 +66,6 @@ def lesson_available(settings: Settings, runtime: Runtime) -> bool:
         and runtime.lesson is not None
         and settings.lore_subject in runtime.lesson.subjects()
     )
-
-    async def aclose(self) -> None:
-        """Release provider clients on shutdown (embedder pool, model client)."""
-        seen: set[int] = set()
-        for component in (self.retriever, self.llm, self.small_llm):
-            if component is None or id(component) in seen:
-                continue
-            seen.add(id(component))
-            close = getattr(component, "aclose", None)
-            if close is not None:
-                await close()
 
 
 async def build_runtime(settings: Settings) -> Runtime:
@@ -139,6 +136,36 @@ async def build_runtime(settings: Settings) -> Runtime:
         if settings.routing == "intent"
         else None
     )
+    exam_store: ExamStore | None = None
+    exam_judge: Llm | None = None
+    exam_cache: JudgeCache | None = None
+    if settings.exam_store_path.exists():
+        try:
+            exam_store = ExamStore(settings.exam_store_path)
+            bank: ExamBank | None = exam_store.bank(settings.exam_subject)
+        except Exception as error:
+            logger.warning("exam serving disabled: %s", error)
+            if exam_store is not None:
+                exam_store.close()
+            exam_store = None
+            bank = None
+        if exam_store is not None:
+            if bank is None:
+                logger.info(
+                    "no published exam bank for %s; exam routes stay empty",
+                    settings.exam_subject,
+                )
+            else:
+                try:
+                    exam_judge = judge_llm_from_bank(bank)
+                    exam_cache = default_judge_cache()
+                except Exception as error:
+                    logger.warning("exam grading disabled: %s", error)
+    else:
+        logger.info(
+            "exam bank absent at %s; exam routes stay empty",
+            settings.exam_store_path,
+        )
     return Runtime(
         retriever=setup.retriever,
         llm=llm,
@@ -163,4 +190,7 @@ async def build_runtime(settings: Settings) -> Runtime:
         packs=packs,
         pack_store=pack_store,
         lesson=lesson,
+        exam_store=exam_store,
+        exam_judge=exam_judge,
+        exam_cache=exam_cache,
     )

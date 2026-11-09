@@ -12,7 +12,7 @@ the raw test page and is not part of this build.
 | `src/data/subjects.ts` | The five departments: URL slug, API subject key, professor, accent, crest, status. The static status is the product open/soon decision; the pack version and lesson/persona flags come from `GET /v1/subjects`. |
 | `src/api/subjects.ts` | Live client for `GET /v1/subjects`; the venue merges the response into the static presentation metadata. |
 | `src/api/chat.ts` | Live client for `POST /ask/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for the DADA venue when the API reports it. |
-| `src/api/exams.ts` | `ExamClient` interface mirroring the planned `/v1/exams` contract, plus `MockExamClient` with a demo DADA bank. |
+| `src/api/exams.ts` | Live client for the served exam bank: paper descriptors, attempt creation and reload, and grading. The browser never sees the MCQ key before the grade response. |
 | `src/api/results.ts` | `ResultsStore` interface; the localStorage implementation is provisional until server-side attempt history exists. |
 | `src/pages/` | Front gate, about page, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |
 | `src/components/` | Door, chat panel, professor silhouette, crest, colonnade backdrop, exam panel, band seal, results card, band strip, history panel, noticeboard, site footer. |
@@ -33,7 +33,9 @@ at `http://localhost:8000`, run the API alongside:
 The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` the DADA room
 sends `mode=lesson`, and with `OWL_PERSONA=true` the professor copy goes live.
 Without the flags the venue falls back to corpus answers and rehearsal copy. The
-exam room is the mock.
+exam room uses the served bank at `/v1/exams`; it needs the imported
+`data/exams/exams.db` (`uv run python scripts/import_exam_bank.py --subject dada`)
+and records results on this device until auth (#35).
 
 ## Deploy (Cloudflare Pages)
 

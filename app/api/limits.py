@@ -222,3 +222,39 @@ class ChatLimiter:
             for key, window in self._ip_windows.items()
             if window.day == day and (window.minute_count or window.day_count)
         }
+
+
+class ExamAttemptLimiter:
+    """Per-session daily attempt cap; signed-in identities get the larger limit."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        now_utc: Callable[[], datetime] | None = None,
+    ) -> None:
+        self._settings = settings
+        self._now_utc = now_utc or (lambda: datetime.now(UTC))
+        self._counts: dict[str, tuple[str, int]] = {}
+
+    def admit(self, identity: str, *, signed_in: bool = False) -> Decision:
+        """Count one attempt or return the daily limit decision."""
+        day = self._now_utc().strftime("%Y-%m-%d")
+        limit = (
+            self._settings.exam_attempts_per_day_signed_in
+            if signed_in
+            else self._settings.exam_attempts_per_day_anonymous
+        )
+        current_day, count = self._counts.get(identity, (day, 0))
+        if current_day != day:
+            current_day = day
+            count = 0
+        if count >= limit:
+            return Decision("rate_limited", "exam_day", self._to_midnight())
+        self._counts[identity] = (current_day, count + 1)
+        return Decision("ok")
+
+    def _to_midnight(self) -> int:
+        now = self._now_utc()
+        seconds = 24 * 3600 - (now.hour * 3600 + now.minute * 60 + now.second)
+        return max(60, seconds)

@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.grading import Band, QuestionGrade
 from app.knowledge.packs import PackSummary
 
 
@@ -60,3 +61,63 @@ class SubjectsResponse(BaseModel):
     lesson_subject: str = ""
     lesson_fallback: bool = True
     persona: bool = False
+
+
+class ExamPaper(BaseModel):
+    """One served paper descriptor; the questions are sampled per attempt."""
+
+    paper_id: str
+    subject: str
+    version: str
+    title: str
+    question_count: int
+    mcq_count: int
+    short_answer_count: int
+    marks: int
+    duration_minutes: int
+
+
+class ExamAnswer(BaseModel):
+    """One submitted answer: an option id for MCQ or text for a short answer."""
+
+    item_id: str
+    option_id: str | None = None
+    answer_text: str | None = None
+
+    @field_validator("item_id")
+    @classmethod
+    def _item_id(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("item_id must not be blank")
+        return stripped
+
+    @field_validator("option_id", "answer_text")
+    @classmethod
+    def _optional_text(cls, value: str | None) -> str | None:
+        return None if value is None else value.strip()
+
+    @model_validator(mode="after")
+    def _one_shape(self) -> "ExamAnswer":
+        if self.option_id is not None and self.answer_text is not None:
+            raise ValueError("an answer is either an option id or answer text, not both")
+        return self
+
+
+class GradeAttemptRequest(BaseModel):
+    """The answers for one attempt; omitted questions are left blank."""
+
+    answers: list[ExamAnswer] = Field(default_factory=list, max_length=50)
+
+
+class ExamGradeResponse(BaseModel):
+    """The graded attempt: per-question results and the deterministic band."""
+
+    attempt_id: str
+    paper_id: str
+    total: int | None
+    max_marks: int
+    band: Band | None
+    needs_review: bool
+    graded_at: str
+    questions: list[QuestionGrade]

@@ -6,6 +6,7 @@ import hmac
 import ipaddress
 import json
 import logging
+import random
 import re
 import secrets
 import time
@@ -13,6 +14,7 @@ import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -26,11 +28,23 @@ from app.agent import build_graph
 from app.agent.persona import PERSONA
 from app.agent.router import classify
 from app.api.cache import AnswerCache, cache_key
-from app.api.limits import ChatLimiter, Decision
+from app.api.limits import ChatLimiter, Decision, ExamAttemptLimiter
 from app.api.runtime import Runtime, build_runtime, lesson_available
-from app.api.schemas import AskRequest, AskResponse, StreamRequest, SubjectsResponse
+from app.api.schemas import (
+    AskRequest,
+    AskResponse,
+    ExamGradeResponse,
+    ExamPaper,
+    GradeAttemptRequest,
+    StreamRequest,
+    SubjectsResponse,
+)
 from app.config import Settings, settings
+from app.exam.attempts import AttemptRecord, AttemptView, sample_attempt
+from app.exam.bank import MCQ_MARKS, SHORT_ANSWER_MARKS
+from app.grading import AttemptAnswer, AttemptGrade, grade_attempt
 from app.knowledge import LORE_SELECTION_VERSION
+from app.knowledge.taxonomy import SUBJECTS
 from app.logging import configure_logging, get_request_id, set_request_id
 from app.pipeline.generate import DEFAULT_TOP_K, SYSTEM_PROMPT, AskResult, ask
 from app.providers.contracts import Llm, Retriever
@@ -42,6 +56,17 @@ logger = logging.getLogger(__name__)
 _INDEX_HTML = Path(__file__).parent / "api" / "static" / "index.html"
 _INDEX_HTML_TEXT = _INDEX_HTML.read_text(encoding="utf-8")
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+_SUBJECT_TITLES = dict(SUBJECTS)
+
+
+def _parse_paper_id(paper_id: str) -> tuple[str, str]:
+    """A paper id is `<subject>-<version>`; the version never contains a hyphen."""
+    if "-" not in paper_id:
+        raise HTTPException(status_code=404, detail="paper not found")
+    subject, _, version = paper_id.rpartition("-")
+    if not subject or not version:
+        raise HTTPException(status_code=404, detail="paper not found")
+    return subject, version
 
 
 def _client_ip(
@@ -128,6 +153,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             )
         app.state.session_secret = app_settings.session_secret or secrets.token_hex(32)
         app.state.limiter = ChatLimiter(app_settings)
+        app.state.exam_limiter = ExamAttemptLimiter(app_settings)
         app.state.trace_sink = TraceSink(
             app_settings.trace_file, app_settings.trace_max_bytes
         )
@@ -257,6 +283,31 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 "retry_after": decision.retry_after,
             },
             headers={"Retry-After": str(decision.retry_after or 60)},
+        )
+
+    def exam_limit_response(decision: Decision) -> JSONResponse:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": "rate limited",
+                "reason": decision.reason,
+                "retry_after": decision.retry_after,
+            },
+            headers={"Retry-After": str(decision.retry_after or 3600)},
+        )
+
+    def grade_response(
+        record: AttemptRecord, grade: AttemptGrade
+    ) -> ExamGradeResponse:
+        return ExamGradeResponse(
+            attempt_id=record.attempt_id,
+            paper_id=record.paper_id,
+            total=grade.total,
+            max_marks=grade.max_marks,
+            band=grade.band,
+            needs_review=grade.needs_review,
+            graded_at=grade.graded_at,
+            questions=list(grade.questions),
         )
 
     def record_usage(
@@ -663,6 +714,166 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             headers=headers,
             background=BackgroundTask(release_lease),
         )
+
+    @app.get("/v1/exams", response_model=list[ExamPaper])
+    def exams(
+        request: Request,
+        subject: str | None = None,
+        version: str | None = None,
+    ) -> list[ExamPaper]:
+        """Published paper descriptors; questions are sampled per attempt."""
+        store = request.app.state.runtime.exam_store
+        if store is None:
+            return []
+        subject = subject or app_settings.exam_subject
+        manifest = store.published_manifest(subject, version)
+        if manifest is None:
+            return []
+        mcq_count = min(app_settings.exam_mcq_count, manifest.mcq_count)
+        short_count = min(app_settings.exam_short_count, manifest.short_answer_count)
+        return [
+            ExamPaper(
+                paper_id=f"{manifest.subject}-{manifest.version}",
+                subject=manifest.subject,
+                version=manifest.version,
+                title=_SUBJECT_TITLES.get(manifest.subject, manifest.subject),
+                question_count=mcq_count + short_count,
+                mcq_count=mcq_count,
+                short_answer_count=short_count,
+                marks=mcq_count * MCQ_MARKS + short_count * SHORT_ANSWER_MARKS,
+                duration_minutes=app_settings.exam_duration_minutes,
+            )
+        ]
+
+    @app.post(
+        "/v1/exams/{paper_id}/attempts",
+        response_model=AttemptView,
+        status_code=201,
+    )
+    def start_attempt(
+        paper_id: str, request: Request
+    ) -> AttemptView | JSONResponse:
+        """Sample and persist one attempt; the response never contains the key."""
+        store = request.app.state.runtime.exam_store
+        if store is None:
+            raise HTTPException(status_code=503, detail="exam bank unavailable")
+        subject, version = _parse_paper_id(paper_id)
+        bank = store.bank(subject, version)
+        if bank is None:
+            raise HTTPException(status_code=404, detail="paper not found")
+        limiter: ExamAttemptLimiter = app.state.exam_limiter
+        decision = limiter.admit(request.state.session_id)
+        if not decision.allowed:
+            return exam_limit_response(decision)
+        try:
+            record = sample_attempt(
+                bank,
+                attempt_id=secrets.token_urlsafe(24),
+                paper_id=paper_id,
+                created_at=datetime.now(UTC)
+                .replace(microsecond=0)
+                .isoformat()
+                .replace("+00:00", "Z"),
+                mcq_count=app_settings.exam_mcq_count,
+                short_count=app_settings.exam_short_count,
+                rng=random.Random(secrets.randbits(64)),
+            )
+            store.create_attempt(record)
+        except ValueError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        return record.view()
+
+    @app.get("/v1/attempts/{attempt_id}", response_model=AttemptView)
+    def get_attempt(attempt_id: str, request: Request) -> AttemptView:
+        """The same persisted view on a reload; options are not reshuffled."""
+        store = request.app.state.runtime.exam_store
+        if store is None:
+            raise HTTPException(status_code=503, detail="exam bank unavailable")
+        record = store.attempt(attempt_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="attempt not found")
+        return record.view()
+
+    @app.post(
+        "/v1/attempts/{attempt_id}/grade",
+        response_model=ExamGradeResponse,
+    )
+    async def grade_attempt_endpoint(
+        attempt_id: str,
+        body: GradeAttemptRequest,
+        request: Request,
+    ) -> ExamGradeResponse:
+        """Score the attempt: deterministic MCQ and one short-answer judge call."""
+        runtime = request.app.state.runtime
+        store = runtime.exam_store
+        if store is None:
+            raise HTTPException(status_code=503, detail="exam bank unavailable")
+        record = store.attempt(attempt_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="attempt not found")
+        if record.grade is not None:
+            return grade_response(record, record.grade)
+        bank = store.bank(record.subject, record.bank_version)
+        if bank is None:
+            raise HTTPException(status_code=503, detail="paper unavailable")
+        judge = runtime.exam_judge
+        if judge is None:
+            raise HTTPException(status_code=503, detail="grading unavailable")
+        by_id = {question.item_id: question for question in record.questions}
+        answers: list[AttemptAnswer] = []
+        seen: set[str] = set()
+        for answer in body.answers:
+            if answer.item_id not in by_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="answer for an item outside the attempt",
+                )
+            if answer.item_id in seen:
+                raise HTTPException(status_code=400, detail="duplicate answer")
+            seen.add(answer.item_id)
+            question = by_id[answer.item_id]
+            if question.kind == "mcq":
+                if answer.option_id is None:
+                    raise HTTPException(
+                        status_code=400, detail="MCQ answers use option_id"
+                    )
+                served = {option.option_id for option in question.options}
+                if answer.option_id not in served:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="option id is not one of the served options",
+                    )
+                answers.append(
+                    AttemptAnswer(item_id=answer.item_id, option_id=answer.option_id)
+                )
+            else:
+                if answer.option_id is not None:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="short answers use answer_text",
+                    )
+                answers.append(
+                    AttemptAnswer(
+                        item_id=answer.item_id,
+                        answer_text=answer.answer_text or "",
+                    )
+                )
+        try:
+            grade = await grade_attempt(
+                bank,
+                list(record.item_ids),
+                answers,
+                llm=judge,
+                cache=runtime.exam_cache,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        except ProviderError as error:
+            raise HTTPException(
+                status_code=502, detail="model provider unavailable"
+            ) from error
+        store.save_grade(attempt_id, grade)
+        return grade_response(record, grade)
 
     return app
 

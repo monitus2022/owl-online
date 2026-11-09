@@ -14,7 +14,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
 | Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper and the curated concept-title/alias matcher; the DADA pack is published; pack wiring and Charms content remain on #128 |
-| Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator and SQLite import; the DADA bank 1.0.0 is published (#190) |
+| Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); the DADA bank 1.0.0 is published (#190) |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -46,7 +46,7 @@ Exam-bank and canon-index stages (canon-index rows are built; the rest is planne
 | Subject packs | `app/knowledge/` | subject taxonomy, material records, source refs, pack build and validation |
 | Exam bank | `app/exam/` | bank records, pack and corpus validation, duplicate and publication gates |
 | Exam build | `app/pipeline/exam/` | offline plan, retrieve, generate, validate, persist |
-| Exam store | `app/storage/` | SQLite banks and items imported from validated JSONL; paper and attempt repository follows #38 |
+| Exam store | `app/storage/` | SQLite banks, items, attempts and grades imported or persisted by `app/storage/exam_store.py` (#189/#193) |
 | Grading | `app/grading/` | built (#192): deterministic MCQ scoring, one-call short-answer LLM judge, deterministic totals and bands |
 
 ## Build vs managed
@@ -205,12 +205,12 @@ flowchart TD
 ## API surface
 
 The served contract is documented in `docs/api.md`: the current `/health`,
-`/ask`, `/ask/stream` and `/v1/subjects` routes, the SSE event schema, the
-error shapes, and the planned `/v1` surface for chat, persona, exams and
-grading. The split is by purpose, not by subject: a subject is request data,
+`/ask`, `/ask/stream`, `/v1/subjects` and exam serving routes, the SSE event
+schema, the error shapes, and the remaining planned `/v1` surface for chat and
+persona. The split is by purpose, not by subject: a subject is request data,
 chat intents stay internal, and the exam bank and grading are separate
-resources. The versioned aliases gate per-subject chat and the exam surface;
-the frontend already ships as its own static build.
+resources. The versioned aliases still gate per-subject chat; the frontend
+already ships as its own static build.
 
 ## Frontend surface
 
@@ -224,7 +224,7 @@ that do not exist yet:
 
 | Interface | Lives in | Today | Swap when |
 |---|---|---|---|
-| `ExamClient` | `web/src/api/exams.ts` | `MockExamClient` runs a demo bank and grades on the device, in the shape of the planned `/v1/exams` contract | #38/#42 add `HttpExamClient` |
+| `ExamClient` | `web/src/api/exams.ts` | `HttpExamClient` lists papers, starts and reloads an attempt, and submits it for server grading; the browser never sees the MCQ key before the grade response | device-local result records move server-side with #35 |
 | `ResultsStore` | `web/src/api/results.ts` | device-local localStorage records, labelled provisional | #35 moves history server-side |
 
 The static subject list decides which departments are open. The venue fetches
@@ -554,13 +554,14 @@ flowchart LR
   PACK --> LESSON[Lesson builder]
   CORP -. labelled off-pack fallback .-> LESSON
   EXAM --> DB[(Exam store)]
-  DB --> API[Static exam API]
+  DB --> API[Exam serving API]
 ```
 
 The DADA bank 1.0.0 is published under `data/exams/dada` with 25 MCQ and 25
 short-answer items. `docs/exams/dada-1.0.0.md` is the structure-only record and
 `docs/exams/dada-1.0.0.manifest.toml` holds the version and pins. The serving
-API is still planned (#193).
+API is built (#193): it samples a paper per attempt from the imported bank and
+serves it without a model call.
 
 A pack contains subjects, topics, concepts, materials and source refs. Every
 material points to a chunk id, book, chapter, quote, text hash and index hash.
@@ -590,9 +591,9 @@ film or secondary material.
 |---|---|---|
 | Pack build | batch job over the corpus | validated materials with source refs and pack version |
 | Exam build | batch job over the packs | validated questions, rubrics, evidence snapshots |
-| Exam store | SQLite in `/data` | bank items with versions and status; paper and attempt records follow #38 |
-| Exam serving | `GET /exams` and `GET /exams/{id}` | stored paper, no model call |
-| Attempt grading | submit endpoint | hybrid score and score band |
+| Exam store | SQLite in `/data` | banks, items, persisted attempts and grades |
+| Exam serving | `GET /v1/exams` and `POST /v1/exams/{paper_id}/attempts` | sampled stored paper and attempt view, no model call |
+| Attempt grading | `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one pinned judge call, then a deterministic band |
 
 The bank is authored as `data/exams/<subject>/bank.jsonl` plus `manifest.toml`,
 validated by `app/exam/bank.py`, and imported into `data/exams/exams.db` by
@@ -600,6 +601,32 @@ validated by `app/exam/bank.py`, and imported into `data/exams/exams.db` by
 evidence snapshot; the validator recomputes every hash against the corpus. MCQ
 items keep at least six options, while the serving view samples four per
 attempt. Short-answer items keep a golden answer and rubric for the judge.
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant A as API
+  participant S as ExamStore
+  participant J as Judge
+  C->>A: GET /v1/exams
+  A->>S: published manifest
+  A-->>C: paper descriptor
+  C->>A: POST /v1/exams/dada-1.0.0/attempts
+  A->>S: sample 6 MCQ + 4 short, persist four options and the key
+  A-->>C: attempt view, no key
+  C->>A: POST /v1/attempts/{id}/grade
+  A->>S: load the persisted attempt
+  A->>J: one call for all short answers
+  A->>S: save the grade
+  A-->>C: per-question marks, feedback and band
+```
+
+The attempt is persisted before the client sees it, so a reload returns the same
+options and a repeated grade returns the stored result without a second judge
+call. The server never puts `correct_option_id`, the golden answer, the rubric
+or evidence into the pre-submission view. The exam limiter caps attempts at
+three per day anonymous and five signed-in; it is separate from the chat
+limiter.
 
 The boundary matters because the two surfaces have different guarantees. Chat
 practice is disposable and formative. Exam-bank papers are validated, versioned
@@ -686,8 +713,10 @@ Chat is the variable-cost surface; exam content is mostly offline. The chat
 controls (#88) enforce per-session limits (10/min, 100/day, 2 concurrent), the same minute and
 concurrency limits per IP plus a 100/day IP cap, and a daily token budget. Over a limit the API returns 429
 with `Retry-After`; over the budget it returns 503 for chat only, so `/health`
-and future exam routes stay up. Counters live in the one API process, so a
-restart resets the windows; auth later moves them to a user id.
+and the exam routes stay up. Exam attempts use a separate per-session daily cap
+(3 anonymous, 5 signed-in), so a chat limit never consumes an exam attempt.
+Counters live in the one API process, so a restart resets the windows; auth
+later moves them to a user id.
 
 Corpus-only answers pass through an in-process exact cache keyed by prompt
 version, index text hash, retrieval settings, embedder and reranker config,
@@ -730,7 +759,7 @@ generate) for the per-call detail.
 | `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
 | `AttemptAnswer` / `AttemptGrade` / `QuestionGrade` / `CriterionGrade` | `app/grading/models.py` | pydantic | answer shape, per-question criteria and marks, per-attempt total and band |
 | `JudgeConfig` | `app/grading/models.py` | dataclass | pinned judge model, temperature, prompt version, provider and max tokens |
-| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash, published pack summaries, pack store and derived lesson selector |
+| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash, published pack summaries, pack store, derived lesson selector, exam store, exam judge and judge cache |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
 
@@ -769,8 +798,12 @@ Built bank types (#189):
 | `RubricCriterion` | `app/exam/bank.py` | criterion id, description and maximum marks |
 | `ShortAnswerKey` | `app/exam/bank.py` | golden answer, required points and rubric |
 | `EvidenceSnapshot` | `app/exam/bank.py` | chunk id plus excerpt text, book and chapter at generation time |
+| `AttemptQuestion` / `ServedOption` | `app/exam/attempts.py` | one persisted question; the MCQ options served plus the server-side correct option id |
+| `AttemptRecord` | `app/exam/attempts.py` | sampled attempt: paper id, bank version, questions, later grade |
+| `AttemptView` / `QuestionView` | `app/exam/attempts.py` | the pre-submission client payload; no key, golden answer, rubric or evidence |
+| `ExamStore` | `app/storage/exam_store.py` | SQLite banks, items, attempts and grades |
 
-Planned paper and attempt types, once #38 lands:
+Planned storage types, once the remaining #38 surface lands:
 
 | Type | Module | Purpose |
 |---|---|---|

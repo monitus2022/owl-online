@@ -51,9 +51,9 @@ page describes what comes next and why.
   built, and the wizard-hat identity. The venue reads `GET /v1/subjects` for
   the published pack and the live lesson/persona flags, and keeps the static
   status for open/soon; a statically open department with no pack stays on
-  corpus chat with a note (#172, PR #173). Frontend follow-ups are contract-gated: the
-  exam client swap needs #38/#42; server-side records need #35; starter prompts
-  are #162/#163.
+  corpus chat with a note (#172, PR #173). Frontend follow-ups are contract-gated:
+  the served exam client is wired (#193); server-side records need #35; starter
+  prompts are #162/#163.
 - The deterministic CI gate is merged; #74 and #75 follow. #107 is deferred.
 - The Lexicon canon index (#125-#128) is the feed for the B1 packs: an
   item/concept-to-chapter mapping harvested as structure only from
@@ -73,12 +73,13 @@ page describes what comes next and why.
   authoring review. #128 (pack wiring: concept seeding, reference and
   source-ref prefill, chapter-to-subject lesson table) remains for Charms and
   the extraction pipeline; the #87 pack schema and validator landed with PR #153.
-- The served exam paper (#193) follows; DADA packs and the DADA bank 1.0.0 are
+- The served exam paper (#193) is built; DADA packs and the DADA bank 1.0.0 are
   delivered, mixed-scope lesson answers are delivered (#177, PR #199), and the
   answer path is settled except the voice work (#176). The bank blueprint (#188)
   fixes a target of 25 MCQ and 25 short-answer items. The bank schema, validator
-  and SQLite import are in #189, the hybrid grader is built in #192, and the
-  bank eval and judge calibration are recorded in #191.
+  and SQLite import are in #189, the DADA bank 1.0.0 is published in #190, the
+  hybrid grader is built in #192, the bank eval and judge calibration are
+  recorded in #191, and served attempts are in #193.
 
 ## Product shape
 
@@ -250,8 +251,8 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 ## Phase B: Subject packs and exam bank
 
 Status: DADA packs delivered; the DADA bank 1.0.0 is published, the hybrid
-grader is built and the bank eval and judge calibration are recorded (#191);
-serving (#193) is next.
+grader is built, the bank eval and judge calibration are recorded (#191), and
+served attempts are built (#193).
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
 bank and hybrid grader on top of them.
@@ -436,7 +437,7 @@ B1 exit criteria:
 ### B2: Exam bank
 
 Status: bank 1.0.0 published (#190); hybrid grading built (#192); bank eval and
-judge calibration recorded (#191); serving next (#193).
+judge calibration recorded (#191); served attempts built (#193).
 
 A paper is 10 questions: 6 MCQ at 3 marks and 4 short answers at 8 marks, 50
 marks total. That is long enough to feel like a paper and short enough to finish
@@ -493,13 +494,13 @@ Tickets:
 |---|---|
 | #39 | Offline question generator and validator |
 | #41 | Hybrid grader: deterministic objective scoring plus LLM rubric judge |
-| #42 | Static exam endpoints and attempt submission |
+| #42 | Static exam endpoints and attempt submission (built in #193; per-user attempt history follows #35) |
 | #40 | Exam and grading evaluation |
 
 The DADA bank line is #187 (sub-issues #188-#193): 25 MCQ and 25 short-answer
 items, 50 in total. The blueprint is `docs/exams/dada-bank-blueprint.md`.
 
-Exit criteria:
+Exit criteria (met by #190-#193):
 
 - a validated 50-item bank is stored (25 MCQ and 25 short answer);
 - a paper is sampled per attempt without a model call;
