@@ -31,7 +31,8 @@ at `http://localhost:8000`, run the API alongside:
       uv run uvicorn app.main:app --reload
 
 The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` the DADA room
-sends `mode=lesson`, and with `OWL_PERSONA=true` the professor copy goes live.
+sends `mode=lesson`, and with `OWL_PERSONA=true` the home subject's professor
+copy goes live. Other open rooms keep rehearsal or neutral copy.
 Without the flags the venue falls back to corpus answers and rehearsal copy. The
 exam room uses the served bank at `/v1/exams`; it needs the imported
 `data/exams/exams.db` (`uv run python scripts/import_exam_bank.py --subject dada`

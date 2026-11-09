@@ -24,6 +24,7 @@ from app.grading import (
     judge_llm_from_bank,
     score_mcq,
 )
+from app.grading.judge import DADA_JUDGE_SYSTEM, DADA_RETRY_SYSTEM, JUDGE_SYSTEM
 from app.knowledge.materials import SourceRef
 
 QUOTE = "The sample lesson turns a feared shape into a comic one."
@@ -797,6 +798,15 @@ async def test_judge_prompt_version_must_match() -> None:
             [_answer("dada-short-001")],
             llm=ScriptedLlm("{}"),
         )
+
+
+def test_dada_v2_prompt_is_frozen() -> None:
+    assert DADA_JUDGE_SYSTEM.startswith(
+        "You are an exam judge for the O.W.L. Defence Against the Dark Arts bank."
+    )
+    assert "subject bank" not in DADA_JUDGE_SYSTEM
+    assert "Defence Against the Dark Arts" not in JUDGE_SYSTEM
+    assert DADA_RETRY_SYSTEM.startswith(DADA_JUDGE_SYSTEM)
 
 
 def test_neutral_judge_prompt_version_is_accepted() -> None:

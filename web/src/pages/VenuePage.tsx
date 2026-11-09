@@ -91,6 +91,7 @@ export function VenuePage() {
       : department.persona && personaSubject === subject.apiSubject
         ? "live"
         : "rehearsal";
+  const vacant = subject.professor === "Professor not yet appointed";
   const room: Subject = {
     ...subject,
     status: isOpen ? "open" : "soon",
@@ -150,7 +151,7 @@ export function VenuePage() {
           <h1>{room.name}</h1>
           <p className="venue-professor">
             {room.professor}
-            {room.personaState === "live" ? "" : " — voice in rehearsal"}
+            {room.personaState === "live" || vacant ? "" : " — voice in rehearsal"}
           </p>
         </div>
         <Crest crest={room.crest} className="venue-crest" />
@@ -174,7 +175,7 @@ export function VenuePage() {
             className={tab === entry.id ? "tab tab-on" : "tab"}
             onClick={() => setTab(entry.id)}
           >
-            {entry.label}
+            {entry.id === "chat" && vacant ? "Ask the department" : entry.label}
           </button>
         ))}
       </div>

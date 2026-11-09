@@ -53,13 +53,19 @@ Metrics: max Jaccard `0.6500` (pair `charms-short-008` / `charms-short-009`), ma
 | `charms-sound` | 3 | 2 |
 | `charms-utility` | 3 | 5 |
 
-The bank covers all 7 topics and all 49 pack concepts. It cites 44 of the 50
-materials; the six practice, classroom and examination-administration materials
-are intentionally not tested because the bank tests charm concepts only. The
-DADA blueprint's one-item-per-kind-per-material target would require 100 items
-for a 50-material pack, so this run skips that target and reports coverage
-descriptively. The concept cap (no more than two items of one kind per concept)
-still applies and passes.
+The bank covers all 7 topics and 43 of the 49 pack concepts. It cites 44 of the
+50 materials. The six concepts behind the professor, practice, classroom and
+examination-administration materials are intentionally excluded because the
+bank tests charm concepts only. The DADA blueprint's one-item-per-kind-per-
+material target would require 100 items for a 50-material pack, so this run
+skips that target and reports coverage descriptively. The concept cap (no more
+than two items of one kind per concept) still applies and passes.
+
+## Reproduce
+
+```text
+uv run python scripts/run_exam_eval.py --bank data/exams/charms --no-calibration --skip-coverage-targets --json data/exams/charms/candidates/exam_eval.json
+```
 
 ## Independent checks
 

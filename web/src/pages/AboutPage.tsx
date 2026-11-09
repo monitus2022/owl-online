@@ -147,13 +147,12 @@ export function AboutPage() {
             </tr>
             <tr>
               <td>The professor&rsquo;s voice</td>
-              <td className="truth-demo">In rehearsal</td>
+              <td className="truth-real">Live for DADA</td>
               <td>
-                Every chat affordance addresses the professor, but the
-                persona layer is a thin slice behind a flag that is off on
-                the served endpoint; the full voice still awaits the real
-                lore pack and the lore eval (#97). Today&rsquo;s replies
-                come from the grounded engine in a plain voice.
+                The DADA card is live behind the persona flag. The flag is
+                site-wide, but the home-subject field scopes the live voice to
+                DADA; Charms shows neutral revision-room copy until a professor
+                is appointed, and the other rooms keep rehearsal copy.
               </td>
             </tr>
             <tr>
