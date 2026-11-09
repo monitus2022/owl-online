@@ -269,8 +269,11 @@ and compiled at `config/lessons/` (2026-11-08). The DADA pilot pack is
 authored, reviewed and published: 25 materials, 21 concepts, 4 topics,
 version 1.0.0, fingerprint `e7139cbcc23eaa5c`, and `GET /v1/subjects`
 serves published packs. The pack validation record is
-`docs/packs/dada-1.0.0.md`. Remaining on #87: pack wiring and the Charms/multi-subject content passes
-(#128), and coverage maintenance. The canon-index coverage summary is
+`docs/packs/dada-1.0.0.md`. The Charms 0.1.0 draft is authored and validates
+with 43 materials, 42 concepts and 6 topics; it is pending the maintainer's
+prose review and is recorded at `docs/packs/charms-0.1.0-draft.md`. Remaining on
+#87: pack wiring and the Charms/multi-subject content passes (#128), and
+coverage maintenance. The canon-index coverage summary is
 `scripts/lexicon_report.py`; per-subject pack coverage remains part of #87.
 
 Lesson mode's stateless first slice (#166) answers from the pack behind
