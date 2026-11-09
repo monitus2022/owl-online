@@ -225,10 +225,12 @@ that do not exist yet:
 | `ExamClient` | `web/src/api/exams.ts` | `MockExamClient` runs a demo bank and grades on the device, in the shape of the planned `/v1/exams` contract | #38/#42 add `HttpExamClient` |
 | `ResultsStore` | `web/src/api/results.ts` | device-local localStorage records, labelled provisional | #35 moves history server-side |
 
-The voice rule lives in `web/src/data/subjects.ts`: while `OWL_PERSONA` is off
-at the served host the UI addresses the professor but claims no authorship;
-flipping that department's `personaState` is the single switch for the chat
-affordances. The `build` check of the `web` workflow runs the Pages build on
+The voice rule lives in `web/src/data/subjects.ts` for presentation metadata
+only. The venue fetches `GET /v1/subjects` and takes the live `persona` and
+`lesson` flags from it, so the UI addresses the professor only when the API says
+the voice is live, and the DADA room sends `mode=lesson` only when the API says
+the pack selector is loaded. The static file remains the fallback when the API
+is unreachable. The `build` check of the `web` workflow runs the Pages build on
 every pull request and push to main, and deploy-preview origins are covered by
 the API's CORS origin regex. `web/README.md` carries the component map and the
 honesty rules.

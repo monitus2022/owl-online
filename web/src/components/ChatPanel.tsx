@@ -17,6 +17,7 @@ interface Message {
   text: string;
   mode?: ChatMode;
   citations?: string[];
+  materials?: string[];
   abstained?: boolean;
   failed?: boolean;
 }
@@ -27,6 +28,7 @@ const MODE_LABELS: Record<ChatMode, string> = {
   feedback: "Feedback",
   meta: "Office note",
   personal: "Office note",
+  lesson: "Lesson",
 };
 
 // The server emits meta and personal only when OWL_PERSONA is on. The badge
@@ -40,15 +42,29 @@ function modeLabel(mode: ChatMode, personaState: PersonaState): string {
   return MODE_LABELS[mode];
 }
 
-export function ChatPanel({ subject }: { subject: Subject }) {
+function welcome(subject: Subject, lesson: boolean): string {
+  if (lesson) {
+    return subject.personaState === "live"
+      ? `Welcome to the ${subject.name} revision room. I teach from the department's reviewed notes; ask about the set topics, or say the word if you want to be tested.`
+      : `Welcome to the ${subject.name} revision room. Answers come from the department's reviewed notes, and questions outside them are refused honestly. The professor's voice is still in rehearsal.`;
+  }
+  return subject.personaState === "live"
+    ? `Welcome to the ${subject.name} revision room. Ask ${subject.professor} about the set texts, or say the word if you want to be tested.`
+    : "Welcome to the revision room. Ask the professor about the set texts — grounded answers cite the books, and nothing beyond them is guessed. The professor's voice is still in rehearsal.";
+}
+
+export function ChatPanel({
+  subject,
+  lesson,
+}: {
+  subject: Subject;
+  lesson: boolean;
+}) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
       role: "professor",
-      text:
-        subject.personaState === "live"
-          ? `Welcome to the ${subject.name} revision room. Ask ${subject.professor} about the set texts, or say the word if you want to be tested.`
-          : "Welcome to the revision room. Ask the professor about the set texts — grounded answers cite the books, and nothing beyond them is guessed. The professor's voice is still in rehearsal.",
+      text: "",
     },
   ]);
   const [question, setQuestion] = useState("");
@@ -77,7 +93,11 @@ export function ChatPanel({ subject }: { subject: Subject }) {
     ]);
 
     try {
-      for await (const streamEvent of askStream(text, subject.personaState)) {
+      for await (const streamEvent of askStream(
+        text,
+        subject.personaState,
+        lesson ? "lesson" : "auto",
+      )) {
         if (streamEvent.name === "mode") {
           const data = streamEvent.data as { mode: ChatMode };
           updateProfessor(professorId, (draft) => ({ ...draft, mode: data.mode }));
@@ -94,6 +114,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
             answer: string;
             citations: string[];
             lore_citations?: string[];
+            material_citations?: string[];
             abstained: boolean;
             mode?: ChatMode;
           };
@@ -104,6 +125,7 @@ export function ChatPanel({ subject }: { subject: Subject }) {
           updateProfessor(professorId, (draft) => ({
             ...draft,
             text: data.answer,
+            materials: data.material_citations ?? [],
             citations: chips,
             abstained: data.abstained,
             mode: data.mode ?? draft.mode,
@@ -138,20 +160,40 @@ export function ChatPanel({ subject }: { subject: Subject }) {
         {messages.map((message, index) => {
           const thinking =
             busy && index === messages.length - 1 && message.role === "professor";
+          // The first turn is the room greeting: derive it at render time so
+          // the API's persona/lesson flags, which arrive after mount, are
+          // reflected without rewriting transcript state.
+          const bodyText =
+            message.id === 0 ? welcome(subject, lesson) : message.text;
           const body = (
             <>
               {message.role === "professor" && message.mode && (
                 <span className="mode-badge">{modeLabel(message.mode, subject.personaState)}</span>
               )}
               <p className={message.failed ? "chat-text chat-failed" : "chat-text"}>
-                {message.text || (message.role === "professor" ? "…" : "")}
+                {bodyText || (message.role === "professor" ? "…" : "")}
               </p>
+              {message.materials && message.materials.length > 0 && (
+                <div className="citation-group">
+                  <span className="citation-label">Lesson notes</span>
+                  <ul className="citation-chips">
+                    {message.materials.map((material) => (
+                      <li key={material}>{material}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {message.citations && message.citations.length > 0 && (
-                <ul className="citation-chips">
-                  {message.citations.map((citation) => (
-                    <li key={citation}>{citation}</li>
-                  ))}
-                </ul>
+                <div className="citation-group">
+                  {message.materials && message.materials.length > 0 && (
+                    <span className="citation-label">Set texts</span>
+                  )}
+                  <ul className="citation-chips">
+                    {message.citations.map((citation) => (
+                      <li key={citation}>{citation}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
               {message.abstained && (
                 <p className="abstain-note">

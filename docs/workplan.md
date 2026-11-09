@@ -574,6 +574,7 @@ persists exam attempts and chat history.
 | #87 | Subject packs: DADA 1.0.0 published; extraction build and Charms content open | V3 - Product |
 | #128 | Lexicon canon index: pack wiring and seeding queues; DADA authored, Charms seeded, Charms content open | V3 - Product |
 | #166 | Lesson mode, first slice: pack-grounded answers with a derived material selector (flag off) | V3 - Product |
+| #168 | DADA venue defaults to pack-grounded lesson chat; `/v1/subjects` carries `lesson` and `persona` | V3 - Product |
 
 ### Next
 

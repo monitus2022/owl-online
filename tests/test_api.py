@@ -548,6 +548,8 @@ def test_subjects_lists_published_packs():
         response = client.get("/v1/subjects")
     assert response.status_code == 200
     body = response.json()
+    assert body["lesson"] is False
+    assert body["persona"] is False
     assert body["subjects"] == [
         {
             "subject": "dada",
@@ -568,7 +570,7 @@ def test_subjects_empty_without_packs():
     with _client() as client:
         response = client.get("/v1/subjects")
     assert response.status_code == 200
-    assert response.json() == {"subjects": []}
+    assert response.json() == {"subjects": [], "lesson": False, "persona": False}
 
 
 # Lesson mode: pack-grounded answers use an explicit mode, gated by settings.
@@ -734,3 +736,15 @@ def test_lesson_mode_abstains_when_no_material_matches():
     assert finals[0]["abstained"] is True
     assert finals[0]["material_citations"] == []
     assert finals[0]["citations"] == []
+
+
+def test_subjects_reports_lesson_and_persona_flags():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True, persona=True),
+        runtime=_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        body = client.get("/v1/subjects").json()
+    assert body["lesson"] is True
+    assert body["persona"] is True
+    assert body["subjects"] == []

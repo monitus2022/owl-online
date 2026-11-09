@@ -24,6 +24,8 @@ export type PersonaState = "live" | "rehearsal";
 
 export interface Subject {
   slug: string;
+  /** Canonical API subject key; differs from the URL slug for DADA. */
+  apiSubject: string;
   name: string;
   /** Short name for the crest plaque on the door. */
   plaque: string;
@@ -41,6 +43,7 @@ export interface Subject {
 export const SUBJECTS: Subject[] = [
   {
     slug: "defence-against-the-dark-arts",
+    apiSubject: "dada",
     name: "Defence Against the Dark Arts",
     plaque: "DADA",
     professor: "Professor Alistair Crane",
@@ -53,6 +56,7 @@ export const SUBJECTS: Subject[] = [
   },
   {
     slug: "potions",
+    apiSubject: "potions",
     name: "Potions",
     plaque: "POT",
     professor: "Department not yet open",
@@ -65,6 +69,7 @@ export const SUBJECTS: Subject[] = [
   },
   {
     slug: "transfiguration",
+    apiSubject: "transfiguration",
     name: "Transfiguration",
     plaque: "TRA",
     professor: "Department not yet open",
@@ -77,6 +82,7 @@ export const SUBJECTS: Subject[] = [
   },
   {
     slug: "charms",
+    apiSubject: "charms",
     name: "Charms",
     plaque: "CHA",
     professor: "Department not yet open",
@@ -89,6 +95,7 @@ export const SUBJECTS: Subject[] = [
   },
   {
     slug: "herbology",
+    apiSubject: "herbology",
     name: "Herbology",
     plaque: "HER",
     professor: "Department not yet open",

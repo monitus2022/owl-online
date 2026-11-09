@@ -9,8 +9,9 @@ the raw test page and is not part of this build.
 
 | Path | What it is |
 |---|---|
-| `src/data/subjects.ts` | The five departments: slug, professor, accent, crest, personaState, status. Stand-in for `GET /v1/subjects`. |
-| `src/api/chat.ts` | Live client for `POST /ask/stream` (SSE: mode/token/reset/final/error). |
+| `src/data/subjects.ts` | The five departments: URL slug, API subject key, professor, accent, crest, status. Presentation metadata only; availability, version, lesson and persona flags come from `GET /v1/subjects`. |
+| `src/api/subjects.ts` | Live client for `GET /v1/subjects`; the venue merges the response into the static presentation metadata. |
+| `src/api/chat.ts` | Live client for `POST /ask/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for the DADA venue when the API reports it. |
 | `src/api/exams.ts` | `ExamClient` interface mirroring the planned `/v1/exams` contract, plus `MockExamClient` with a demo DADA bank. |
 | `src/api/results.ts` | `ResultsStore` interface; the localStorage implementation is provisional until server-side attempt history exists. |
 | `src/pages/` | Front gate, about page, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |

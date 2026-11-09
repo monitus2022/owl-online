@@ -121,15 +121,13 @@ def meta_topic(question: str) -> str | None:
     return None
 
 
-def classify(
+def _auto_mode(
     question: str,
     *,
-    requested_mode: RequestedMode = "auto",
-    student_answer: str | None = None,
-    persona: bool = False,
+    student_answer: str | None,
+    persona: bool,
 ) -> Mode:
-    if requested_mode != "auto":
-        return requested_mode
+    """The intent without an explicit request override."""
     if student_answer and student_answer.strip():
         return "feedback"
     if _FEEDBACK_REQUEST.search(question):
@@ -151,6 +149,26 @@ def classify(
         if _PERSONAL.search(question):
             return "personal"
     return "answer"
+
+
+def classify(
+    question: str,
+    *,
+    requested_mode: RequestedMode = "auto",
+    student_answer: str | None = None,
+    persona: bool = False,
+) -> Mode:
+    auto = _auto_mode(
+        question, student_answer=student_answer, persona=persona
+    )
+    if requested_mode == "lesson":
+        # Lesson is a preference for the answer path, not an absolute route:
+        # persona, practice and feedback keep their normal handling, so a
+        # venue that defaults to lesson still greets and tests correctly.
+        return "lesson" if auto == "answer" else auto
+    if requested_mode != "auto":
+        return requested_mode
+    return auto
 
 
 def route(state: AgentState, *, persona: bool = False) -> dict[str, object]:

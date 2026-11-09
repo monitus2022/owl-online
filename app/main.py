@@ -323,7 +323,12 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     @app.get("/v1/subjects", response_model=SubjectsResponse)
     def subjects(request: Request) -> SubjectsResponse:
         """Published packs only; drafts stay invisible to the frontend."""
-        return SubjectsResponse(subjects=list(request.app.state.runtime.packs))
+        runtime = request.app.state.runtime
+        return SubjectsResponse(
+            subjects=list(runtime.packs),
+            lesson=app_settings.lesson_mode and runtime.lesson is not None,
+            persona=app_settings.persona,
+        )
 
     @app.get("/", response_class=HTMLResponse)
     def chat_page() -> HTMLResponse:
