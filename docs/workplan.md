@@ -71,7 +71,8 @@ page describes what comes next and why.
   sampled quotes was not recorded before that merge, so the criterion stays
   automated-met / human-pending and is carried into the #128 DADA and Charms
   authoring review. #128 (pack wiring: concept seeding, reference and
-  source-ref prefill, chapter-to-subject lesson table) remains for Charms and
+  source-ref prefill, chapter-to-subject lesson table) has the Charms draft
+  authored and pending review; pack wiring and the other subjects remain with
   the extraction pipeline; the #87 pack schema and validator landed with PR #153.
 - The served exam paper (#193) is built; DADA packs and the DADA bank 1.0.0 are
   delivered, mixed-scope lesson answers are delivered (#177, PR #199), and the
@@ -270,7 +271,7 @@ authored, reviewed and published: 25 materials, 21 concepts, 4 topics,
 version 1.0.0, fingerprint `e7139cbcc23eaa5c`, and `GET /v1/subjects`
 serves published packs. The pack validation record is
 `docs/packs/dada-1.0.0.md`. The Charms 0.1.0 draft is authored and validates
-with 43 materials, 42 concepts and 6 topics; it is pending the maintainer's
+with 50 materials, 49 concepts and 7 topics; it is pending the maintainer's
 prose review and is recorded at `docs/packs/charms-0.1.0-draft.md`. Remaining on
 #87: pack wiring and the Charms/multi-subject content passes (#128), and
 coverage maintenance. The canon-index coverage summary is
