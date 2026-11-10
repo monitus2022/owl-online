@@ -195,6 +195,23 @@ curl -s https://api.monitus.org/v1/subjects
 Expect the DADA summary with `lesson:true` and `persona:true` when the pack is
 present.
 
+### Rollout guard
+
+`.github/workflows/deploy-guard.yml` runs when the `deploy` workflow completes
+on `main`. It queries the run's jobs and fails unless a job named `deploy`
+concluded `success`. A build-only run is therefore a red `deploy-guard` check,
+not a green deploy with the old container still serving.
+
+On 2026-11-09 the deploy run for `2c4fbe5` (run 42671829253, attempts 1-3) and
+the `workflow_dispatch` run 42673727721 created only `build-and-push`; GitHub
+never created `deploy`. The image was in ECR, so the rollout was run manually
+over SSM and `https://api.monitus.org/` stayed live. Later pushes to `main`
+(`1c44f00`, `1f6c32d`, `b320e81`) created both jobs and succeeded, so the
+missing-job incident was transient rather than a workflow defect. The guard is
+the permanent check: if it fails, run the SSM rollout manually, record the run
+id and the manual rollout here or in the pull request, and investigate the
+Actions run before the next merge.
+
 The instance pulls the image with its own role
 (`AmazonEC2ContainerRegistryReadOnly`) and calls Bedrock with its own role, so
 no keys live on the host. The container binds `127.0.0.1:8000`; nginx terminates
