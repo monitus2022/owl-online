@@ -809,11 +809,6 @@ def test_dada_v2_prompt_is_frozen() -> None:
     assert DADA_RETRY_SYSTEM.startswith(DADA_JUDGE_SYSTEM)
 
 
-def test_neutral_judge_prompt_version_is_accepted() -> None:
-    bank = _bank(judge_prompt_version="owl-bank-judge-v3")
-    judge_llm_from_bank(bank)
-
-
 async def test_neutral_judge_prompt_is_subject_agnostic() -> None:
     bank = _bank(judge_prompt_version="owl-bank-judge-v3")
     llm = ScriptedLlm(_judge_json({"dada-short-001": (4, 4)}))
