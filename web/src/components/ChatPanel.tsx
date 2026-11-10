@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { askStream, ChatError } from "../api/chat";
 import type { ChatMode, LessonScope } from "../api/chat";
+import { startersFor } from "../data/subjects";
 import type { PersonaState, Subject } from "../data/subjects";
 import { Silhouette } from "./Silhouette";
 
@@ -106,9 +107,8 @@ export function ChatPanel({
     );
   }
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    const text = question.trim();
+  async function send(raw: string) {
+    const text = raw.trim();
     if (text === "" || busy || !ready) return;
     setQuestion("");
     setBusy(true);
@@ -186,6 +186,11 @@ export function ChatPanel({
     } finally {
       setBusy(false);
     }
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    await send(question);
   }
 
   return (
@@ -291,6 +296,21 @@ export function ChatPanel({
           );
         })}
       </ol>
+      {messages.length === 1 && !vacant && (
+        <div className="starter-chips" role="group" aria-label="Example questions">
+          {startersFor(subject).map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              className="starter-chip"
+              disabled={busy || !ready}
+              onClick={() => void send(prompt)}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      )}
       <form className="chat-form" onSubmit={submit}>
         <input
           value={question}

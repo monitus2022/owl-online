@@ -710,6 +710,34 @@ main {
   margin: 0.5rem 0 0;
 }
 
+.starter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 0.8rem;
+}
+
+.starter-chip {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.starter-chip:hover:not(:disabled),
+.starter-chip:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.starter-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .chat-form {
   display: flex;
   gap: 0.5rem;
