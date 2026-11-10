@@ -248,6 +248,22 @@ def test_contract_gates_route_closed_facts_and_clarify():
     )
     assert (
         classify(
+            "Did you go to the exam?",
+            requested_mode="lesson",
+            persona=True,
+        )
+        == "policy"
+    )
+    assert (
+        classify(
+            "Where did you train as an Auror?",
+            requested_mode="lesson",
+            persona=True,
+        )
+        == "meta"
+    )
+    assert (
+        classify(
             "what is included in DADA?", requested_mode="lesson", persona=True
         )
         == "clarify"

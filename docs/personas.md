@@ -104,7 +104,9 @@ the education template.
 
 The shared education template is "I studied at {study_place}, where I was a
 student during {youth_period}." `study_place` is Hogwarts and `youth_period` is
-the Battle of Hogwarts.
+the Battle of Hogwarts. `persona:subject_scope` is a reserved fact and template
+for a future scope join; the live DADA scope is `lore:dada-001`/`lore:dada.scope`,
+and the other cards use the scripted `persona:subject` reply.
 
 ## Shared spine
 

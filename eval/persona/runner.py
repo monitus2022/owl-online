@@ -377,11 +377,15 @@ async def _run_scenario(
         elif route == "fact":
             entries: list[str] = []
             for fact_id in decision.fact_ids:
-                if not fact_id.startswith("lore:") or stack.lore is None:
+                if fact_id.startswith("persona:"):
+                    text = stack.persona.fact_response(fact_id[8:])
+                    if text:
+                        entries.append(text)
                     continue
-                entry = stack.lore.get(fact_id[5:])
-                if entry is not None:
-                    entries.append(entry.body.strip())
+                if fact_id.startswith("lore:") and stack.lore is not None:
+                    entry = stack.lore.get(fact_id[5:])
+                    if entry is not None:
+                        entries.append(entry.body.strip())
             if entries:
                 answer = "\n\n".join(entries)
             else:

@@ -206,3 +206,36 @@ async def test_abstention_on_a_citation_expected_scenario_is_a_miss():
     assert report.candidate.citation_retention == 0.0
     assert report.candidate.persona_pass_rate == 0.0
     assert report.candidate.expected_judged == 0
+
+
+@pytest.mark.asyncio
+async def test_fact_route_resolves_a_persona_fact():
+    pack = _pack()
+    selector = await LessonSelector.build(
+        PackStore(packs={"dada": pack}, fingerprints={"dada": "fp"}),
+        KeywordEmbedder(),
+    )
+    scenarios = [
+        PersonaScenario(
+            scenario_id="s5",
+            question="Where did you study when you are young?",
+            route="fact",
+            category="professor_education",
+            citation="none",
+        )
+    ]
+    stack = PersonaEvalStack(
+        persona=PERSONA,
+        selector=selector,
+        retriever=EmptyRetriever(),
+        llm_for_sample=lambda sample: VoiceLlm(),
+        judge=VoiceJudge(),
+        pack=pack,
+        chunks_by_id={CHUNK_ID: _chunk()},
+    )
+    report = await run_persona_eval(scenarios, stack, samples=1)
+    sample = report.candidate.samples[0]
+    assert sample.route == "fact"
+    assert sample.abstained is False
+    assert "Hogwarts" in sample.answer
+    assert "Battle of Hogwarts" in sample.answer

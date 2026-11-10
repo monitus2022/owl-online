@@ -9,11 +9,11 @@ the prompts and the meta nodes read.
 from __future__ import annotations
 
 import random
-import re
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from string import Formatter
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PERSONA_PATH = REPO_ROOT / "config" / "persona.toml"
@@ -202,7 +202,16 @@ def _persona_from_data(data: dict[str, object]) -> Persona:
         str(key): text(templates, str(key), "templates") for key in templates
     }
     for key, template in template_values.items():
-        fields = set(re.findall(r"\{([a-z0-9_.]+)\}", template))
+        try:
+            fields = {
+                field_name.split(".", 1)[0].split("[", 1)[0]
+                for _, field_name, _, _ in Formatter().parse(template)
+                if field_name is not None
+            }
+        except ValueError as error:
+            raise ValueError(
+                f"persona template {key!r} is malformed: {error}"
+            ) from error
         missing = fields - set(fact_values)
         if missing:
             raise ValueError(

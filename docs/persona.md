@@ -52,6 +52,9 @@ fact path and keeps the other meta topics scripted.
 `study_place` is Hogwarts and `youth_period` is the Battle of Hogwarts on every
 card. The lore scope fact is `lore:dada-001`; `lore:dada.scope` is its stable
 alias, and the fact node resolves either id to the same reviewed entry.
+`persona:subject_scope` is a reserved fact and template for a future scope
+join; the live DADA scope is `lore:dada-001`/`lore:dada.scope`, and the other
+cards use the scripted `persona:subject` reply.
 
 ## Register
 
@@ -96,9 +99,8 @@ questions is planned in #184 and is not in the router today.
 
 The #216 target is the contract and authority model in
 `docs/routing-contracts.md`. Policy, closed facts and teaching are separate
-contracts; when #219 lands, a router miss will be unclassified rather than a
-lesson question, and the lesson path will be opt-in. Today the deterministic
-router still promotes a miss to lesson.
+contracts. #219 landed the gates: a router miss is unclassified and abstains
+rather than entering the lesson path, and lesson is opt-in on a teaching term.
 
 ## Variant bank
 

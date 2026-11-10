@@ -1293,6 +1293,12 @@ def test_lesson_mode_routes_closed_facts_and_clarify():
                 "examination",
                 "policy:script:assessment.dada",
             ),
+            (
+                "Did you go to the exam?",
+                "policy",
+                "examination",
+                "policy:script:assessment.dada",
+            ),
             ("What is the capital of France?", "abstain", "will not guess", None),
         ):
             with client.stream(
