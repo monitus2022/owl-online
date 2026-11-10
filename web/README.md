@@ -54,10 +54,10 @@ auth (#35). Each venue requests its own subject, so the Charms room serves
 
 ## Status and honesty rules
 
-- Two subjects are real: Defence Against the Dark Arts has the live professor
-  card, and Charms has a published pack and exam bank with the professor post
-  still vacant. The other three doors lead to "classroom being furnished" — no
-  invented professors or content.
+- Two subjects are real rooms: Defence Against the Dark Arts and Charms have
+  published packs, exam banks and live professor cards. Potions, Transfiguration
+  and Herbology also have published packs and live cards, but no exam bank yet;
+  their doors stay closed until the bank exists.
 - The static subject list decides which departments are open. The persona flag
   (`OWL_PERSONA`) and lesson flag (`OWL_LESSON_MODE`) are read from
   `GET /v1/subjects`; a statically open department with no pack stays on corpus

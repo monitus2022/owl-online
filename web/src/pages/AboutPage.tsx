@@ -29,10 +29,11 @@ export function AboutPage() {
         <p>
           Defence Against the Dark Arts is taught by Professor Alistair
           Crane, who fought at the Battle as a student and served about ten
-          years in the Auror Office before co-founding the school. Charms is
-          open with a published pack and exam bank while its professor post
-          stays vacant; the other three departments open as their classrooms
-          are furnished and their professors take the post.
+          years in the Auror Office before co-founding the school. The other
+          four departments have their own reviewed professor cards. Charms is
+          open with a published pack and exam bank; Potions, Transfiguration
+          and Herbology have published packs but stay closed until their exam
+          banks exist.
         </p>
         <p>
           The academy, its founders and its professors are original
@@ -151,19 +152,20 @@ export function AboutPage() {
               <td>
                 Each of the five departments has a reviewed professor card.
                 DADA and Charms are open; Potions, Transfiguration and
-                Herbology stay furnished but soon until their subject packs
-                pass validation. The API reports the live card and lesson
-                subjects per room.
+                Herbology have published packs but stay soon until their exam
+                banks exist. The API reports the live card and lesson subjects
+                per room.
               </td>
             </tr>
             <tr>
               <td>Three closed departments</td>
               <td className="truth-not">Not built yet</td>
               <td>
-                Potions, Transfiguration and Herbology open only when their
-                subject packs pass validation; before that the door stays soon
-                and no content is invented. Charms is open with a published
-                pack and exam bank, and its professor card is live.
+                Potions, Transfiguration and Herbology have published subject
+                packs, but their doors stay soon until their exam banks exist;
+                before that no content is invented. Charms is open with a
+                published pack and exam bank, and all five professor cards are
+                live.
               </td>
             </tr>
           </tbody>

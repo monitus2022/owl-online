@@ -69,13 +69,13 @@ page describes what comes next and why.
   disagreement queue recorded; see the Resolver results section). The
   resolver's spot-check is machine-checked and recorded; the human read of the
   sampled quotes was not recorded before that merge, so the criterion stays
-  automated-met / human-pending and is carried into the #128 DADA and Charms
-  authoring review. #128 (pack wiring: concept seeding, reference and
-  source-ref prefill, chapter-to-subject lesson table) has the Charms 1.0.0
-  pack published; pack wiring and the other subjects remain with the
-  extraction pipeline; the #87 pack schema and validator landed with PR #153.
-- The served exam paper (#193) is built; DADA and Charms packs and both banks
-  1.0.0 are delivered, mixed-scope lesson answers are delivered (#177, PR #199),
+  automated-met / human-pending and carried into the five pack authoring
+  reviews. #128 (pack wiring: concept seeding, reference and source-ref
+  prefill, chapter-to-subject lesson table) has all five O.W.L. packs published
+  at 1.0.0; reference prefill and queue reporting remain; the #87 pack schema
+  and validator landed with PR #153.
+- The served exam paper (#193) is built; all five packs and the DADA/Charms
+  banks 1.0.0 are delivered, mixed-scope lesson answers are delivered (#177, PR #199),
   and the answer path is settled, and the lesson voice is delivered (#176). The bank blueprint (#188)
   fixes a target of 25 MCQ and 25 short-answer items. The bank schema, validator
   and SQLite import are in #189, the DADA bank 1.0.0 is published in #190, the
@@ -251,9 +251,9 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
 ## Phase B: Subject packs and exam bank
 
-Status: DADA and Charms packs delivered; both banks 1.0.0 are published, the hybrid
-grader is built, the DADA bank eval and judge calibration are recorded (#191), and
-served attempts are built (#193).
+Status: all five O.W.L. packs delivered; the DADA and Charms banks 1.0.0 are
+published, the hybrid grader is built, the DADA bank eval and judge calibration
+are recorded (#191), and served attempts are built (#193).
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
 bank and hybrid grader on top of them.
@@ -265,16 +265,16 @@ Status: schema and validation merged on #87 (PR #153:
 23 tests): the 12-subject taxonomy, Topic/Concept/Material/SourceRef/
 ReferenceLink records, the `data/subjects/<subject>/` layout, the
 deterministic corpus-join validator and the rebuild fingerprint. The
-chapter-to-subject lesson table for the DADA and Charms pilots is approved
-and compiled at `config/lessons/` (2026-11-08). The DADA pilot pack is
+chapter-to-subject lesson tables for the five O.W.L. pilots are approved and
+compiled at `config/lessons/` (2026-11-08; extended 2026-11-10). The DADA pilot pack is
 authored, reviewed and published: 25 materials, 21 concepts, 4 topics,
 version 1.0.0, fingerprint `e7139cbcc23eaa5c`, and `GET /v1/subjects`
 serves published packs. The pack validation record is
-`docs/packs/dada-1.0.0.md`. The Charms pack is authored, reviewed and published
-at 1.0.0: 50 materials, 49 concepts, 7 topics, fingerprint
-`12e1ee2fe077a004`; the record is `docs/packs/charms-1.0.0.md`. Remaining on
-#87: pack wiring and the remaining subject content passes (#128), and coverage
-maintenance. The canon-index coverage summary is `scripts/lexicon_report.py`;
+`docs/packs/dada-1.0.0.md`. The Charms pack is published at 1.0.0: 50 materials, 49 concepts, 7 topics,
+fingerprint `12e1ee2fe077a004`; the record is `docs/packs/charms-1.0.0.md`.
+Potions (34/34/6), Transfiguration (34/29/6) and Herbology (33/31/6) are also
+published at 1.0.0 with records under `docs/packs/`. Remaining on #87:
+reference prefill, queue reporting and coverage maintenance (#128). The canon-index coverage summary is `scripts/lexicon_report.py`;
 per-subject pack coverage remains part of #87.
 
 Lesson mode's stateless first slice (#166) answers from the pack behind
@@ -611,7 +611,7 @@ persists exam attempts and chat history.
 | #30 | Conversation memory and follow-up rewrite | V3 - Product |
 | #44 | Progress tracking and weak topics | V3 - Product |
 | #35 | Auth, per-user history and limits | V3 - Product |
-| #128 | Pack wiring, Charms materials and coverage maintenance | V3 - Product |
+| #128 | Pack wiring, reference prefill and coverage maintenance | V3 - Product |
 | #179 | E2E, accessibility and load checks | V3 - Product |
 | #180 | Privacy, retention and data handling | V3 - Product |
 | #181 | Versioned `/v1` chat and OpenAPI | V3 - Product |
@@ -661,8 +661,8 @@ persists exam attempts and chat history.
 - An active ticket needs a `Done when` and a verification step.
 
 The active work is #216 (#217-#220); #30 follows. The remaining Now items are #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
-(#127 closed); #128 carries the pack wiring and the remaining subject content. The
-#87 schema, validator and the DADA and Charms 1.0.0 packs are delivered. #16, #120, #170, #172,
+(#127 closed); #128 carries reference prefill and coverage maintenance. The #87
+schema, validator and all five 1.0.0 packs are delivered. #16, #120, #170, #172,
 #174 and #127 are closed. #107 is deferred and likely superseded by the
 per-book path. The courtesy note to the Lexicon is deferred to project
 completion by maintainer decision.

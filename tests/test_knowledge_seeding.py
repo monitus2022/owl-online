@@ -101,7 +101,7 @@ def test_lesson_table_rejects_duplicate_and_bad_basis(tmp_path: Path):
 
 def test_committed_lesson_tables_are_consistent():
     root = Path(__file__).resolve().parents[1] / "config" / "lessons"
-    for name in ("dada", "charms"):
+    for name in ("dada", "charms", "potions", "transfiguration", "herbology"):
         rows = load_lesson_table(root / f"{name}.jsonl")
         keys = [(row.book, row.chapter) for row in rows]
         assert len(keys) == len(set(keys)), name
