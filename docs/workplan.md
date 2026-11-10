@@ -43,6 +43,13 @@ page describes what comes next and why.
   answers, then generative-within-the-record bounded by the lore pack - with
   tier 3 (invented non-canon flavor) explicitly out of scope; tiers and the
   five-professor card model are recorded in `docs/persona.md`.
+- The contract/authority epic #216 is delivered: #217's design note and
+  207-item frozen fixture, #219's policy/closed-fact/teaching gates, #222's
+  five-card registry and subject fixtures, #218's typed citations and
+  cross-type checker, #220's fact IDs/templates and #184's no-classifier
+  decision. A router miss now abstains instead of entering the lesson path;
+  the residual is one lesson-gap item in 207, and the five-subject fixture is
+  55/55.
 - The academy frontend surface has shipped: `web/` deployed on Cloudflare
   Pages - the gate, the cloister with five identified venues, live chat
   against `/ask/stream` with citation chips and in-world limit copy, the
@@ -114,8 +121,8 @@ bands are deterministic.
 
 ## Phase A: V2 chat foundation
 
-Status: delivered, except the deploy hardening in #74 and #75. The
-deterministic CI gate is in place.
+Status: delivered, except the deploy hardening in #74 and #75. #214 added
+the post-deploy guard; the deterministic CI gate is in place.
 
 | Ticket | Scope |
 |---|---|
@@ -441,8 +448,10 @@ B1 exit criteria:
 
 ### B2: Exam bank
 
-Status: bank 1.0.0 published (#190); hybrid grading built (#192); bank eval and
-judge calibration recorded (#191); served attempts built (#193).
+Status: all five subject banks 1.0.0 published (#190, #213, #228, #230,
+#231); hybrid grading built (#192); the DADA bank eval and judge calibration
+are recorded (#191) and the other four banks have published validation
+records; served attempts built (#193).
 
 A paper is 10 questions: 6 MCQ at 3 marks and 4 short answers at 8 marks, 50
 marks total. That is long enough to feel like a paper and short enough to finish
@@ -594,16 +603,9 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #178 | Exam bank one-paper vertical slice (tracker for #38/#39/#40/#41/#42) | V3 - Product |
-| #187 | DADA bank: 25 MCQ + 25 short answer, 50 items total (#188-#193) | V3 - Product |
-| #213 | Charms bank: 25 MCQ + 25 short answer, 50 items total | V3 - Product |
-| #206 | Session-scoped attempt history without accounts | V3 - Product |
-| #38/#39/#40/#41/#42 | Exam model, generator, evaluation, grader and endpoints | V3 - Product |
-| #162/#163 | Starter prompts and routing contract | V3 - Product |
+| #162/#163 | Starter prompts and the routing contract test | V3 - Product |
 | #19/#33 | Cost and latency instrumentation and a minimal dashboard | V3 - Product |
-| #182 | Persona name/background routing with fuzzy spellings | V3 - Product |
-| #216 | Contract and authority routing (#217-#220, #222; #184 is the residual) | V3 - Product |
-| #222 | Multi-subject persona registry and policy for all five departments | V3 - Product |
+| #128 | Pack wiring: reference prefill and coverage maintenance | V3 - Product |
 
 ### Next - complete the loop
 
@@ -612,11 +614,9 @@ persists exam attempts and chat history.
 | #30 | Conversation memory and follow-up rewrite | V3 - Product |
 | #44 | Progress tracking and weak topics | V3 - Product |
 | #35 | Auth, per-user history and limits | V3 - Product |
-| #128 | Pack wiring, reference prefill and coverage maintenance | V3 - Product |
 | #179 | E2E, accessibility and load checks | V3 - Product |
 | #180 | Privacy, retention and data handling | V3 - Product |
 | #181 | Versioned `/v1` chat and OpenAPI | V3 - Product |
-| #184 | Residual measurement and classifier decision under #216 | V3 - Product |
 
 ### Later - hardening
 
@@ -651,7 +651,12 @@ persists exam attempts and chat history.
 | Frontend surfaces | #132, #134, #135, #136, #137, #141, #143, #145, #157 |
 | Lesson mode and persona | #120, #166, #168, #176, #177 (PR #199; the #97 thin slice is delivered, #97 stays open for the remaining persona work) |
 | Venue fallback | #172 (PR #173) |
-| Deploy hardening | #170, #174 (PR #175) |
+| Deploy hardening | #170, #174 (PR #175), #214 (deploy guard) |
+| Contract and authority routing | #216, #217, #218, #219, #220, #222, #184 |
+| Subject banks | #190, #213, #228, #230, #231 |
+| Attempt history | #206 |
+| Docs refresh | #185 |
+| Open trackers (work delivered, ticket open) | #178, #187, #38-#42, #182 |
 
 ## Backlog policy
 
@@ -661,12 +666,14 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The active work is #216 (#217-#220); #30 follows. The remaining Now items are #162/#163, #19/#33 and #182. On the pack line: the canon index is harvested (#125, #126) and resolved
-(#127 closed); #128 carries reference prefill and coverage maintenance. The #87
-schema, validator and all five 1.0.0 packs are delivered. #16, #120, #170, #172,
-#174 and #127 are closed. #107 is deferred and likely superseded by the
-per-book path. The courtesy note to the Lexicon is deferred to project
-completion by maintainer decision.
+The #216 epic is delivered; the active work is #162/#163, #19/#33 and #128.
+#30 follows. The remaining Next items are #179/#180/#181/#35/#44. On the pack
+line, the canon index is harvested (#125, #126) and resolved (#127 closed);
+#128 carries reference prefill and coverage maintenance. The #87 schema,
+validator and all five 1.0.0 packs are delivered. #16, #120, #170, #172, #174
+and #127 are closed. #107 is deferred and likely superseded by the per-book
+path. The courtesy note to the Lexicon is deferred to project completion by
+maintainer decision.
 
 ## Decisions
 
