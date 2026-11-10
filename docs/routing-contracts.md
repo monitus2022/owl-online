@@ -237,25 +237,46 @@ Add a residual classifier only if all of these hold on the untouched holdout:
 
 #184 carries the residual measurement and classifier decision.
 
-## Mapping to the current code
+## Decision (2026-11-10)
 
-| Current | Target |
+The deterministic layer leaves one residual on the 207-item DADA fixture and
+zero on the 55-item five-subject fixture. The one residual is `abs-019`, the
+hex-versus-jinx distinction: the teaching terms match the pack but no material
+entails the distinction, and the lesson node abstains at runtime. That is a
+lesson-gap, not a paraphrase residual, and a classifier cannot fix it.
+
+The residual is not material: 1 item in 207, with zero policy leaks, authority
+bleed, false abstain and fact mismatch. No classifier is added. The fixture and
+the two measurements stay as the regression guard. Revisit only if a new
+fixture slice produces a material paraphrase residual after normalization and
+slot cues, or if a policy or authority miss appears. If a classifier is then
+proposed, the #184 gate still applies:
+
+- false-meta rate on book questions is zero or within a stated tiny band;
+- meta recall improves beyond the noise band;
+- p95 latency and cost per routed question stay within the stated budget;
+- book answer accuracy, faithfulness and abstention do not move;
+- a run record documents the fixture and the shadow comparison.
+
+## Current state against the target
+
+| Target | State |
 |---|---|
-| `app/agent/router.py` `classify()` promotes a miss to `lesson` under `mode=lesson` | Policy, closed-fact and teaching gates; miss clarifies or abstains |
-| `meta` topics and regex cues | Closed-fact gate over a normalized lexicon and slots |
-| `app/knowledge/lore.py` `_SETTING_CUE` regex cue | Lexicon plus relation slots; no full-utterance matching |
-| `ask_lesson()` accepts material/book citations | Lesson citations only, and only after the teaching gate |
-| `AskResult` has three untyped citation lists | Typed citation authority and a cross-type checker |
-| Persona card has no fact IDs | Stable `persona:` fact IDs and templates |
+| Policy, closed-fact and teaching gates; a miss clarifies or abstains | Implemented in #219 |
+| Closed-fact gate over a normalized lexicon and relation slots | Partial: regex cue lists plus stable fact IDs and templates; not yet a normalized lexicon and slot gate |
+| Lexicon plus slots, no full-utterance matching | Partial: the router still uses phrase cues such as `_EDUCATION`; the fact IDs and templates are the stable layer |
+| Lesson citations only after the teaching gate | Implemented in #219 and #218 |
+| Typed citation authority and a cross-type checker | Implemented in #218 |
+| Stable `persona:` fact IDs and templates | Implemented in #220 |
 
 ## Migration order
 
-1. #217: this note and the frozen fixture.
-2. #222: the multi-subject persona registry and policy for all five departments.
-3. #219: the three gates and the unclassified default, parameterized by the registry.
-4. #218: typed citations and the authority checker.
-5. #220: persona and lore fact IDs, plus templates for the five cards.
-6. #184: residual measurement, then the classifier decision.
+1. #217: this note and the frozen fixture. Done.
+2. #222: the multi-subject persona registry and policy for all five departments. Done.
+3. #219: the three gates and the unclassified default, parameterized by the registry. Done.
+4. #218: typed citations and the authority checker. Done.
+5. #220: persona and lore fact IDs, plus templates for the five cards. Done.
+6. #184: residual measurement, then the classifier decision. Done: no classifier.
 
 ## Non-goals
 
