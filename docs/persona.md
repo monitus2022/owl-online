@@ -201,7 +201,10 @@ the response.
 
 The conformance fixture is `eval/persona/fixtures/conformance.jsonl`. It is
 separate from the factual gold set: 30 scenarios across in-pack, in-pack
-gap, mixed, off-pack, meta, personal, off-topic and adversarial prompts. Deterministic
+gap, mixed, off-pack, meta, personal, off-topic and adversarial prompts.
+`eval/persona/fixtures/subjects.jsonl` covers the same card-only routes for the
+five subjects (#222); `eval/persona/test_charms_conformance.py` is the Charms
+lesson case. Deterministic
 checks run before the judge: citations resolve, source refs and hashes resolve,
 abstention is the in-world line, no exam disclosure, no private knowledge, no
 advice outside the role, no slang, emoji or deadlines, and the length budget.

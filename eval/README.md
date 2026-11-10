@@ -517,10 +517,16 @@ table in `docs/runs/README.md`.
 ## Persona conformance (#176)
 
 `eval/persona/` measures the lesson and persona surfaces separately from the
-factual gold set. The fixture is 30 scenarios across in-pack, in-pack gap,
+factual gold set. The DADA fixture is 30 scenarios across in-pack, in-pack gap,
 mixed, off-pack, meta, personal, off-topic and adversarial prompts. Each scenario records the
 expected route, accepted scopes, citation requirement, boundary and rubric
 anchors. Questions are original; no corpus or pack prose is stored.
+
+`eval/persona/fixtures/subjects.jsonl` is the five-card companion (#222):
+identity, subject definition, professor background, scope and exam refusal for
+each subject. `eval/persona/test_subject_cards.py` runs those card-only routes
+against the registry. `eval/persona/test_charms_conformance.py` is the non-DADA
+lesson conformance case.
 
 ```text
 uv run python scripts/run_persona_eval.py
@@ -567,5 +573,16 @@ uv run python scripts/measure_routing.py
 
 It prints the expected-vs-actual contract matrix and exits non-zero on a policy
 leak, authority bleed, false abstain, fact mismatch or an abstain item routed
-away from abstain (except the known hex-versus-jinx residual). The design note is
-`docs/routing-contracts.md`.
+away from abstain (except the known hex-versus-jinx residual).
+
+`eval/routing/fixtures/subjects.jsonl` is the five-card companion (#222): 11
+items per subject across policy, persona, lore, lesson, abstain and clarify,
+with one held-out policy paraphrase per subject. Its SHA-256 is pinned in
+`test_subjects.py`. The per-subject measurement loads the published pack for
+each subject and reports the same gate:
+
+```text
+uv run python scripts/measure_subject_routing.py
+```
+
+The design note is `docs/routing-contracts.md`.

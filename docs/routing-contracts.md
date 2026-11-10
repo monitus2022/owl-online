@@ -137,11 +137,19 @@ a fact ID in shadow eval.
 ## Measurement
 
 The policy and closed-fact gates are subject-parameterized through the persona
-registry (#222). The fixture is DADA-first and extends per subject. It is
-`eval/routing/fixtures/contracts.jsonl`, frozen before cue tuning; the SHA-256 is pinned in `eval/routing/test_fixtures.py`. It has 207
-items across policy, persona, lore, lesson, abstain and clarify, with 14
-held-out policy, persona, lesson, abstain and clarify items that are not for cue
-tuning. Policy is the largest stratum (51 of 207).
+registry (#222). The DADA fixture is
+`eval/routing/fixtures/contracts.jsonl`, frozen before cue tuning; the SHA-256 is
+pinned in `eval/routing/test_fixtures.py`. It has 207 items across policy,
+persona, lore, lesson, abstain and clarify, with 14 held-out policy, persona,
+lesson, abstain and clarify items that are not for cue tuning. Policy is the
+largest stratum (51 of 207).
+
+The five-card companion is `eval/routing/fixtures/subjects.jsonl`: 11 items per
+subject (55 total), one held-out policy paraphrase per subject, and a required
+`What is included in <Subject>?` clarify item. Its SHA-256 is pinned in
+`eval/routing/test_subjects.py`. `scripts/measure_subject_routing.py` loads the
+published pack for each subject, computes the teaching terms, and reports the
+same matrix and gate per subject.
 
 Each item records:
 
