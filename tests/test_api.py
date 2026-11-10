@@ -8,7 +8,7 @@ import time
 from fastapi.testclient import TestClient
 
 from app.agent import build_graph
-from app.agent.persona import PERSONA
+from app.agent.persona import PERSONA, PERSONAS
 from app.api.runtime import Runtime
 from app.config import Settings
 from app.knowledge.materials import Material, SourceRef
@@ -629,9 +629,11 @@ def test_subjects_empty_without_packs():
         "subjects": [],
         "lesson": False,
         "lesson_subject": "",
+        "lesson_subjects": [],
         "lesson_fallback": True,
         "persona": False,
         "persona_subject": "",
+        "persona_subjects": [],
     }
 
 
@@ -676,6 +678,21 @@ class _LessonLlm(_Llm):
             "[mat:dada-test-material].",
         ):
             yield piece
+
+
+class _CaptureLessonLlm(_LessonLlm):
+    def __init__(self) -> None:
+        self.systems: list[str] = []
+
+    async def stream(self, system: str, prompt: str, *, context=None):
+        self.systems.append(system)
+        async for piece in super().stream(system, prompt, context=context):
+            yield piece
+
+
+class _MultiLessonSelector(_LessonSelector):
+    def subjects(self):
+        return ("dada", "charms")
 
 
 def _lesson_runtime() -> Runtime:
@@ -850,7 +867,7 @@ def test_lesson_mode_falls_back_to_corpus_when_no_material_matches():
     assert "not in the department's notes" in finals[0]["answer"]
 
 
-def test_persona_is_scoped_to_the_home_subject():
+def test_persona_uses_the_request_subject_card():
     llm = _CaptureStreamLlm()
     app = create_app(
         app_settings=Settings(persona=True, persona_subject="dada"),
@@ -867,6 +884,7 @@ def test_persona_is_scoped_to_the_home_subject():
         charms_modes = [
             data["mode"] for name, data in charms_events if name == "mode"
         ]
+        charms_finals = [data for name, data in charms_events if name == "final"]
         charms_systems = list(llm.systems)
 
         with client.stream(
@@ -879,9 +897,10 @@ def test_persona_is_scoped_to_the_home_subject():
         dada_modes = [data["mode"] for name, data in dada_events if name == "mode"]
         dada_finals = [data for name, data in dada_events if name == "final"]
 
-    assert charms_modes[-1] == "answer"
+    assert charms_modes[-1] == "meta"
     assert dada_modes[-1] == "meta"
     assert all("Professor Crane" not in system for system in charms_systems)
+    assert "Raman" in charms_finals[0]["answer"]
     assert "Crane" in dada_finals[0]["answer"]
 
 
@@ -959,6 +978,40 @@ def _persona_lesson_runtime() -> Runtime:
     )
 
 
+def test_lesson_mode_uses_the_request_subject_card():
+    selector = _MultiLessonSelector()
+    llm = _CaptureLessonLlm()
+    graph = build_graph(
+        _Retriever(),
+        llm,
+        lesson=selector,
+        lesson_top_k=3,
+        personas=PERSONAS,
+        default_subject="dada",
+    )
+    app = create_app(
+        app_settings=Settings(lesson_mode=True, persona=True),
+        runtime=Runtime(
+            retriever=_Retriever(), llm=llm, agent=graph, lesson=selector
+        ),
+    )
+    with TestClient(app) as client:
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={
+                "question": "How does Rowan trim the wick?",
+                "subject": "charms",
+                "mode": "lesson",
+            },
+        ) as response:
+            body = "".join(response.iter_text())
+    assert any("Professor Raman" in system for system in llm.systems)
+    assert not any("Professor Crane" in system for system in llm.systems)
+    finals = [data for name, data in _parse_sse(body) if name == "final"]
+    assert finals and finals[0]["material_citations"] == ["dada-test-material"]
+
+
 def test_lesson_mode_still_routes_meta_and_practice():
     app = create_app(
         app_settings=Settings(lesson_mode=True, persona=True),
@@ -1007,3 +1060,22 @@ def test_lesson_mode_routes_subject_definition_to_meta():
             assert tokens == []
     assert app.state.limiter.tokens_used == 0
     assert len(app.state.cache) == 0
+
+
+def test_ask_rejects_an_unknown_subject():
+    with _client() as client:
+        response = client.post(
+            "/ask", json={"question": "Who are you?", "subject": "astronomy"}
+        )
+    assert response.status_code == 422
+    assert response.json()["detail"] == "unknown subject"
+
+
+def test_stream_rejects_an_unknown_subject():
+    with _client() as client:
+        response = client.post(
+            "/ask/stream",
+            json={"question": "Who are you?", "subject": "astronomy"},
+        )
+    assert response.status_code == 422
+    assert response.json()["detail"] == "unknown subject"

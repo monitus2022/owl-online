@@ -3,6 +3,7 @@
 Router: answer | practice | feedback | meta | personal | lesson.
 """
 
+from collections.abc import Mapping
 from functools import partial
 
 from langgraph.graph import END, START, StateGraph
@@ -13,7 +14,7 @@ from app.agent.nodes.feedback import feedback_node
 from app.agent.nodes.lesson import lesson_node
 from app.agent.nodes.persona import meta_node, personal_node
 from app.agent.nodes.practice import practice_node
-from app.agent.persona import PERSONA, Persona
+from app.agent.persona import Persona
 from app.agent.router import route
 from app.agent.state import AgentState
 from app.knowledge import LoreStore
@@ -33,6 +34,8 @@ def build_graph(
     max_retries: int = DEFAULT_MAX_RETRIES,
     multi_book: bool = False,
     persona: Persona | None = None,
+    personas: Mapping[str, Persona] | None = None,
+    default_subject: str = "dada",
     lore: LoreStore | None = None,
     lore_subject: str = "dada",
     small_llm: Llm | None = None,
@@ -43,8 +46,11 @@ def build_graph(
     lesson_fallback: bool = True,
 ) -> CompiledStateGraph:
     """Build the stateless per-request graph; no checkpointer in D4."""
+    if personas is None and persona is not None:
+        personas = {default_subject: persona}
+    persona_enabled = personas is not None
     graph = StateGraph(AgentState)
-    graph.add_node("router", partial(route, persona=persona is not None))
+    graph.add_node("router", partial(route, persona=persona_enabled))
 
     # Only the answer path verifies and retries; practice and feedback stay
     # single-pass and ephemeral.
@@ -59,15 +65,32 @@ def build_graph(
             max_retries=max_retries,
             multi_book=multi_book,
             persona=persona,
+            personas=personas,
+            default_subject=default_subject,
             lore=lore,
             lore_subject=lore_subject,
         ),
     )
     graph.add_edge("answer", END)
 
-    active_persona = persona or PERSONA
-    graph.add_node("meta", partial(meta_node, persona=active_persona))
-    graph.add_node("personal", partial(personal_node, persona=active_persona))
+    graph.add_node(
+        "meta",
+        partial(
+            meta_node,
+            persona=persona,
+            personas=personas,
+            default_subject=default_subject,
+        ),
+    )
+    graph.add_node(
+        "personal",
+        partial(
+            personal_node,
+            persona=persona,
+            personas=personas,
+            default_subject=default_subject,
+        ),
+    )
     graph.add_edge("meta", END)
     graph.add_edge("personal", END)
 
@@ -109,6 +132,8 @@ def build_graph(
                 min_score=lesson_min_score,
                 max_retries=max_retries,
                 persona=persona,
+                personas=personas,
+                default_subject=default_subject,
                 fallback=lesson_fallback,
             ),
         )

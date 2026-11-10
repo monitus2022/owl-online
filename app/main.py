@@ -24,7 +24,7 @@ from sse_starlette.sse import EventSourceResponse
 from starlette.background import BackgroundTask
 
 from app.agent import build_graph
-from app.agent.persona import PERSONA
+from app.agent.persona import PERSONAS
 from app.agent.router import classify
 from app.api.cache import AnswerCache, cache_key
 from app.api.limits import ChatLimiter, Decision, ExamAttemptLimiter
@@ -138,7 +138,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     built.llm,
                     max_retries=app_settings.retry_budget,
                     multi_book=app_settings.multi_book,
-                    persona=PERSONA if app_settings.persona else None,
+                    personas=PERSONAS if app_settings.persona else None,
+                    default_subject=app_settings.persona_subject,
                     lore=built.lore,
                     lore_subject=app_settings.lore_subject,
                     small_llm=built.small_llm,
@@ -232,17 +233,20 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     def get_llm(request: Request) -> Llm:
         return request.app.state.runtime.llm
 
-    def cache_scope(runtime: Runtime, model: str, persona_enabled: bool) -> str:
+    def cache_scope(
+        runtime: Runtime, model: str, persona_enabled: bool, subject: str
+    ) -> str:
         """Everything besides the question that can change a cached answer."""
+        card = PERSONAS.get(subject)
         persona_scope = (
-            hashlib.sha256(PERSONA.answer_suffix().encode("utf-8")).hexdigest()[:8]
-            if persona_enabled
+            hashlib.sha256(card.answer_suffix().encode("utf-8")).hexdigest()[:8]
+            if persona_enabled and card is not None
             else "off"
         )
         lesson_scope = (
             f"{runtime.pack_store.scope()}|{app_settings.lesson_top_k}|"
             f"{app_settings.lesson_min_score}|{app_settings.lesson_fallback}|"
-            f"{app_settings.lore_subject}"
+            f"{subject}"
             if app_settings.lesson_mode and runtime.pack_store is not None
             else "off"
         )
@@ -263,7 +267,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 lesson_scope,
                 runtime.lore.version() if runtime.lore is not None else "none",
                 LORE_SELECTION_VERSION,
-                app_settings.lore_subject,
+                subject,
                 model,
             ]
         )
@@ -332,15 +336,20 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         result: AskResult,
         latency_ms: float,
         student: str = "",
+        subject: str = "",
     ) -> None:
         limiter: ChatLimiter = app.state.limiter
         # A scripted meta or personal reply makes no model call; it must not
         # charge the daily budget as if it did.
         scripted = result.model_calls == 0 and result.attempts == 0
         attempts = 0 if scripted else max(1, result.model_calls or result.attempts)
+        card = PERSONAS.get(subject or app_settings.persona_subject)
         persona_chars = (
-            len(PERSONA.answer_suffix())
-            if app_settings.persona and intent == "answer" and not app_settings.multi_book
+            len(card.answer_suffix())
+            if app_settings.persona
+            and card is not None
+            and intent == "answer"
+            and not app_settings.multi_book
             else 0
         )
         per_draft = (
@@ -390,13 +399,22 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         """Published packs only; drafts stay invisible to the frontend."""
         runtime = request.app.state.runtime
         lesson = lesson_available(app_settings, runtime)
+        lesson_subjects = (
+            sorted(runtime.lesson.subjects())
+            if app_settings.lesson_mode and runtime.lesson is not None
+            else []
+        )
         return SubjectsResponse(
             subjects=list(runtime.packs),
             lesson=lesson,
             lesson_subject=app_settings.lore_subject if lesson else "",
+            lesson_subjects=lesson_subjects,
             lesson_fallback=app_settings.lesson_fallback,
             persona=app_settings.persona,
             persona_subject=app_settings.persona_subject if app_settings.persona else "",
+            persona_subjects=(
+                sorted(PERSONAS) if app_settings.persona else []
+            ),
         )
 
     @app.get("/")
@@ -415,10 +433,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         }
 
     def persona_enabled_for(subject: str) -> bool:
-        """Only the persona's home subject gets the live card."""
+        """Every registered subject gets its own live card."""
         return app_settings.persona and (
             subject or app_settings.persona_subject
-        ) == app_settings.persona_subject
+        ) in PERSONAS
 
     @app.post("/ask", response_model=AskResponse)
     async def ask_endpoint(
@@ -431,9 +449,15 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         limiter: ChatLimiter = app.state.limiter
         runtime = request.app.state.runtime
         model = getattr(llm, "name", "?")
-        persona_enabled = persona_enabled_for(body.subject)
+        subject = body.subject or app_settings.persona_subject
+        if body.subject and body.subject not in PERSONAS:
+            raise HTTPException(status_code=422, detail="unknown subject")
+        persona_enabled = persona_enabled_for(subject)
+        persona = PERSONAS.get(subject) if persona_enabled else None
         key = cache_key(
-            body.question, cache_scope(runtime, model, persona_enabled), model
+            body.question,
+            cache_scope(runtime, model, persona_enabled, subject),
+            model,
         )
         cached = app.state.cache.get(key)
         decision = limiter.admit(
@@ -460,6 +484,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     question=body.question,
                     result=cached,
                     latency_ms=0.0,
+                    subject=subject,
                 )
                 return AskResponse(
                     answer=cached.answer,
@@ -478,15 +503,15 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         max_retries=app_settings.retry_budget,
                         multi_book=app_settings.multi_book,
                         persona_suffix=(
-                            PERSONA.answer_suffix() if persona_enabled else None
+                            persona.answer_suffix() if persona is not None else None
                         ),
                         lore=runtime.lore,
-                        subject=app_settings.lore_subject,
+                        subject=subject,
                         on_stage=mark,
                     )
-                    if persona_enabled and result.abstained:
+                    if persona is not None and result.abstained:
                         result = replace(
-                            result, answer=PERSONA.abstain_response()
+                            result, answer=persona.abstain_response()
                         )
             except TimeoutError:
                 request_id = get_request_id()
@@ -515,6 +540,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 question=body.question,
                 result=result,
                 latency_ms=(time.perf_counter() - start) * 1000,
+                subject=subject,
             )
             return AskResponse(
                 answer=result.answer,
@@ -538,13 +564,18 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         agent = runtime.agent
         if agent is None:
             raise RuntimeError("agent graph was not built")
-        if body.mode == "lesson" and not lesson_available(app_settings, runtime):
+        subject = body.subject or app_settings.persona_subject
+        if body.subject and body.subject not in PERSONAS:
+            raise HTTPException(status_code=422, detail="unknown subject")
+        if body.mode == "lesson" and not lesson_available(
+            app_settings, runtime, subject
+        ):
             raise HTTPException(status_code=400, detail="lesson mode is not enabled")
         session = request.state.session_id
         limiter: ChatLimiter = app.state.limiter
         llm = runtime.llm
         model = getattr(llm, "name", "?")
-        persona_enabled = persona_enabled_for(body.subject)
+        persona_enabled = persona_enabled_for(subject)
         intent = classify(
             body.question,
             requested_mode=body.mode,
@@ -556,7 +587,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         key = (
             cache_key(
                 body.question,
-                cache_scope(runtime, model, persona_enabled),
+                cache_scope(runtime, model, persona_enabled, subject),
                 model,
             )
             if intent == "answer"
@@ -572,6 +603,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             "question": body.question,
             "requested_mode": body.mode,
             "student_answer": body.student_answer,
+            "subject": subject,
             "persona_enabled": persona_enabled,
             "top_k": DEFAULT_TOP_K,
         }
@@ -604,6 +636,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         question=body.question,
                         result=cached,
                         latency_ms=0.0,
+                        subject=subject,
                     )
                     if cached.abstained:
                         yield {"event": "reset", "data": json.dumps({})}
@@ -711,6 +744,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 result=result,
                 latency_ms=(time.perf_counter() - start) * 1000,
                 student=body.student_answer or "",
+                subject=subject,
             )
             if final.get("abstained"):
                 yield {"event": "reset", "data": json.dumps({})}
