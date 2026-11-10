@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import random
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -234,3 +235,16 @@ def for_subject(subject: str) -> Persona:
         return PERSONAS[subject]
     except KeyError as error:
         raise KeyError(f"no persona card for subject {subject!r}") from error
+
+
+def active_persona(
+    subject: str | None,
+    *,
+    enabled: bool,
+    personas: Mapping[str, Persona] | None,
+    default_subject: str,
+) -> Persona | None:
+    """The card for one request, or None when the persona is off."""
+    if not enabled or personas is None:
+        return None
+    return personas.get(subject or default_subject)

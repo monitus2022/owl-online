@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from langgraph.graph.state import CompiledStateGraph
 
 from app.agent import build_graph
-from app.agent.persona import PERSONA
+from app.agent.persona import PERSONAS
 from app.config import Settings
 from app.exam.bank import ExamBank
 from app.grading import JudgeCache, default_judge_cache, judge_llm_from_bank
@@ -55,16 +55,19 @@ class Runtime:
             self.exam_store.close()
 
 
-def lesson_available(settings: Settings, runtime: Runtime) -> bool:
+def lesson_available(
+    settings: Settings, runtime: Runtime, subject: str | None = None
+) -> bool:
     """One definition for the payload flag and the request gate.
 
     Lesson is available only when the feature is on, a selector exists, and the
-    configured subject is one the selector can actually serve.
+    requested subject is one the selector can actually serve.
     """
+    target = subject or settings.persona_subject
     return (
         settings.lesson_mode
         and runtime.lesson is not None
-        and settings.lore_subject in runtime.lesson.subjects()
+        and target in runtime.lesson.subjects()
     )
 
 
@@ -176,12 +179,11 @@ async def build_runtime(settings: Settings) -> Runtime:
             llm,
             max_retries=settings.retry_budget,
             multi_book=settings.multi_book,
-            persona=PERSONA if settings.persona else None,
+            personas=PERSONAS if settings.persona else None,
+            default_subject=settings.persona_subject,
             lore=lore,
-            lore_subject=settings.lore_subject,
             small_llm=small_llm,
             lesson=lesson,
-            lesson_subject=settings.lore_subject,
             lesson_top_k=settings.lesson_top_k,
             lesson_min_score=settings.lesson_min_score,
             lesson_fallback=settings.lesson_fallback,

@@ -62,9 +62,11 @@ class SubjectsResponse(BaseModel):
     subjects: list[PackSummary]
     lesson: bool = False
     lesson_subject: str = ""
+    lesson_subjects: list[str] = Field(default_factory=list)
     lesson_fallback: bool = True
     persona: bool = False
     persona_subject: str = ""
+    persona_subjects: list[str] = Field(default_factory=list)
 
 
 class ExamPaper(BaseModel):

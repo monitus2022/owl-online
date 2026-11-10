@@ -30,9 +30,10 @@ at `http://localhost:8000`, run the API alongside:
     OWL_PROVIDER=openrouter OWL_LESSON_MODE=true OWL_PERSONA=true \
       uv run uvicorn app.main:app --reload
 
-The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` the DADA room
-sends `mode=lesson`, and with `OWL_PERSONA=true` the home subject's professor
-copy goes live. Other open rooms keep rehearsal or neutral copy.
+The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` each open room
+whose subject is in `lesson_subjects` sends `mode=lesson`, and with
+`OWL_PERSONA=true` each subject in `persona_subjects` uses its own professor
+copy. A room outside those lists keeps rehearsal or neutral copy.
 Without the flags the venue falls back to corpus answers and rehearsal copy. The
 exam room uses the served bank at `/v1/exams`; it needs the imported
 `data/exams/exams.db` (`uv run python scripts/import_exam_bank.py --subject dada`

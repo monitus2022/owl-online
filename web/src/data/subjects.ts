@@ -9,8 +9,8 @@
 export type SubjectStatus = "open" | "soon";
 
 // One silhouette per professor, drawn in components/Silhouette.tsx. The
-// variants are bust shapes only — an unnamed department gets a shape but no
-// invented identity; the status page is what keeps it honest.
+// variants are bust shapes only; the professor names come from the reviewed
+// persona cards and the status page keeps the open/soon decision honest.
 export type ProfessorVariant = "crane" | "witch-hat" | "flask" | "wide-hat" | "scarf";
 
 // Department emblems drawn in components/Crest.tsx. The motifs are objects
@@ -30,7 +30,7 @@ export interface Subject {
   name: string;
   /** Short name for the crest plaque on the door. */
   plaque: string;
-  /** The department's professor, once one exists in the persona layer. */
+  /** The department's professor, from the reviewed persona card. */
   professor: string;
   /** Accent colour for the venue theme. Keep the five distinguishable. */
   accent: string;
@@ -51,7 +51,7 @@ export const SUBJECTS: Subject[] = [
     accent: "#7b93ff",
     professorVariant: "crane",
     crest: "shield",
-    personaState: "rehearsal",
+    personaState: "live",
     status: "open",
     blurb: "Counter-jinxes, dark creatures and defensive theory.",
   },
@@ -60,11 +60,11 @@ export const SUBJECTS: Subject[] = [
     apiSubject: "potions",
     name: "Potions",
     plaque: "POT",
-    professor: "Department not yet open",
+    professor: "Professor Edith Vale",
     accent: "#3fc9b0",
     professorVariant: "flask",
     crest: "flask",
-    personaState: "rehearsal",
+    personaState: "live",
     status: "soon",
     blurb: "Brewing, antidotes and the standard cautions.",
   },
@@ -73,11 +73,11 @@ export const SUBJECTS: Subject[] = [
     apiSubject: "transfiguration",
     name: "Transfiguration",
     plaque: "TRA",
-    professor: "Department not yet open",
+    professor: "Professor Marcus Hale",
     accent: "#b58cff",
     professorVariant: "witch-hat",
     crest: "butterfly",
-    personaState: "rehearsal",
+    personaState: "live",
     status: "soon",
     blurb: "Switches, anomalies and the laws of Gamp.",
   },
@@ -86,11 +86,11 @@ export const SUBJECTS: Subject[] = [
     apiSubject: "charms",
     name: "Charms",
     plaque: "CHA",
-    professor: "Professor not yet appointed",
+    professor: "Professor Priya Raman",
     accent: "#e8c46a",
     professorVariant: "wide-hat",
     crest: "star",
-    personaState: "rehearsal",
+    personaState: "live",
     status: "open",
     blurb: "Everyday charms and precise wandwork.",
   },
@@ -99,11 +99,11 @@ export const SUBJECTS: Subject[] = [
     apiSubject: "herbology",
     name: "Herbology",
     plaque: "HER",
-    professor: "Department not yet open",
+    professor: "Professor Nell Ashby",
     accent: "#7ed06a",
     professorVariant: "scarf",
     crest: "sprout",
-    personaState: "rehearsal",
+    personaState: "live",
     status: "soon",
     blurb: "Magical plants and greenhouse practice.",
   },

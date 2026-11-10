@@ -147,12 +147,13 @@ export function AboutPage() {
             </tr>
             <tr>
               <td>The professor&rsquo;s voice</td>
-              <td className="truth-real">Live for DADA</td>
+              <td className="truth-real">Live for the five cards</td>
               <td>
-                The DADA card is live behind the persona flag. The flag is
-                site-wide, but the home-subject field scopes the live voice to
-                DADA; Charms shows neutral revision-room copy until a professor
-                is appointed, and the other rooms keep rehearsal copy.
+                Each of the five departments has a reviewed professor card.
+                DADA and Charms are open; Potions, Transfiguration and
+                Herbology stay furnished but soon until their subject packs
+                pass validation. The API reports the live card and lesson
+                subjects per room.
               </td>
             </tr>
             <tr>
@@ -160,10 +161,9 @@ export function AboutPage() {
               <td className="truth-not">Not built yet</td>
               <td>
                 Potions, Transfiguration and Herbology open only when their
-                subject packs pass validation; before that a closed door shows
-                no invented professor and no content. Charms is open with a
-                published pack and exam bank, but its professor post is still
-                vacant.
+                subject packs pass validation; before that the door stays soon
+                and no content is invented. Charms is open with a published
+                pack and exam bank, and its professor card is live.
               </td>
             </tr>
           </tbody>

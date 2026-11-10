@@ -6,7 +6,7 @@ are listed below. The academy frontend has already split into its own static
 build (`web/`, served on Cloudflare Pages) and calls the chat routes and the
 served exam bank, relying on the CORS origin regex and the session cookie. The
 remaining versioned aliases are listed below. The chat request already carries
-an optional subject so the persona card can be scoped to its home department.
+an optional subject so the request uses that department's persona card.
 
 Base URL: the deployment origin, for example `https://api.monitus.org`.
 
@@ -16,7 +16,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 |---|---|---|
 | `GET` | `/health` | liveness; returns `{"status": "ok"}` |
 | `GET` | `/` | JSON service descriptor; the API host does not serve a chat page |
-| `GET` | `/v1/subjects` | published subject packs plus the `lesson`, `lesson_subject`, `lesson_fallback` and `persona` flags |
+| `GET` | `/v1/subjects` | published subject packs plus the `lesson`, `lesson_subjects`, `lesson_fallback`, `persona` and `persona_subjects` flags |
 | `POST` | `/ask` | one-shot grounded answer |
 | `POST` | `/ask/stream` | chat over server-sent events |
 | `GET` | `/v1/exams` | published paper descriptors, filtered by subject and version |
@@ -54,9 +54,10 @@ Request:
 ```
 
 `question` is trimmed, must be 1 to 1000 characters, and must not be blank.
-`subject` is the department key; empty means `OWL_PERSONA_SUBJECT`. The live
-persona card applies only when the subject matches that home subject, so a
-Charms request is answered without the DADA persona.
+`subject` is the department key; empty means `OWL_PERSONA_SUBJECT`. The
+registered card for that subject is active, so a Charms request uses Professor
+Raman and a DADA request uses Professor Crane. An off-taxonomy key is a `422`;
+a valid department without a card answers persona-off.
 
 Response `200`:
 
@@ -91,12 +92,14 @@ Request:
 }
 ```
 
-`subject` follows the same rule as `/ask`: the persona card is active only for
-its home subject, and omitted means `OWL_PERSONA_SUBJECT`. `mode` is `auto`, `answer`, `practice`, `feedback` or `lesson`. `student_answer`
+`subject` follows the same rule as `/ask`: the registered card for that subject
+is active, and omitted means `OWL_PERSONA_SUBJECT`. An unknown subject is a
+`422`. `mode` is `auto`, `answer`, `practice`, `feedback` or `lesson`. `student_answer`
 is at most 6000 characters and is only valid with `auto` or `feedback`. When the
 persona is on, the server may also route to `meta` or `personal`; those are not
 accepted as request modes. `lesson` is explicit only, never inferred, and is
-rejected with `400` unless `OWL_LESSON_MODE` is on and a published pack loaded.
+rejected with `400` unless `OWL_LESSON_MODE` is on and the request subject has a
+published pack loaded.
 It is a preference for the answer path, not an absolute route: practice,
 feedback, meta and personal keep their normal handling, so a venue that defaults
 to lesson still greets and tests correctly.
@@ -138,8 +141,8 @@ book chunk ids those materials resolve to through their `source_refs`. A mixed o
 off-pack answer also cites the retrieved set-text chunks; `off_pack` has empty
 `material_citations`. The selector is
 derived at startup by embedding the material texts in memory; no second index is
-built or stored. The subject is `OWL_LORE_SUBJECT` until the request `subject`
-field ships. Lesson answers are never cached.
+built or stored. `subject` is the request field; omitted means
+`OWL_PERSONA_SUBJECT`. Lesson answers are never cached.
 
 The embedding selector's best-match cosine must clear `OWL_LESSON_MIN_SCORE`
 (default 0.58, calibrated for the local `qwen3-embedding:0.6b`: related
@@ -196,22 +199,27 @@ Response `200`:
   ],
   "lesson": true,
   "lesson_subject": "dada",
+  "lesson_subjects": ["charms", "dada"],
   "lesson_fallback": true,
   "persona": true,
-  "persona_subject": "dada"
+  "persona_subject": "dada",
+  "persona_subjects": ["charms", "dada", "herbology", "potions", "transfiguration"]
 }
 ```
 
 `lesson` is true only when lesson mode is enabled, a selector loaded, and the
-configured subject (`OWL_LORE_SUBJECT`) is among the selector's subjects.
+default API subject (`OWL_PERSONA_SUBJECT`) is among the selector's subjects.
 `lesson_subject` names that subject when `lesson` is true, so the frontend can
-scope the mode to the right venue. `lesson_fallback` mirrors
+scope the mode to the right venue. `lesson_subjects` lists every subject with a
+loaded pack, so a venue can ask whether its own lesson mode is live.
+`lesson_fallback` mirrors
 `OWL_LESSON_FALLBACK`, so the room copy can say whether outside-the-notes
 questions are answered from the set texts or refused. `persona` mirrors
 `OWL_PERSONA`, so the frontend can stop hardcoding whether the professor's voice
-is live. `persona_subject` names the subject that persona belongs to
-(`OWL_PERSONA_SUBJECT`) when `persona` is true; a room for another subject shows
-the rehearsal copy instead of claiming a live professor.
+is live. `persona_subject` names the default subject (`OWL_PERSONA_SUBJECT`) when
+`persona` is true. `persona_subjects` lists every registered card; a room for a
+subject in that list uses its own professor, and a room outside it shows the
+rehearsal copy instead of claiming a live professor.
 
 ### Exam serving
 

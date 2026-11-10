@@ -1,10 +1,11 @@
 """Answer node: the existing grounded ask() path, with token streaming."""
 
+from collections.abc import Mapping
 from dataclasses import replace
 
 from langgraph.config import get_stream_writer
 
-from app.agent.persona import Persona
+from app.agent.persona import Persona, active_persona
 from app.agent.state import AgentState
 from app.knowledge import LoreStore
 from app.pipeline.generate import DEFAULT_MAX_RETRIES, ask
@@ -21,6 +22,8 @@ async def answer_node(
     max_retries: int = DEFAULT_MAX_RETRIES,
     multi_book: bool = False,
     persona: Persona | None = None,
+    personas: Mapping[str, Persona] | None = None,
+    default_subject: str | None = None,
     lore: LoreStore | None = None,
     lore_subject: str = "dada",
 ) -> dict[str, object]:
@@ -32,7 +35,16 @@ async def answer_node(
     def reset() -> None:
         writer({"type": "reset", "reason": "retry"})
 
-    active_persona = persona if state.get("persona_enabled", True) else None
+    subject = state.get("subject") or default_subject or lore_subject
+    cards = personas
+    if cards is None and persona is not None:
+        cards = {default_subject or subject: persona}
+    active = active_persona(
+        subject,
+        enabled=state.get("persona_enabled", True),
+        personas=cards,
+        default_subject=subject,
+    )
     result = await ask(
         state["question"],
         retriever=retriever,
@@ -44,14 +56,14 @@ async def answer_node(
         max_retries=max_retries,
         multi_book=multi_book,
         persona_suffix=(
-            active_persona.answer_suffix() if active_persona is not None else None
+            active.answer_suffix() if active is not None else None
         ),
         lore=lore,
-        subject=lore_subject,
+        subject=subject,
     )
-    if result.abstained and active_persona is not None:
+    if result.abstained and active is not None:
         # Keep the abstention contract; only the user-facing line changes.
-        result = replace(result, answer=active_persona.abstain_response())
+        result = replace(result, answer=active.abstain_response())
     return {
         "chunks": result.chunks,
         "answer": result.answer,
