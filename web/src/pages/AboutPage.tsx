@@ -30,10 +30,8 @@ export function AboutPage() {
           Defence Against the Dark Arts is taught by Professor Alistair
           Crane, who fought at the Battle as a student and served about ten
           years in the Auror Office before co-founding the school. The other
-          four departments have their own reviewed professor cards. Charms is
-          open with a published pack and exam bank; Potions and Transfiguration
-          are also open. Herbology has a published pack but stays closed until
-          its exam bank exists.
+          four departments have their own reviewed professor cards. All five
+          departments are now open with published packs and exam banks.
         </p>
         <p>
           The academy, its founders and its professors are original
@@ -151,20 +149,17 @@ export function AboutPage() {
               <td className="truth-real">Live for the five cards</td>
               <td>
                 Each of the five departments has a reviewed professor card.
-                DADA, Charms, Potions and Transfiguration are open;
-                Herbology has a published pack but stays soon until its exam
-                bank exists. The API reports the live card and lesson subjects
+                All five departments are open with published packs and
+                exam banks. The API reports the live card and lesson subjects
                 per room.
               </td>
             </tr>
             <tr>
-              <td>One closed department</td>
-              <td className="truth-not">Not built yet</td>
+              <td>No closed departments</td>
+              <td className="truth-real">Live</td>
               <td>
-                Herbology has a published subject pack, but its door stays soon
-                until its exam bank exists; before that no content is invented.
-                Charms, Potions and Transfiguration are open with published packs
-                and exam banks, and all five professor cards are live.
+                All five departments are open with published packs, exam banks
+                and reviewed professor cards.
               </td>
             </tr>
           </tbody>

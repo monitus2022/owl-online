@@ -227,7 +227,7 @@ rehearsal copy instead of claiming a live professor.
 ### Exam serving
 
 The exam room reads the published bank through four routes. A paper id is
-`<subject>-<version>`, for example `dada-1.0.0`, `charms-1.0.0`, `potions-1.0.0` or `transfiguration-1.0.0`. Nothing is
+`<subject>-<version>`, for example `dada-1.0.0`, `charms-1.0.0`, `potions-1.0.0`, `transfiguration-1.0.0` or `herbology-1.0.0`. Nothing is
 generated at request time: the server samples a stored bank, persists the
 attempt, and grades it later. The banks are independent, so the Charms venue
 requests `subject=charms` explicitly; the default remains `OWL_EXAM_SUBJECT`.

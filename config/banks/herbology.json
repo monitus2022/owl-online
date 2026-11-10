@@ -1,0 +1,1050 @@
+{
+  "items": [
+    {
+      "item_id": "herbology-mcq-001",
+      "kind": "mcq",
+      "material_id": "herbology-aquatic-gillyweed",
+      "prompt": "What does prepared gillyweed look like?",
+      "difficulty": "recall",
+      "options": [
+        "A ball of slimy, greyish-green rat tails.",
+        "A cluster of dry, black seed pods.",
+        "A bundle of pale, fibrous roots.",
+        "A smooth, glassy green bulb.",
+        "A fan of thin, silver leaves.",
+        "A spongy, brown fungal cap."
+      ],
+      "correct": 0,
+      "rationale": "Prepared gillyweed is a ball of slimy, greyish-green rat tails."
+    },
+    {
+      "item_id": "herbology-mcq-002",
+      "kind": "mcq",
+      "material_id": "herbology-aquatic-gillyweed-effects",
+      "prompt": "Which change appears first after gillyweed is swallowed?",
+      "difficulty": "explanation",
+      "options": [
+        "Gills open as slits on either side of the neck.",
+        "The feet widen into broad, green flippers.",
+        "The hands grow thin, clear webbing.",
+        "The eyes cloud over and stop blinking.",
+        "The lungs fill with cold water.",
+        "The toes lengthen into narrow claws."
+      ],
+      "correct": 0,
+      "rationale": "The gills appear first, as a pain at the neck followed by two flapping slits."
+    },
+    {
+      "item_id": "herbology-mcq-003",
+      "kind": "mcq",
+      "material_id": "herbology-dangerous-bubotuber",
+      "prompt": "Which description matches the Bubotuber?",
+      "difficulty": "recall",
+      "options": [
+        "A thick, black, upright body covered in shiny swellings.",
+        "A pale, creeping vine that winds around the hand.",
+        "A grey cactus covered in soft, boil-like pads.",
+        "A short, leafy shrub with fat pink pods.",
+        "A tall, silver tree with whiplike branches.",
+        "A flat, green weed with narrow floating leaves."
+      ],
+      "correct": 0,
+      "rationale": "The Bubotuber is a thick, black, upright body covered in liquid-filled swellings."
+    },
+    {
+      "item_id": "herbology-mcq-004",
+      "kind": "mcq",
+      "material_id": "herbology-dangerous-bubotuber-pus",
+      "prompt": "Why must bubotuber pus be diluted before use?",
+      "difficulty": "comparison",
+      "options": [
+        "Diluted it treats stubborn acne; undiluted it burns the skin.",
+        "Diluted it smells of petrol; undiluted it smells sweet.",
+        "Diluted it is safe to drink; undiluted it stains cloth.",
+        "Diluted it keeps for years; undiluted it spoils quickly.",
+        "Diluted it attracts insects; undiluted it repels them.",
+        "Diluted it feeds plants; undiluted it kills seedlings."
+      ],
+      "correct": 0,
+      "rationale": "Concentration separates the acne remedy from the caustic liquid."
+    },
+    {
+      "item_id": "herbology-mcq-005",
+      "kind": "mcq",
+      "material_id": "herbology-dangerous-devils-snare",
+      "prompt": "Why does struggling make a creeping plant tighten?",
+      "difficulty": "scenario",
+      "options": [
+        "The plant feeds on movement.",
+        "The stems are triggered by pressure and tighten as they are pulled.",
+        "The plant mistakes movement for light.",
+        "The stems tighten only when cut.",
+        "The plant is trying to lift the grower.",
+        "The plant releases when it hears a calm voice."
+      ],
+      "correct": 1,
+      "rationale": "The stems respond to pressure; pulling and struggling make them wind tighter."
+    },
+    {
+      "item_id": "herbology-mcq-006",
+      "kind": "mcq",
+      "material_id": "herbology-dangerous-snargaluff",
+      "prompt": "How does a Snargaluff behave when it is disturbed?",
+      "difficulty": "explanation",
+      "options": [
+        "It shoots out long, prickly vines and opens a central hole.",
+        "It closes its leaves and sinks into the soil.",
+        "It releases a cloud of foul-smelling sap.",
+        "It grows a ring of pale, glowing flowers.",
+        "It draws its feelers in and stays still.",
+        "It sprays a jet of thick, green liquid."
+      ],
+      "correct": 0,
+      "rationale": "A disturbed stump whips out vines and opens a hole that can trap an arm."
+    },
+    {
+      "item_id": "herbology-mcq-007",
+      "kind": "mcq",
+      "material_id": "herbology-dangerous-snargaluff-pods",
+      "prompt": "How should a Snargaluff pod be punctured to collect its juice?",
+      "difficulty": "application",
+      "options": [
+        "With something sharp, over a bowl.",
+        "By squeezing it hard between both hands.",
+        "By crushing it underfoot on the floor.",
+        "By cutting it open with a blunt spoon.",
+        "By soaking it in water until it splits.",
+        "By shaking it until the contents burst out."
+      ],
+      "correct": 0,
+      "rationale": "The juice is collected by puncturing the pod with something sharp over a bowl."
+    },
+    {
+      "item_id": "herbology-mcq-008",
+      "kind": "mcq",
+      "material_id": "herbology-dangerous-tentacula-seeds",
+      "prompt": "How are Venomous Tentacula seeds classified for trade?",
+      "difficulty": "recall",
+      "options": [
+        "A Class C Non-Tradeable Substance.",
+        "An ordinary garden seed with no restriction.",
+        "A Class A Restricted Ingredient.",
+        "A Class B Controlled Herb.",
+        "A licensed medicinal export only.",
+        "A banned substance with no lawful use."
+      ],
+      "correct": 0,
+      "rationale": "The seeds are named a Class C Non-Tradeable Substance."
+    },
+    {
+      "item_id": "herbology-mcq-009",
+      "kind": "mcq",
+      "material_id": "herbology-dangerous-whomping-willow",
+      "prompt": "Why is a tree with whiplike, slashing branches treated as a specimen to respect at a distance?",
+      "difficulty": "explanation",
+      "options": [
+        "Its whiplike branches can smash a broomstick to splinters.",
+        "Its roots spread and crack the surrounding stone.",
+        "Its pollen causes hours of unconsciousness.",
+        "Its sap dissolves leather and cloth on contact.",
+        "Its shade kills every plant beneath it.",
+        "Its fruit bursts open when it is touched."
+      ],
+      "correct": 0,
+      "rationale": "The branches strike hard enough to destroy a broomstick."
+    },
+    {
+      "item_id": "herbology-mcq-010",
+      "kind": "mcq",
+      "material_id": "herbology-dangerous-venomous-tentacula",
+      "prompt": "What is the correct way to make a Venomous Tentacula withdraw its feelers?",
+      "difficulty": "application",
+      "options": [
+        "A sharp slap to the plant.",
+        "A calm stroke along the stem.",
+        "A spray of cold water.",
+        "A handful of dragon dung.",
+        "A dark cloth over the pot.",
+        "A quiet incantation."
+      ],
+      "correct": 0,
+      "rationale": "A sharp slap makes the plant draw in the feelers that have been reaching out."
+    },
+    {
+      "item_id": "herbology-mcq-011",
+      "kind": "mcq",
+      "material_id": "herbology-foundations-dragon-dung-compost",
+      "prompt": "Why is dragon dung described as a feed to be measured rather than applied freely?",
+      "difficulty": "explanation",
+      "options": [
+        "It is strong enough to distress plants that receive too much.",
+        "It loses all value once it has dried out.",
+        "It is too costly to spread over a whole tray.",
+        "It attracts pests that damage young roots.",
+        "It must be mixed with water before it touches soil.",
+        "It works only on plants grown for their flowers."
+      ],
+      "correct": 0,
+      "rationale": "Dragon dung is a strong feed, and overfeeding distresses the plants."
+    },
+    {
+      "item_id": "herbology-mcq-012",
+      "kind": "mcq",
+      "material_id": "herbology-foundations-greenhouse-three",
+      "prompt": "Why should a grower separate plants that bite, sting or throttle from ordinary specimens?",
+      "difficulty": "scenario",
+      "options": [
+        "They need less light than ordinary plants.",
+        "They grow faster in open beds.",
+        "They can injure anyone who handles them, so access must be controlled.",
+        "They cannot survive in pots.",
+        "They produce no useful material.",
+        "They attract ordinary garden pests."
+      ],
+      "correct": 2,
+      "rationale": "Dangerous specimens need controlled access so that an ordinary visitor is not exposed to them."
+    },
+    {
+      "item_id": "herbology-mcq-013",
+      "kind": "mcq",
+      "material_id": "herbology-fungi-mimbulus-mimbletonia",
+      "prompt": "What makes Mimbulus mimbletonia difficult to obtain?",
+      "difficulty": "recall",
+      "options": [
+        "It is rare, and even a large collection may not hold one.",
+        "It grows everywhere and is hard to remove.",
+        "It is invisible to most growers.",
+        "It is a potion rather than a plant.",
+        "It is an ordinary cactus with no special value.",
+        "It cannot be propagated at all."
+      ],
+      "correct": 0,
+      "rationale": "The plant is rare enough that even a large collection may not have a specimen."
+    },
+    {
+      "item_id": "herbology-mcq-014",
+      "kind": "mcq",
+      "material_id": "herbology-foundations-protective-equipment",
+      "prompt": "Which protection is worn when collecting undiluted bubotuber pus?",
+      "difficulty": "application",
+      "options": [
+        "Dragon-hide gloves covering the hands.",
+        "Earmuffs fitted over both ears.",
+        "A gum shield and a pair of goggles.",
+        "A breathing mask and a hood.",
+        "Thick boots and a long apron.",
+        "A padded hat and a neck brace."
+      ],
+      "correct": 0,
+      "rationale": "Undiluted bubotuber pus irritates skin, so dragon-hide gloves are worn."
+    },
+    {
+      "item_id": "herbology-mcq-015",
+      "kind": "mcq",
+      "material_id": "herbology-foundations-subject",
+      "prompt": "What does Herbology study?",
+      "difficulty": "recall",
+      "options": [
+        "The care, handling and uses of magical plants and fungi.",
+        "The brewing and bottling of magical liquids.",
+        "The breeding and keeping of magical creatures.",
+        "The reading of stars and the foretelling of events.",
+        "The turning of one object into another.",
+        "The history of spells and their inventors."
+      ],
+      "correct": 0,
+      "rationale": "Herbology covers the care, handling and uses of magical plants and fungi."
+    },
+    {
+      "item_id": "herbology-mcq-016",
+      "kind": "mcq",
+      "material_id": "herbology-fungi-dirigible-plum",
+      "prompt": "What does a Dirigible Plum look like?",
+      "difficulty": "recall",
+      "options": [
+        "A small, orange, radish-shaped fruit on a bush.",
+        "A pale, onion-shaped root with a strong taste.",
+        "A grey cactus covered in soft boils.",
+        "A fat pink pod filled with shining beans.",
+        "A shrivelled black pod that rattles.",
+        "A green, grapefruit-sized object that pulses."
+      ],
+      "correct": 0,
+      "rationale": "The fruit is small, orange and radish-shaped and grows on a bush."
+    },
+    {
+      "item_id": "herbology-mcq-017",
+      "kind": "mcq",
+      "material_id": "herbology-fungi-gurdyroot",
+      "prompt": "What is an infusion of Gurdyroot like to drink?",
+      "difficulty": "comparison",
+      "options": [
+        "Clear and odourless, like water.",
+        "Bright blue and fizzy.",
+        "Golden and sweet.",
+        "Cloudy white and tasteless.",
+        "Deep purple and intensely unpleasant.",
+        "Invisible and silent."
+      ],
+      "correct": 4,
+      "rationale": "The infusion is as purple as beetroot juice and tastes disgusting."
+    },
+    {
+      "item_id": "herbology-mcq-018",
+      "kind": "mcq",
+      "material_id": "herbology-fungi-puffapod",
+      "prompt": "Why are Puffapod beans collected in a wooden pail?",
+      "difficulty": "explanation",
+      "options": [
+        "A dropped bean bursts into bloom at once.",
+        "The beans leak a caustic green sap.",
+        "The beans rattle and must be muffled.",
+        "The pail keeps the beans warm and dry.",
+        "The beans weigh too much for a cloth bag.",
+        "The pail stops the pods from squeaking."
+      ],
+      "correct": 0,
+      "rationale": "A dropped bean blooms at once, so a pail catches the harvest."
+    },
+    {
+      "item_id": "herbology-mcq-019",
+      "kind": "mcq",
+      "material_id": "herbology-fungi-stinksap",
+      "prompt": "Which statement is true of Stinksap?",
+      "difficulty": "explanation",
+      "options": [
+        "It smells like rancid manure but is not poisonous.",
+        "It is harmless to smell but poisonous to touch.",
+        "It is colourless and has no noticeable odour.",
+        "It is poisonous and cannot be removed.",
+        "It smells sweet and attracts insects.",
+        "It is a sticky sap that hardens like resin."
+      ],
+      "correct": 0,
+      "rationale": "Stinksap smells of rancid manure, is not poisonous and can be scoured away."
+    },
+    {
+      "item_id": "herbology-mcq-020",
+      "kind": "mcq",
+      "material_id": "herbology-harvest-abyssinian-shrivelfig",
+      "prompt": "What must be done to a shrivelfig before it is used in a potion?",
+      "difficulty": "application",
+      "options": [
+        "Its skin must be removed.",
+        "Its leaves must be dried.",
+        "Its root must be crushed.",
+        "Its seeds must be soaked.",
+        "Its stalk must be boiled.",
+        "Its sap must be drained."
+      ],
+      "correct": 0,
+      "rationale": "A shrivelfig must be skinned before it goes into a potion."
+    },
+    {
+      "item_id": "herbology-mcq-021",
+      "kind": "mcq",
+      "material_id": "herbology-harvest-flutterby-bush",
+      "prompt": "Why does a Flutterby Bush appear to move in still air?",
+      "difficulty": "explanation",
+      "options": [
+        "Its leaves quiver and wave as a natural trait.",
+        "It is shivering because the air is too cold.",
+        "It is trying to pull away from its pot.",
+        "It is releasing a cloud of fine seeds.",
+        "It is tracking the light across the room.",
+        "It is warning that it needs water."
+      ],
+      "correct": 0,
+      "rationale": "The leaves move as a natural trait, not because of wind or distress."
+    },
+    {
+      "item_id": "herbology-mcq-022",
+      "kind": "mcq",
+      "material_id": "herbology-harvest-mandrake-maturation",
+      "prompt": "Which change signals that growing Mandrakes need repotting again?",
+      "difficulty": "application",
+      "options": [
+        "Their acne clears and they become secretive.",
+        "Their leaves turn from green to purple.",
+        "Their roots stop making any sound.",
+        "Their skins become smooth and pale.",
+        "They begin to flower for the first time.",
+        "They sink deeper into the compost."
+      ],
+      "correct": 0,
+      "rationale": "Clearing acne and secretiveness signal that the plants need repotting again."
+    },
+    {
+      "item_id": "herbology-mcq-023",
+      "kind": "mcq",
+      "material_id": "herbology-harvest-screechsnap",
+      "prompt": "What does a Screechsnap do when it is given too much fertiliser?",
+      "difficulty": "application",
+      "options": [
+        "It wriggles and squeaks in discomfort.",
+        "It grows a taller, sturdier stem.",
+        "It closes its leaves and turns grey.",
+        "It gives off a sharp petrol smell.",
+        "It produces a long, low whistle.",
+        "It drops its pods onto the soil."
+      ],
+      "correct": 0,
+      "rationale": "An overfed Screechsnap wriggles and squeaks, signalling that the dose was too strong."
+    },
+    {
+      "item_id": "herbology-mcq-024",
+      "kind": "mcq",
+      "material_id": "herbology-medicinal-aconite",
+      "prompt": "Which set of names refers to a single plant?",
+      "difficulty": "recall",
+      "options": [
+        "Monkshood, wolfsbane and aconite.",
+        "Dittany, mandrake and nettle.",
+        "Gillyweed, shrivelfig and tentacula.",
+        "Puffapod, gurdyroot and snargaluff.",
+        "Bubotuber, stinksap and puffapod.",
+        "Flutterby, screechsnap and dirigible plum."
+      ],
+      "correct": 0,
+      "rationale": "Monkshood, wolfsbane and aconite are three names for one plant."
+    },
+    {
+      "item_id": "herbology-mcq-025",
+      "kind": "mcq",
+      "material_id": "herbology-medicinal-mandrake",
+      "prompt": "Why is the cry of a mature Mandrake dangerous?",
+      "difficulty": "explanation",
+      "options": [
+        "A mature plant’s cry can kill anyone within hearing.",
+        "The plant’s leaves are poisonous to touch.",
+        "The roots explode when pulled.",
+        "The plant releases a cloud of sleeping gas.",
+        "The flowers blind anyone who looks at them.",
+        "The stem stings anyone who brushes it."
+      ],
+      "correct": 0,
+      "rationale": "A mature plant’s cry can be lethal to anyone who hears it."
+    },
+    {
+      "item_id": "herbology-short-001",
+      "kind": "short_answer",
+      "material_id": "herbology-aquatic-gillyweed",
+      "prompt": "Explain how gillyweed allows a swimmer to stay underwater.",
+      "difficulty": "explanation",
+      "model_answer": "Gillyweed changes the body rather than the water. Within moments of eating it, the swimmer can breathe underwater. The change lasts only a time, so the preparation must be fresh and the dose reliable.",
+      "required_points": [
+        "changes the body",
+        "breathe underwater"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that gillyweed lets a swimmer breathe underwater.",
+          4
+        ],
+        [
+          "completeness",
+          "Mentions that the change is in the body and does not last.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-002",
+      "kind": "short_answer",
+      "material_id": "herbology-aquatic-gillyweed-effects",
+      "prompt": "A swimmer takes gillyweed before a long dive. Explain why the return to land matters.",
+      "difficulty": "scenario",
+      "model_answer": "The weed wears off after a short time. As it fades, the flippers shrink back to ordinary feet and water rushes into the mouth. A swimmer should plan the dive to finish on dry land because the change does not last.",
+      "required_points": [
+        "flippers shrink back to ordinary feet",
+        "water rushes into the mouth",
+        "the change does not last"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the transformation fades and the swimmer returns to ordinary feet.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes the risk of water entering the mouth if the effect ends underwater.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-003",
+      "kind": "short_answer",
+      "material_id": "herbology-aquatic-water-plants-guide",
+      "prompt": "Why should a grower consult a regional guide before harvesting water plants?",
+      "difficulty": "comparison",
+      "model_answer": "Water plants differ from garden plants in how they are collected, how quickly they spoil and how their effects are dosed. A guide for one sea or lake does not describe every body of water. The grower should start with local literature and check the plant against a description.",
+      "required_points": [
+        "how quickly they spoil",
+        "local literature",
+        "check the plant against a description"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that water plants differ in collection, spoilage and dosing.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that a regional guide covers only its own waters.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-004",
+      "kind": "short_answer",
+      "material_id": "herbology-dangerous-bubotuber",
+      "prompt": "Explain why harvesting a Bubotuber demands both care and steady hands.",
+      "difficulty": "explanation",
+      "model_answer": "The crop is the yellowish-green pus held in the plant's shiny swellings. The pus is extremely valuable, so nothing should be wasted, but undiluted it irritates the skin. A grower wears dragon-hide gloves and collects the liquid in bottles with a steady hand.",
+      "required_points": [
+        "extremely valuable",
+        "undiluted it irritates the skin",
+        "dragon-hide gloves"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Identifies the pus in the swellings as the valuable crop.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that undiluted pus irritates skin and needs gloves.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-005",
+      "kind": "short_answer",
+      "material_id": "herbology-dangerous-bubotuber-pus",
+      "prompt": "A grower has collected bubotuber pus. Describe the handling that keeps it a medicine rather than an injury.",
+      "difficulty": "application",
+      "model_answer": "The pus must be collected in bottles, kept labelled and diluted before use. Diluted, it is an excellent remedy for stubborn acne; undiluted, it raises large yellow boils on the skin. Concentration decides whether the harvest heals or harms.",
+      "required_points": [
+        "diluted before use",
+        "large yellow boils"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that the pus is diluted for use and kept labelled.",
+          4
+        ],
+        [
+          "completeness",
+          "Contrasts the diluted remedy with the undiluted injury.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-006",
+      "kind": "short_answer",
+      "material_id": "herbology-foundations-subject",
+      "prompt": "Explain why Herbology is described as supporting Potions and healing.",
+      "difficulty": "scenario",
+      "model_answer": "Herbology deals with magical plants and fungi: how to handle them, keep them alive and put them to use. A potion is only as good as the plant it was made from, and a plant is only useful to a grower who knows how to grow, harvest and handle it safely. That is why Herbology supports both Potions and healing.",
+      "required_points": [
+        "magical plants and fungi",
+        "only as good as the plant",
+        "grow, harvest and handle"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that Herbology supplies and cares for the plants used in potions and healing.",
+          4
+        ],
+        [
+          "completeness",
+          "Connects plant quality and safe handling to the quality of the finished remedy.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-007",
+      "kind": "short_answer",
+      "material_id": "herbology-dangerous-devils-snare-disguise",
+      "prompt": "Why must an unfamiliar climbing plant be identified before it is handled?",
+      "difficulty": "application",
+      "model_answer": "A cutting that looks harmless may be a dangerous species, and the mistake can be fatal. The rule is to identify the specimen first and treat any unfamiliar climber as a possible hazard.",
+      "required_points": [
+        "can be fatal",
+        "identify the specimen first",
+        "possible hazard"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that an unfamiliar climbing plant may be a dangerous lookalike.",
+          4
+        ],
+        [
+          "completeness",
+          "States that the specimen must be identified before handling.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-008",
+      "kind": "short_answer",
+      "material_id": "herbology-dangerous-snargaluff",
+      "prompt": "Why does harvesting from a Snargaluff reward teamwork?",
+      "difficulty": "comparison",
+      "model_answer": "The stump looks dead until it is disturbed, then whips out prickly vines and opens a hole that can trap an arm. One person can distract the vines while another reaches for the pod. Protective gloves, a gum shield and patience make the job safer.",
+      "required_points": [
+        "distract the vines",
+        "reaches for the pod",
+        "protective gloves"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that one person distracts the vines while another reaches in.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes the protective gloves and the risk of a trapped arm.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-009",
+      "kind": "short_answer",
+      "material_id": "herbology-dangerous-snargaluff-pods",
+      "prompt": "Explain why Snargaluff pods are harvested fresh rather than stored.",
+      "difficulty": "application",
+      "model_answer": "Snargaluff pods are best when they are fresh, so they are harvested and used at once rather than stored. The pod is taken from the hole in the stump and handled over a bowl, because squeezing it by hand can send it flying. Freshness and control therefore matter as much as the extraction method.",
+      "required_points": [
+        "fresh",
+        "bowl",
+        "flying"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Describes puncturing the pod rather than squeezing it.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes the bowl that catches the juice.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-010",
+      "kind": "short_answer",
+      "material_id": "herbology-dangerous-venomous-tentacula",
+      "prompt": "Explain why a Venomous Tentacula must be watched all around, not just at the stem.",
+      "difficulty": "explanation",
+      "model_answer": "The plant has long feelers that move on their own and can inch over a shoulder from behind. It is quick enough to seize a handler unexpectedly. A sharp slap makes it draw the feelers in, and the handler must track every feeler rather than the pot in front.",
+      "required_points": [
+        "feelers that move on their own",
+        "sharp slap",
+        "every feeler"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the feelers move independently and can reach from behind.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that a sharp slap makes the plant draw its feelers in.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-011",
+      "kind": "short_answer",
+      "material_id": "herbology-dangerous-whomping-willow",
+      "prompt": "Explain why a violent tree is dangerous even when it is approached from a distance.",
+      "difficulty": "scenario",
+      "model_answer": "Its branches move like whips and can smash a broomstick to splinters, so the danger is not limited to the trunk. It is protective as well as violent, guarding what lies at its roots. A grower treats it as a specimen to be respected from a distance, not pruned by hand.",
+      "required_points": [
+        "branches move like whips",
+        "smash a broomstick",
+        "respected from a distance"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the branches are the danger, not only the trunk.",
+          4
+        ],
+        [
+          "completeness",
+          "States that the tree is protective and must be respected from a distance.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-012",
+      "kind": "short_answer",
+      "material_id": "herbology-foundations-dragon-dung-compost",
+      "prompt": "How should dragon dung compost be used on a young tray of plants?",
+      "difficulty": "application",
+      "model_answer": "Dragon dung is a strong feed, so the grower should give the plants only what they can use and watch how they respond. Overfed seedlings wriggle and squeak in discomfort. The dose should then be reduced rather than increased.",
+      "required_points": [
+        "strong feed",
+        "watch how they respond",
+        "in discomfort"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that dragon dung is a strong feed that must be dosed.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes the wriggling and squeaking of overfed seedlings as the signal.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-013",
+      "kind": "short_answer",
+      "material_id": "herbology-foundations-greenhouses",
+      "prompt": "Explain why a plant that bites, stings or throttles needs controlled access.",
+      "difficulty": "explanation",
+      "model_answer": "Some dangerous plants can injure on contact, so they cannot be kept where anyone can reach them. Their door is kept locked and entered only with a key, and handling follows a clear procedure. The danger is managed by separation and controlled access, not by trusting the plant to behave.",
+      "required_points": [
+        "dangerous plants",
+        "door is kept locked"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains why contact danger requires controlled access.",
+          4
+        ],
+        [
+          "completeness",
+          "Names separation and procedure as the way the danger is managed.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-014",
+      "kind": "short_answer",
+      "material_id": "herbology-foundations-protective-equipment",
+      "prompt": "Explain the order of protection before work begins with a hostile plant.",
+      "difficulty": "explanation",
+      "model_answer": "The handler identifies the hazard, covers the exposed part and only then starts. Earmuffs go on before a Mandrake is lifted, dragon-hide gloves before bubotuber pus is handled, and goggles before whipping vines begin. Safety equipment is the first step of the method, not an accessory.",
+      "required_points": [
+        "identifies the hazard",
+        "covers the exposed part",
+        "first step of the method"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that the hazard is identified and the exposed part covered first.",
+          4
+        ],
+        [
+          "completeness",
+          "Gives an example of the right equipment for a named hazard.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-015",
+      "kind": "short_answer",
+      "material_id": "herbology-foundations-repotting",
+      "prompt": "What does repotting give a growing plant?",
+      "difficulty": "explanation",
+      "model_answer": "Repotting is the routine transplanting of a growing plant into fresh soil and a larger container, and in Herbology it is a skill with its own hazards. Mandrake repotting begins with the plant being taken from its tray, plunged into a large pot and buried in dark, moist compost with only the tufted leaves showing [b2-c06-0029]. The class works four to a tray with pots and compost, which gives the plant room and lets the grower inspect the root [b2-c06-0031].",
+      "required_points": [
+        "dark, moist compost",
+        "tufted leaves",
+        "four to a tray"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that repotting supplies fresh soil and more room.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes the inspection of the root and pot.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-016",
+      "kind": "short_answer",
+      "material_id": "herbology-fungi-dirigible-plum",
+      "prompt": "How should a herbologist record the Dirigible Plum's reputed property?",
+      "difficulty": "comparison",
+      "model_answer": "The plant is a bush bearing a small, orange, radish-shaped fruit. A claim that the fruit enhances the ability to accept the extraordinary is a statement of belief rather than a tested property. The grower should record the claim as belief and describe only the plant's appearance with confidence.",
+      "required_points": [
+        "radish-shaped fruit",
+        "statement of belief",
+        "tested property"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Describes the fruit as small, orange and radish-shaped.",
+          4
+        ],
+        [
+          "completeness",
+          "States that the reputed property is belief rather than tested fact.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-017",
+      "kind": "short_answer",
+      "material_id": "herbology-fungi-gurdyroot",
+      "prompt": "Why is the Gurdyroot a case study in separating use from evidence?",
+      "difficulty": "comparison",
+      "model_answer": "The root yields a real infusion, as deeply purple as beetroot juice, and the drink is memorable for its unpleasant taste. A claim that Gurdyroots ward off Gulping Plimpies is made by the people who use them, not demonstrated. The grower can prepare the root while recording the claim as belief.",
+      "required_points": [
+        "deeply purple as beetroot juice",
+        "ward off Gulping Plimpies",
+        "recording the claim as belief"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Describes the infusion as purple and unpleasant.",
+          4
+        ],
+        [
+          "completeness",
+          "States that the protective claim is belief, not evidence.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-018",
+      "kind": "short_answer",
+      "material_id": "herbology-fungi-mimbulus-mimbletonia",
+      "prompt": "Why is Mimbulus mimbletonia a promising specimen for a patient grower?",
+      "difficulty": "explanation",
+      "model_answer": "The plant is rare, small and grey, and it looks like a cactus covered in boils rather than spines. It pulsates slightly, grows noticeably over a year and makes odd crooning noises when touched. Its rarity makes propagation a genuine ambition.",
+      "required_points": [
+        "covered in boils rather than spines",
+        "crooning noises when touched",
+        "propagation a genuine ambition"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Describes the grey, boil-covered body of the plant.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes its rarity and the ambition to propagate it.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-019",
+      "kind": "short_answer",
+      "material_id": "herbology-harvest-abyssinian-shrivelfig",
+      "prompt": "Explain the two stages that make a well-grown shrivelfig a good ingredient.",
+      "difficulty": "explanation",
+      "model_answer": "The plant needs pruning and repotting while it is growing, and the withered stalks go to the compost heap. In the potion the fig itself must be skinned before use. A well-grown fig that is badly skinned is still a bad ingredient, so both stages matter.",
+      "required_points": [
+        "pruning and repotting",
+        "must be skinned before use",
+        "badly skinned"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that the plant needs pruning and repotting while it grows.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that the fig must be skinned before use.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-020",
+      "kind": "short_answer",
+      "material_id": "herbology-harvest-mandrake-maturation",
+      "prompt": "How can a grower tell that a Mandrake crop has reached the next stage?",
+      "difficulty": "application",
+      "model_answer": "A Mandrake crop runs to a schedule that can be read from the plants: seedlings are safe enough to repot with earmuffs, older plants become sullen and secretive as their acne clears, and full maturity is marked by the plants trying to crowd into neighbouring pots [b2-c06-0029] [b2-c13-0026] [b2-c14-0008]. Only then are they ready for cutting and stewing. The harvest is therefore a sequence of stages, each with its own handling.",
+      "required_points": [
+        "crowd into neighbouring pots",
+        "cutting and stewing"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Names a stage sign such as secretiveness or clearing acne.",
+          4
+        ],
+        [
+          "completeness",
+          "Identifies movement into neighbouring pots as full maturity.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-021",
+      "kind": "short_answer",
+      "material_id": "herbology-harvest-pruning",
+      "prompt": "Why is pruning a decision rather than simple tidying?",
+      "difficulty": "explanation",
+      "model_answer": "Pruning removes dead, damaged or excess growth so that the living wood can grow. Every cut decides where the plant will put its energy next, and the removed material is either waste or a future ingredient. The grower prunes with a reason, a clean tool and a place for what comes off.",
+      "required_points": [
+        "dead, damaged or excess growth",
+        "where the plant will put its energy next",
+        "clean tool"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that pruning directs where the plant spends its energy.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that removed material is waste or a future ingredient.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-022",
+      "kind": "short_answer",
+      "material_id": "herbology-medicinal-aconite",
+      "prompt": "Why does accurate labelling matter for a plant known by several common names?",
+      "difficulty": "application",
+      "model_answer": "Monkshood, wolfsbane and aconite are three names for one plant, so a specimen may arrive under any of them. A mislabelled specimen is an accident waiting to happen, especially with a plant that should not be handled casually. The grower records the name given, confirms the plant and never relies on a single common name.",
+      "required_points": [
+        "three names for one plant",
+        "mislabelled specimen",
+        "single common name"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that the three names refer to one plant.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains that a mislabelled specimen is a safety risk.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-023",
+      "kind": "short_answer",
+      "material_id": "herbology-medicinal-dittany",
+      "prompt": "Explain how a herbologist identifies and supplies Dittany without taking over the potion-maker’s work.",
+      "difficulty": "explanation",
+      "model_answer": "Dittany is a healing herb listed in a standard reference, so identification begins with the plant name and its description. The herbologist grows, harvests and supplies the herb; the potion-maker turns it into Essence of Dittany. The grower’s responsibility ends with a correctly identified, well-grown plant, not with the treatment of a wound.",
+      "required_points": [
+        "standard reference",
+        "grows, harvests and supplies",
+        "not with the treatment"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that identification starts from the plant name and a standard reference.",
+          4
+        ],
+        [
+          "completeness",
+          "Separates the grower’s supply role from the potion-maker’s preparation.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-024",
+      "kind": "short_answer",
+      "material_id": "herbology-medicinal-mandrake",
+      "prompt": "Explain why a Mandrake crop is dangerous to handle even before it is ready to harvest.",
+      "difficulty": "explanation",
+      "model_answer": "A Mandrake’s cry is dangerous: a mature plant can kill anyone who hears it, and even seedlings knock a listener out for hours. The crop must therefore be handled with earmuffs throughout, and the roots are cut and stewed only when the plants are fully grown. The danger is managed by protective equipment and by timing the harvest.",
+      "required_points": [
+        "mature plant can kill",
+        "seedlings knock a listener out",
+        "earmuffs"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States the danger of the mature cry and the seedlings.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains how earmuffs and harvest timing manage the danger.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "herbology-short-025",
+      "kind": "short_answer",
+      "material_id": "herbology-medicinal-nettles",
+      "prompt": "How should nettles be gathered and prepared for use?",
+      "difficulty": "application",
+      "model_answer": "Fresh nettles sting, so they should be gathered with gloves. Drying makes them safe to handle and measure, and dried nettles can then be weighed as an ingredient. The plant is common and plain, but it is not harmless.",
+      "required_points": [
+        "gathered with gloves",
+        "Drying makes them safe",
+        "weighed as an ingredient"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that fresh nettles sting and need gloves.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that drying makes them safe to handle and measure.",
+          4
+        ]
+      ]
+    }
+  ]
+}
