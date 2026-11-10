@@ -14,3 +14,4 @@
 {"id": "cit-014", "mode": "meta", "citations": ["lore:school-001"], "abstained": false, "valid": false, "note": "Scripted meta answer with a cite."}
 {"id": "cit-015", "mode": "abstain", "citations": [], "abstained": true, "valid": true, "note": "Abstained answer with no cite."}
 {"id": "cit-016", "mode": "lesson", "citations": ["b1-c01-0000"], "abstained": false, "valid": false, "note": "Unknown citation form."}
+{"id": "cit-017", "mode": "feedback", "citations": [], "abstained": false, "needs_input": true, "valid": true, "note": "A feedback request with no student answer has nothing to cite."}

@@ -334,6 +334,7 @@ def test_ask_stream_reports_missing_feedback_answer():
     assert "reset" not in names
     assert finals[0]["needs_input"] is True
     assert finals[0]["abstained"] is False
+    assert finals[0]["citation_errors"] == []
 
 
 def test_ask_stream_rejects_student_answer_outside_feedback_mode():

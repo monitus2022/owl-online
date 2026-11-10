@@ -87,6 +87,7 @@ def check_authority(
     *,
     mode: str,
     abstained: bool = False,
+    needs_input: bool = False,
 ) -> list[str]:
     """Return the authority errors for one final answer.
 
@@ -94,6 +95,9 @@ def check_authority(
     a teaching answer must carry a lesson cite; policy must carry a script cite;
     scripted meta, personal, clarify and abstain answers carry no citations.
     """
+    if needs_input and not citations:
+        # A feedback request with no student answer has nothing to cite.
+        return []
     errors: list[str] = []
     parsed: list[TypedCitation] = []
     for raw in citations:

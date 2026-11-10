@@ -96,6 +96,10 @@ def test_abstained_answers_do_not_need_a_citation():
     assert check_authority([], mode="policy", abstained=True) == []
 
 
+def test_needs_input_feedback_is_exempt():
+    assert check_authority([], mode="feedback", needs_input=True) == []
+
+
 def test_scripted_modes_carry_no_citations():
     for mode in ("meta", "personal", "clarify", "abstain"):
         assert check_authority([], mode=mode) == []

@@ -87,7 +87,9 @@ empty on `/ask`, which stays corpus-only, and lesson answers are stream-only.
 answer must carry a `persona:` or `lore:` cite and must not carry a `lesson:`
 cite; a teaching answer must carry a `lesson:` cite and must not carry a
 `persona:`, `lore:` or `policy:` cite; a policy answer carries
-`policy:script:`. The legacy fields stay for compatibility. The citation spaces
+`policy:script:`. The corpus `answer` path may carry a setting or a lesson
+authority, but not both, and never policy. A `needs_input` feedback request has
+nothing to cite yet and is exempt. The legacy fields stay for compatibility. The citation spaces
 are validated separately; an unknown id of any kind is stripped from the text. `abstained` is true when there is no book or lore
 evidence, the draft cites nothing, or the model refuses. The answer text is
 always returned; an abstention is a `200`, not an error.

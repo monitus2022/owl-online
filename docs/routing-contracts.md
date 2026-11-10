@@ -64,7 +64,9 @@ The lesson path is opt-in. Residual traffic is not RAG.
 
 A setting answer with no `persona:` or `lore:` cite is invalid. A setting answer
 with a `lesson:` cite is invalid even if the book mentions the same noun. A
-teaching answer that cites `lore:` for a curricular claim is invalid. This is an
+teaching answer that cites `lore:` for a curricular claim is invalid. The corpus
+`answer` path may carry a setting or a lesson authority, but not both, and never
+policy; a `needs_input` feedback request has nothing to cite yet. This is an
 authority check, not a prompt instruction.
 
 The API now carries the typed field as `typed_citations` alongside the legacy

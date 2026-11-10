@@ -22,5 +22,6 @@ def test_citation_fixture_rejects_cross_type_cites():
             row["citations"],
             mode=row["mode"],
             abstained=row["abstained"],
+            needs_input=row.get("needs_input", False),
         )
         assert bool(errors) != row["valid"], row["id"]

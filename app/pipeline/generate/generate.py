@@ -162,6 +162,8 @@ class AskResult:
     prompt_chars: int = 0
     # Lesson scope: where the evidence came from. None on the corpus path.
     scope: LessonScope | None = None
+    # The feedback path asks for a student answer; there is nothing to cite yet.
+    needs_input: bool = False
 
 
 def retrieval_floor(
