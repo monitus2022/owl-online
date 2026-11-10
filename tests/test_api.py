@@ -1281,9 +1281,20 @@ def test_lesson_mode_routes_closed_facts_and_clarify():
         for question, expected, needle, typed in (
             ("Where is Ashcombe?", "fact", "Cotswolds", "lore:school-001"),
             ("What is included in DADA?", "clarify", "Do you mean", None),
-            ("Where did you study when you are young?", "meta", "Hogwarts", None),
+            (
+                "Where did you study when you are young?",
+                "fact",
+                "Hogwarts",
+                "persona:professor.education",
+            ),
             (
                 "What is the mark scheme?",
+                "policy",
+                "examination",
+                "policy:script:assessment.dada",
+            ),
+            (
+                "Did you go to the exam?",
                 "policy",
                 "examination",
                 "policy:script:assessment.dada",

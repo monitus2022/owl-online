@@ -104,8 +104,10 @@ Pick one authority per fact, even when the card and the lore pack overlap:
 - `lore:school-001` owns school location, founding, student count, houses and
   departments. The card's `school` reply is a scripted variant, not the fixture
   authority.
-- `lore:dada-001` owns subject scope. `persona:subject` owns the role and
-  definition ("what is your subject", "what is DADA").
+- `lore:dada-001` owns subject scope; `lore:dada.scope` is its stable alias.
+  `persona:subject` owns the role and definition ("what is your subject",
+  "what is DADA"). `persona:professor.education` is a template join over the
+  card's `study_place` and `youth_period` facts.
 - `lore:auror-001` owns the Auror pathway. `persona:professor.background` owns
   Crane's own service.
 - `lore:teaching-record` owns the set-texts policy.

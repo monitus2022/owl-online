@@ -101,14 +101,21 @@ def fact_node(
     )
     entries: list[str] = []
     citations: list[str] = []
+    typed: list[str] = []
     for fact_id in state.get("fact_ids", []):
-        if not fact_id.startswith("lore:") or lore is None:
+        if fact_id.startswith("persona:") and active is not None:
+            text = active.fact_response(fact_id[8:])
+            if text:
+                entries.append(text)
+                typed.append(fact_id)
             continue
-        entry = lore.get(fact_id[5:])
-        if entry is None:
-            continue
-        entries.append(entry.body.strip())
-        citations.append(entry.id)
+        if fact_id.startswith("lore:") and lore is not None:
+            entry = lore.get(fact_id[5:])
+            if entry is None:
+                continue
+            entries.append(entry.body.strip())
+            citations.append(entry.id)
+            typed.append(fact_id)
     if not entries:
         text = active.abstain_response() if active is not None else ABSTAIN_MESSAGE
         result = _result(text)
@@ -117,11 +124,7 @@ def fact_node(
         return result
     result = _result("\n\n".join(entries))
     result["lore_citations"] = citations
-    result["typed_citations"] = [
-        fact_id
-        for fact_id in state.get("fact_ids", [])
-        if fact_id.startswith(("persona:", "lore:"))
-    ]
+    result["typed_citations"] = typed
     return result
 
 

@@ -153,3 +153,16 @@ def test_personas_doc_lists_every_card_variant():
                 assert text in doc, (subject, topic, text)
         for text in persona.personal_variants():
             assert text in doc, (subject, "personal", text)
+
+
+def test_each_card_has_stable_fact_ids_and_join_templates():
+    education = (
+        "I studied at Hogwarts, where I was a student during the Battle of Hogwarts."
+    )
+    for subject, card in PERSONAS.items():
+        assert card.facts["study_place"] == "Hogwarts", subject
+        assert card.facts["youth_period"] == "the Battle of Hogwarts", subject
+        assert card.fact_response("professor.education") == education, subject
+        scope = card.fact_response("subject_scope")
+        assert scope is not None, subject
+        assert card.subject in scope, subject

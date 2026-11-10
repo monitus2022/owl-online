@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 _ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+_ALIAS = re.compile(r"^[a-z0-9][a-z0-9.-]*$")
 TIERS = frozenset({"book", "product", "secondary"})
 # A setting question must name Ashcombe, a founder, the faculty, the founders
 # of Ashcombe, the Auror pathway or the post-war/public-history setting. A book
@@ -97,6 +98,7 @@ class LoreEntry:
     body: str
     source: str
     tags: tuple[str, ...] = ()
+    aliases: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -124,6 +126,7 @@ class LoreStore:
                     entry.body,
                     entry.source,
                     entry.tags,
+                    entry.aliases,
                 )
                 for entry in self.entries
             ]
@@ -256,6 +259,21 @@ def _build_store(items: list[tuple[str, dict]], source: Path) -> LoreStore:
         tags = row.get("tags", [])
         if not isinstance(tags, list) or any(not isinstance(tag, str) for tag in tags):
             raise ValueError(f"{label}: tags must be a list of strings")
+        aliases = row.get("aliases", [])
+        if not isinstance(aliases, list) or any(
+            not isinstance(alias, str) for alias in aliases
+        ):
+            raise ValueError(f"{label}: aliases must be a list of strings")
+        clean_aliases = tuple(alias.strip() for alias in aliases)
+        for alias in clean_aliases:
+            if not _ALIAS.match(alias):
+                raise ValueError(
+                    f"{label}: alias must be lowercase letters, digits, dots "
+                    f"and hyphens, got {alias!r}"
+                )
+            if alias in seen:
+                raise ValueError(f"{label}: duplicate id or alias {alias!r}")
+            seen.add(alias)
         entries.append(
             LoreEntry(
                 id=entry_id,
@@ -265,11 +283,17 @@ def _build_store(items: list[tuple[str, dict]], source: Path) -> LoreStore:
                 body=body,
                 source=source_note,
                 tags=tuple(tag.strip() for tag in tags),
+                aliases=clean_aliases,
             )
         )
     if not entries:
         raise ValueError(f"no lore entries in {source}")
-    return LoreStore(tuple(entries), {entry.id: entry for entry in entries})
+    by_id: dict[str, LoreEntry] = {}
+    for entry in entries:
+        by_id[entry.id] = entry
+        for alias in entry.aliases:
+            by_id[alias] = entry
+    return LoreStore(tuple(entries), by_id)
 
 
 def load_lore(path: Path) -> LoreStore:

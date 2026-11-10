@@ -189,6 +189,13 @@ def test_persona_card_missing_topic_fails(tmp_path):
                 'response = "Hello."',
                 "[abstain]",
                 'response = "I cannot confirm that."',
+                "[facts]",
+                *(f'"{key}" = "{value}"' for key, value in PERSONA.facts.items()),
+                "[templates]",
+                *(
+                    f'"{key}" = "{value}"'
+                    for key, value in PERSONA.templates.items()
+                ),
             ]
         ),
         encoding="utf-8",
@@ -356,6 +363,17 @@ def _minimal_card(meta_identity: str = "I am X.", boundaries: dict | None = None
             'response = "Hello."',
             "[abstain]",
             'response = "I cannot confirm that."',
+            "[facts]",
+            'identity = "X"',
+            'subject = "DADA"',
+            'study_place = "Hogwarts"',
+            'youth_period = "the war"',
+            '"professor.education" = "Hogwarts; student"',
+            '"professor.background" = "Fought and taught."',
+            'subject_scope = "the subject"',
+            "[templates]",
+            '"professor.education" = "I studied at {study_place} during {youth_period}."',
+            'subject_scope = "{subject} covers {subject_scope}."',
         ]
     )
     return "\n".join(lines)
@@ -556,3 +574,22 @@ def test_auror_pathway_is_shared_across_subjects():
     entry = store.get("auror-001")
     assert entry is not None
     assert entry.subject == "all"
+
+
+def test_persona_template_rejects_a_missing_fact(tmp_path):
+    card = _minimal_card().replace(
+        '"professor.education" = "I studied at {study_place} during {youth_period}."',
+        '"professor.education" = "I studied at {missing_fact}."',
+    )
+    path = tmp_path / "persona.toml"
+    path.write_text(card, encoding="utf-8")
+    with pytest.raises(ValueError, match="missing facts"):
+        load_persona(path)
+
+
+def test_persona_card_missing_facts_section_fails(tmp_path):
+    card = _minimal_card().replace("[facts]\n", "[not_facts]\n")
+    path = tmp_path / "persona.toml"
+    path.write_text(card, encoding="utf-8")
+    with pytest.raises(ValueError, match="missing section 'facts'"):
+        load_persona(path)

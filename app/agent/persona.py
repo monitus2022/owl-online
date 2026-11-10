@@ -13,6 +13,7 @@ import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from string import Formatter
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PERSONA_PATH = REPO_ROOT / "config" / "persona.toml"
@@ -52,6 +53,8 @@ class Persona:
     meta: dict[str, tuple[str, ...]]
     personal: tuple[str, ...]
     abstain: tuple[str, ...]
+    facts: dict[str, str]
+    templates: dict[str, str]
 
     @staticmethod
     def _pick(variants: tuple[str, ...], choice: int | None) -> str:
@@ -83,6 +86,21 @@ class Persona:
             f"{self.boundaries['facts']} {self.boundaries['advice']} "
             f"{self.boundaries['record']} {self.boundaries['exam']}"
         )
+
+    def fact_response(self, fact_id: str) -> str | None:
+        """One reviewed fact, or the fact filled into its join template."""
+        value = self.facts.get(fact_id)
+        if value is None:
+            return None
+        template = self.templates.get(fact_id)
+        if template is None:
+            return value
+        try:
+            return template.format(**self.facts)
+        except KeyError as error:
+            raise ValueError(
+                f"persona template {fact_id!r} references a missing fact {error}"
+            ) from error
 
     def meta_response(self, topic: str, *, choice: int | None = None) -> str | None:
         variants = self.meta.get(topic)
@@ -142,6 +160,8 @@ def _persona_from_data(data: dict[str, object]) -> Persona:
         meta = data["meta"]
         personal = data["personal"]
         abstain = data["abstain"]
+        facts = data["facts"]
+        templates = data["templates"]
     except KeyError as error:
         raise ValueError(f"persona card is missing section {error}") from error
     missing = [topic for topic in META_TOPICS if topic not in meta]
@@ -171,6 +191,32 @@ def _persona_from_data(data: dict[str, object]) -> Persona:
     meta_values = {
         topic: variants(meta, topic, "meta") for topic in META_TOPICS
     }
+    if not isinstance(facts, dict) or not facts:
+        raise ValueError("persona card has an invalid facts section")
+    if not isinstance(templates, dict) or not templates:
+        raise ValueError("persona card has an invalid templates section")
+    fact_values = {
+        str(key): text(facts, str(key), "facts") for key in facts
+    }
+    template_values = {
+        str(key): text(templates, str(key), "templates") for key in templates
+    }
+    for key, template in template_values.items():
+        try:
+            fields = {
+                field_name.split(".", 1)[0].split("[", 1)[0]
+                for _, field_name, _, _ in Formatter().parse(template)
+                if field_name is not None
+            }
+        except ValueError as error:
+            raise ValueError(
+                f"persona template {key!r} is malformed: {error}"
+            ) from error
+        missing = fields - set(fact_values)
+        if missing:
+            raise ValueError(
+                f"persona template {key!r} references missing facts: {sorted(missing)}"
+            )
     return Persona(
         name=text(identity, "name", "identity"),
         address=text(identity, "address", "identity"),
@@ -187,6 +233,8 @@ def _persona_from_data(data: dict[str, object]) -> Persona:
         meta=meta_values,
         personal=variants(personal, "response", "personal"),
         abstain=variants(abstain, "response", "abstain"),
+        facts=fact_values,
+        templates=template_values,
     )
 
 

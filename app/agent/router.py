@@ -240,6 +240,11 @@ _POLICY_PATTERNS = (
         r"marks?.*(?:essay|short answers?|paper|question))\b",
         re.IGNORECASE,
     ),
+    re.compile(
+        r"\b(did|do|will|would|can|could) you (?:go|going|sit|take|see) "
+        r"(?:to |for )?(?:the )?(?:exam|test|assessment)\b",
+        re.IGNORECASE,
+    ),
 )
 
 _POLICY_NEGATIVE = re.compile(
@@ -279,8 +284,10 @@ _EDUCATION = re.compile(
     r"\b(where did you (?:study|learn|go to school)|what school did you attend|"
     r"where were you educated|your education|when you were young|"
     r"where did you study|which academy did you attend|in your youth|"
-    r"when you were a lad|where did you learn magic|did you go to|"
-    r"study at hogwarts|train as a young wizard|where did you train)\b",
+    r"when you were a lad|where did you learn magic|"
+    r"did you go to (?:hogwarts|school|the school|a wizarding school)|"
+    r"study at hogwarts|train as a young wizard|"
+    r"where did you train (?:as a (?:young )?(?:wizard|witch)|in magic))\b",
     re.IGNORECASE,
 )
 _TEACHING_RECORD = re.compile(
@@ -489,7 +496,8 @@ def contract_decision(
         return ContractDecision("lore", fact_ids=("lore:teaching-record",))
     if re.search(
         r"\b(were you an auror|how long were you in the auror office|"
-        r"why did you leave the aurors|your auror service)\b",
+        r"why did you leave the aurors|your auror service|"
+        r"where did you train as an auror|did you train as an auror)\b",
         question,
         re.IGNORECASE,
     ):
@@ -673,8 +681,11 @@ def classify(
     )
     if decision.contract == "policy":
         return "policy"
-    if persona and decision.contract == "persona":
-        return "meta"
+    if decision.contract == "persona":
+        if persona and decision.fact_ids == ("persona:professor.education",):
+            return "fact"
+        if persona:
+            return "meta"
     if decision.contract == "lore":
         return "fact"
     if decision.contract == "clarify":
