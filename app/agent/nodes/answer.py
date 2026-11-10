@@ -38,7 +38,7 @@ async def answer_node(
     subject = state.get("subject") or default_subject or lore_subject
     cards = personas
     if cards is None and persona is not None:
-        cards = {subject: persona}
+        cards = {default_subject or subject: persona}
     active = active_persona(
         subject,
         enabled=state.get("persona_enabled", True),

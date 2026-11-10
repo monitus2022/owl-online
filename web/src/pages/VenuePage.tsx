@@ -81,14 +81,17 @@ export function VenuePage() {
   // pack keeps the room usable on the corpus path. Opening a statically
   // "soon" department is a product change with its own professor copy.
   const isOpen = subject.status === "open";
-  // The persona flag is site-wide today, but only the home subject has a card.
-  // Keep every other room honest until the per-subject registry (#195/#97) lands.
-  // The lesson subject is the fallback while an older API lacks persona_subject.
+  // The API lists the subjects with a live card and a live lesson pack.
+  // The single subject fields are the fallback while an older API is cached.
   const personaSubject = department?.persona_subject || department?.lesson_subject;
+  const personaSubjects = department?.persona_subjects ?? [];
+  const lessonSubjects = department?.lesson_subjects ?? [];
   const personaState =
     department === null
       ? subject.personaState
-      : department.persona && personaSubject === subject.apiSubject
+      : department.persona &&
+          (personaSubjects.includes(subject.apiSubject) ||
+            personaSubject === subject.apiSubject)
         ? "live"
         : "rehearsal";
   const vacant = subject.professor === "Professor not yet appointed";
@@ -99,7 +102,8 @@ export function VenuePage() {
   };
   const lesson = Boolean(
     department?.lesson &&
-      department.lesson_subject === subject.apiSubject &&
+      (lessonSubjects.includes(subject.apiSubject) ||
+        department.lesson_subject === subject.apiSubject) &&
       summary?.status === "published" &&
       isOpen,
   );

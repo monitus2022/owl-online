@@ -173,7 +173,7 @@ control the non-secret runtime toggles. The workflow passes them with `-e`, and
 | `OWL_LESSON_MODE` | `false` | enable pack-grounded lesson answers |
 | `OWL_LESSON_FALLBACK` | `true` | answer from labelled set texts when the pack does not cover the question |
 | `OWL_PERSONA` | `false` | enable the professor voice |
-| `OWL_PERSONA_SUBJECT` | `dada` | subject whose professor card is live; independent of `OWL_LORE_SUBJECT` |
+| `OWL_PERSONA_SUBJECT` | `dada` | default API chat subject and card; independent of `OWL_LORE_SUBJECT`, which is the eval/direct-call default |
 
 Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
 `/data/subjects/dada/pack.toml` exists on the volume, then run the deploy
@@ -183,8 +183,8 @@ container with the variables.
 The workflow always injects these five keys (the repository variable or its
 default), so they override `owl.env` even when no repository variable is set.
 The file entries are only for manual `docker run` or Compose.
-`OWL_LESSON_MODE` also needs a valid published pack for `OWL_LORE_SUBJECT`
-(default `dada`).
+`OWL_LESSON_MODE` also needs a valid published pack for the request subject;
+the default API subject is `OWL_PERSONA_SUBJECT` (default `dada`).
 
 After the deploy, check:
 

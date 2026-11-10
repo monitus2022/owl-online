@@ -22,9 +22,11 @@ export interface SubjectsPayload {
   subjects: SubjectSummary[];
   lesson: boolean;
   lesson_subject: string;
+  lesson_subjects: string[];
   lesson_fallback: boolean;
   persona: boolean;
   persona_subject: string;
+  persona_subjects: string[];
 }
 
 export async function fetchSubjects(): Promise<SubjectsPayload> {
@@ -40,9 +42,19 @@ export async function fetchSubjects(): Promise<SubjectsPayload> {
     lesson: Boolean(payload.lesson),
     lesson_subject:
       typeof payload.lesson_subject === "string" ? payload.lesson_subject : "",
+    lesson_subjects: Array.isArray(payload.lesson_subjects)
+      ? payload.lesson_subjects.filter(
+          (item): item is string => typeof item === "string",
+        )
+      : [],
     lesson_fallback: payload.lesson_fallback !== false,
     persona: Boolean(payload.persona),
     persona_subject:
       typeof payload.persona_subject === "string" ? payload.persona_subject : "",
+    persona_subjects: Array.isArray(payload.persona_subjects)
+      ? payload.persona_subjects.filter(
+          (item): item is string => typeof item === "string",
+        )
+      : [],
   };
 }

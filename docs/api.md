@@ -140,8 +140,8 @@ book chunk ids those materials resolve to through their `source_refs`. A mixed o
 off-pack answer also cites the retrieved set-text chunks; `off_pack` has empty
 `material_citations`. The selector is
 derived at startup by embedding the material texts in memory; no second index is
-built or stored. The subject is `OWL_LORE_SUBJECT` until the request `subject`
-field ships. Lesson answers are never cached.
+built or stored. `subject` is the request field; omitted means
+`OWL_PERSONA_SUBJECT`. Lesson answers are never cached.
 
 The embedding selector's best-match cosine must clear `OWL_LESSON_MIN_SCORE`
 (default 0.58, calibrated for the local `qwen3-embedding:0.6b`: related
@@ -207,7 +207,7 @@ Response `200`:
 ```
 
 `lesson` is true only when lesson mode is enabled, a selector loaded, and the
-configured subject (`OWL_LORE_SUBJECT`) is among the selector's subjects.
+default API subject (`OWL_PERSONA_SUBJECT`) is among the selector's subjects.
 `lesson_subject` names that subject when `lesson` is true, so the frontend can
 scope the mode to the right venue. `lesson_subjects` lists every subject with a
 loaded pack, so a venue can ask whether its own lesson mode is live.

@@ -141,11 +141,11 @@ class Settings(BaseSettings):
     # Authored setting facts. A directory of Markdown front-matter files, or a
     # JSONL file. Missing means the answer path stays book-only.
     lore_path: Path | None = Path("data/lore")
-    # Canonical subject key for lore selection. The persona card's display name
-    # is "Defense Against the Dark Arts"; the pack key is "dada".
+    # Default subject key for the eval harness and direct ask() callers. The
+    # API uses the request subject, or persona_subject when it is omitted.
     lore_subject: str = "dada"
-    # Subject whose professor card is live. Kept separate from lore_subject so
-    # the persona label follows the card, not the lesson scope.
+    # Default API chat subject and the card used when the request omits subject.
+    # Kept separate from lore_subject so the eval default does not pin the API.
     persona_subject: str = "dada"
     # Subject knowledge packs (#87). A parent directory of per-subject pack
     # directories (data/subjects/<subject>/). Empty means no packs present:

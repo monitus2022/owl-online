@@ -63,7 +63,7 @@ def lesson_available(
     Lesson is available only when the feature is on, a selector exists, and the
     requested subject is one the selector can actually serve.
     """
-    target = subject or settings.lore_subject
+    target = subject or settings.persona_subject
     return (
         settings.lesson_mode
         and runtime.lesson is not None

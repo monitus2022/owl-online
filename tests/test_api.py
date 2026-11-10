@@ -639,6 +639,26 @@ def test_subjects_empty_without_packs():
 
 # Lesson mode: pack-grounded answers use an explicit mode, gated by settings.
 
+_CHARMS_MATERIAL = Material(
+    material_id="charms-test-material",
+    subject="charms",
+    topic="charms",
+    concept="charms-test",
+    kind="spell",
+    text="Raman lifts the feather with a charm.",
+    review_status="reviewed",
+    source_refs=[
+        SourceRef(
+            chunk_id="b1-c01-0000",
+            book=1,
+            chapter=1,
+            quote="Raman lifts the feather",
+            text_hash="0123456789abcdef",
+            index_text_hash="fedcba9876543210",
+        )
+    ],
+)
+
 _LESSON_MATERIAL = Material(
     material_id="dada-test-material",
     subject="dada",
@@ -686,11 +706,24 @@ class _CaptureLessonLlm(_LessonLlm):
 
     async def stream(self, system: str, prompt: str, *, context=None):
         self.systems.append(system)
-        async for piece in super().stream(system, prompt, context=context):
+        if "charms-test-material" in prompt:
+            pieces = ("Raman lifts the feather ", "[mat:charms-test-material].")
+        else:
+            pieces = ("Rowan trims the wick ", "[mat:dada-test-material].")
+        for piece in pieces:
             yield piece
 
 
 class _MultiLessonSelector(_LessonSelector):
+    def __init__(self) -> None:
+        self.subjects_seen: list[str] = []
+
+    async def select(self, question, *, subject, top_k=3, min_score=0.0):
+        self.subjects_seen.append(subject)
+        if subject == "charms":
+            return [_CHARMS_MATERIAL]
+        return [_LESSON_MATERIAL]
+
     def subjects(self):
         return ("dada", "charms")
 
@@ -1000,7 +1033,7 @@ def test_lesson_mode_uses_the_request_subject_card():
             "POST",
             "/ask/stream",
             json={
-                "question": "How does Rowan trim the wick?",
+                "question": "How does Raman lift the feather?",
                 "subject": "charms",
                 "mode": "lesson",
             },
@@ -1009,7 +1042,8 @@ def test_lesson_mode_uses_the_request_subject_card():
     assert any("Professor Raman" in system for system in llm.systems)
     assert not any("Professor Crane" in system for system in llm.systems)
     finals = [data for name, data in _parse_sse(body) if name == "final"]
-    assert finals and finals[0]["material_citations"] == ["dada-test-material"]
+    assert selector.subjects_seen == ["charms"]
+    assert finals and finals[0]["material_citations"] == ["charms-test-material"]
 
 
 def test_lesson_mode_still_routes_meta_and_practice():
@@ -1065,7 +1099,7 @@ def test_lesson_mode_routes_subject_definition_to_meta():
 def test_ask_rejects_an_unknown_subject():
     with _client() as client:
         response = client.post(
-            "/ask", json={"question": "Who are you?", "subject": "astronomy"}
+            "/ask", json={"question": "Who are you?", "subject": "astrology"}
         )
     assert response.status_code == 422
     assert response.json()["detail"] == "unknown subject"
@@ -1075,7 +1109,79 @@ def test_stream_rejects_an_unknown_subject():
     with _client() as client:
         response = client.post(
             "/ask/stream",
-            json={"question": "Who are you?", "subject": "astronomy"},
+            json={"question": "Who are you?", "subject": "astrology"},
         )
     assert response.status_code == 422
     assert response.json()["detail"] == "unknown subject"
+
+
+class _SubjectEchoLlm(_Llm):
+    def __init__(self) -> None:
+        self.systems: list[str] = []
+
+    def _label(self, system: str) -> str:
+        return "Raman" if "Professor Raman" in system else "Crane"
+
+    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        self.systems.append(system)
+        return f"{self._label(system)} answers [b1-c01-0000]."
+
+    async def stream(self, system: str, prompt: str, *, context=None):
+        self.systems.append(system)
+        label = self._label(system)
+        for piece in (f"{label} answers", " [b1-c01-0000]."):
+            yield piece
+
+
+def test_cache_separates_subject_cards_on_both_paths():
+    llm = _SubjectEchoLlm()
+    app = create_app(
+        app_settings=Settings(persona=True),
+        runtime=Runtime(retriever=_Retriever(), llm=llm),
+    )
+    with TestClient(app) as client:
+        dada = client.post(
+            "/ask", json={"question": "Who trims the wick?", "subject": "dada"}
+        ).json()
+        charms = client.post(
+            "/ask", json={"question": "Who trims the wick?", "subject": "charms"}
+        ).json()
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "Who trims the wick?", "subject": "dada"},
+        ) as response:
+            body = "".join(response.iter_text())
+        dada_stream = [data for name, data in _parse_sse(body) if name == "final"][0]
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "Who trims the wick?", "subject": "charms"},
+        ) as response:
+            body = "".join(response.iter_text())
+        charms_stream = [data for name, data in _parse_sse(body) if name == "final"][0]
+
+    assert dada["answer"].startswith("Crane")
+    assert charms["answer"].startswith("Raman")
+    assert dada_stream["answer"].startswith("Crane")
+    assert charms_stream["answer"].startswith("Raman")
+    # The two /ask calls fill the cache; the stream calls read the same
+    # per-subject keys, so the model is called once per subject.
+    assert len(llm.systems) == 2
+
+
+def test_subjects_reports_per_subject_persona_and_lesson_lists():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True, persona=True),
+        runtime=_persona_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        body = client.get("/v1/subjects").json()
+    assert body["persona_subjects"] == [
+        "charms",
+        "dada",
+        "herbology",
+        "potions",
+        "transfiguration",
+    ]
+    assert body["lesson_subjects"] == ["dada"]

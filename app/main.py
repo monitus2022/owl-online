@@ -43,7 +43,7 @@ from app.exam.attempts import AttemptRecord, AttemptSummary, AttemptView, sample
 from app.exam.bank import MCQ_MARKS, SHORT_ANSWER_MARKS
 from app.grading import AttemptAnswer, AttemptGrade, grade_attempt
 from app.knowledge import LORE_SELECTION_VERSION
-from app.knowledge.taxonomy import SUBJECTS
+from app.knowledge.taxonomy import SUBJECT_KEYS, SUBJECTS
 from app.logging import configure_logging, get_request_id, set_request_id
 from app.pipeline.generate import DEFAULT_TOP_K, SYSTEM_PROMPT, AskResult, ask
 from app.providers.contracts import Llm, Retriever
@@ -407,7 +407,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         return SubjectsResponse(
             subjects=list(runtime.packs),
             lesson=lesson,
-            lesson_subject=app_settings.lore_subject if lesson else "",
+            lesson_subject=app_settings.persona_subject if lesson else "",
             lesson_subjects=lesson_subjects,
             lesson_fallback=app_settings.lesson_fallback,
             persona=app_settings.persona,
@@ -450,7 +450,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         runtime = request.app.state.runtime
         model = getattr(llm, "name", "?")
         subject = body.subject or app_settings.persona_subject
-        if body.subject and body.subject not in PERSONAS:
+        if body.subject and body.subject not in SUBJECT_KEYS:
             raise HTTPException(status_code=422, detail="unknown subject")
         persona_enabled = persona_enabled_for(subject)
         persona = PERSONAS.get(subject) if persona_enabled else None
@@ -565,7 +565,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         if agent is None:
             raise RuntimeError("agent graph was not built")
         subject = body.subject or app_settings.persona_subject
-        if body.subject and body.subject not in PERSONAS:
+        if body.subject and body.subject not in SUBJECT_KEYS:
             raise HTTPException(status_code=422, detail="unknown subject")
         if body.mode == "lesson" and not lesson_available(
             app_settings, runtime, subject

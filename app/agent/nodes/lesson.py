@@ -38,7 +38,7 @@ async def lesson_node(
     active_subject = state.get("subject") or default_subject or subject
     cards = personas
     if cards is None and persona is not None:
-        cards = {active_subject: persona}
+        cards = {default_subject or active_subject: persona}
     active = active_persona(
         active_subject,
         enabled=state.get("persona_enabled", True),

@@ -235,14 +235,15 @@ Two interfaces keep the boundary between the UI and the services:
 | `ResultsStore` | `web/src/api/results.ts` | `HttpResultsStore` reads `GET /v1/attempts` for the signed session; records are provisional | #35 moves history to a user id |
 
 The static subject list decides which departments are open. The venue fetches
-`GET /v1/subjects` for the published pack and the live `persona`, `persona_subject`
-and `lesson` flags, so the DADA room sends `mode=lesson` only when the API says
-the selector is loaded. `persona_subject` names the home subject of the live
-card, so only that room takes the live voice copy; every other open room keeps
-the rehearsal copy even when the site-wide persona flag is on. A statically open
-department with no pack stays on the corpus path with a note; a statically
-"soon" department stays furnished until its product entry is opened. The static
-persona state is only the fallback when the API is unreachable. The `build`
+`GET /v1/subjects` for the published pack and the live `persona`,
+`persona_subjects`, `lesson` and `lesson_subjects` flags, so each room checks
+its own subject. The DADA room sends `mode=lesson` only when the API says its
+pack is loaded; Charms does the same when its pack and lesson mode are live.
+Each room takes the live voice copy when its subject is in `persona_subjects`,
+and the single `persona_subject` is the default fallback for an older API. A
+statically open department with no pack stays on the corpus path with a note; a
+statically "soon" department stays furnished until its product entry is opened.
+The static persona state is only the fallback when the API is unreachable. The `build`
 check of the `web` workflow runs the Pages build on
 every pull request and push to main, and deploy-preview origins are covered by
 the API's CORS origin regex. `web/README.md` carries the component map and the
@@ -261,11 +262,11 @@ sequenceDiagram
   participant L as LoreStore
   participant LLM as OpenRouterLlm
 
-  C->>API: POST /ask {question}
-  API->>API: cache.get (hit -> return)
+  C->>API: POST /ask {question, subject}
+  API->>API: resolve the subject card; cache.get (hit -> return)
   API->>API: session cookie, limiter.admit (429 / 503)
   API->>R: get_retriever / get_llm
-  API->>A: ask(question, retriever, llm, persona_suffix, lore)
+  API->>A: ask(question, retriever, llm, persona_suffix, lore, subject)
   A->>RET: retrieve(question, top_k)
   RET->>RET: classify single-hop vs multi-book from coverage cues
   RET->>RET: parse book/chapter reference
@@ -761,9 +762,10 @@ later moves them to a user id.
 
 Corpus-only answers pass through an in-process exact cache keyed by prompt
 version, index text hash, retrieval settings, embedder and reranker config,
-model, normalised question, the persona flag, a hash of the persona suffix, the
-lore pack version, the lore selection version, and (when lesson mode is on) the
-pack fingerprints, lesson top-k, floor, fallback setting and subject. Practice,
+model, normalised question, the request subject, the persona flag, a hash of
+that subject's persona suffix, the lore pack version, the lore selection
+version, and when lesson mode is on the pack fingerprints, lesson top-k, floor,
+fallback setting and subject. Practice,
 feedback, meta, personal and lesson never read or write it: feedback is personalised by the
 student answer, practice is meant to vary, meta/personal are scripted, and
 lesson answers are pack-first and scope-tagged. Usage is logged for
