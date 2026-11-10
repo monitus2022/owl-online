@@ -1,0 +1,17 @@
+{"id": "cit-001", "mode": "policy", "citations": ["policy:script:assessment.dada"], "abstained": false, "valid": true, "note": "Valid policy script."}
+{"id": "cit-002", "mode": "policy", "citations": ["lore:school-001"], "abstained": false, "valid": false, "note": "Policy answer with a lore cite."}
+{"id": "cit-003", "mode": "policy", "citations": [], "abstained": false, "valid": false, "note": "Policy answer with no script."}
+{"id": "cit-004", "mode": "fact", "citations": ["lore:school-001"], "abstained": false, "valid": true, "note": "Valid lore setting fact."}
+{"id": "cit-005", "mode": "fact", "citations": ["persona:identity"], "abstained": false, "valid": true, "note": "Valid persona setting fact."}
+{"id": "cit-006", "mode": "fact", "citations": ["lesson:doc#span"], "abstained": false, "valid": false, "note": "Setting answer with a lesson cite."}
+{"id": "cit-007", "mode": "fact", "citations": [], "abstained": false, "valid": false, "note": "Setting answer with no setting cite."}
+{"id": "cit-008", "mode": "lesson", "citations": ["lesson:doc#span"], "abstained": false, "valid": true, "note": "Valid teaching span."}
+{"id": "cit-009", "mode": "lesson", "citations": ["lore:school-001"], "abstained": false, "valid": false, "note": "Teaching answer with a lore cite."}
+{"id": "cit-010", "mode": "lesson", "citations": [], "abstained": false, "valid": false, "note": "Teaching answer with no lesson cite."}
+{"id": "cit-011", "mode": "answer", "citations": ["lesson:doc#span"], "abstained": false, "valid": true, "note": "Corpus answer with a lesson span."}
+{"id": "cit-012", "mode": "answer", "citations": ["lore:school-001"], "abstained": false, "valid": true, "note": "Corpus answer with a lore setting fact."}
+{"id": "cit-013", "mode": "answer", "citations": ["lesson:doc#span", "lore:school-001"], "abstained": false, "valid": false, "note": "Mixed authority on the answer path."}
+{"id": "cit-014", "mode": "meta", "citations": ["lore:school-001"], "abstained": false, "valid": false, "note": "Scripted meta answer with a cite."}
+{"id": "cit-015", "mode": "abstain", "citations": [], "abstained": true, "valid": true, "note": "Abstained answer with no cite."}
+{"id": "cit-016", "mode": "lesson", "citations": ["b1-c01-0000"], "abstained": false, "valid": false, "note": "Unknown citation form."}
+{"id": "cit-017", "mode": "feedback", "citations": [], "abstained": false, "needs_input": true, "valid": true, "note": "A feedback request with no student answer has nothing to cite."}

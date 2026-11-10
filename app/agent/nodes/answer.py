@@ -69,6 +69,7 @@ async def answer_node(
         "answer": result.answer,
         "citations": result.citations,
         "lore_citations": result.lore_citations,
+        "typed_citations": result.typed_citations,
         "lore_chars": result.lore_chars,
         "abstained": result.abstained,
         "attempts": result.attempts,

@@ -43,6 +43,7 @@ from app.exam.attempts import AttemptRecord, AttemptSummary, AttemptView, sample
 from app.exam.bank import MCQ_MARKS, SHORT_ANSWER_MARKS
 from app.grading import AttemptAnswer, AttemptGrade, grade_attempt
 from app.knowledge import LORE_SELECTION_VERSION
+from app.knowledge.citations import check_authority, typed_from_legacy
 from app.knowledge.taxonomy import SUBJECT_KEYS, SUBJECTS
 from app.logging import configure_logging, get_request_id, set_request_id
 from app.pipeline.generate import DEFAULT_TOP_K, SYSTEM_PROMPT, AskResult, ask
@@ -55,6 +56,28 @@ logger = logging.getLogger(__name__)
 
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 _SUBJECT_TITLES = dict(SUBJECTS)
+
+
+def _typed_and_errors(
+    result: AskResult, *, mode: str, needs_input: bool = False
+) -> tuple[list[str], list[str]]:
+    """The typed citations and the authority errors for one final answer."""
+    typed = result.typed_citations or typed_from_legacy(
+        result.citations, result.lore_citations, result.material_citations
+    )
+    errors = check_authority(
+        typed,
+        mode=mode,
+        abstained=result.abstained,
+        needs_input=needs_input or result.needs_input,
+    )
+    if errors:
+        logger.warning(
+            "citation authority errors mode=%s: %s",
+            mode,
+            "; ".join(errors),
+        )
+    return typed, errors
 
 
 def _parse_paper_id(paper_id: str) -> tuple[str, str]:
@@ -484,12 +507,15 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     latency_ms=0.0,
                     subject=subject,
                 )
+                typed, errors = _typed_and_errors(cached, mode="answer")
                 return AskResponse(
                     answer=cached.answer,
                     citations=cached.citations,
                     abstained=cached.abstained,
                     lore_citations=cached.lore_citations,
                     material_citations=cached.material_citations,
+                    typed_citations=typed,
+                    citation_errors=errors,
                 )
             start = time.perf_counter()
             try:
@@ -540,12 +566,15 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 latency_ms=(time.perf_counter() - start) * 1000,
                 subject=subject,
             )
+            typed, errors = _typed_and_errors(result, mode="answer")
             return AskResponse(
                 answer=result.answer,
                 citations=result.citations,
                 abstained=result.abstained,
                 lore_citations=result.lore_citations,
                 material_citations=result.material_citations,
+                typed_citations=typed,
+                citation_errors=errors,
             )
         finally:
             limiter.release(decision.token)
@@ -641,6 +670,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     )
                     if cached.abstained:
                         yield {"event": "reset", "data": json.dumps({})}
+                    typed, errors = _typed_and_errors(cached, mode="answer")
                     yield {
                         "event": "final",
                         "data": json.dumps(
@@ -649,6 +679,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                                 "citations": cached.citations,
                                 "lore_citations": cached.lore_citations,
                                 "material_citations": cached.material_citations,
+                                "typed_citations": typed,
+                                "citation_errors": errors,
                                 "scope": cached.scope,
                                 "abstained": cached.abstained,
                                 "needs_input": False,
@@ -724,6 +756,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 citations=list(final.get("citations", [])),
                 lore_citations=list(final.get("lore_citations", [])),
                 material_citations=list(final.get("material_citations", [])),
+                typed_citations=list(final.get("typed_citations", [])),
+                needs_input=bool(final.get("needs_input", False)),
                 scope=final.get("scope"),
                 prompt_chars=int(final.get("prompt_chars") or 0),
                 lore_chars=int(final.get("lore_chars") or 0),
@@ -749,6 +783,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             )
             if final.get("abstained"):
                 yield {"event": "reset", "data": json.dumps({})}
+            mode = str(final.get("mode", intent))
+            typed, errors = _typed_and_errors(
+                result, mode=mode, needs_input=bool(final.get("needs_input", False))
+            )
             yield {
                 "event": "final",
                 "data": json.dumps(
@@ -757,11 +795,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         "citations": final.get("citations", []),
                         "lore_citations": final.get("lore_citations", []),
                         "material_citations": final.get("material_citations", []),
+                        "typed_citations": typed,
+                        "citation_errors": errors,
                         "scope": final.get("scope"),
                         "abstained": final.get("abstained", False),
                         "needs_input": final.get("needs_input", False),
                         "attempts": final.get("attempts", 1),
-                        "mode": final.get("mode", "answer"),
+                        "mode": mode,
                     },
                     ensure_ascii=False,
                 ),

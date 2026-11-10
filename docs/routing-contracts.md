@@ -64,11 +64,18 @@ The lesson path is opt-in. Residual traffic is not RAG.
 
 A setting answer with no `persona:` or `lore:` cite is invalid. A setting answer
 with a `lesson:` cite is invalid even if the book mentions the same noun. A
-teaching answer that cites `lore:` for a curricular claim is invalid. This is an
+teaching answer that cites `lore:` for a curricular claim is invalid. The corpus
+`answer` path may carry a setting or a lesson authority, but not both, and never
+policy; a `needs_input` feedback request has nothing to cite yet. This is an
 authority check, not a prompt instruction.
 
-The current API has `citations`, `lore_citations` and `material_citations`.
-#218 adds the typed field and the checker without breaking the frontend.
+The API now carries the typed field as `typed_citations` alongside the legacy
+`citations`, `lore_citations` and `material_citations`; `app/knowledge/citations.py`
+holds the parser and the cross-type checker, and the final payload reports
+`citation_errors`. The frontend renders the typed chips when present and falls
+back to the legacy fields otherwise. The cross-type fixture is
+`eval/routing/fixtures/citations.jsonl`; `eval/routing/test_citations.py` runs
+the checker over every row.
 
 The fixture uses fact IDs; the emitted cite IDs are a small mapping:
 

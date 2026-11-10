@@ -93,6 +93,8 @@ def test_ask_returns_grounded_answer_with_citations():
     body = response.json()
     assert body["abstained"] is False
     assert body["citations"] == ["b1-c01-0000"]
+    assert body["typed_citations"] == ["lesson:b1-c01-0000#b1-c01-0000"]
+    assert body["citation_errors"] == []
     assert "b1-c01-0000" in body["answer"]
 
 
@@ -151,6 +153,8 @@ def test_ask_response_matches_the_typed_schema():
         "abstained",
         "lore_citations",
         "material_citations",
+        "typed_citations",
+        "citation_errors",
     }
 
 
@@ -330,6 +334,7 @@ def test_ask_stream_reports_missing_feedback_answer():
     assert "reset" not in names
     assert finals[0]["needs_input"] is True
     assert finals[0]["abstained"] is False
+    assert finals[0]["citation_errors"] == []
 
 
 def test_ask_stream_rejects_student_answer_outside_feedback_mode():
@@ -547,6 +552,8 @@ def test_ask_returns_lore_citations():
     assert body["abstained"] is False
     assert body["citations"] == []
     assert body["lore_citations"] == ["school-001"]
+    assert body["typed_citations"] == ["lore:school-001"]
+    assert body["citation_errors"] == []
 
 
 def test_ask_stream_carries_lore_citations():
@@ -571,6 +578,8 @@ def test_ask_stream_carries_lore_citations():
     events = _parse_sse(body)
     finals = [data for name, data in events if name == "final"]
     assert finals[0]["lore_citations"] == ["school-001"]
+    assert finals[0]["typed_citations"] == ["lore:school-001"]
+    assert finals[0]["citation_errors"] == []
 
 
 def test_subjects_lists_published_packs():
@@ -781,6 +790,8 @@ def test_lesson_mode_returns_material_and_source_citations():
     assert finals[0]["scope"] == "in_pack"
     assert finals[0]["material_citations"] == ["dada-test-material"]
     assert finals[0]["citations"] == ["b1-c01-0000"]
+    assert "lesson:dada-test-material#b1-c01-0000" in finals[0]["typed_citations"]
+    assert finals[0]["citation_errors"] == []
     assert finals[0]["abstained"] is False
 
 
@@ -1046,6 +1057,8 @@ def test_lesson_mode_uses_the_request_subject_card():
     finals = [data for name, data in _parse_sse(body) if name == "final"]
     assert selector.subjects_seen == ["charms"]
     assert finals and finals[0]["material_citations"] == ["charms-test-material"]
+    assert "lesson:charms-test-material#b1-c01-0000" in finals[0]["typed_citations"]
+    assert finals[0]["citation_errors"] == []
 
 
 def test_lesson_mode_still_routes_meta_and_practice():
@@ -1265,12 +1278,17 @@ def test_lesson_mode_routes_closed_facts_and_clarify():
         ),
     )
     with TestClient(app) as client:
-        for question, expected, needle in (
-            ("Where is Ashcombe?", "fact", "Cotswolds"),
-            ("What is included in DADA?", "clarify", "Do you mean"),
-            ("Where did you study when you are young?", "meta", "Hogwarts"),
-            ("What is the mark scheme?", "policy", "examination"),
-            ("What is the capital of France?", "abstain", "will not guess"),
+        for question, expected, needle, typed in (
+            ("Where is Ashcombe?", "fact", "Cotswolds", "lore:school-001"),
+            ("What is included in DADA?", "clarify", "Do you mean", None),
+            ("Where did you study when you are young?", "meta", "Hogwarts", None),
+            (
+                "What is the mark scheme?",
+                "policy",
+                "examination",
+                "policy:script:assessment.dada",
+            ),
+            ("What is the capital of France?", "abstain", "will not guess", None),
         ):
             with client.stream(
                 "POST",
@@ -1283,6 +1301,11 @@ def test_lesson_mode_routes_closed_facts_and_clarify():
             finals = [data for name, data in events if name == "final"]
             assert modes[0] == expected
             assert needle in finals[0]["answer"]
+            if typed is None:
+                assert finals[0]["typed_citations"] == []
+            else:
+                assert typed in finals[0]["typed_citations"]
+            assert finals[0]["citation_errors"] == []
         with client.stream(
             "POST",
             "/ask/stream",
