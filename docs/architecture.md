@@ -638,7 +638,7 @@ film or secondary material.
 | Pack build | batch job over the corpus | validated materials with source refs and pack version |
 | Exam build | batch job over the packs | validated questions, rubrics, evidence snapshots |
 | Exam store | SQLite in `/data` | banks, items, persisted attempts and grades |
-| Exam serving | `GET /v1/exams` and `POST /v1/exams/{paper_id}/attempts` | sampled stored paper and attempt view, no model call |
+| Exam serving | `GET /v1/exams`, `POST /v1/exams/{paper_id}/attempts` and `DELETE /v1/attempts` | sampled stored paper, attempt view and the session-scoped delete, no model call |
 | Attempt grading | `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one pinned judge call, then a deterministic band |
 
 The bank is authored as `data/exams/<subject>/bank.jsonl` plus `manifest.toml`,
@@ -668,6 +668,9 @@ sequenceDiagram
   C->>A: GET /v1/attempts?subject=dada
   A->>S: graded attempts for this session
   A-->>C: summaries, no key or evidence
+  C->>A: DELETE /v1/attempts
+  A->>S: delete this session's attempts
+  A-->>C: deleted count
 ```
 
 The attempt is persisted before the client sees it, so a reload returns the same

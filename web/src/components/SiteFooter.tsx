@@ -30,6 +30,8 @@ export function SiteFooter() {
       </p>
       <p className="footer-nav">
         <Link to="/about">About the Academy</Link>
+        <span aria-hidden="true"> / </span>
+        <Link to="/privacy">Privacy and retention</Link>
       </p>
     </footer>
   );

@@ -196,7 +196,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         allow_origins=app_settings.cors_origin_list,
         allow_origin_regex=app_settings.cors_origin_regex,
         allow_credentials=True,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["*"],
         # Let a cross-origin chat page read the request id for support.
         expose_headers=["X-Request-ID", "Retry-After"],
@@ -922,6 +922,14 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             subject=subject or app_settings.exam_subject,
             limit=limit,
         )
+
+    @app.delete("/v1/attempts")
+    def delete_attempts(request: Request) -> dict[str, int]:
+        """Delete the current session's attempts (the anonymous delete path)."""
+        store = request.app.state.runtime.exam_store
+        if store is None:
+            raise HTTPException(status_code=503, detail="exam bank unavailable")
+        return {"deleted": store.delete_attempts(request.state.session_id)}
 
     @app.get("/v1/attempts/{attempt_id}", response_model=AttemptView)
     def get_attempt(attempt_id: str, request: Request) -> AttemptView:

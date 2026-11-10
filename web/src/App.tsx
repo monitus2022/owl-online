@@ -4,6 +4,7 @@ import { AboutPage } from "./pages/AboutPage";
 import { CloisterPage } from "./pages/CloisterPage";
 import { FrontPage } from "./pages/FrontPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { PrivacyPage } from "./pages/PrivacyPage";
 import { VenuePage } from "./pages/VenuePage";
 
 // One entering animation per route change: the wrapper is keyed on the path,
@@ -23,6 +24,7 @@ function Shell() {
       <Routes location={location}>
         <Route path="/" element={<FrontPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/cloister" element={<CloisterPage />} />
         <Route path="/venue/:slug" element={<VenuePage />} />
         <Route path="*" element={<NotFoundPage />} />
