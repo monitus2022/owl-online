@@ -113,6 +113,20 @@ def test_delete_preflight_allows_the_pages_origin():
     assert "DELETE" in methods
 
 
+def test_delete_preflight_rejects_an_unrelated_pages_origin():
+    app = create_app(runtime=Runtime(retriever=_Retriever(), llm=_Llm()))
+    with TestClient(app) as client:
+        response = client.options(
+            "/v1/attempts",
+            headers={
+                "Origin": "https://evil.pages.dev",
+                "Access-Control-Request-Method": "DELETE",
+            },
+        )
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_delete_attempts_is_session_scoped(tmp_path):
     store = ExamStore(tmp_path / "exams.db")
     app = create_app(

@@ -20,8 +20,8 @@ export function PrivacyPage() {
           <li>
             Chat is ephemeral. The transcript lives in your browser tab; the
             API does not persist it as a chat record. Corpus-only answers are
-            cached in process memory for up to an hour; the cache clears on
-            restart and has no per-session key.
+            cached in process memory for up to an hour by default; the cache
+            clears on restart and has no per-session key.
           </li>
           <li>
             Usage logs record the session id, intent, model, cache flag, token
@@ -29,9 +29,9 @@ export function PrivacyPage() {
             text.
           </li>
           <li>
-            Traces record the request id, span names, timings, counts, cited
-            retrieved chunk and lore ids, and a prompt hash with its length. They do not
-            record the prompt or answer text.
+            Traces record the request id, span names, timings, counts,
+            retrieved chunk and lore ids, and a prompt hash with its length.
+            They do not record the prompt or answer text.
           </li>
           <li>
             Exam attempts record the paper, the questions you saw, your

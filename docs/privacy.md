@@ -10,7 +10,7 @@ and not a data processing agreement.
 | Data | Where | Contents | Prompt or answer text |
 |---|---|---|---|
 | Chat transcript | Browser tab only | The messages in the open tab | Yes, in the browser; not persisted as a chat record |
-| Answer cache | Process memory | Corpus-only answers, keyed by question, model and index scope; 256 entries, 1 hour TTL, cleared on restart | The cached answer text is in memory; it is not a chat record and is not session-keyed |
+| Answer cache | Process memory | Corpus-only answers, keyed by question, model and index scope; default 256 entries and 1 hour TTL (configurable), cleared on restart | The cached answer text is in memory; it is not a chat record and is not session-keyed |
 | Usage log | Process log | Session id, intent, model, cache flag, token counts, cost, latency | No |
 | Trace | Process log and optional capped file | Request id, span names, timings, counts, retrieved chunk and lore ids, prompt hash and length | No |
 | Exam attempt | SQLite `attempts` and `attempt_questions` | Paper, questions served, answers, grade, session id, timestamps | The attempt stores the served question prompts and the student's answers; it does not store chat prompts |
@@ -31,7 +31,7 @@ does not store the raw answer, but its feedback may quote it.
 |---|---|
 | Chat transcript | Until the tab closes or the page reloads; the API keeps no chat record |
 | Answer cache | Up to 1 hour (TTL) or 256 entries, whichever comes first; cleared on restart |
-| Judge cache | Operator-managed; delete `data/exam_judge_cache.jsonl` to clear |
+| Judge cache | Operator-managed; delete `data/exam_judge_cache.jsonl` and restart the API to clear the in-process copy |
 | Session cookie | 24 hours (`max_age=86400`); the next request gets a new session id |
 | Usage log | Host log rotation |
 | Trace | Process log rotation; the optional file caps at 20 MB with one rotation |
@@ -76,16 +76,18 @@ The only cookie is `owl_session`. The middleware sets it with:
   local HTTP development;
 - `max_age=86400`.
 
-CORS allows the configured origins and the Pages preview regex, with
-credentials. The state-changing endpoints are JSON `POST`/`DELETE` calls, which
-trigger a CORS preflight; a browser from an origin outside the allowlist cannot
-read the response or send the credentialed request. Attempt ids are random and
-session-owned (`owned_attempt` returns 404 for another session), so a forged
-grade request cannot target an attempt it does not own. The chat endpoints are
-unauthenticated by design but rate-limited per session and per IP.
+CORS allows the configured origins and the project's Pages origin with its
+preview subdomains (`owl-online.pages.dev`), with credentials; an unrelated
+`*.pages.dev` origin is rejected. The state-changing endpoints are JSON
+`POST`/`DELETE` calls, which trigger a CORS preflight; a browser from an origin
+outside the allowlist cannot read the response or send the credentialed request.
+Attempt ids are random and session-owned (`owned_attempt` returns 404 for
+another session), so a forged grade request cannot target an attempt it does not
+own. The chat endpoints are unauthenticated by design but rate-limited per
+session and per IP.
 
 Residual CSRF risk: the cookie is `SameSite=None` on HTTPS, so a cross-site
-request can carry it. The JSON preflight and the origin allowlist are the
+request can carry it. The JSON preflight and the scoped origin allowlist are the
 barrier, and the attempt ids are unguessable. A dedicated CSRF token is not
 needed for the current anonymous surface; revisit it when accounts and
 state-changing account routes land in #35.
