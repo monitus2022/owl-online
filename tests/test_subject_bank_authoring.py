@@ -32,6 +32,7 @@ def test_quote_overlap_gate_rejects_copied_run_and_missing_chunk() -> None:
     from types import SimpleNamespace
 
     item = SimpleNamespace(
+        item_id="test-mcq-001",
         prompt="alpha beta gamma delta epsilon zeta eta",
         model_answer="",
         rationale="",
