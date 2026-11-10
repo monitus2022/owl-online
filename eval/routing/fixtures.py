@@ -14,6 +14,7 @@ from pathlib import Path
 CONTRACTS = frozenset(
     {"policy", "persona", "lore", "lesson", "abstain", "clarify"}
 )
+SUBJECTS = ("dada", "charms", "potions", "transfiguration", "herbology")
 FACT_PREFIX = {
     "policy": "policy:",
     "persona": "persona:",
@@ -46,6 +47,7 @@ class RoutingItem:
     category: str
     holdout: bool = False
     note: str = ""
+    subject: str = "dada"
 
     def fact_prefix_ok(self) -> bool:
         if self.contract in FACT_PREFIX:
@@ -82,6 +84,9 @@ def parse_item(record: dict[str, object], where: str) -> RoutingItem:
     if contract not in CONTRACTS:
         raise ValueError(f"{where}: unknown contract {contract!r}")
     category = _require_str(record, "category", where)
+    subject = record.get("subject", "dada")
+    if not isinstance(subject, str) or subject not in SUBJECTS:
+        raise ValueError(f"{where}: unknown subject {subject!r}")
     fact_ids = _fact_ids(record, where)
     fact_present = record.get("fact_present")
     if not isinstance(fact_present, bool):
@@ -96,6 +101,7 @@ def parse_item(record: dict[str, object], where: str) -> RoutingItem:
         item_id=item_id,
         utterance=utterance,
         contract=contract,
+        subject=subject,
         fact_ids=fact_ids,
         fact_present=fact_present,
         category=category,
@@ -166,12 +172,43 @@ def validate_fixture(items: list[RoutingItem]) -> None:
         raise ValueError("persona and lore items must record a supporting fact")
 
 
+def validate_subject_fixture(items: list[RoutingItem]) -> None:
+    """Per-subject coverage for the five-card routing fixture (#222)."""
+    by_subject: dict[str, list[RoutingItem]] = {}
+    for item in items:
+        by_subject.setdefault(item.subject, []).append(item)
+    missing = set(SUBJECTS) - set(by_subject)
+    if missing:
+        raise ValueError(f"subject fixture is missing subjects: {sorted(missing)}")
+    for subject, rows in by_subject.items():
+        contracts = {row.contract for row in rows}
+        absent = CONTRACTS - contracts
+        if absent:
+            raise ValueError(f"{subject}: missing contracts {sorted(absent)}")
+        if len(rows) < 10:
+            raise ValueError(f"{subject}: needs at least 10 items")
+        if not any(row.holdout for row in rows):
+            raise ValueError(f"{subject}: needs a held-out item")
+        required = f"what is included in {subject}"
+        if required not in {
+            row.utterance.lower().rstrip("?.!") for row in rows
+        }:
+            raise ValueError(f"{subject}: missing {required!r}")
+        if any(
+            row.contract in {"persona", "lore", "lesson"} and not row.fact_present
+            for row in rows
+        ):
+            raise ValueError(f"{subject}: persona/lore/lesson items need a fact")
+
+
 __all__ = [
     "CONTRACTS",
     "MINIMUMS",
     "REQUIRED_UTTERANCES",
+    "SUBJECTS",
     "RoutingItem",
     "load_routing_items",
     "parse_item",
     "validate_fixture",
+    "validate_subject_fixture",
 ]

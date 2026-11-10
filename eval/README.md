@@ -567,5 +567,16 @@ uv run python scripts/measure_routing.py
 
 It prints the expected-vs-actual contract matrix and exits non-zero on a policy
 leak, authority bleed, false abstain, fact mismatch or an abstain item routed
-away from abstain (except the known hex-versus-jinx residual). The design note is
-`docs/routing-contracts.md`.
+away from abstain (except the known hex-versus-jinx residual).
+
+`eval/routing/fixtures/subjects.jsonl` is the five-card companion (#222): 11
+items per subject across policy, persona, lore, lesson, abstain and clarify,
+with one held-out policy paraphrase per subject. Its SHA-256 is pinned in
+`test_subjects.py`. The per-subject measurement loads the published pack for
+each subject and reports the same gate:
+
+```text
+uv run python scripts/measure_subject_routing.py
+```
+
+The design note is `docs/routing-contracts.md`.
