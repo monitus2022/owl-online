@@ -144,6 +144,9 @@ class Settings(BaseSettings):
     # Canonical subject key for lore selection. The persona card's display name
     # is "Defense Against the Dark Arts"; the pack key is "dada".
     lore_subject: str = "dada"
+    # Subject whose professor card is live. Kept separate from lore_subject so
+    # the persona label follows the card, not the lesson scope.
+    persona_subject: str = "dada"
     # Subject knowledge packs (#87). A parent directory of per-subject pack
     # directories (data/subjects/<subject>/). Empty means no packs present:
     # exam generation and lesson mode stay disabled until a pack validates.

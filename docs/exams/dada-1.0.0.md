@@ -66,6 +66,13 @@
 | 4 | 4 |
 | 5 | 4 |
 
+## Option lengths
+
+| Metric | Value |
+|---|---:|
+| Correct option strictly longest | 80.0% (20/25) |
+| Mean gap over the longest distractor | 1.28 words |
+
 ## Items
 
 | Item | Kind | Topic | Material | Review |

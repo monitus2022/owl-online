@@ -81,12 +81,17 @@ export function VenuePage() {
   // pack keeps the room usable on the corpus path. Opening a statically
   // "soon" department is a product change with its own professor copy.
   const isOpen = subject.status === "open";
+  // The persona flag is site-wide today, but only the home subject has a card.
+  // Keep every other room honest until the per-subject registry (#195/#97) lands.
+  // The lesson subject is the fallback while an older API lacks persona_subject.
+  const personaSubject = department?.persona_subject || department?.lesson_subject;
   const personaState =
     department === null
       ? subject.personaState
-      : department.persona
+      : department.persona && personaSubject === subject.apiSubject
         ? "live"
         : "rehearsal";
+  const vacant = subject.professor === "Professor not yet appointed";
   const room: Subject = {
     ...subject,
     status: isOpen ? "open" : "soon",
@@ -146,7 +151,7 @@ export function VenuePage() {
           <h1>{room.name}</h1>
           <p className="venue-professor">
             {room.professor}
-            {room.personaState === "live" ? "" : " — voice in rehearsal"}
+            {room.personaState === "live" || vacant ? "" : " — voice in rehearsal"}
           </p>
         </div>
         <Crest crest={room.crest} className="venue-crest" />
@@ -170,7 +175,7 @@ export function VenuePage() {
             className={tab === entry.id ? "tab tab-on" : "tab"}
             onClick={() => setTab(entry.id)}
           >
-            {entry.label}
+            {entry.id === "chat" && vacant ? "Ask the department" : entry.label}
           </button>
         ))}
       </div>

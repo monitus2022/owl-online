@@ -248,7 +248,7 @@ def route(state: AgentState, *, persona: bool = False) -> dict[str, object]:
         question,
         requested_mode=state.get("requested_mode", "auto"),
         student_answer=state.get("student_answer"),
-        persona=persona,
+        persona=persona and state.get("persona_enabled", True),
     )
     payload: dict[str, object] = {"mode": mode}
     if mode == "meta":

@@ -29,9 +29,10 @@ export function AboutPage() {
         <p>
           Defence Against the Dark Arts is taught by Professor Alistair
           Crane, who fought at the Battle as a student and served about ten
-          years in the Auror Office before co-founding the school. The other
-          four departments open as their classrooms are furnished and their
-          professors take the post.
+          years in the Auror Office before co-founding the school. Charms is
+          open with a published pack and exam bank while its professor post
+          stays vacant; the other three departments open as their classrooms
+          are furnished and their professors take the post.
         </p>
         <p>
           The academy, its founders and its professors are original
@@ -73,8 +74,8 @@ export function AboutPage() {
           <li>six multiple-choice questions at 3 marks and four short answers at
             8 marks, 50 marks in total;</li>
           <li>
-            every question comes from the published DADA bank and cites the
-            reviewed material and book passages behind it; the bank is
+            every question comes from that subject's published bank and cites
+            the reviewed material and book passages behind it; each bank is
             authored offline, not generated in the exam room;
           </li>
           <li>
@@ -128,7 +129,7 @@ export function AboutPage() {
               <td>Exam papers and marks</td>
               <td className="truth-real">Real, practice</td>
               <td>
-                The exam room serves a paper sampled from the published DADA
+                The exam room serves a paper sampled from the subject's published
                 bank. The server keeps the MCQ key, scores objective answers by
                 code and sends the short answers to a pinned judge; totals and
                 bands are deterministic. A result is practice, not an official
@@ -146,22 +147,23 @@ export function AboutPage() {
             </tr>
             <tr>
               <td>The professor&rsquo;s voice</td>
-              <td className="truth-demo">In rehearsal</td>
+              <td className="truth-real">Live for DADA</td>
               <td>
-                Every chat affordance addresses the professor, but the
-                persona layer is a thin slice behind a flag that is off on
-                the served endpoint; the full voice still awaits the real
-                lore pack and the lore eval (#97). Today&rsquo;s replies
-                come from the grounded engine in a plain voice.
+                The DADA card is live behind the persona flag. The flag is
+                site-wide, but the home-subject field scopes the live voice to
+                DADA; Charms shows neutral revision-room copy until a professor
+                is appointed, and the other rooms keep rehearsal copy.
               </td>
             </tr>
             <tr>
-              <td>Four closed departments</td>
+              <td>Three closed departments</td>
               <td className="truth-not">Not built yet</td>
               <td>
-                Potions, Transfiguration, Charms and Herbology open only
-                when their subject packs pass validation; before that a
-                closed door shows no invented professor and no content.
+                Potions, Transfiguration and Herbology open only when their
+                subject packs pass validation; before that a closed door shows
+                no invented professor and no content. Charms is open with a
+                published pack and exam bank, but its professor post is still
+                vacant.
               </td>
             </tr>
           </tbody>

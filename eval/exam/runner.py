@@ -26,6 +26,7 @@ async def run_exam_eval(
     concurrency: int = 4,
     independent: bool = True,
     calibration: bool = True,
+    coverage_targets: bool = True,
 ) -> ExamEvalReport:
     """Load the published bank and run the selected checks."""
     bank = load_exam_bank(bank_path)
@@ -33,12 +34,16 @@ async def run_exam_eval(
     chunks = load_chunks(chunks_path)
     index_hash = text_hash(chunks)
     embedder = make_embedder(embedder_provider, model=embedder_model)
+    targets = None if coverage_targets else {}
     deterministic = await run_deterministic_checks(
         bank,
         pack,
         {chunk.id: chunk for chunk in chunks},
         index_hash,
         embedder=embedder,
+        topic_targets=targets,
+        difficulty_targets=targets,
+        material_targets=coverage_targets,
     )
     independent_report = None
     calibration_report = None

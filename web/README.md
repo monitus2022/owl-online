@@ -31,11 +31,14 @@ at `http://localhost:8000`, run the API alongside:
       uv run uvicorn app.main:app --reload
 
 The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` the DADA room
-sends `mode=lesson`, and with `OWL_PERSONA=true` the professor copy goes live.
+sends `mode=lesson`, and with `OWL_PERSONA=true` the home subject's professor
+copy goes live. Other open rooms keep rehearsal or neutral copy.
 Without the flags the venue falls back to corpus answers and rehearsal copy. The
 exam room uses the served bank at `/v1/exams`; it needs the imported
-`data/exams/exams.db` (`uv run python scripts/import_exam_bank.py --subject dada`)
-and records results in the signed browser session until auth (#35).
+`data/exams/exams.db` (`uv run python scripts/import_exam_bank.py --subject dada`
+and `--subject charms`) and records results in the signed browser session until
+auth (#35). Each venue requests its own subject, so the Charms room serves
+`charms-1.0.0` without changing the API default.
 
 ## Deploy (Cloudflare Pages)
 
@@ -50,9 +53,10 @@ and records results in the signed browser session until auth (#35).
 
 ## Status and honesty rules
 
-- One subject is real (Defence Against the Dark Arts, chat only). The other
-  four doors lead to "classroom being furnished" — no invented professors or
-  content.
+- Two subjects are real: Defence Against the Dark Arts has the live professor
+  card, and Charms has a published pack and exam bank with the professor post
+  still vacant. The other three doors lead to "classroom being furnished" — no
+  invented professors or content.
 - The static subject list decides which departments are open. The persona flag
   (`OWL_PERSONA`) and lesson flag (`OWL_LESSON_MODE`) are read from
   `GET /v1/subjects`; a statically open department with no pack stays on corpus

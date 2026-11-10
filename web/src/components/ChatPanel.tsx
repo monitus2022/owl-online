@@ -46,7 +46,11 @@ function welcome(
   subject: Subject,
   lesson: boolean,
   lessonFallback: boolean,
+  vacant: boolean,
 ): string {
+  if (vacant) {
+    return `Welcome to the ${subject.name} revision room. Answers come from the department's reviewed notes, and nothing beyond them is guessed. No professor has been appointed for this department yet.`;
+  }
   if (lesson) {
     const outside = lessonFallback
       ? "Questions outside the notes are answered from the set texts and labelled."
@@ -71,6 +75,7 @@ export function ChatPanel({
   lessonFallback: boolean;
   ready: boolean;
 }) {
+  const vacant = subject.professor === "Professor not yet appointed";
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
@@ -107,6 +112,7 @@ export function ChatPanel({
       for await (const streamEvent of askStream(
         text,
         subject.personaState,
+        subject.apiSubject,
         lesson ? "lesson" : "auto",
       )) {
         if (streamEvent.name === "mode") {
@@ -168,7 +174,10 @@ export function ChatPanel({
   }
 
   return (
-    <section className="chat" aria-label="Chat with the professor">
+    <section
+      className="chat"
+      aria-label={vacant ? "Chat with the department" : "Chat with the professor"}
+    >
       <ol className="chat-log">
         {messages.map((message, index) => {
           const thinking =
@@ -178,7 +187,7 @@ export function ChatPanel({
           // reflected without rewriting transcript state.
           const bodyText =
             message.id === 0
-              ? welcome(subject, lesson, lessonFallback)
+              ? welcome(subject, lesson, lessonFallback, vacant)
               : message.text;
           const modeIsLesson = message.mode === "lesson";
           const body = (
@@ -257,7 +266,13 @@ export function ChatPanel({
         <input
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
-          placeholder={ready ? "Ask the professor…" : "Preparing the room…"}
+          placeholder={
+            !ready
+              ? "Preparing the room…"
+              : vacant
+                ? "Ask about the set texts…"
+                : "Ask the professor…"
+          }
           maxLength={1000}
           autoComplete="off"
           disabled={busy || !ready}

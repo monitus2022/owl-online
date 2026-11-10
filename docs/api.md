@@ -4,9 +4,9 @@ The served surface is FastAPI. Chat is unversioned today; `GET /v1/subjects`
 and the exam serving routes are versioned. The remaining planned `/v1` aliases
 are listed below. The academy frontend has already split into its own static
 build (`web/`, served on Cloudflare Pages) and calls the chat routes and the
-served exam bank, relying on the CORS origin regex and the session cookie; the
-remaining versioned aliases gate the per-subject chat field and any custom domain
-that must pin its CORS origin.
+served exam bank, relying on the CORS origin regex and the session cookie. The
+remaining versioned aliases are listed below. The chat request already carries
+an optional subject so the persona card can be scoped to its home department.
 
 Base URL: the deployment origin, for example `https://api.monitus.org`.
 
@@ -50,10 +50,13 @@ Response `200`:
 Request:
 
 ```json
-{"question": "Who teaches Defense Against the Dark Arts in book 4?"}
+{"question": "Who teaches Defense Against the Dark Arts in book 4?", "subject": "dada"}
 ```
 
 `question` is trimmed, must be 1 to 1000 characters, and must not be blank.
+`subject` is the department key; empty means `OWL_PERSONA_SUBJECT`. The live
+persona card applies only when the subject matches that home subject, so a
+Charms request is answered without the DADA persona.
 
 Response `200`:
 
@@ -82,12 +85,14 @@ Request:
 ```json
 {
   "question": "Who teaches Defense Against the Dark Arts in book 4?",
+  "subject": "dada",
   "mode": "auto",
   "student_answer": null
 }
 ```
 
-`mode` is `auto`, `answer`, `practice`, `feedback` or `lesson`. `student_answer`
+`subject` follows the same rule as `/ask`: the persona card is active only for
+its home subject, and omitted means `OWL_PERSONA_SUBJECT`. `mode` is `auto`, `answer`, `practice`, `feedback` or `lesson`. `student_answer`
 is at most 6000 characters and is only valid with `auto` or `feedback`. When the
 persona is on, the server may also route to `meta` or `personal`; those are not
 accepted as request modes. `lesson` is explicit only, never inferred, and is
@@ -192,7 +197,8 @@ Response `200`:
   "lesson": true,
   "lesson_subject": "dada",
   "lesson_fallback": true,
-  "persona": true
+  "persona": true,
+  "persona_subject": "dada"
 }
 ```
 
@@ -203,14 +209,17 @@ scope the mode to the right venue. `lesson_fallback` mirrors
 `OWL_LESSON_FALLBACK`, so the room copy can say whether outside-the-notes
 questions are answered from the set texts or refused. `persona` mirrors
 `OWL_PERSONA`, so the frontend can stop hardcoding whether the professor's voice
-is live.
+is live. `persona_subject` names the subject that persona belongs to
+(`OWL_PERSONA_SUBJECT`) when `persona` is true; a room for another subject shows
+the rehearsal copy instead of claiming a live professor.
 
 ### Exam serving
 
 The exam room reads the published bank through four routes. A paper id is
-`<subject>-<version>`, for example `dada-1.0.0`. Nothing is generated at request
-time: the server samples a stored bank, persists the attempt, and grades it
-later.
+`<subject>-<version>`, for example `dada-1.0.0` or `charms-1.0.0`. Nothing is
+generated at request time: the server samples a stored bank, persists the
+attempt, and grades it later. The banks are independent, so the Charms venue
+requests `subject=charms` explicitly; the default remains `OWL_EXAM_SUBJECT`.
 
 `GET /v1/exams?subject=dada&version=1.0.0` returns the published paper
 descriptors. `subject` defaults to `OWL_EXAM_SUBJECT` and `version` to the

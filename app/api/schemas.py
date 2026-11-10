@@ -12,6 +12,9 @@ class AskRequest(BaseModel):
     """A single revision question."""
 
     question: str = Field(min_length=1, max_length=1000)
+    # The department the question is asked in. Empty means the exam/persona
+    # default subject. The server uses it to scope the live persona card.
+    subject: str = Field(default="", max_length=64)
 
     @field_validator("question")
     @classmethod
@@ -61,6 +64,7 @@ class SubjectsResponse(BaseModel):
     lesson_subject: str = ""
     lesson_fallback: bool = True
     persona: bool = False
+    persona_subject: str = ""
 
 
 class ExamPaper(BaseModel):

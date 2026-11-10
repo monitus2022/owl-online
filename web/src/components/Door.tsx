@@ -16,7 +16,9 @@ export function Door({ subject }: { subject: Subject }) {
         aria-label={
           closed
             ? `${subject.name} — the department is not yet open`
-            : `Enter ${subject.name}, taught by ${subject.professor}`
+            : subject.professor === "Professor not yet appointed"
+              ? `Enter ${subject.name}`
+              : `Enter ${subject.name}, taught by ${subject.professor}`
         }
       >
         <svg viewBox="0 0 120 200" className="door-art" aria-hidden="true">

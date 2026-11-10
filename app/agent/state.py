@@ -11,6 +11,7 @@ RequestedMode = Literal["auto", "answer", "practice", "feedback", "lesson"]
 class AgentState(TypedDict, total=False):
     question: str
     requested_mode: RequestedMode
+    persona_enabled: bool
     student_answer: str | None
     top_k: int
     mode: Mode

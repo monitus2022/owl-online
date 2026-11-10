@@ -232,11 +232,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     def get_llm(request: Request) -> Llm:
         return request.app.state.runtime.llm
 
-    def cache_scope(runtime: Runtime, model: str) -> str:
+    def cache_scope(runtime: Runtime, model: str, persona_enabled: bool) -> str:
         """Everything besides the question that can change a cached answer."""
         persona_scope = (
             hashlib.sha256(PERSONA.answer_suffix().encode("utf-8")).hexdigest()[:8]
-            if app_settings.persona
+            if persona_enabled
             else "off"
         )
         lesson_scope = (
@@ -396,6 +396,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             lesson_subject=app_settings.lore_subject if lesson else "",
             lesson_fallback=app_settings.lesson_fallback,
             persona=app_settings.persona,
+            persona_subject=app_settings.persona_subject if app_settings.persona else "",
         )
 
     @app.get("/")
@@ -413,6 +414,12 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             "subjects": "/v1/subjects",
         }
 
+    def persona_enabled_for(subject: str) -> bool:
+        """Only the persona's home subject gets the live card."""
+        return app_settings.persona and (
+            subject or app_settings.persona_subject
+        ) == app_settings.persona_subject
+
     @app.post("/ask", response_model=AskResponse)
     async def ask_endpoint(
         body: AskRequest,
@@ -424,7 +431,10 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         limiter: ChatLimiter = app.state.limiter
         runtime = request.app.state.runtime
         model = getattr(llm, "name", "?")
-        key = cache_key(body.question, cache_scope(runtime, model), model)
+        persona_enabled = persona_enabled_for(body.subject)
+        key = cache_key(
+            body.question, cache_scope(runtime, model, persona_enabled), model
+        )
         cached = app.state.cache.get(key)
         decision = limiter.admit(
             session, request.state.client_ip, cache_hit=cached is not None
@@ -468,13 +478,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         max_retries=app_settings.retry_budget,
                         multi_book=app_settings.multi_book,
                         persona_suffix=(
-                            PERSONA.answer_suffix() if app_settings.persona else None
+                            PERSONA.answer_suffix() if persona_enabled else None
                         ),
                         lore=runtime.lore,
                         subject=app_settings.lore_subject,
                         on_stage=mark,
                     )
-                    if app_settings.persona and result.abstained:
+                    if persona_enabled and result.abstained:
                         result = replace(
                             result, answer=PERSONA.abstain_response()
                         )
@@ -534,16 +544,21 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         limiter: ChatLimiter = app.state.limiter
         llm = runtime.llm
         model = getattr(llm, "name", "?")
+        persona_enabled = persona_enabled_for(body.subject)
         intent = classify(
             body.question,
             requested_mode=body.mode,
             student_answer=body.student_answer,
-            persona=app_settings.persona,
+            persona=persona_enabled,
         )
         # Only corpus-only answers are shared; feedback is personalised,
         # practice is meant to vary, and meta/personal are scripted.
         key = (
-            cache_key(body.question, cache_scope(runtime, model), model)
+            cache_key(
+                body.question,
+                cache_scope(runtime, model, persona_enabled),
+                model,
+            )
             if intent == "answer"
             else None
         )
@@ -557,6 +572,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             "question": body.question,
             "requested_mode": body.mode,
             "student_answer": body.student_answer,
+            "persona_enabled": persona_enabled,
             "top_k": DEFAULT_TOP_K,
         }
         headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}

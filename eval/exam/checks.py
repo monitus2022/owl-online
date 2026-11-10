@@ -119,6 +119,7 @@ async def run_deterministic_checks(
     target_counts: tuple[int, int] = (25, 25),
     topic_targets: dict[str, int] | None = None,
     difficulty_targets: dict[str, int] | None = None,
+    material_targets: bool = True,
 ) -> BankCheckReport:
     """Run the deterministic checks and return the report plus measurements."""
     target_topics = DADA_TOPIC_TARGETS if topic_targets is None else topic_targets
@@ -355,11 +356,15 @@ async def run_deterministic_checks(
     for item in items:
         if item.material_id in material_counts:
             material_counts[item.material_id][item.kind] += 1
-    material_failures = [
-        f"{material_id}: {kind_counts}"
-        for material_id, kind_counts in sorted(material_counts.items())
-        if kind_counts["mcq"] != 1 or kind_counts["short_answer"] != 1
-    ]
+    material_failures = (
+        [
+            f"{material_id}: {kind_counts}"
+            for material_id, kind_counts in sorted(material_counts.items())
+            if kind_counts["mcq"] != 1 or kind_counts["short_answer"] != 1
+        ]
+        if material_targets
+        else []
+    )
     difficulty_failures: list[str] = []
     for kind in ("mcq", "short_answer"):
         totals = {
