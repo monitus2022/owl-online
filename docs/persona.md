@@ -232,11 +232,12 @@ The five founders share one policy spine. The registry loads the DADA seed from
 
 The shared spine in `config/personas/spine.toml` carries the school facts, the
 exam/syllabus/grading refusals, the public-history boundary, the Auror pathway,
-the greeting and the abstention line. Each card carries its own identity, role,
+the greeting and the abstention line. The Auror lore entry is `subject = "all"`
+so every department can cite the same pathway. Each card carries its own identity, role,
 subject definition, teaching stance and professor background. The registry is
 loaded at startup and exposed as `PERSONAS`; `PERSONA` remains the DADA alias.
-The router and API still select DADA until #222 wires the subject through, so a
-Charms or Potions request does not yet use its card. Tier 2 composition stays
+The router and API still select DADA until the remaining #222 slices wire the
+subject through, so a Charms or Potions request does not yet use its card. Tier 2 composition stays
 bounded by the lore pack entries for that professor's subject; persona facts
 about the school and founders live in the shared lore entries, not in five
 prompt files that can drift apart.

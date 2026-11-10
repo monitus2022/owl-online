@@ -543,7 +543,7 @@ The registry now loads five cards: the DADA seed plus Potions, Transfiguration,
 Charms and Herbology, merged over a shared policy spine. The API still serves
 only the home `persona_subject` (default `dada`, `OWL_PERSONA_SUBJECT`); the
 request `subject` guard keeps a Charms or Potions request out of Crane's voice
-until #222 wires the per-subject cards through. The flag itself stays site-wide
+until the remaining #222 slices wire the per-subject cards through. The flag itself stays site-wide
 until that wiring lands. The card and the doc change together;
 `tests/test_personas.py` asserts every card has every meta topic and the shared
 boundaries, and `tests/test_persona.py` keeps the DADA variant table aligned.

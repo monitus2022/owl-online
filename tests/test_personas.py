@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from app.agent.persona import (
@@ -105,7 +107,40 @@ def test_for_subject_rejects_an_unknown_subject():
         for_subject("astronomy")
 
 
-def test_dada_seed_card_still_loads_standalone():
-    from app.agent.persona import load_persona
+def test_dada_seed_is_the_raw_toml_card():
+    import tomllib
 
-    assert load_persona() == PERSONA
+    from app.agent.persona import (
+        PERSONA_PATH,
+        SPINE_PATH,
+        _deep_merge,
+        _persona_from_data,
+    )
+
+    raw = tomllib.loads(PERSONA_PATH.read_text(encoding="utf-8"))
+    assert _persona_from_data(raw) == PERSONA
+    spine = tomllib.loads(SPINE_PATH.read_text(encoding="utf-8"))
+    assert _deep_merge(spine, raw) == raw
+
+
+def test_the_four_cards_share_the_spine_greeting():
+    greetings = {
+        for_subject(subject).meta_variants("greeting")
+        for subject in EXPECTED
+        if subject != "dada"
+    }
+    assert len(greetings) == 1
+    assert PERSONA.meta_variants("greeting") not in greetings
+
+
+def test_personas_doc_lists_every_card_variant():
+    doc = (Path(__file__).resolve().parents[1] / "docs" / "personas.md").read_text(
+        encoding="utf-8"
+    )
+    for subject in EXPECTED:
+        if subject == "dada":
+            continue
+        persona = for_subject(subject)
+        for topic in ("identity", "scope", "subject", "professor", "boundaries"):
+            for text in persona.meta_variants(topic):
+                assert text in doc, (subject, topic, text)
