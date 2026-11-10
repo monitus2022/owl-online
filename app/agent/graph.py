@@ -12,7 +12,14 @@ from langgraph.graph.state import CompiledStateGraph
 from app.agent.nodes.answer import answer_node
 from app.agent.nodes.feedback import feedback_node
 from app.agent.nodes.lesson import lesson_node
-from app.agent.nodes.persona import clarify_node, fact_node, meta_node, personal_node
+from app.agent.nodes.persona import (
+    abstain_node,
+    clarify_node,
+    fact_node,
+    meta_node,
+    personal_node,
+    policy_node,
+)
 from app.agent.nodes.practice import practice_node
 from app.agent.persona import Persona
 from app.agent.router import route
@@ -50,8 +57,21 @@ def build_graph(
     if personas is None and persona is not None:
         personas = {default_subject: persona}
     persona_enabled = personas is not None
+    concept_terms = getattr(lesson, "concept_terms", None)
+    teaching_terms = (
+        (lambda subject: concept_terms(subject))
+        if callable(concept_terms)
+        else None
+    )
     graph = StateGraph(AgentState)
-    graph.add_node("router", partial(route, persona=persona_enabled))
+    graph.add_node(
+        "router",
+        partial(
+            route,
+            persona=persona_enabled,
+            teaching_terms=teaching_terms,
+        ),
+    )
 
     # Only the answer path verifies and retries; practice and feedback stay
     # single-pass and ephemeral.
@@ -105,8 +125,28 @@ def build_graph(
         ),
     )
     graph.add_node("clarify", clarify_node)
+    graph.add_node(
+        "policy",
+        partial(
+            policy_node,
+            persona=persona,
+            personas=personas,
+            default_subject=default_subject,
+        ),
+    )
+    graph.add_node(
+        "abstain",
+        partial(
+            abstain_node,
+            persona=persona,
+            personas=personas,
+            default_subject=default_subject,
+        ),
+    )
     graph.add_edge("fact", END)
     graph.add_edge("clarify", END)
+    graph.add_edge("policy", END)
+    graph.add_edge("abstain", END)
 
     for name, node in (
         ("practice", practice_node),
@@ -134,6 +174,8 @@ def build_graph(
         "personal": "personal",
         "fact": "fact",
         "clarify": "clarify",
+        "policy": "policy",
+        "abstain": "abstain",
     }
     if lesson is not None:
         graph.add_node(

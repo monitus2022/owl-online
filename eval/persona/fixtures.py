@@ -14,7 +14,9 @@ from pathlib import Path
 
 from app.agent.persona import META_TOPICS as PERSONA_META_TOPICS
 
-ROUTES = frozenset({"lesson", "meta", "personal", "answer"})
+ROUTES = frozenset(
+    {"lesson", "meta", "personal", "answer", "policy", "fact", "clarify", "abstain"}
+)
 SCOPES = frozenset({"in_pack", "mixed", "off_pack", "abstained"})
 CITATIONS = frozenset({"material", "book", "both", "either", "none"})
 BOUNDARIES = frozenset(

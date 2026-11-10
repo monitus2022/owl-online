@@ -178,15 +178,16 @@ reports:
 - policy leaks: 0
 - authority bleed: 0
 - false abstain given fact present: 0
+- fact mismatch: 0
 - over-clarify: 0
-- matrix: policy 51/51; persona 36/37; lore 35/37; lesson 39/40; clarify 9/18;
-  abstain 0/24 routed to the lesson path.
+- matrix: policy 51/51; persona 37/37; lore 37/37; lesson 40/40; clarify 18/18;
+  abstain 23/24.
 
-The lesson path still abstains at runtime when no span is found, so the abstain
-row is a teaching-path residual rather than a router answer. The clarify misses
-and the one lesson-to-persona misroute are the next cue pass. The script is
-`scripts/measure_routing.py`; it exits non-zero if policy leaks or authority
-bleed appear.
+The one abstain-to-lesson residual is the hex-versus-jinx distinction: the
+terms match the pack but no material entails the distinction. The lesson node
+still abstains at runtime when no span is found, and it reports `mode=abstain`
+in the final payload. The script is `scripts/measure_routing.py`; it exits
+non-zero on a policy leak, authority bleed, false abstain or fact mismatch.
 
 ## Residual and classifier
 

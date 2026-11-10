@@ -565,6 +565,6 @@ measurement is:
 uv run python scripts/measure_routing.py
 ```
 
-It prints the expected-vs-actual contract matrix and exits non-zero if a policy
-leak or authority bleed appears. The design note is
+It prints the expected-vs-actual contract matrix and exits non-zero on a policy
+leak, authority bleed, false abstain or fact mismatch. The design note is
 `docs/routing-contracts.md`.

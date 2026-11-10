@@ -69,6 +69,7 @@ async def lesson_node(
         "material_citations": result.material_citations,
         "scope": result.scope,
         "abstained": result.abstained,
+        "mode": "abstain" if result.abstained else "lesson",
         "attempts": result.attempts,
         "model_calls": result.model_calls,
         "abstain_reason": result.abstain_reason,

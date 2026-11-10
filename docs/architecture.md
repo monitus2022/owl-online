@@ -493,11 +493,13 @@ lightweight. Four persona-adjacent intents are added when `OWL_PERSONA` is on:
 | `answer` | a question about the books | grounded explanation with citations | no | no |
 | `practice` | "give me a practice question on ..." | one or two grounded questions, streamed | no | no |
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
-| `meta` | persona on; identity, subject scope, subject definition, exam (non-disclosure), syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
+| `meta` | persona on; identity, subject scope, subject definition, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
+| `policy` | exam, syllabus, grading, mark scheme or a jailbreak | reviewed refusal from the card, or a generic refusal when persona is off | no | no |
+| `abstain` | unclassified, off-topic or unsafe | the in-world abstention line, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
-| `fact` | persona on; a closed lore fact matched by the contract gate | reviewed setting text from the lore pack, `[lore:<id>]` citations, no model call | no | no |
-| `clarify` | persona on; an ambiguous scope/assessment ask | one scripted disambiguation line, no model call | no | no |
-| `lesson` | classification would be answer, explicit `mode=lesson`, `OWL_LESSON_MODE` on | persona-first teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
+| `fact` | a closed lore fact matched by the contract gate | reviewed setting text from the lore pack, `[lore:<id>]` citations, no model call | no | no |
+| `clarify` | an ambiguous scope/assessment ask | one scripted disambiguation line, no model call | no | no |
+| `lesson` | contract gates miss, a teaching term matches, explicit `mode=lesson`, `OWL_LESSON_MODE` on | persona-first teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
 
 Lesson mode is the one intent grounded in a subject pack first; the corpus is a
 labelled fallback when the pack is thin. The selector is derived at startup by
@@ -797,7 +799,7 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, scope, lore_chars, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, lore_citations, material_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

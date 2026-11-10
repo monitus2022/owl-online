@@ -13,6 +13,8 @@ Mode = Literal[
     "lesson",
     "fact",
     "clarify",
+    "policy",
+    "abstain",
 ]
 RequestedMode = Literal["auto", "answer", "practice", "feedback", "lesson"]
 

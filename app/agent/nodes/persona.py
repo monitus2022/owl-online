@@ -81,6 +81,9 @@ def personal_node(
 CLARIFY_RESPONSE = (
     "Do you mean what the subject covers, or what the examination will assess?"
 )
+POLICY_REFUSAL = (
+    "I cannot answer that. I do not disclose the examination format or its contents."
+)
 
 
 def fact_node(
@@ -119,3 +122,39 @@ def fact_node(
 def clarify_node(state: AgentState) -> dict[str, object]:
     """A scripted disambiguation for an ambiguous closed-fact ask."""
     return _result(CLARIFY_RESPONSE)
+
+
+def policy_node(
+    state: AgentState,
+    *,
+    persona: Persona | None = None,
+    personas: Mapping[str, Persona] | None = None,
+    default_subject: str = "dada",
+) -> dict[str, object]:
+    """A policy refusal, from the card when live and generic otherwise."""
+    active = _active(
+        state, persona=persona, personas=personas, default_subject=default_subject
+    )
+    topic = state.get("meta_topic") or "exam"
+    text = (
+        active.meta_response(topic) if active is not None else None
+    ) or POLICY_REFUSAL
+    return _result(text)
+
+
+def abstain_node(
+    state: AgentState,
+    *,
+    persona: Persona | None = None,
+    personas: Mapping[str, Persona] | None = None,
+    default_subject: str = "dada",
+) -> dict[str, object]:
+    """The in-world abstention for an unclassified teaching request."""
+    active = _active(
+        state, persona=persona, personas=personas, default_subject=default_subject
+    )
+    text = active.abstain_response() if active is not None else ABSTAIN_MESSAGE
+    result = _result(text)
+    result["abstained"] = True
+    result["abstain_reason"] = "no_evidence"
+    return result

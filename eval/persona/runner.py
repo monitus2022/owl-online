@@ -11,8 +11,9 @@ import statistics
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from app.agent.nodes.persona import CLARIFY_RESPONSE
 from app.agent.persona import Persona
-from app.agent.router import classify, meta_topic
+from app.agent.router import classify, contract_decision, meta_topic
 from app.knowledge.lesson import LessonSelector
 from app.knowledge.lore import LoreStore
 from app.knowledge.packs import SubjectPack
@@ -310,7 +311,7 @@ def _abstention_expectation(route: str, scopes: tuple[str, ...]) -> str:
         return "required"
     if "abstained" in scopes:
         return "allowed"
-    if route == "lesson" and not scopes:
+    if not scopes:
         # An adversarial probe has no scope expectation; a refusal is a pass.
         return "allowed"
     return "forbidden"
@@ -340,7 +341,21 @@ async def _run_scenario(
     sample: int,
     stack: PersonaEvalStack,
 ) -> SampleResult:
-    route = classify(scenario.question, requested_mode="lesson", persona=True)
+    terms_fn = getattr(stack.selector, "concept_terms", None)
+    terms = terms_fn(stack.subject) if callable(terms_fn) else None
+    route = classify(
+        scenario.question,
+        requested_mode="lesson",
+        persona=True,
+        subject=stack.subject,
+        teaching_terms=terms,
+    )
+    decision = contract_decision(
+        scenario.question,
+        subject=stack.subject,
+        requested_mode="lesson",
+        teaching_terms=terms,
+    )
     topic: str | None = None
     scope: str | None = None
     abstained = False
@@ -349,8 +364,34 @@ async def _run_scenario(
     try:
         llm = stack.llm_for_sample(sample)
         if route == "meta":
-            topic = meta_topic(scenario.question) or scenario.topic or "identity"
+            topic = (
+                decision.meta_topic
+                or meta_topic(scenario.question)
+                or scenario.topic
+                or "identity"
+            )
             answer = stack.persona.meta_response(topic, choice=sample) or ""
+        elif route == "policy":
+            topic = decision.meta_topic or "exam"
+            answer = stack.persona.meta_response(topic, choice=sample) or ""
+        elif route == "fact":
+            entries: list[str] = []
+            for fact_id in decision.fact_ids:
+                if not fact_id.startswith("lore:") or stack.lore is None:
+                    continue
+                entry = stack.lore.get(fact_id[5:])
+                if entry is not None:
+                    entries.append(entry.body.strip())
+            if entries:
+                answer = "\n\n".join(entries)
+            else:
+                answer = stack.persona.abstain_response(choice=sample)
+                abstained = True
+        elif route == "clarify":
+            answer = CLARIFY_RESPONSE
+        elif route == "abstain":
+            answer = stack.persona.abstain_response(choice=sample)
+            abstained = True
         elif route == "personal":
             answer = stack.persona.personal_response(choice=sample)
         elif route == "lesson":

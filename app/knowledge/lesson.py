@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 
 from app.knowledge.materials import Material
 from app.knowledge.packs import PackStore, SubjectPack
+from app.knowledge.taxonomy import SUBJECT_NAMES
 from app.knowledge.terms import content_terms, phrase_match_score
 from app.providers.contracts import Embedder
 
@@ -127,6 +128,22 @@ class LessonSelector:
 
     def subjects(self) -> tuple[str, ...]:
         return tuple(sorted(self.vectors))
+
+    def concept_terms(self, subject: str) -> set[str]:
+        """Reviewed concept titles and aliases for the teaching gate."""
+        pack = self.store.get(subject)
+        if pack is None:
+            return set()
+        terms: set[str] = set()
+        terms.update(content_terms(subject))
+        terms.update(content_terms(SUBJECT_NAMES.get(subject, subject)))
+        for concept in pack.concepts:
+            terms.update(content_terms(concept.title))
+            for alias in concept.aliases:
+                terms.update(content_terms(alias))
+        for material in pack.materials:
+            terms.update(content_terms(material.text))
+        return terms
 
     def coverage_text(self, subject: str, materials: list[Material]) -> str:
         """Title, aliases and prose for the coverage check.

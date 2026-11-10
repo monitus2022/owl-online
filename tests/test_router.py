@@ -175,7 +175,6 @@ def test_persona_card_name_drives_the_identity_cue():
         "Define DADA",
         "Explain the Defence Against the Dark Arts",
         "What is the DADA subject?",
-        "What is the DADA department?",
         "What is this subject?",
         "What is your subject?",
         "Tell me about DADA",
@@ -200,9 +199,12 @@ def test_scope_question_still_routes_to_scope():
     assert meta_topic("What subjects do you teach?") == "scope"
 
 
-def test_subject_curriculum_routes_to_syllabus():
-    assert classify("What is the DADA curriculum?", persona=True) == "meta"
-    assert meta_topic("What is the DADA curriculum?") == "syllabus"
+def test_subject_curriculum_routes_to_lore():
+    assert classify("What is the DADA curriculum?", persona=True) == "fact"
+
+
+def test_subject_department_routes_to_lore():
+    assert classify("What is the DADA department?", persona=True) == "fact"
 
 
 def test_subject_possessive_forms_do_not_steal_other_topics():
@@ -214,14 +216,14 @@ def test_subject_possessive_forms_do_not_steal_other_topics():
         classify("What is DADA in the Department of Mysteries?", persona=True)
         == "answer"
     )
-    assert classify("What is DADA's syllabus?", persona=True) == "meta"
+    assert classify("What is DADA's syllabus?", persona=True) == "policy"
     assert meta_topic("What is DADA's syllabus?") == "syllabus"
-    assert classify("What is DADA's exam?", persona=True) == "meta"
+    assert classify("What is DADA's exam?", persona=True) == "policy"
     assert meta_topic("What is DADA's exam?") == "exam"
-    assert classify("What is DADA's grading scale?", persona=True) == "meta"
+    assert classify("What is DADA's grading scale?", persona=True) == "policy"
     assert meta_topic("What is DADA's grading scale?") == "grading"
-    assert classify("What is DADA's exam at Hogwarts?", persona=True) == "answer"
-    assert classify("What is on the O.W.L. exam?", persona=True) == "answer"
+    assert classify("What is DADA's exam at Hogwarts?", persona=True) == "policy"
+    assert classify("What is on the O.W.L. exam?", persona=True) == "policy"
 
 
 def test_exam_room_questions_stay_on_the_answer_path():
@@ -327,10 +329,15 @@ def test_contract_gate_has_no_policy_leaks_or_authority_bleed():
         / "contracts.jsonl"
     )
     for item in items:
-        actual = contract_decision(
+        decision = contract_decision(
             item.utterance, subject="dada", requested_mode="lesson"
-        ).contract
+        )
+        actual = decision.contract
         if item.contract == "policy":
             assert actual == "policy", item.item_id
         if item.contract in {"persona", "lore"}:
             assert actual not in {"lesson", "answer"}, item.item_id
+            if item.fact_ids:
+                assert set(decision.fact_ids) & set(item.fact_ids), item.item_id
+        if item.contract == "lesson":
+            assert actual not in {"persona", "lore", "fact"}, item.item_id
