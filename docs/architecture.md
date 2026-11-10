@@ -539,17 +539,17 @@ card also carries a public-history boundary: the professor knows the war and
 post-war outline as public history, but a detail still cites the book chunks and
 he does not claim private knowledge of the people named in the book chunks.
 
-The persona is DADA-only. The lore pack already carries the five founders and
-departments, but the chatbot speaks only for Defense; other subject personas are
-deferred. `persona_subject` (default `dada`, `OWL_PERSONA_SUBJECT`) carries that
-home subject to the frontend, so opening another department does not claim a
-live professor there. The chat request also carries a `subject`; the server
-enables the card only when that subject matches the home subject, so a Charms
-request is not answered in Crane's voice. The flag itself stays site-wide until
-the registry lands. The card and the doc change together; `tests/test_persona.py` asserts
-every meta topic exists. The scripted meta, personal and abstention replies carry
-a reviewed variant bank; one phrasing is chosen at random per request, and the
-facts, boundaries and `abstained` flag are identical across variants.
+The registry now loads five cards: the DADA seed plus Potions, Transfiguration,
+Charms and Herbology, merged over a shared policy spine. The API still serves
+only the home `persona_subject` (default `dada`, `OWL_PERSONA_SUBJECT`); the
+request `subject` guard keeps a Charms or Potions request out of Crane's voice
+until the remaining #222 slices wire the per-subject cards through. The flag itself stays site-wide
+until that wiring lands. The card and the doc change together;
+`tests/test_personas.py` asserts every card has every meta topic and the shared
+boundaries, and `tests/test_persona.py` keeps the DADA variant table aligned.
+The scripted meta, personal and abstention replies carry a reviewed variant
+bank; one phrasing is chosen at random per request, and the facts, boundaries
+and `abstained` flag are identical across variants.
 
 The suffix applies to the single-pass answer path. `OWL_MULTI_BOOK` and
 `OWL_PERSONA` together are unsupported until the multi-book path lands; the

@@ -1,6 +1,6 @@
 +++
 id = "auror-001"
-subject = "dada"
+subject = "all"
 tier = "product"
 title = "The Auror pathway"
 source = "authored; reviewed 2026-11-07; based on the post-war Auror scheme in the supplementary material"

@@ -65,6 +65,7 @@ Layout:
 - `docs/architecture.md` - living diagrams (contracts, module deps, chat flows, exam-bank boundary); update when a contract, an adapter, or the top-level flow changes
 - `docs/workplan.md` - phase plan, ticket map, grading and memory decisions
 - `docs/routing-contracts.md` - contract and authority routing plan (#216): policy, closed facts and teaching; gates, citation types and the residual measurement bar
+- `docs/persona.md` and `docs/personas.md` - the DADA card and the four non-DADA cards; the TOML files under `config/` are the source of truth
 - `docs/exams/` - bank blueprint, artifact rules, serving contract, published bank records, manifest snapshots and the DADA grading probe (#188-#193, #213)
 - `docs/lexicon-canon-index.md` - plan of record for the hp-lexicon canon index (#125-#128); update it when a parse rule, an artifact contract or the source policy changes
 - `docs/runs/` - one committed Markdown record per eval run, plus the template and index
