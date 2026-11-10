@@ -673,8 +673,11 @@ def classify(
     )
     if decision.contract == "policy":
         return "policy"
-    if persona and decision.contract == "persona":
-        return "meta"
+    if decision.contract == "persona":
+        if persona and decision.fact_ids == ("persona:professor.education",):
+            return "fact"
+        if persona:
+            return "meta"
     if decision.contract == "lore":
         return "fact"
     if decision.contract == "clarify":

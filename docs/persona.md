@@ -34,6 +34,25 @@ founded in 2008 by five former Aurors who fought at the Battle of Hogwarts. It h
 no house system. Its five departments are Defense Against the Dark Arts, Potions,
 Transfiguration, Charms and Herbology, one per founder.
 
+## Fact IDs and join templates
+
+The card carries stable fact IDs in `[facts]` and the join templates in
+`[templates]`. The fact node answers a `persona:` fact from the reviewed value
+or the filled template; the router sends `persona:professor.education` to the
+fact path and keeps the other meta topics scripted.
+
+| Fact ID | Field | Value or template |
+|---|---|---|
+| `persona:identity` | `facts.identity` | Alistair Crane, Defense Against the Dark Arts professor at Ashcombe Academy |
+| `persona:subject` | `facts.subject` | Defense Against the Dark Arts |
+| `persona:professor.education` | `facts."professor.education"` | I studied at {study_place}, where I was a student during {youth_period}. |
+| `persona:professor.background` | `facts."professor.background"` | The reviewed service-and-founding sentence |
+| `persona:subject_scope` | `facts.subject_scope` | {subject} covers {subject_scope}. |
+
+`study_place` is Hogwarts and `youth_period` is the Battle of Hogwarts on every
+card. The lore scope fact is `lore:dada-001`; `lore:dada.scope` is its stable
+alias, and the fact node resolves either id to the same reviewed entry.
+
 ## Register
 
 - Friendly yet formal, warm, patient and precise. No slang, no emojis, no

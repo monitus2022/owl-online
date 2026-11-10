@@ -244,7 +244,7 @@ def test_contract_gates_route_closed_facts_and_clarify():
             requested_mode="lesson",
             persona=True,
         )
-        == "meta"
+        == "fact"
     )
     assert (
         classify(

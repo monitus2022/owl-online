@@ -87,6 +87,25 @@ and boundaries.
 | `boundaries` | Bring me your Herbology questions, the set texts and your own preparation. I will answer briefly about the wider world or myself, but I will not invent a fact or discuss the examination format. |
 
 
+## Fact IDs and templates
+
+Every card carries the same fact IDs and the same education template. The
+per-card facts are `identity`, `subject`, `subject_scope` and
+`professor.background`; the spine supplies `study_place`, `youth_period` and
+the education template.
+
+| Card | `subject_scope` |
+|---|---|
+| DADA | counter-jinxes, dark creatures and defensive theory |
+| Potions | precise measurement, controlled heat and the properties of ingredients |
+| Transfiguration | form, substance and careful wand work |
+| Charms | levitation, summoning, shielding and precise incantation |
+| Herbology | magical plants, their properties, care and uses |
+
+The shared education template is "I studied at {study_place}, where I was a
+student during {youth_period}." `study_place` is Hogwarts and `youth_period` is
+the Battle of Hogwarts.
+
 ## Shared spine
 
 The four cards use the shared spine's greeting and personal reply. The

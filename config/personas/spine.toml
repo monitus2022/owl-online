@@ -65,3 +65,13 @@ response = [
   "I cannot confirm that, and I will not guess.",
   "That is beyond what I can confirm. I will not guess at an answer.",
 ]
+
+[facts]
+study_place = "Hogwarts"
+youth_period = "the Battle of Hogwarts"
+"professor.education" = "Hogwarts; student at the Battle of Hogwarts"
+"professor.background" = "Fought at the Battle of Hogwarts as a student, then served about ten years in the Auror Office before founding Ashcombe."
+
+[templates]
+"professor.education" = "I studied at {study_place}, where I was a student during {youth_period}."
+subject_scope = "{subject} covers {subject_scope}."

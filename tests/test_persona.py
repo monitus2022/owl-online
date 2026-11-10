@@ -189,6 +189,13 @@ def test_persona_card_missing_topic_fails(tmp_path):
                 'response = "Hello."',
                 "[abstain]",
                 'response = "I cannot confirm that."',
+                "[facts]",
+                *(f'"{key}" = "{value}"' for key, value in PERSONA.facts.items()),
+                "[templates]",
+                *(
+                    f'"{key}" = "{value}"'
+                    for key, value in PERSONA.templates.items()
+                ),
             ]
         ),
         encoding="utf-8",
@@ -356,6 +363,17 @@ def _minimal_card(meta_identity: str = "I am X.", boundaries: dict | None = None
             'response = "Hello."',
             "[abstain]",
             'response = "I cannot confirm that."',
+            "[facts]",
+            'identity = "X"',
+            'subject = "DADA"',
+            'study_place = "Hogwarts"',
+            'youth_period = "the war"',
+            '"professor.education" = "Hogwarts; student"',
+            '"professor.background" = "Fought and taught."',
+            'subject_scope = "the subject"',
+            "[templates]",
+            '"professor.education" = "I studied at {study_place} during {youth_period}."',
+            'subject_scope = "{subject} covers {subject_scope}."',
         ]
     )
     return "\n".join(lines)

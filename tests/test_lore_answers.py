@@ -211,3 +211,10 @@ async def test_a_bare_lore_id_cannot_pass_as_a_chunk():
     )
     assert result.abstained
     assert result.abstain_reason == "uncited"
+
+
+def test_dada_scope_alias_resolves_to_the_scope_entry():
+    entry = STORE.get("dada.scope")
+    assert entry is not None
+    assert entry.id == "dada-001"
+    assert "dada.scope" in STORE.ids()
