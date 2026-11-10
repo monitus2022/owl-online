@@ -449,8 +449,9 @@ B1 exit criteria:
 ### B2: Exam bank
 
 Status: all five subject banks 1.0.0 published (#190, #213, #228, #230,
-#231); hybrid grading built (#192); bank evals and judge calibration recorded
-(#191); served attempts built (#193).
+#231); hybrid grading built (#192); the DADA bank eval and judge calibration
+are recorded (#191) and the other four banks have published validation
+records; served attempts built (#193).
 
 A paper is 10 questions: 6 MCQ at 3 marks and 4 short answers at 8 marks, 50
 marks total. That is long enough to feel like a paper and short enough to finish
@@ -602,7 +603,6 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #185 | Refresh the status, workplan and deploy docs | V3 - Product |
 | #162/#163 | Starter prompts and the routing contract test | V3 - Product |
 | #19/#33 | Cost and latency instrumentation and a minimal dashboard | V3 - Product |
 | #128 | Pack wiring: reference prefill and coverage maintenance | V3 - Product |
@@ -653,9 +653,10 @@ persists exam attempts and chat history.
 | Venue fallback | #172 (PR #173) |
 | Deploy hardening | #170, #174 (PR #175), #214 (deploy guard) |
 | Contract and authority routing | #216, #217, #218, #219, #220, #222, #184 |
-| Subject banks | #178, #187, #213, #228, #230, #231, #38-#42 |
+| Subject banks | #190, #213, #228, #230, #231 |
 | Attempt history | #206 |
-| Persona routing | #182 |
+| Docs refresh | #185 |
+| Open trackers (work delivered, ticket open) | #178, #187, #38-#42, #182 |
 
 ## Backlog policy
 
@@ -665,15 +666,14 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The #216 epic is delivered; the active work is #185 (docs refresh), then
-#162/#163, #19/#33 and #128. #30 follows. The remaining Next items are
-#179/#180/#181/#35/#44. On the pack line: the canon index is harvested
-(#125, #126) and resolved (#127 closed); #128 carries reference prefill and
-coverage maintenance. The #87
-schema, validator and all five 1.0.0 packs are delivered. #16, #120, #170, #172,
-#174 and #127 are closed. #107 is deferred and likely superseded by the
-per-book path. The courtesy note to the Lexicon is deferred to project
-completion by maintainer decision.
+The #216 epic is delivered; the active work is #162/#163, #19/#33 and #128.
+#30 follows. The remaining Next items are #179/#180/#181/#35/#44. On the pack
+line, the canon index is harvested (#125, #126) and resolved (#127 closed);
+#128 carries reference prefill and coverage maintenance. The #87 schema,
+validator and all five 1.0.0 packs are delivered. #16, #120, #170, #172, #174
+and #127 are closed. #107 is deferred and likely superseded by the per-book
+path. The courtesy note to the Lexicon is deferred to project completion by
+maintainer decision.
 
 ## Decisions
 
