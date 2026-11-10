@@ -1,6 +1,6 @@
 # Workplan
 
-Last updated: 2026-11-09.
+Last updated: 2026-11-10.
 
 This page is the plan of record for the V2-V4 work. Update it when a phase,
 boundary or ticket changes. The architecture page describes what is built; this
@@ -74,13 +74,14 @@ page describes what comes next and why.
   prefill, chapter-to-subject lesson table) has all five O.W.L. packs published
   at 1.0.0; reference prefill and queue reporting remain; the #87 pack schema
   and validator landed with PR #153.
-- The served exam paper (#193) is built; all five packs and the DADA/Charms
-  banks 1.0.0 are delivered, mixed-scope lesson answers are delivered (#177, PR #199),
+- The served exam paper (#193) is built; all five packs and all five exam banks
+  1.0.0 are delivered, mixed-scope lesson answers are delivered (#177, PR #199),
   and the answer path is settled, and the lesson voice is delivered (#176). The bank blueprint (#188)
   fixes a target of 25 MCQ and 25 short-answer items. The bank schema, validator
   and SQLite import are in #189, the DADA bank 1.0.0 is published in #190, the
-  Charms bank 1.0.0 is published in #213, the hybrid grader is built in #192, the
-  bank eval and judge calibration are recorded in #191, and served attempts are in #193.
+  Charms bank 1.0.0 is published in #213, Potions in #228, Transfiguration in
+  #230 and Herbology in #231; the hybrid grader is built in #192, the bank eval
+  and judge calibration are recorded in #191, and served attempts are in #193.
 
 ## Product shape
 

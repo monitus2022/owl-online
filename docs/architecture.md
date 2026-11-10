@@ -14,7 +14,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
 | Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper and the curated concept-title/alias matcher; the DADA, Charms, Potions, Transfiguration and Herbology packs are published; reference prefill and coverage maintenance remain on #128 |
-| Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); the DADA (#190), Charms (#213), Potions (#228), Transfiguration (#230) and Herbology (#231) banks 1.0.0 are published |
+| Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); the DADA (#190), Charms (#213), Potions (#228), Transfiguration (#230) and Herbology (#213 pattern) banks 1.0.0 are published |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
