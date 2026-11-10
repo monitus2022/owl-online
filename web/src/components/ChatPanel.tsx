@@ -297,7 +297,7 @@ export function ChatPanel({
         })}
       </ol>
       {messages.length === 1 && !vacant && (
-        <div className="starter-chips" aria-label="Example questions">
+        <div className="starter-chips" role="group" aria-label="Example questions">
           {startersFor(subject).map((prompt) => (
             <button
               key={prompt}
