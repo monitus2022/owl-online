@@ -104,7 +104,7 @@ export const SUBJECTS: Subject[] = [
     professorVariant: "scarf",
     crest: "sprout",
     personaState: "live",
-    status: "soon",
+    status: "open",
     blurb: "Magical plants and greenhouse practice.",
   },
 ];

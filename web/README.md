@@ -36,8 +36,8 @@ whose subject is in `lesson_subjects` sends `mode=lesson`, and with
 copy. A room outside those lists keeps rehearsal or neutral copy.
 Without the flags the venue falls back to corpus answers and rehearsal copy. The
 exam room uses the served bank at `/v1/exams`; it needs the imported
-`data/exams/exams.db` (`uv run python scripts/import_exam_bank.py --subject dada`
-and `--subject charms`) and records results in the signed browser session until
+`data/exams/exams.db` (`uv run python scripts/import_exam_bank.py --subject <subject>`
+for each of `dada`, `charms`, `potions`, `transfiguration` and `herbology`) and records results in the signed browser session until
 auth (#35). Each venue requests its own subject, so the Charms room serves
 `charms-1.0.0` without changing the API default.
 
@@ -54,10 +54,9 @@ auth (#35). Each venue requests its own subject, so the Charms room serves
 
 ## Status and honesty rules
 
-- Four subjects are real rooms: Defence Against the Dark Arts, Charms, Potions
-  and Transfiguration have published packs, exam banks and live professor cards.
-  Herbology also has a published pack and live card, but no exam bank yet; its
-  door stays closed until the bank exists.
+- All five subjects are real rooms: Defence Against the Dark Arts, Charms,
+  Potions, Transfiguration and Herbology each have a published pack, exam bank
+  and live professor card.
 - The static subject list decides which departments are open. The persona flag
   (`OWL_PERSONA`) and lesson flag (`OWL_LESSON_MODE`) are read from
   `GET /v1/subjects`; a statically open department with no pack stays on corpus

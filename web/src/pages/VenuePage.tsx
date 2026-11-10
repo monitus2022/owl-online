@@ -129,8 +129,8 @@ export function VenuePage() {
           <Crest crest={room.crest} className="soon-crest" />
           <h2>The classroom is being furnished</h2>
           <p>
-            {room.blurb} This department opens when its subject pack is
-            validated.
+            {room.blurb} This department opens when its exam bank is
+            published.
           </p>
         </div>
       </main>
