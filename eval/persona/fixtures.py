@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.agent.persona import META_TOPICS as PERSONA_META_TOPICS
+from app.knowledge.taxonomy import SUBJECT_KEYS
 
 ROUTES = frozenset(
     {"lesson", "meta", "personal", "answer", "policy", "fact", "clarify", "abstain"}
@@ -40,6 +41,7 @@ class PersonaScenario:
     anchors: tuple[str, ...] = ()
     max_words: int = 220
     note: str = ""
+    subject: str = "dada"
 
     def scope_ok(self, scope: str | None) -> bool:
         return not self.scopes or scope in self.scopes
@@ -104,6 +106,9 @@ def parse_scenario(record: dict[str, object], where: str) -> PersonaScenario:
     if not isinstance(max_words, int) or max_words < 1:
         raise ValueError(f"{where}: max_words must be a positive integer")
     note = _optional_str(record, "note", where) or ""
+    subject = record.get("subject", "dada")
+    if not isinstance(subject, str) or subject not in SUBJECT_KEYS:
+        raise ValueError(f"{where}: unknown subject {subject!r}")
     return PersonaScenario(
         scenario_id=scenario_id,
         question=question,
@@ -116,6 +121,7 @@ def parse_scenario(record: dict[str, object], where: str) -> PersonaScenario:
         anchors=anchors,
         max_words=max_words,
         note=note,
+        subject=subject,
     )
 
 
