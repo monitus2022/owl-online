@@ -187,7 +187,8 @@ The one abstain-to-lesson residual is the hex-versus-jinx distinction: the
 terms match the pack but no material entails the distinction. The lesson node
 still abstains at runtime when no span is found, and it reports `mode=abstain`
 in the final payload. The script is `scripts/measure_routing.py`; it exits
-non-zero on a policy leak, authority bleed, false abstain or fact mismatch.
+non-zero on a policy leak, authority bleed, false abstain, fact mismatch or
+any abstain item routed away from abstain except the hex-versus-jinx residual.
 
 ## Residual and classifier
 

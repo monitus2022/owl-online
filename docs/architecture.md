@@ -510,8 +510,9 @@ embedding material texts in memory and scoring a question by cosine; the corpus 
 grounding check, not the selector. A pack-backed lesson answer cites material ids
 in `material_citations` and their book chunks in `citations`; an off-pack answer
 has empty `material_citations` and cites the retrieved book chunks directly.
-With the flag off the request is rejected and the measured corpus path is
-unchanged.
+With the flag off a request whose classified intent is lesson is rejected;
+a `mode=lesson` request that the gates route to policy, fact, clarify or
+abstain is served, and the measured corpus path is unchanged.
 
 The #216 target is answer contract and knowledge authority, not whether a
 phrasing is already in the cue list: policy, closed facts and teaching are

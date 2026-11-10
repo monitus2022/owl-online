@@ -348,7 +348,7 @@ def test_contract_gate_has_no_policy_leaks_or_authority_bleed():
         if item.contract == "lesson":
             assert actual not in {"persona", "lore", "fact"}, item.item_id
         if item.contract == "abstain" and item.item_id != "abs-019":
-            assert actual != "lesson", item.item_id
+            assert actual == "abstain", item.item_id
 
 
 def test_explicit_and_auto_intents_beat_the_teaching_abstain():
@@ -435,6 +435,28 @@ def test_unclassified_lesson_request_abstains():
             requested_mode="lesson",
             persona=True,
             teaching_terms={"boggart"},
+        )
+        == "lesson"
+    )
+
+
+def test_exam_room_and_book_medical_asks_stay_on_the_book_path():
+    terms = {"boggart"}
+    assert (
+        classify(
+            "What is the exam room?",
+            requested_mode="lesson",
+            persona=True,
+            teaching_terms=terms,
+        )
+        == "lesson"
+    )
+    assert (
+        classify(
+            "What medical advice did Madam Pomfrey give?",
+            requested_mode="lesson",
+            persona=True,
+            teaching_terms=terms,
         )
         == "lesson"
     )

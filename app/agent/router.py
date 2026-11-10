@@ -68,7 +68,8 @@ _BOOK_CONTEXT = re.compile(
     r"book four|book five|book six|book seven|first year|second year|"
     r"third year|fourth year|fifth year|sixth year|seventh year|"
     r"year (?:one|two|three|four|five|six|seven)|quirrell|lockhart|lupin|"
-    r"moody|umbridge|snape|carrow|crouch|tonks|o\.?w\.?l\.?|exam room|exam hall)\b",
+    r"moody|umbridge|snape|carrow|crouch|tonks|pomfrey|o\.?w\.?l\.?|"
+    r"exam room|exam hall)\b",
     re.IGNORECASE,
 )
 _SUBJECT_NAME = (
@@ -251,7 +252,7 @@ _OFF_TOPIC = re.compile(
     r"(?:france|germany|spain|italy|america|the united states)|meaning of life|"
     r"tell me a joke|stock price|fix my car|write my essay|favourite colour|"
     r"do you have a girlfriend|dream last night|password to my email|"
-    r"professor[\w' ]* breakfast|favourite quidditch team|"
+    r"professor[\w' ]* breakfast|favourite quidditch team|football team|"
     r"professor's cat|stop taking my medicine|give me legal advice|"
     r"legal advice about|sue my neigh?bour|dangerous potion at home|"
     r"password to the .*common room|privately thinks|private opinion)\b",

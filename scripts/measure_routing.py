@@ -71,6 +71,7 @@ def main() -> int:
     false_abstain: list[str] = []
     over_clarify: list[str] = []
     teaching_residual: list[str] = []
+    abstain_misroute: list[str] = []
     fact_mismatch: list[str] = []
 
     for item in items:
@@ -98,6 +99,8 @@ def main() -> int:
             over_clarify.append(item.item_id)
         if item.contract == "abstain" and actual == "lesson":
             teaching_residual.append(item.item_id)
+        if item.contract == "abstain" and item.item_id != "abs-019" and actual != "abstain":
+            abstain_misroute.append(item.item_id)
 
     print(f"items: {len(items)}")
     print("expected:", dict(expected_counts))
@@ -117,8 +120,15 @@ def main() -> int:
     print(f"fact mismatch: {len(fact_mismatch)} {fact_mismatch}")
     print(f"over-clarify: {len(over_clarify)} {over_clarify}")
     print(f"teaching-path residual on abstain: {len(teaching_residual)} {teaching_residual}")
+    print(f"abstain misroute (excl. abs-019): {len(abstain_misroute)} {abstain_misroute}")
     print()
-    gate_ok = not policy_leaks and not authority_bleed and not false_abstain and not fact_mismatch
+    gate_ok = (
+        not policy_leaks
+        and not authority_bleed
+        and not false_abstain
+        and not fact_mismatch
+        and not abstain_misroute
+    )
     print("gate:", "PASS" if gate_ok else "FAIL")
     return 0 if gate_ok else 1
 

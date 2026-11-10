@@ -566,5 +566,6 @@ uv run python scripts/measure_routing.py
 ```
 
 It prints the expected-vs-actual contract matrix and exits non-zero on a policy
-leak, authority bleed, false abstain or fact mismatch. The design note is
+leak, authority bleed, false abstain, fact mismatch or an abstain item routed
+away from abstain (except the known hex-versus-jinx residual). The design note is
 `docs/routing-contracts.md`.
