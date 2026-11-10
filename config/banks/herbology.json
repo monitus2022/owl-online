@@ -778,7 +778,7 @@
       "material_id": "herbology-foundations-repotting",
       "prompt": "What does repotting give a growing plant?",
       "difficulty": "explanation",
-      "model_answer": "Repotting is the routine transplanting of a growing plant into fresh soil and a larger container, and in Herbology it is a skill with its own hazards. Mandrake repotting begins with the plant being taken from its tray, plunged into a large pot and buried in dark, moist compost with only the tufted leaves showing [b2-c06-0029]. The class works four to a tray with pots and compost, which gives the plant room and lets the grower inspect the root [b2-c06-0031].",
+      "model_answer": "Repotting is the routine transplanting of a growing plant into fresh soil and a larger container, and in Herbology it is a skill with its own hazards. Mandrake repotting begins with the plant being taken from its tray, plunged into a large pot and buried in dark, moist compost with only the tufted leaves showing. A grower sets four to a tray with pots and compost, which gives the plant room and lets the root be inspected.",
       "required_points": [
         "dark, moist compost",
         "tufted leaves",
@@ -903,7 +903,7 @@
       "material_id": "herbology-harvest-mandrake-maturation",
       "prompt": "How can a grower tell that a Mandrake crop has reached the next stage?",
       "difficulty": "application",
-      "model_answer": "A Mandrake crop runs to a schedule that can be read from the plants: seedlings are safe enough to repot with earmuffs, older plants become sullen and secretive as their acne clears, and full maturity is marked by the plants trying to crowd into neighbouring pots [b2-c06-0029] [b2-c13-0026] [b2-c14-0008]. Only then are they ready for cutting and stewing. The harvest is therefore a sequence of stages, each with its own handling.",
+      "model_answer": "A Mandrake crop runs to a schedule that can be read from the plants: seedlings are safe enough to repot with earmuffs, older plants become sullen and secretive as their acne clears, and full maturity is marked by the plants trying to crowd into neighbouring pots. Only then are they ready for cutting and stewing. The harvest is therefore a sequence of stages, each with its own handling.",
       "required_points": [
         "crowd into neighbouring pots",
         "cutting and stewing"

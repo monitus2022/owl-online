@@ -1,8 +1,8 @@
 # Bank record: herbology 1.0.0
 
 - Status: `published`
-- Built at: `2026-11-10T07:34:13Z`
-- Reviewed at: `2026-11-10T07:34:13Z`
+- Built at: `2026-11-10T08:21:08Z`
+- Reviewed at: `2026-11-10T08:21:08Z`
 - Pack: `1.0.0` / `da6804d846814ec9`
 - Index text hash: `aca4c57462d449f5`
 - Generator: `deepseek/deepseek-v4.1-flash` / `herbology-bank-authoring-v1` / temperature 0.0
@@ -160,5 +160,5 @@
 ## Review
 
 - The owner reviewed the item set and approved the final concept-only bank.
-- The read-only review found story/lesson framing, duplicate items and weak
-  keys. All were fixed; the final pass is clean.
+- The read-only review found story/lesson framing, duplicate items, weak keys
+  and leaked source markers. All were fixed; the final pass is clean.
