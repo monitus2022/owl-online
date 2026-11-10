@@ -371,7 +371,7 @@ sequenceDiagram
   API->>API: cache.get when the intent is answer
   API->>API: limiter.admit (429 / 503)
   API->>G: astream(state with subject)
-  G->>G: router -> answer | practice | feedback | meta | personal | lesson
+  G->>G: router -> policy | fact | clarify | abstain | answer | practice | feedback | meta | personal | lesson
   G-->>API: mode update
   API-->>C: event: mode
   G->>R: retrieve(question, top_k)
@@ -405,13 +405,16 @@ SSE events:
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
-deterministic. An explicit `answer`, `practice` or `feedback` wins. A supplied
-student answer is a feedback request, a practice request is a question or short
-set of questions, and everything else is answer. When `OWL_PERSONA` is on, narrow
-meta and personal cues route to scripted replies before the answer path.
-`mode=lesson` is a preference, not an override: it applies only when the
-classification would otherwise be `answer`; practice, feedback, meta and
-personal keep their routes, so a lesson-default venue still greets and tests.
+deterministic and applies the policy, closed-fact and teaching gates before any
+retrieval. An explicit `answer`, `practice` or `feedback` wins over the gates
+except that policy still fails closed; a supplied student answer is a feedback
+request, and a practice request is a question or short set of questions. When
+`OWL_PERSONA` is on, meta, fact, clarify, policy and abstain cues route to
+scripted replies before the answer path. `mode=lesson` is a preference, not an
+override: the teaching gate sends an explanatory request with a pack term to
+lesson, unclassified or off-topic traffic abstains, and practice, feedback,
+meta and personal keep their routes, so a lesson-default venue still greets and
+tests.
 Name variants and fuzzy spellings of the professor are normalised before the
 persona cues; book professors such as Snape stay on the answer path.
 Meta and personal skip retrieval and the model, so they stream no tokens. Tokens

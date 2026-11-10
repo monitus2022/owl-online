@@ -15,7 +15,9 @@ export type ChatMode =
   | "personal"
   | "lesson"
   | "fact"
-  | "clarify";
+  | "clarify"
+  | "policy"
+  | "abstain";
 
 export type LessonScope = "in_pack" | "mixed" | "off_pack" | "abstained";
 

@@ -97,10 +97,12 @@ is active, and omitted means `OWL_PERSONA_SUBJECT`. An unknown subject is a
 `422`. `mode` is `auto`, `answer`, `practice`, `feedback` or `lesson`. `student_answer`
 is at most 6000 characters and is only valid with `auto` or `feedback`. When the
 persona is on, the server may also route to `meta`, `personal`, `fact` or
-`clarify`; policy and abstain are server routes too. Those are not accepted as
-request modes. `lesson` is explicit only, never inferred, and is
-rejected with `400` unless `OWL_LESSON_MODE` is on and the request subject has a
-published pack loaded.
+`clarify`; `policy` and `abstain` are server routes too. Those are not accepted
+as request modes. `lesson` is explicit only, never inferred. A request is
+rejected with `400` only when the classified intent is `lesson` and
+`OWL_LESSON_MODE` is off or the request subject has no published pack loaded; a
+`mode=lesson` request that the gates route to `policy`, `fact`, `clarify` or
+`abstain` is served.
 It is a preference for the answer path, not an absolute route: practice,
 feedback, meta and personal keep their normal handling, so a venue that defaults
 to lesson still greets and tests correctly.
@@ -109,7 +111,7 @@ The response is `text/event-stream`. Events:
 
 | Event | Data | When |
 |---|---|---|
-| `mode` | `{"mode": "answer"}` | after the router; can be `answer`, `practice`, `feedback`, `meta`, `personal` or `lesson` |
+| `mode` | `{"mode": "answer"}` | after the router; can be `policy`, `fact`, `clarify`, `abstain`, `answer`, `practice`, `feedback`, `meta`, `personal` or `lesson` |
 | `token` | `{"text": "..."}` | each streamed token |
 | `reset` | `{}` or `{"reason": "retry"}` / `{"reason": "fallback"}` | clear the draft before a retry, a fallback, an error, or an abstained final |
 | `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `scope`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |

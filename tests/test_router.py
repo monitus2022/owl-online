@@ -328,16 +328,113 @@ def test_contract_gate_has_no_policy_leaks_or_authority_bleed():
         / "fixtures"
         / "contracts.jsonl"
     )
+    terms = {"boggart", "dementor", "expelliarmus", "patronus", "curse"}
     for item in items:
         decision = contract_decision(
-            item.utterance, subject="dada", requested_mode="lesson"
+            item.utterance,
+            subject="dada",
+            requested_mode="lesson",
+            teaching_terms=terms,
         )
         actual = decision.contract
         if item.contract == "policy":
             assert actual == "policy", item.item_id
         if item.contract in {"persona", "lore"}:
             assert actual not in {"lesson", "answer"}, item.item_id
+            if item.fact_present:
+                assert actual != "abstain", item.item_id
             if item.fact_ids:
                 assert set(decision.fact_ids) & set(item.fact_ids), item.item_id
         if item.contract == "lesson":
             assert actual not in {"persona", "lore", "fact"}, item.item_id
+        if item.contract == "abstain" and item.item_id != "abs-019":
+            assert actual != "lesson", item.item_id
+
+
+def test_explicit_and_auto_intents_beat_the_teaching_abstain():
+    terms = {"boggart"}
+    assert (
+        classify(
+            "I feel sad.",
+            requested_mode="lesson",
+            persona=True,
+            teaching_terms=terms,
+        )
+        == "personal"
+    )
+    assert (
+        classify(
+            "Assess the essay",
+            requested_mode="lesson",
+            persona=True,
+            teaching_terms=terms,
+        )
+        == "feedback"
+    )
+    assert (
+        classify(
+            "Generate five exam questions on Horcruxes",
+            requested_mode="lesson",
+            persona=True,
+            teaching_terms=terms,
+        )
+        == "practice"
+    )
+    assert (
+        classify(
+            "What do you cover?",
+            requested_mode="lesson",
+            persona=True,
+            teaching_terms=terms,
+        )
+        == "meta"
+    )
+
+
+def test_policy_does_not_steal_explicit_practice_or_feedback():
+    assert classify("Ask me an exam question", persona=True) == "practice"
+    assert classify("Grade my exam answer", persona=True) == "feedback"
+    assert classify("Assess my exam essay", persona=True) == "feedback"
+    assert classify("Can you mark my exam before I sit it?", persona=True) == "policy"
+
+
+def test_auto_mode_is_subject_aware():
+    assert (
+        classify(
+            "Who is Professor Crane?",
+            persona=True,
+            subject="charms",
+        )
+        == "answer"
+    )
+    assert (
+        classify("What is DADA?", persona=True, subject="charms") == "answer"
+    )
+    assert (
+        classify("Tell me about Professor Crane", subject="charms") == "answer"
+    )
+    assert (
+        classify("Who is Professor Raman?", persona=True, subject="charms")
+        == "meta"
+    )
+
+
+def test_unclassified_lesson_request_abstains():
+    assert (
+        classify(
+            "What is the capital of France?",
+            requested_mode="lesson",
+            persona=True,
+            teaching_terms={"boggart"},
+        )
+        == "abstain"
+    )
+    assert (
+        classify(
+            "What is a boggart?",
+            requested_mode="lesson",
+            persona=True,
+            teaching_terms={"boggart"},
+        )
+        == "lesson"
+    )

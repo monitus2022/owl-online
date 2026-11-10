@@ -27,7 +27,7 @@ _FEEDBACK_ASK = re.compile(
 )
 _FEEDBACK_TARGET = re.compile(
     r"\b(answer|response|essay|work|student|script|submission|"
-    r"following|this|it)\b",
+    r"following|this)\b",
     re.IGNORECASE,
 )
 _FEEDBACK_REQUEST = re.compile(
@@ -50,6 +50,16 @@ _PRACTICE_PHRASE = re.compile(
     r"\b(quiz|test) (me|my knowledge)\b",
     re.IGNORECASE,
 )
+# Explicit practice requests keep their route even when the wording mentions an
+# exam. The quantifier keeps "give me the exam format" on the policy path.
+_PRACTICE_EXEMPT = re.compile(
+    r"\b(generate|create|make|write|draft|compose|produce|build|design)\b"
+    r"[^.?!]*\b(practice|exercises?|drills?|quiz|quizzes|worksheets?)\b"
+    r"|\b(generate|create|make|give|ask)\b[^.?!]*\b"
+    r"(?:a|an|some|one|two|three|four|five|\d+)\b[^.?!]*\bquestions?\b"
+    r"|\bquiz (?:me|my knowledge)\b",
+    re.IGNORECASE,
+)
 # A curriculum question with a book context is a book question, not a syllabus
 # question. The guard keeps "What is the DADA curriculum at Hogwarts?" on the
 # answer path while "What is the DADA curriculum?" routes to the syllabus.
@@ -58,7 +68,7 @@ _BOOK_CONTEXT = re.compile(
     r"book four|book five|book six|book seven|first year|second year|"
     r"third year|fourth year|fifth year|sixth year|seventh year|"
     r"year (?:one|two|three|four|five|six|seven)|quirrell|lockhart|lupin|"
-    r"moody|umbridge|snape|carrow|crouch|tonks|o\.?w\.?l\.?)\b",
+    r"moody|umbridge|snape|carrow|crouch|tonks|o\.?w\.?l\.?|exam room|exam hall)\b",
     re.IGNORECASE,
 )
 _SUBJECT_NAME = (
@@ -196,14 +206,6 @@ def meta_topic(question: str) -> str | None:
 
 
 POLICY_TOPICS = frozenset({"exam", "syllabus", "grading"})
-_POLICY_NEAR = re.compile(
-    r"\b(exam paper|test paper|mark scheme|marking scheme|assessment key|"
-    r"answer key|model answer|examiner|invigilator|grade boundaries|pass mark|"
-    r"what will (?:i|we) be tested on|what will you test|"
-    r"how will .* (?:graded|marked)|what is on the test|what is on the exam|"
-    r"assessment)\b",
-    re.IGNORECASE,
-)
 _POLICY_PATTERNS = (
     re.compile(
         r"\b(exam|examination|test(?:ed|ing)?|assessment|paper|examin(?:ed|able))\b"
@@ -245,11 +247,14 @@ _POLICY_NEGATIVE = re.compile(
     re.IGNORECASE,
 )
 _OFF_TOPIC = re.compile(
-    r"\b(bake bread|pizza|weather|capital of|meaning of life|tell me a joke|"
-    r"stock price|fix my car|write my essay|favourite colour|girlfriend|"
-    r"dream last night|password to my email|breakfast|football team|"
-    r"professor's cat|stop taking my medicine|medical advice|legal advice|"
-    r"dangerous potion at home|make a dangerous potion)\b",
+    r"\b(bake bread|the best pizza|the weather tomorrow|capital of "
+    r"(?:france|germany|spain|italy|america|the united states)|meaning of life|"
+    r"tell me a joke|stock price|fix my car|write my essay|favourite colour|"
+    r"do you have a girlfriend|dream last night|password to my email|"
+    r"professor[\w' ]* breakfast|favourite quidditch team|"
+    r"professor's cat|stop taking my medicine|give me legal advice|"
+    r"legal advice about|sue my neigh?bour|dangerous potion at home|"
+    r"password to the .*common room|privately thinks|private opinion)\b",
     re.IGNORECASE,
 )
 _DADA_ONLY = re.compile(
@@ -320,7 +325,7 @@ _BACKGROUND = re.compile(
 )
 _SCOPE = re.compile(
     r"\b(what is your subject|what subjects do you teach|what do you teach|"
-    r"what is your field)\b",
+    r"what do you cover|what is your field)\b",
     re.IGNORECASE,
 )
 _BOUNDARIES = re.compile(
@@ -328,7 +333,7 @@ _BOUNDARIES = re.compile(
     re.IGNORECASE,
 )
 _GREETING = re.compile(
-    r"^\s*(hello|hi|good morning|good evening|good afternoon)"
+    r"^\s*(hello|hi|hey|good morning|good evening|good afternoon)"
     r"(?:,\s*(?:professor|prof\.?))?[.!]?\s*$",
     re.IGNORECASE,
 )
@@ -410,16 +415,13 @@ def contract_decision(
     card = PERSONAS.get(subject) or PERSONA
     book_context = bool(_BOOK_CONTEXT.search(question))
 
-    if _PRACTICE_REQUEST.search(question) and re.search(
-        r"\bpractice\b", question, re.IGNORECASE
-    ):
+    if _PRACTICE_EXEMPT.search(question):
         return ContractDecision("answer", reason="explicit practice request")
     if (
         _FEEDBACK_REQUEST.search(question)
         or (_FEEDBACK_NOUN_REQUEST.search(question) and _FEEDBACK_TARGET.search(question))
+        or (_FEEDBACK_ACTION.search(question) and _FEEDBACK_TARGET.search(question))
         or (_FEEDBACK_ASK.search(question) and _FEEDBACK_TARGET.search(question))
-    ) and re.search(
-        r"\b(this|my) (answer|response|work|essay|script)\b", question, re.IGNORECASE
     ):
         return ContractDecision("answer", reason="explicit feedback request")
 
@@ -621,6 +623,7 @@ def _auto_mode(
     *,
     student_answer: str | None,
     persona: bool,
+    subject: str = "dada",
 ) -> Mode:
     """The intent without an explicit request override."""
     if student_answer and student_answer.strip():
@@ -636,7 +639,7 @@ def _auto_mode(
     if _PRACTICE_REQUEST.search(question) or _PRACTICE_PHRASE.search(question):
         return "practice"
     if persona:
-        topic = meta_topic(question)
+        topic = meta_topic(question) if subject == "dada" else None
         if topic is not None and not (
             topic in {"exam", "syllabus", "subject"} and _BOOK_CONTEXT.search(question)
         ):
@@ -656,7 +659,10 @@ def classify(
     teaching_terms: set[str] | None = None,
 ) -> Mode:
     auto = _auto_mode(
-        question, student_answer=student_answer, persona=persona
+        question,
+        student_answer=student_answer,
+        persona=persona,
+        subject=subject,
     )
     decision = contract_decision(
         question,
@@ -672,14 +678,14 @@ def classify(
         return "fact"
     if decision.contract == "clarify":
         return "clarify"
-    if decision.contract == "abstain":
-        return "abstain"
     if requested_mode in ("answer", "practice", "feedback"):
         return requested_mode
     if auto in ("practice", "feedback", "personal"):
         return auto
     if persona and auto == "meta":
         return "meta"
+    if decision.contract == "abstain":
+        return "abstain"
     if requested_mode == "lesson":
         return "lesson"
     if requested_mode != "auto":

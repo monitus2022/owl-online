@@ -1269,6 +1269,8 @@ def test_lesson_mode_routes_closed_facts_and_clarify():
             ("Where is Ashcombe?", "fact", "Cotswolds"),
             ("What is included in DADA?", "clarify", "Do you mean"),
             ("Where did you study when you are young?", "meta", "Hogwarts"),
+            ("What is the mark scheme?", "policy", "examination"),
+            ("What is the capital of France?", "abstain", "will not guess"),
         ):
             with client.stream(
                 "POST",
