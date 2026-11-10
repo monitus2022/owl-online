@@ -923,6 +923,14 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             limit=limit,
         )
 
+    @app.delete("/v1/attempts")
+    def delete_attempts(request: Request) -> dict[str, int]:
+        """Delete the current session's attempts (the anonymous delete path)."""
+        store = request.app.state.runtime.exam_store
+        if store is None:
+            raise HTTPException(status_code=503, detail="exam bank unavailable")
+        return {"deleted": store.delete_attempts(request.state.session_id)}
+
     @app.get("/v1/attempts/{attempt_id}", response_model=AttemptView)
     def get_attempt(attempt_id: str, request: Request) -> AttemptView:
         """The same persisted view on a reload; options are not reshuffled."""

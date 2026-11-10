@@ -22,6 +22,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 | `GET` | `/v1/exams` | published paper descriptors, filtered by subject and version |
 | `POST` | `/v1/exams/{paper_id}/attempts` | sample and persist a paper attempt |
 | `GET` | `/v1/attempts` | graded attempts for the current session, newest first |
+| `DELETE` | `/v1/attempts` | delete the current session's attempts |
 | `GET` | `/v1/attempts/{attempt_id}` | the persisted pre-submission attempt |
 | `POST` | `/v1/attempts/{attempt_id}/grade` | deterministic MCQ scoring plus the pinned rubric judge |
 
@@ -348,6 +349,13 @@ keys, golden answers, rubric or evidence:
 Ungraded attempts are excluded from the list; they remain available by id until
 graded. A `needs_review` attempt appears with a null total and band. The frontend
 history and noticeboard read this route, not localStorage.
+
+`DELETE /v1/attempts` deletes every attempt owned by the current session and
+returns `{"deleted": n}`. It is the anonymous delete path; the attempt questions
+cascade. Clearing the cookie starts a new session but does not delete old
+attempts. The operator retention path is
+`uv run python scripts/prune_attempts.py --days 90`; the full policy is
+`docs/privacy.md`.
 
 `POST /v1/attempts/{attempt_id}/grade` submits the answers. Omitted questions
 are left blank. An MCQ answer is an `option_id` from the served four; a short

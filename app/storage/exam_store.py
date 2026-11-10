@@ -489,6 +489,33 @@ class ExamStore:
         return summaries
 
     @_locked
+    def delete_attempts(self, session_id: str) -> int:
+        """Delete every attempt owned by one session; questions cascade."""
+        if not session_id:
+            return 0
+        with self._conn:
+            cursor = self._conn.execute(
+                "DELETE FROM attempts WHERE session_id = ?", (session_id,)
+            )
+        return cursor.rowcount
+
+    @_locked
+    def count_attempts_before(self, before: str) -> int:
+        row = self._conn.execute(
+            "SELECT COUNT(*) FROM attempts WHERE created_at < ?", (before,)
+        ).fetchone()
+        return int(row[0])
+
+    @_locked
+    def prune_attempts(self, before: str) -> int:
+        """Delete attempts created before an ISO timestamp; questions cascade."""
+        with self._conn:
+            cursor = self._conn.execute(
+                "DELETE FROM attempts WHERE created_at < ?", (before,)
+            )
+        return cursor.rowcount
+
+    @_locked
     def save_grade(
         self,
         attempt_id: str,
