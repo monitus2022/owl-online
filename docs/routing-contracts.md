@@ -136,8 +136,9 @@ a fact ID in shadow eval.
 
 ## Measurement
 
-The fixture is `eval/routing/fixtures/contracts.jsonl`. It is frozen before cue
-tuning; the SHA-256 is pinned in `eval/routing/test_fixtures.py`. It has 207
+The policy and closed-fact gates are subject-parameterized through the persona
+registry (#222). The fixture is DADA-first and extends per subject. It is
+`eval/routing/fixtures/contracts.jsonl`, frozen before cue tuning; the SHA-256 is pinned in `eval/routing/test_fixtures.py`. It has 207
 items across policy, persona, lore, lesson, abstain and clarify, with 14
 held-out policy, persona, lesson, abstain and clarify items that are not for cue
 tuning. Policy is the largest stratum (51 of 207).
@@ -213,10 +214,11 @@ Add a residual classifier only if all of these hold on the untouched holdout:
 ## Migration order
 
 1. #217: this note and the frozen fixture.
-2. #219: the three gates and the unclassified default.
-3. #218: typed citations and the authority checker.
-4. #220: persona and lore fact IDs, plus templates for the two named joins.
-5. #184: residual measurement, then the classifier decision.
+2. #222: the multi-subject persona registry and policy for all five departments.
+3. #219: the three gates and the unclassified default, parameterized by the registry.
+4. #218: typed citations and the authority checker.
+5. #220: persona and lore fact IDs, plus templates for the five cards.
+6. #184: residual measurement, then the classifier decision.
 
 ## Non-goals
 
