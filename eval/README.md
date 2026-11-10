@@ -585,4 +585,9 @@ each subject and reports the same gate:
 uv run python scripts/measure_subject_routing.py
 ```
 
+`eval/routing/fixtures/citations.jsonl` is the cross-type citation fixture
+(#218): valid policy, persona, lore and lesson cites plus the invalid
+cross-authority cases. `eval/routing/test_citations.py` runs the checker over
+every row.
+
 The design note is `docs/routing-contracts.md`.

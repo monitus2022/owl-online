@@ -17,6 +17,7 @@ interface Message {
   text: string;
   mode?: ChatMode;
   citations?: string[];
+  typedCitations?: string[];
   materials?: string[];
   scope?: LessonScope;
   abstained?: boolean;
@@ -144,6 +145,7 @@ export function ChatPanel({
             citations?: string[];
             lore_citations?: string[];
             material_citations?: string[];
+            typed_citations?: string[];
             scope?: LessonScope | null;
             abstained: boolean;
             mode?: ChatMode;
@@ -157,6 +159,7 @@ export function ChatPanel({
             text: data.answer,
             materials: data.material_citations ?? [],
             citations: chips,
+            typedCitations: data.typed_citations ?? [],
             scope: data.scope ?? undefined,
             abstained: data.abstained,
             mode: data.mode ?? draft.mode,
@@ -230,17 +233,29 @@ export function ChatPanel({
                   </ul>
                 </div>
               )}
-              {message.citations && message.citations.length > 0 && (
+              {message.typedCitations && message.typedCitations.length > 0 ? (
                 <div className="citation-group">
-                  {message.materials && message.materials.length > 0 && (
-                    <span className="citation-label">Set texts</span>
-                  )}
+                  <span className="citation-label">Citations</span>
                   <ul className="citation-chips">
-                    {message.citations.map((citation) => (
+                    {message.typedCitations.map((citation) => (
                       <li key={citation}>{citation}</li>
                     ))}
                   </ul>
                 </div>
+              ) : (
+                message.citations &&
+                message.citations.length > 0 && (
+                  <div className="citation-group">
+                    {message.materials && message.materials.length > 0 && (
+                      <span className="citation-label">Set texts</span>
+                    )}
+                    <ul className="citation-chips">
+                      {message.citations.map((citation) => (
+                        <li key={citation}>{citation}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )
               )}
               {message.abstained && (
                 <p className="abstain-note">

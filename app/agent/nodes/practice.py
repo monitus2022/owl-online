@@ -42,6 +42,7 @@ async def practice_node(
             "chunks": [],
             "answer": ABSTAIN_MESSAGE,
             "citations": [],
+            "typed_citations": [],
             "abstained": True,
         }
     prompt = evidence_prompt(state["question"], chunks)
@@ -58,6 +59,7 @@ async def practice_node(
         "chunks": chunks,
         "answer": result.answer,
         "citations": result.citations,
+        "typed_citations": result.typed_citations,
         "abstained": result.abstained,
         "llm_model": model_used,
         "attempts": attempts,

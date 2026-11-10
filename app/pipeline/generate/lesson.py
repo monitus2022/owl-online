@@ -446,16 +446,25 @@ def ground_lesson_answer(
         answer, allowed_materials, allowed_chunks
     )
     source_ids = list(cited_chunks)
+    typed: list[str] = []
     for material in materials:
         if material.material_id not in cited:
             continue
+        span = (
+            material.source_refs[0].chunk_id
+            if material.source_refs
+            else material.material_id
+        )
+        typed.append(f"lesson:{material.material_id}#{span}")
         for ref in material.source_refs:
             if ref.chunk_id not in source_ids:
                 source_ids.append(ref.chunk_id)
+    typed.extend(f"lesson:{chunk_id}#{chunk_id}" for chunk_id in cited_chunks)
     return AskResult(
         answer=cleaned,
         citations=source_ids,
         material_citations=cited,
+        typed_citations=list(dict.fromkeys(typed)),
         chunks=list(chunks),
         scope=scope,
     )

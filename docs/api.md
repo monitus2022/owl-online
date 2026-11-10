@@ -67,15 +67,28 @@ Response `200`:
   "citations": ["b4-c25-0075"],
   "abstained": false,
   "lore_citations": [],
-  "material_citations": []
+  "material_citations": [],
+  "typed_citations": ["lesson:b4-c25-0075#b4-c25-0075"],
+  "citation_errors": []
 }
 ```
 
 `citations` are book chunk ids. `lore_citations` are setting-entry ids in the
 `[lore:<id>]` space. `material_citations` are lesson-material ids; it is always
 empty on `/ask`, which stays corpus-only, and lesson answers are stream-only.
-The citation spaces are validated separately; an unknown id of any kind is
-stripped from the text. `abstained` is true when there is no book or lore
+`typed_citations` is the authoritative typed set (#218):
+
+- `policy:script:<id>`
+- `persona:<fact_id>`
+- `lore:<fact_id>`
+- `lesson:<doc_id>#<span>`
+
+`citation_errors` is the deterministic authority-checker result. A setting
+answer must carry a `persona:` or `lore:` cite and must not carry a `lesson:`
+cite; a teaching answer must carry a `lesson:` cite and must not carry a
+`persona:`, `lore:` or `policy:` cite; a policy answer carries
+`policy:script:`. The legacy fields stay for compatibility. The citation spaces
+are validated separately; an unknown id of any kind is stripped from the text. `abstained` is true when there is no book or lore
 evidence, the draft cites nothing, or the model refuses. The answer text is
 always returned; an abstention is a `200`, not an error.
 
@@ -114,7 +127,7 @@ The response is `text/event-stream`. Events:
 | `mode` | `{"mode": "answer"}` | after the router; can be `policy`, `fact`, `clarify`, `abstain`, `answer`, `practice`, `feedback`, `meta`, `personal` or `lesson` |
 | `token` | `{"text": "..."}` | each streamed token |
 | `reset` | `{}` or `{"reason": "retry"}` / `{"reason": "fallback"}` | clear the draft before a retry, a fallback, an error, or an abstained final |
-| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `scope`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | terminal; always preceded by `reset` |
 
 `final` is the authoritative payload. A client should replace the draft on
@@ -133,6 +146,8 @@ thin it adds a labelled corpus tier instead of refusing:
   "citations": ["b4-c14-0006", "b4-c14-0009"],
   "lore_citations": [],
   "material_citations": ["dada-countering-countercurse-doctrine"],
+  "typed_citations": ["lesson:dada-countering-countercurse-doctrine#b4-c14-0006", "lesson:b4-c14-0009#b4-c14-0009"],
+  "citation_errors": [],
   "scope": "in_pack",
   "abstained": false
 }

@@ -295,12 +295,12 @@ sequenceDiagram
       LLM-->>A: answer citing [chunk-id] or [lore:id]
     end
     alt verification passed
-      A-->>API: AskResult(answer, citations, lore_citations, material_citations, attempts)
+      A-->>API: AskResult(answer, citations, lore_citations, material_citations, typed_citations, attempts)
     else refusal or still uncited
       A-->>API: AskResult(abstain, abstain_reason, attempts)
     end
   end
-  API-->>C: AskResponse {answer, citations, lore_citations, material_citations, abstained}
+  API-->>C: AskResponse {answer, citations, lore_citations, material_citations, typed_citations, citation_errors, abstained}
 ```
 
 One deadline covers the whole request: `OWL_ASK_TIMEOUT_S` (default 30 s) wraps
@@ -391,7 +391,7 @@ sequenceDiagram
   end
   G-->>API: final state
   API-->>C: event: reset when abstained
-  API-->>C: event: final {answer, citations, lore_citations, material_citations, scope, abstained, needs_input, attempts, mode}
+  API-->>C: event: final {answer, citations, lore_citations, material_citations, typed_citations, citation_errors, scope, abstained, needs_input, attempts, mode}
 ```
 
 SSE events:
@@ -401,7 +401,7 @@ SSE events:
 | `mode` | `{"mode": "answer"}` | after the router update |
 | `token` | `{"text": "..."}` | for each streamed token |
 | `reset` | `{"reason": "retry"}` before a retry draft, `{"reason": "fallback"}` before a routing fallback; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
-| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `scope`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
@@ -439,7 +439,7 @@ uncovered, the branch retrieves the corpus as a labelled second tier
 department)" sections, and requires the matching citation space. `scope` is
 `in_pack`, `mixed`, `off_pack` or `abstained`; an off-pack answer starts with
 "This is not in the department's notes" and a mixed answer cites both spaces.
-The final payload carries `material_citations`, book `citations` and `scope`.
+The final payload carries `material_citations`, book `citations`, typed `typed_citations`, `citation_errors` and `scope`.
 With the fallback off, a question with no material above the floor abstains
 with `no_evidence`; a selected material that leaves terms uncovered stays
 pack-only. With the fallback on, an uncovered term with no corpus evidence also
@@ -802,7 +802,7 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, scope, lore_chars, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

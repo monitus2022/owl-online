@@ -26,6 +26,8 @@ export interface FinalPayload {
   citations: string[];
   lore_citations?: string[];
   material_citations?: string[];
+  typed_citations?: string[];
+  citation_errors?: string[];
   scope?: LessonScope | null;
   abstained: boolean;
   needs_input?: boolean;

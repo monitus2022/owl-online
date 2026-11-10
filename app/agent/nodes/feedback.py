@@ -42,6 +42,7 @@ async def feedback_node(
             "chunks": [],
             "answer": MISSING_ANSWER,
             "citations": [],
+            "typed_citations": [],
             "abstained": False,
             "needs_input": True,
         }
@@ -57,6 +58,7 @@ async def feedback_node(
             "chunks": [],
             "answer": ABSTAIN_MESSAGE,
             "citations": [],
+            "typed_citations": [],
             "abstained": True,
         }
     prompt = evidence_prompt(
@@ -77,6 +79,7 @@ async def feedback_node(
         "chunks": chunks,
         "answer": result.answer,
         "citations": result.citations,
+        "typed_citations": result.typed_citations,
         "abstained": result.abstained,
         "llm_model": model_used,
         "attempts": attempts,

@@ -17,6 +17,7 @@ def _result(text: str) -> dict[str, object]:
     return {
         "answer": text,
         "citations": [],
+        "typed_citations": [],
         "abstained": False,
         "chunks": [],
         "attempts": 0,
@@ -116,6 +117,11 @@ def fact_node(
         return result
     result = _result("\n\n".join(entries))
     result["lore_citations"] = citations
+    result["typed_citations"] = [
+        fact_id
+        for fact_id in state.get("fact_ids", [])
+        if fact_id.startswith(("persona:", "lore:"))
+    ]
     return result
 
 
@@ -139,7 +145,10 @@ def policy_node(
     text = (
         active.meta_response(topic) if active is not None else None
     ) or POLICY_REFUSAL
-    return _result(text)
+    subject = state.get("subject") or default_subject
+    result = _result(text)
+    result["typed_citations"] = [f"policy:script:assessment.{subject}"]
+    return result
 
 
 def abstain_node(

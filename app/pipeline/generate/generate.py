@@ -153,6 +153,10 @@ class AskResult:
     # Lesson mode cites reviewed pack materials; `citations` then carries the
     # book chunk ids those materials resolve to.
     material_citations: list[str] = field(default_factory=list)
+    # Typed citations (#218): policy:script:<id>, persona:<fact_id>,
+    # lore:<fact_id>, lesson:<doc_id>#<span>. The legacy fields above stay for
+    # the frontend and older cached results.
+    typed_citations: list[str] = field(default_factory=list)
     # Exact prompt size when the path knows it (lesson mode). The corpus path
     # stays 0 so usage accounting keeps its existing estimate.
     prompt_chars: int = 0
@@ -233,11 +237,14 @@ def ground_answer(
         return AskResult(
             ABSTAIN_MESSAGE, abstained=True, chunks=chunks, abstain_reason="uncited"
         )
+    typed = [f"lesson:{cid}#{cid}" for cid in citations]
+    typed.extend(f"lore:{lid}" for lid in lore_citations)
     return AskResult(
         _drop_unknown_citations(answer, allowed, allowed_lore),
         citations,
         chunks=chunks,
         lore_citations=lore_citations,
+        typed_citations=list(dict.fromkeys(typed)),
     )
 
 
