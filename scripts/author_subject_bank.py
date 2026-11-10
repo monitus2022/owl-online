@@ -74,7 +74,9 @@ def _longest_common_run(left: str, right: str) -> int:
     return best
 
 
-def _check_quote_overlap(items: list[BankItem], limit: int = 7) -> list[str]:
+def _check_quote_overlap(
+    items: list[BankItem], chunks: dict[str, object], limit: int = 7
+) -> list[str]:
     """Reject item prose that copies a long run from its evidence quote."""
     problems: list[str] = []
     for item in items:
@@ -88,7 +90,9 @@ def _check_quote_overlap(items: list[BankItem], limit: int = 7) -> list[str]:
             ]
         )
         for ref in item.source_refs:
-            run = _longest_common_run(prose, ref.quote)
+            chunk = chunks.get(ref.chunk_id)
+            source = getattr(chunk, "text", ref.quote)
+            run = _longest_common_run(prose, source)
             if run >= limit:
                 problems.append(
                     f"{item.item_id}: {run}-word run copied from {ref.chunk_id}"
@@ -316,7 +320,7 @@ def main() -> int:
             mcq_seen += 1
         items.append(_build_item(spec, material, mark_reviewed, position))
 
-    overlap = _check_quote_overlap(items)
+    overlap = _check_quote_overlap(items, by_id)
     if overlap:
         for problem in overlap:
             print(f"error: {problem}", file=sys.stderr)

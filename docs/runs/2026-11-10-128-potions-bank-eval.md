@@ -2,7 +2,7 @@
 
 - Date: 2026-11-10
 - Run id: `exam-20261110-potions-1.0.0`
-- Ticket: #128 (remaining subject exam banks)
+- Ticket: #187/#213 pattern (remaining subject bank)
 - Bank: `potions` 1.0.0
 - Artifacts: `data/exams/potions/candidates/exam_eval.json` (local, gitignored)
 - Calibration: not run. The calibration fixture is DADA-specific.
@@ -47,6 +47,7 @@
 | MCQ ambiguities | 0 |
 | MCQ mismatches | none |
 | Short golden answers | 25/25 correct and complete |
+| Short candidate answers | 19/25 earned full marks (diagnostic) |
 | Short review flags | 0 |
 | Missing required points | 0 |
 | Errors | 0 |
@@ -101,6 +102,8 @@ wrote data/exams/potions/candidates/exam_eval.json
 - The default DADA per-material coverage target does not fit a 34-material,
   50-item bank, so this run skips that target and reports the topic coverage
   descriptively. The bank validator still checks grounding and exact prompts.
+- Six model-written candidate short answers did not earn full marks. They are a
+  diagnostic of the candidate wording, not a defect in the stored golden answers.
 - No retrieval or generation slice is part of this run.
 
 ## Reproduce

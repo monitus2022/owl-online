@@ -1,8 +1,8 @@
 # Bank record: potions 1.0.0
 
 - Status: `published`
-- Built at: `2026-11-10T07:34:02Z`
-- Reviewed at: `2026-11-10T07:34:02Z`
+- Built at: `2026-11-10T07:45:32Z`
+- Reviewed at: `2026-11-10T07:45:32Z`
 - Pack: `1.0.0` / `bc75045e02412ffe`
 - Index text hash: `aca4c57462d449f5`
 - Generator: `deepseek/deepseek-v4.1-flash` / `potions-bank-authoring-v1` / temperature 0.0
@@ -148,20 +148,3 @@
 - Errors: 0
 - Warnings: 0
 - Detailed messages stay in the CLI output; this record is structure only.
-
-## Evaluation
-
-- Run id `exam-20261110-potions-1.0.0`; record
-  `docs/runs/2026-11-10-128-potions-bank-eval.md`.
-- Near-duplicates: max token Jaccard 0.4348 (limit 0.75), max embedding cosine
-  0.8826 (limit 0.90).
-- Independent verifier: 25/25 MCQ keys agree, 0 ambiguities; 25/25 golden
-  answers accepted, 0 missing required points.
-- Option lengths: correct option strictly longest in 56.0% of MCQs, mean gap
-  0.76 words.
-
-## Review
-
-- The owner reviewed the item set and approved the final concept-only bank.
-- The first read-only review found story/lesson framing, cross-bank duplicates
-  and verbatim corpus runs. All were fixed; the final pass is clean.

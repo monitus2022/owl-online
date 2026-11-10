@@ -24,10 +24,10 @@
       "prompt": "What does the standard rule for blended poisons require of an antidote?",
       "difficulty": "comparison",
       "options": [
-        "It must be greater than the sum of the antidotes for the separate ingredients.",
+        "It must do more than simply add the separate antidotes together.",
         "It must be identical to the antidote for the strongest ingredient.",
         "It must be brewed from the same plants as the poison itself.",
-        "It must be weaker than the sum of the antidotes for the separate parts.",
+        "It must be weaker than a simple combination of the individual remedies.",
         "It must be replaced by a bezoar in every case.",
         "It must be taken before the poison is swallowed."
       ],
@@ -296,7 +296,7 @@
       "prompt": "Which stirring method brings the Draught of Living Death to its finished state?",
       "difficulty": "explanation",
       "options": [
-        "Stir counterclockwise until clear, with a clockwise stir after every seventh counterclockwise turn.",
+        "Keep stirring anticlockwise until clear, adding one clockwise turn after each seven anticlockwise turns.",
         "Stir clockwise until lilac, then stop and let it cool.",
         "Stir once in each direction, then add the bean whole.",
         "Stir constantly clockwise until the brew turns black.",
@@ -456,7 +456,7 @@
       "material_id": "potions-danger-antidote-limits",
       "prompt": "Explain why a bezoar does not remove the need to learn how to mix antidotes.",
       "difficulty": "explanation",
-      "model_answer": "A bezoar protects against most poisons, but it does not work on everything and is rare, so it cannot cover every case. A blended poison needs an antidote greater than the sum of the antidotes for its separate ingredients. Antidote work therefore remains a necessary skill, and it should be guided by a qualified healer rather than self-prescribed.",
+      "model_answer": "A bezoar protects against most poisons, but it does not work on everything and is rare, so it cannot cover every case. A blended poison needs a remedy that adds something beyond the simple total of its separate antidotes. Antidote work therefore remains a necessary skill, and it should be guided by a qualified healer rather than self-prescribed.",
       "required_points": [
         "does not work on everything",
         "blended poison",
@@ -631,7 +631,7 @@
       "material_id": "potions-healing-antidotes",
       "prompt": "Explain why antidote work is described as a branch of diagnosis rather than a universal cure.",
       "difficulty": "explanation",
-      "model_answer": "An antidote neutralises a poison already in the body, so the brewer must first identify the poison before choosing a remedy. A blended poison needs an antidote greater than the sum of the antidotes for its separate components, which means finding the added component that transforms the mixture. A bezoar helps with many poisons but not all, and a healer should approve any antidote.",
+      "model_answer": "An antidote neutralises a poison already in the body, so the brewer must first identify the poison before choosing a remedy. A blended poison needs a remedy that is more than the simple total of its separate antidotes, which means finding the added component that transforms the mixture. A bezoar helps with many poisons but not all, and a healer should approve any antidote.",
       "required_points": [
         "identify the poison",
         "added component",
