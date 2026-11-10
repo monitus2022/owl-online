@@ -9,7 +9,7 @@ Cloudflare Pages. The API stays separate; the API host serves only the API and
 
 | Path | What it is |
 |---|---|
-| `src/data/subjects.ts` | The five departments: URL slug, API subject key, professor, accent, crest, status. The static status is the product open/soon decision; the pack version and lesson/persona flags come from `GET /v1/subjects`. |
+| `src/data/subjects.ts` | The five departments: URL slug, API subject key, professor, accent, crest, status, and the curated starter prompts. The static status is the product open/soon decision; the pack version and lesson/persona flags come from `GET /v1/subjects`. |
 | `src/api/subjects.ts` | Live client for `GET /v1/subjects`; the venue merges the response into the static presentation metadata. |
 | `src/api/chat.ts` | Live client for `POST /ask/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for a venue whose subject is in `lesson_subjects` when the API reports it, and renders typed citation chips with a legacy fallback. |
 | `src/api/exams.ts` | Live client for the served exam bank: paper descriptors, attempt creation and grading; the API can return the same persisted attempt by id. The browser never sees the MCQ key before the grade response. |
@@ -29,6 +29,10 @@ at `http://localhost:8000`, run the API alongside:
 
     OWL_PROVIDER=openrouter OWL_LESSON_MODE=true OWL_PERSONA=true \
       uv run uvicorn app.main:app --reload
+
+The chat offers curated starter chips on the first turn. The list is
+`startersFor` in `src/data/subjects.ts`; the off state omits the identity and
+exam prompts, and `tests/test_presets.py` pins the strings and their routes.
 
 The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` each open room
 whose subject is in `lesson_subjects` sends `mode=lesson`, and with

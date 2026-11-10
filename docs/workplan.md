@@ -603,7 +603,6 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #162/#163 | Starter prompts and the routing contract test | V3 - Product |
 | #19/#33 | Cost and latency instrumentation and a minimal dashboard | V3 - Product |
 | #128 | Pack wiring: reference prefill and coverage maintenance | V3 - Product |
 
@@ -656,6 +655,7 @@ persists exam attempts and chat history.
 | Subject banks | #190, #213, #228, #230, #231 |
 | Attempt history | #206 |
 | Docs refresh | #185 |
+| Starter prompts | #162, #163 |
 | Open trackers (work delivered, ticket open) | #178, #187, #38-#42, #182 |
 
 ## Backlog policy
@@ -666,8 +666,8 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The #216 epic is delivered; the active work is #162/#163, #19/#33 and #128.
-#30 follows. The remaining Next items are #179/#180/#181/#35/#44. On the pack
+The #216 epic is delivered; the active work is #19/#33 and #128. #30 follows.
+The remaining Next items are #179/#180/#181/#35/#44. On the pack
 line, the canon index is harvested (#125, #126) and resolved (#127 closed);
 #128 carries reference prefill and coverage maintenance. The #87 schema,
 validator and all five 1.0.0 packs are delivered. #16, #120, #170, #172, #174

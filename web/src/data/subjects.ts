@@ -112,3 +112,19 @@ export const SUBJECTS: Subject[] = [
 export function getSubject(slug: string | undefined): Subject | undefined {
   return SUBJECTS.find((subject) => subject.slug === slug);
 }
+
+// Curated starter prompts (#162). The strings are the tested interface:
+// a wording change updates tests/test_presets.py in the same change.
+// The off state never offers the identity or exam prompts; both are
+// persona-dependent and would fall through to the corpus or policy path.
+export function startersFor(subject: Subject): string[] {
+  const base = [`What is ${subject.name}?`, "Give me a practice question."];
+  if (subject.personaState !== "live") {
+    return base;
+  }
+  const prompts = ["Who are you?", ...base];
+  if (subject.apiSubject === "dada") {
+    prompts.push("What will be on the exam?");
+  }
+  return prompts;
+}
