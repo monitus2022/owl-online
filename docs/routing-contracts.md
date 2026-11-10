@@ -249,16 +249,22 @@ The residual is not material: 1 item in 207, with zero policy leaks, authority
 bleed, false abstain and fact mismatch. No classifier is added. The fixture and
 the two measurements stay as the regression guard. Revisit only if a new
 fixture slice produces a material paraphrase residual after normalization and
-slot cues, or if a policy or authority miss appears; the conditions above still
-apply.
+slot cues, or if a policy or authority miss appears. If a classifier is then
+proposed, the #184 gate still applies:
+
+- false-meta rate on book questions is zero or within a stated tiny band;
+- meta recall improves beyond the noise band;
+- p95 latency and cost per routed question stay within the stated budget;
+- book answer accuracy, faithfulness and abstention do not move;
+- a run record documents the fixture and the shadow comparison.
 
 ## Current state against the target
 
 | Target | State |
 |---|---|
 | Policy, closed-fact and teaching gates; a miss clarifies or abstains | Implemented in #219 |
-| Closed-fact gate over a normalized lexicon and relation slots | Implemented in #219 and #220 |
-| Lexicon plus slots, no full-utterance matching | Implemented in #219 |
+| Closed-fact gate over a normalized lexicon and relation slots | Partial: regex cue lists plus stable fact IDs and templates; not yet a normalized lexicon and slot gate |
+| Lexicon plus slots, no full-utterance matching | Partial: the router still uses phrase cues such as `_EDUCATION`; the fact IDs and templates are the stable layer |
 | Lesson citations only after the teaching gate | Implemented in #219 and #218 |
 | Typed citation authority and a cross-type checker | Implemented in #218 |
 | Stable `persona:` fact IDs and templates | Implemented in #220 |
