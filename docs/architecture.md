@@ -12,9 +12,9 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | Layer | Path | Responsibility |
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
-| Agent | `app/agent/` | LangGraph state, chat-intent router, answer / practice / feedback / meta / personal / lesson nodes |
+| Agent | `app/agent/` | LangGraph state, contract-aware router, answer / practice / feedback / meta / personal / lesson / fact / clarify / policy / abstain nodes |
 | Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper and the curated concept-title/alias matcher; the DADA, Charms, Potions, Transfiguration and Herbology packs are published; reference prefill and coverage maintenance remain on #128 |
-| Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); the DADA (#190), Charms (#213), Potions (#228), Transfiguration (#230) and Herbology (#213 pattern) banks 1.0.0 are published |
+| Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); the DADA (#190), Charms (#213), Potions (#228), Transfiguration (#230) and Herbology (#231) banks 1.0.0 are published |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
@@ -29,7 +29,7 @@ Pipeline stages, in order:
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
 | Generate | `app/pipeline/generate/` | `ask`, `ask_lesson` (pack-first scope with a labelled corpus fallback), `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
-| Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node`, `lesson_node` |
+| Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node`, `lesson_node`, `fact_node`, `clarify_node`, `policy_node`, `abstain_node` |
 
 `parse_chapters` drops the front matter before book 1 and trims the previous
 book's trailing copyright page plus the next book's dedication and contents from
@@ -518,9 +518,11 @@ The #216 target is answer contract and knowledge authority, not whether a
 phrasing is already in the cue list: policy, closed facts and teaching are
 separate contracts, and a router miss is unclassified rather than a lesson
 question. The plan of record, gates, citation types and measurement bar are in
-`docs/routing-contracts.md` (#216). #219 changes the router so the lesson path is
-opt-in and unclassified traffic clarifies or abstains; today the router still
-promotes a miss to lesson.
+`docs/routing-contracts.md` (#216). The router now applies the policy,
+closed-fact and teaching gates before retrieval: the lesson path is opt-in,
+unclassified traffic abstains, and the one measured residual is the
+hex-versus-jinx lesson gap where the terms match but no material entails the
+answer.
 
 With the persona on, the lesson system prompt is persona-first: identity,
 register and stance precede the grounding rules, a short voice reminder closes

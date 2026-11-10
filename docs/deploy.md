@@ -11,7 +11,8 @@ embedder. Read the two constraints before picking a host.
    at `OWL_CHUNKS_PATH` and `OWL_INDEX_DIR`. Build the index locally once
    (`uv run python scripts/build_index.py`) and upload `data/chunks.jsonl`, the
    index built with the same embedder (`data/index/titan/` for the Bedrock
-   host), the authored `data/lore/` pack and `data/subjects/`. The index
+   host), the authored `data/lore/` pack, `data/subjects/` and the exam store
+   (`data/exams/exams.db`) if papers are served. The index
    directory must be writable: Chroma opens its SQLite store read-write at
    startup, so mount it writable (or copy it to a writable path) rather than
    read-only. The published subject packs live under
