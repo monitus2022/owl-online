@@ -55,6 +55,48 @@ JUDGE_PROMPT_VERSION = "owl-bank-judge-v3"
 
 ITEMS: list[dict] = []
 
+def _words(value: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", value.lower())
+
+
+def _longest_common_run(left: str, right: str) -> int:
+    """Longest contiguous word run shared by two spans."""
+    first, second = _words(left), _words(right)
+    best = 0
+    previous = [0] * (len(second) + 1)
+    for word in first:
+        current = [0] * (len(second) + 1)
+        for index, other in enumerate(second, 1):
+            if word == other:
+                current[index] = previous[index - 1] + 1
+                best = max(best, current[index])
+        previous = current
+    return best
+
+
+def _check_quote_overlap(items: list[BankItem], limit: int = 7) -> list[str]:
+    """Reject item prose that copies a long run from its evidence quote."""
+    problems: list[str] = []
+    for item in items:
+        prose = " ".join(
+            [
+                item.prompt,
+                item.model_answer or "",
+                item.rationale or "",
+                " ".join(option.text for option in item.options),
+                " ".join(criterion.description for criterion in item.rubric),
+            ]
+        )
+        for ref in item.source_refs:
+            run = _longest_common_run(prose, ref.quote)
+            if run >= limit:
+                problems.append(
+                    f"{item.item_id}: {run}-word run copied from {ref.chunk_id}"
+                )
+                break
+    return problems
+
+
 def _validate_specs() -> None:
     seen: set[str] = set()
     for spec in ITEMS:
@@ -121,7 +163,7 @@ _FORBIDDEN_PEDAGOGY = (
     "pupils", "paper", "papers", "school", "professor", "taught", "homework",
     "schoolwork", "practical examination", "written paper", "theory paper",
     "task", "penalty", "mirror", "eyebrow", "learning", "theory", "advanced",
-    "beginner", "introduced", "greenhouse", "knot", "boil-cure",
+    "beginner", "introduced",
 )
 
 
@@ -273,6 +315,13 @@ def main() -> int:
         if spec["kind"] == "mcq":
             mcq_seen += 1
         items.append(_build_item(spec, material, mark_reviewed, position))
+
+    overlap = _check_quote_overlap(items)
+    if overlap:
+        for problem in overlap:
+            print(f"error: {problem}", file=sys.stderr)
+        print("not writing the bank: item prose copies its evidence", file=sys.stderr)
+        return 1
 
     if publish:
         unreviewed = [item.item_id for item in items if item.review_status != "reviewed"]

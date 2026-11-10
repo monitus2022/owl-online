@@ -151,7 +151,7 @@ export function AboutPage() {
               <td className="truth-real">Live for the five cards</td>
               <td>
                 Each of the five departments has a reviewed professor card.
-                DADA and Charms are open; Potions, Transfiguration and
+                DADA, Charms and Potions are open; Transfiguration and
                 Herbology have published packs but stay soon until their exam
                 banks exist. The API reports the live card and lesson subjects
                 per room.

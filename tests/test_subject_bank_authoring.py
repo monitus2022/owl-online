@@ -7,10 +7,21 @@ from pathlib import Path
 
 import pytest
 
-from scripts.author_subject_bank import _check_prose
+import scripts.author_subject_bank as bank_authoring
+from scripts.author_subject_bank import _check_prose, _longest_common_run
 
 ROOT = Path(__file__).resolve().parents[1]
 BANK_DIR = ROOT / "config" / "banks"
+
+
+def test_batches_validate() -> None:
+    for _subject, data in _batches():
+        bank_authoring.ITEMS = data["items"]
+        bank_authoring._validate_specs()
+
+
+def test_longest_common_run() -> None:
+    assert _longest_common_run("a b c d e", "x c d e y") == 3
 
 
 def _batches() -> list[tuple[str, dict]]:

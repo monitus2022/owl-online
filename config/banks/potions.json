@@ -160,7 +160,7 @@
       "prompt": "How long does a fresh batch of truth potion take to mature?",
       "difficulty": "recall",
       "options": [
-        "A full moon cycle.",
+        "A whole lunar month.",
         "One hour.",
         "One day.",
         "One week.",
@@ -168,7 +168,7 @@
         "It needs no maturation."
       ],
       "correct": 0,
-      "rationale": "A fresh batch takes a full moon cycle to mature, so it cannot be produced at a moment’s notice."
+      "rationale": "A fresh batch needs a whole lunar month before it is ready, so it cannot be produced at a moment’s notice."
     },
     {
       "item_id": "potions-mcq-011",
@@ -262,12 +262,12 @@
       "prompt": "What condition makes the Elixir of Life's immortality work?",
       "difficulty": "comparison",
       "options": [
-        "It must be drunk regularly, for all eternity, to keep the drinker alive.",
+        "It must be taken on a continuing schedule to keep the drinker alive.",
         "It must be drunk once and then never again.",
         "It must be kept away from all metal objects.",
         "It must be taken only on the night of a full moon.",
         "It must be mixed with a bezoar before drinking.",
-        "It must be poured over the drinker's skin."
+        "It must be poured over the drinker’s skin."
       ],
       "correct": 0,
       "rationale": "The Elixir is a maintenance dose, so the drinker depends on it rather than escaping death once and for all."
@@ -364,14 +364,14 @@
       "prompt": "A brewer is too heavy-handed with the ingredients of a calming draught. What is the risk?",
       "difficulty": "scenario",
       "options": [
-        "The drinker falls into a heavy and sometimes irreversible sleep.",
         "The drinker becomes reckless and dangerously overconfident.",
         "The drinker loses all memory of the previous day.",
-        "The drinker's skin breaks out in angry red boils.",
-        "The drinker's bones begin to regrow painfully.",
+        "The drinker’s skin breaks out in angry red boils.",
+        "The drinker sinks into a deep sleep that may not be reversible.",
+        "The drinker’s bones begin to regrow painfully.",
         "The drinker becomes unable to tell a lie."
       ],
-      "correct": 0,
+      "correct": 3,
       "rationale": "The calming draught's danger is built into the dose, so excess can deepen calm into an irreversible sleep."
     },
     {
@@ -731,9 +731,9 @@
       "material_id": "potions-legendary-elixir-of-life",
       "prompt": "Explain why the Elixir of Life is best described as a maintenance dose rather than a cure for death.",
       "difficulty": "explanation",
-      "model_answer": "The Elixir of Life extends life, but it must be drunk regularly, for all eternity, if the drinker is to maintain their immortality. Without that regular dose the drinker would die like anyone else, so the dependence is a weakness rather than a triumph. It is therefore a maintenance dose, not a cure for mortality.",
+      "model_answer": "The Elixir of Life extends life only while it is taken on a regular schedule, for all eternity. Without that continuing dose the drinker ages and dies like anyone else, so the dependence is a weakness rather than a triumph. It is therefore a maintenance dose, not a cure for mortality.",
       "required_points": [
-        "drunk regularly",
+        "extends life",
         "for all eternity",
         "maintenance dose"
       ],
@@ -756,11 +756,11 @@
       "material_id": "potions-legendary-felix-felicis",
       "prompt": "Explain what a luck potion does and does not do.",
       "difficulty": "explanation",
-      "model_answer": "A correctly brewed luck potion makes the drinker's endeavours tend to succeed until its effects wear off, and one tiny bottle provides twelve hours of luck. It does not create skill or knowledge; it only tilts circumstances in the drinker's favour. Taken in excess it causes giddiness, recklessness and dangerous overconfidence, which is why organised contests ban it.",
+      "model_answer": "A correctly brewed luck potion makes the drinker’s endeavours tend to succeed until its effects wear off, and one tiny bottle provides twelve hours of luck. It does not create skill or knowledge; it only tilts circumstances in the drinker’s favour. An excessive measure brings giddiness, recklessness and a dangerous belief in success, which is why organised contests ban it.",
       "required_points": [
-        "twelve hours",
-        "does not create skill or knowledge",
-        "dangerous overconfidence"
+        "giddiness",
+        "recklessness",
+        "dangerous belief"
       ],
       "rubric": [
         [
@@ -781,11 +781,11 @@
       "material_id": "potions-mind-amortentia",
       "prompt": "Explain why a love potion is considered dangerous even though it cannot create love.",
       "difficulty": "explanation",
-      "model_answer": "A love potion cannot create love, because love cannot be manufactured or imitated; it produces a powerful infatuation or obsession instead. That obsession is why such a potion is described as probably the most dangerous and powerful potion in the room. The danger lies in the obsession it produces, not in its attractive scent.",
+      "model_answer": "A love potion cannot create love, because love cannot be manufactured or imitated; it produces a powerful infatuation or obsession instead. That obsession is why it is treated as the room’s most dangerous brew. The danger lies in the obsession it produces, not in its attractive scent.",
       "required_points": [
         "cannot create love",
         "powerful infatuation or obsession",
-        "most dangerous and powerful"
+        "most dangerous brew"
       ],
       "rubric": [
         [
@@ -906,10 +906,9 @@
       "material_id": "potions-mind-veritaserum",
       "prompt": "Explain why a truth potion does not settle every question.",
       "difficulty": "explanation",
-      "model_answer": "A truth potion is powerful, but three drops are needed to make a drinker spill secrets and its use is controlled by strict guidelines. A fresh batch also takes a full moon cycle to mature, so it cannot be produced at a moment's notice. Because an able wizard can carry an antidote, the potion is a controlled tool rather than a magical lie detector.",
+      "model_answer": "A truth potion is powerful, but three drops are needed to make a drinker spill secrets and its use is controlled by strict guidelines. A fresh batch needs a whole lunar month before it is ready, so it cannot be produced at a moment’s notice. Because an able wizard can carry an antidote, the potion is a controlled tool rather than a magical lie detector.",
       "required_points": [
         "three drops",
-        "full moon cycle",
         "antidote"
       ],
       "rubric": [
