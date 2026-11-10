@@ -1,0 +1,1053 @@
+{
+  "items": [
+    {
+      "item_id": "potions-mcq-001",
+      "kind": "mcq",
+      "material_id": "potions-danger-accidents",
+      "prompt": "Why is a brewing mistake treated as a hazard to more than the brewer?",
+      "difficulty": "explanation",
+      "options": [
+        "A failed brew can explode or spill and injure everyone nearby.",
+        "A failed brew always escapes the cauldron as a cloud of poison.",
+        "A failed brew permanently weakens the brewer's wand.",
+        "A failed brew releases a creature that must be recaptured.",
+        "A failed brew removes the method from the brewer's memory.",
+        "A failed brew spreads through the air and spoils nearby ingredients."
+      ],
+      "correct": 0,
+      "rationale": "A cauldron explosion or a caustic spill can injure a whole room, and hospital guides group such accidents with other artefact injuries."
+    },
+    {
+      "item_id": "potions-mcq-002",
+      "kind": "mcq",
+      "material_id": "potions-danger-antidote-limits",
+      "prompt": "What does the standard rule for blended poisons require of an antidote?",
+      "difficulty": "comparison",
+      "options": [
+        "It must do more than simply add the separate antidotes together.",
+        "It must be identical to the antidote for the strongest ingredient.",
+        "It must be brewed from the same plants as the poison itself.",
+        "It must be weaker than a simple combination of the individual remedies.",
+        "It must be replaced by a bezoar in every case.",
+        "It must be taken before the poison is swallowed."
+      ],
+      "correct": 0,
+      "rationale": "A blended poison needs an added component that transforms the mixture, not a simple sum of the individual remedies."
+    },
+    {
+      "item_id": "potions-mcq-003",
+      "kind": "mcq",
+      "material_id": "potions-danger-contamination",
+      "prompt": "Which change turns a finished potion into a contaminated one?",
+      "difficulty": "explanation",
+      "options": [
+        "Any change that makes the preparation unreliable, such as a spoiled ingredient.",
+        "Only visible dirt floating on the surface of the liquid.",
+        "Only the addition of a second potion to the same bottle.",
+        "Any change in the colour of the bottle used to store it.",
+        "Any delay between brewing the potion and drinking it.",
+        "Only a cracked stopper on an otherwise clean bottle."
+      ],
+      "correct": 0,
+      "rationale": "Contamination is any change that makes a preparation unreliable, not only dirt in the vessel."
+    },
+    {
+      "item_id": "potions-mcq-004",
+      "kind": "mcq",
+      "material_id": "potions-danger-ingredients",
+      "prompt": "Why can adding an ingredient at the wrong stage make a brew spill and burn?",
+      "difficulty": "application",
+      "options": [
+        "The ingredient reacts before the cauldron is taken off the heat, so the brew spills and burns.",
+        "The ingredient was harmless and only the cauldron was at fault.",
+        "The ingredient was added too late, after the brew had cooled.",
+        "The ingredient was measured by weight rather than by count.",
+        "The ingredient was spoiled and had lost all of its strength.",
+        "The ingredient was stirred too slowly for its heat to spread."
+      ],
+      "correct": 0,
+      "rationale": "Adding the ingredient before the cauldron leaves the heat lets it react too soon and the brew spills."
+    },
+    {
+      "item_id": "potions-mcq-005",
+      "kind": "mcq",
+      "material_id": "potions-foundation-brewing-method",
+      "prompt": "Which factors does a brewer control separately during a timed brew?",
+      "difficulty": "explanation",
+      "options": [
+        "Heat, stirring motion, and the points at which ingredients are added.",
+        "The colour of the cauldron, the age of the ingredients, and the room.",
+        "The price of the ingredients, the shape of the bottle, and the label.",
+        "The number of helpers, the time of day, and the phase of the moon.",
+        "The weight of the finished potion, the stopper, and the shelf height.",
+        "The name of the potion, the maker's patience, and the bottle count."
+      ],
+      "correct": 0,
+      "rationale": "Brewing is a timed process in which heat, motion and addition points are separate variables."
+    },
+    {
+      "item_id": "potions-mcq-006",
+      "kind": "mcq",
+      "material_id": "potions-foundation-cauldron",
+      "prompt": "Why does a cauldron's condition count as part of a potion's recipe?",
+      "difficulty": "recall",
+      "options": [
+        "A clean, sound vessel keeps the brew from becoming a poison or spilling.",
+        "A cauldron's metal decides the potion's flavour and colour.",
+        "A cauldron must be replaced after every single brew.",
+        "A cauldron's age sets how long a potion will keep.",
+        "A cauldron must be filled to the brim before heating.",
+        "A cauldron's handles control the direction of stirring."
+      ],
+      "correct": 0,
+      "rationale": "Cleanliness is a safety rule, and a collapsing cauldron can drench the brewer with a caustic spill."
+    },
+    {
+      "item_id": "potions-mcq-007",
+      "kind": "mcq",
+      "material_id": "potions-foundation-dosing",
+      "prompt": "What does the difference between three drops and a full bottle of the same brew show?",
+      "difficulty": "application",
+      "options": [
+        "Dose and concentration decide whether a brew is medicine or a danger.",
+        "A larger dose always makes a potion work faster and better.",
+        "The number of drops changes only the potion's colour.",
+        "A bottle and a drop contain the same effective amount.",
+        "Potency depends only on the ingredients, never on quantity.",
+        "A small dose is always harmless whatever the brew."
+      ],
+      "correct": 0,
+      "rationale": "Potency is a property of concentration and dose, so a larger measure makes a different and more dangerous potion."
+    },
+    {
+      "item_id": "potions-mcq-008",
+      "kind": "mcq",
+      "material_id": "potions-foundation-ingredient-preparation",
+      "prompt": "Why can crushing a sopophorous bean work better than cutting it?",
+      "difficulty": "explanation",
+      "options": [
+        "Crushing releases more juice, which changes the brew's colour and yield.",
+        "Crushing removes the need to measure the other ingredients.",
+        "Crushing makes the bean safe to handle with bare hands.",
+        "Crushing adds heat that replaces the cauldron's flame.",
+        "Crushing destroys the bean's active property completely.",
+        "Crushing lets the bean be added after the brew has cooled."
+      ],
+      "correct": 0,
+      "rationale": "Preparation changes how much of a substance reaches the potion, so a better technique can change yield and timing."
+    },
+    {
+      "item_id": "potions-mcq-009",
+      "kind": "mcq",
+      "material_id": "potions-foundation-potions-definition",
+      "prompt": "What is the defining feature of a potion as a branch of magic?",
+      "difficulty": "recall",
+      "options": [
+        "It works through a prepared liquid rather than a wand movement.",
+        "It works only through spoken words and a wand gesture.",
+        "It works by changing the brewer's own appearance.",
+        "It works without any ingredients or measured steps.",
+        "It works only on creatures and never on people.",
+        "It works by storing a spell inside a metal object."
+      ],
+      "correct": 0,
+      "rationale": "Potions works through prepared liquids, and a draught is judged by what it does to the drinker."
+    },
+    {
+      "item_id": "potions-mcq-010",
+      "kind": "mcq",
+      "material_id": "potions-mind-veritaserum",
+      "prompt": "How long does a fresh batch of truth potion take to mature?",
+      "difficulty": "recall",
+      "options": [
+        "A whole lunar month.",
+        "One hour.",
+        "One day.",
+        "One week.",
+        "One year.",
+        "It needs no maturation."
+      ],
+      "correct": 0,
+      "rationale": "A fresh batch needs a whole lunar month before it is ready, so it cannot be produced at a moment’s notice."
+    },
+    {
+      "item_id": "potions-mcq-011",
+      "kind": "mcq",
+      "material_id": "potions-healing-bezoar",
+      "prompt": "What is a bezoar?",
+      "difficulty": "recall",
+      "options": [
+        "A stone-like mass from a goat's stomach that protects against most poisons.",
+        "A powdered mineral that turns a poison into clean water.",
+        "A plant whose cry is fatal to anyone who hears it.",
+        "A potion that reverses any magical transformation.",
+        "A charm that draws poison out through the skin.",
+        "A metal vessel used to store antidotes."
+      ],
+      "correct": 0,
+      "rationale": "A bezoar is a fast emergency antidote, but it is rare and does not cover every poison."
+    },
+    {
+      "item_id": "potions-mcq-012",
+      "kind": "mcq",
+      "material_id": "potions-foundation-storage",
+      "prompt": "Why should a stored potion be labelled with the brewer’s name?",
+      "difficulty": "explanation",
+      "options": [
+        "To trace a sample back to its source.",
+        "To make the potion taste better.",
+        "To keep the potion warm.",
+        "To increase its potency.",
+        "To stop it freezing.",
+        "To hide its ingredients."
+      ],
+      "correct": 0,
+      "rationale": "The label identifies the brewer and the sample so a mistake can be traced."
+    },
+    {
+      "item_id": "potions-mcq-013",
+      "kind": "mcq",
+      "material_id": "potions-healing-dittany",
+      "prompt": "How is Essence of Dittany applied to a fresh wound?",
+      "difficulty": "application",
+      "options": [
+        "Three drops are poured onto the wound.",
+        "It is swallowed as a draught.",
+        "It is rubbed in as a thick paste.",
+        "It is injected with a needle.",
+        "It is inhaled as a vapour.",
+        "It is applied only after the wound has healed."
+      ],
+      "correct": 0,
+      "rationale": "The essence is poured drop by drop onto the bleeding wound."
+    },
+    {
+      "item_id": "potions-mcq-014",
+      "kind": "mcq",
+      "material_id": "potions-healing-mandrake-draught",
+      "prompt": "What is the Mandrake Restorative Draught used to treat?",
+      "difficulty": "recall",
+      "options": [
+        "A person who has been transfigured or cursed, restoring the original state.",
+        "A person suffering from a common cold and a mild fever.",
+        "A person with broken bones that must regrow.",
+        "A person who has swallowed a blended poison.",
+        "A person who has been splashed with a swelling solution.",
+        "A person who needs to forget a recent event."
+      ],
+      "correct": 0,
+      "rationale": "The draught is the specialised answer to Petrification and a powerful restorative, not a general pick-me-up."
+    },
+    {
+      "item_id": "potions-mcq-015",
+      "kind": "mcq",
+      "material_id": "potions-healing-pepperup",
+      "prompt": "What describes the effect of Pepperup Potion?",
+      "difficulty": "explanation",
+      "options": [
+        "It clears a cold almost at once but leaves the drinker smoking at the ears.",
+        "It regrows bone over a painful night in a hospital bed.",
+        "It restores a petrified person to their original state.",
+        "It induces a heavy, sometimes irreversible sleep.",
+        "It makes the drinker lucky for twelve hours.",
+        "It forces the drinker to answer questions truthfully."
+      ],
+      "correct": 0,
+      "rationale": "Pepperup is a fast comfort treatment for a cold, with a visible and temporary side effect."
+    },
+    {
+      "item_id": "potions-mcq-016",
+      "kind": "mcq",
+      "material_id": "potions-legendary-elixir-of-life",
+      "prompt": "What condition makes the Elixir of Life's immortality work?",
+      "difficulty": "comparison",
+      "options": [
+        "It must be taken on a continuing schedule to keep the drinker alive.",
+        "It must be drunk once and then never again.",
+        "It must be kept away from all metal objects.",
+        "It must be taken only on the night of a full moon.",
+        "It must be mixed with a bezoar before drinking.",
+        "It must be poured over the drinker’s skin."
+      ],
+      "correct": 0,
+      "rationale": "The Elixir is a maintenance dose, so the drinker depends on it rather than escaping death once and for all."
+    },
+    {
+      "item_id": "potions-mcq-017",
+      "kind": "mcq",
+      "material_id": "potions-legendary-felix-felicis",
+      "prompt": "A brewer takes a large extra measure of a luck potion before a contest. What is the likely result?",
+      "difficulty": "scenario",
+      "options": [
+        "Giddiness, recklessness and dangerous overconfidence.",
+        "A permanent gain in skill and knowledge.",
+        "Twelve extra hours of reliable luck.",
+        "A heavy and irreversible sleep.",
+        "Complete immunity to poison for a day.",
+        "Loss of the ability to tell the truth."
+      ],
+      "correct": 0,
+      "rationale": "A small measure gives twelve hours of luck; excess brings giddiness, recklessness and dangerous overconfidence."
+    },
+    {
+      "item_id": "potions-mcq-018",
+      "kind": "mcq",
+      "material_id": "potions-legendary-living-death",
+      "prompt": "Which stirring method brings the Draught of Living Death to its finished state?",
+      "difficulty": "explanation",
+      "options": [
+        "Keep stirring anticlockwise until clear, adding one clockwise turn after each seven anticlockwise turns.",
+        "Stir clockwise until lilac, then stop and let it cool.",
+        "Stir once in each direction, then add the bean whole.",
+        "Stir constantly clockwise until the brew turns black.",
+        "Stir only after the brew has been taken off the heat.",
+        "Stir counterclockwise once, then leave it undisturbed for a day."
+      ],
+      "correct": 0,
+      "rationale": "The draught's simple ingredient list conceals a delicate process in which stirring and juice yield decide success."
+    },
+    {
+      "item_id": "potions-mcq-019",
+      "kind": "mcq",
+      "material_id": "potions-legendary-wolfsbane",
+      "prompt": "How does the Wolfsbane Potion change a werewolf's transformation?",
+      "difficulty": "comparison",
+      "options": [
+        "It preserves the drinker's mind, so the wolf form becomes harmless.",
+        "It removes the condition so that no transformation occurs.",
+        "It makes the transformation stronger but shorter.",
+        "It turns the wolf form into a different animal entirely.",
+        "It prevents the full moon from rising for a week.",
+        "It cures the condition after a single dose."
+      ],
+      "correct": 0,
+      "rationale": "Wolfsbane manages the transformation rather than curing lycanthropy, and it works when taken in the week before the full moon."
+    },
+    {
+      "item_id": "potions-mcq-020",
+      "kind": "mcq",
+      "material_id": "potions-mind-amortentia",
+      "prompt": "What does the most powerful love potion actually produce?",
+      "difficulty": "explanation",
+      "options": [
+        "A powerful infatuation or obsession, rather than genuine love.",
+        "A lasting bond of true love that cannot be undone.",
+        "A complete loss of memory about the person admired.",
+        "A change of appearance to match the person admired.",
+        "A truth-telling state in which feelings are confessed.",
+        "A calm mood that soothes anxiety and agitation."
+      ],
+      "correct": 0,
+      "rationale": "Love cannot be manufactured or imitated, so the potion produces obsession instead."
+    },
+    {
+      "item_id": "potions-mcq-021",
+      "kind": "mcq",
+      "material_id": "potions-mind-confusing-concoction",
+      "prompt": "What visible sign shows that a Confusing Concoction has succeeded?",
+      "difficulty": "application",
+      "options": [
+        "The brew has reached a thick consistency.",
+        "The brew has turned clear as water.",
+        "The brew gives off a light silver vapour.",
+        "The brew smells different to each person.",
+        "The brew has separated into two layers.",
+        "The brew has begun to smoke at the rim."
+      ],
+      "correct": 0,
+      "rationale": "Thickness is the visible sign of success, and a runny result is a failed potion."
+    },
+    {
+      "item_id": "potions-mcq-022",
+      "kind": "mcq",
+      "material_id": "potions-mind-draught-of-peace",
+      "prompt": "A brewer is too heavy-handed with the ingredients of a calming draught. What is the risk?",
+      "difficulty": "scenario",
+      "options": [
+        "The drinker becomes reckless and dangerously overconfident.",
+        "The drinker loses all memory of the previous day.",
+        "The drinker’s skin breaks out in angry red boils.",
+        "The drinker sinks into a deep sleep that may not be reversible.",
+        "The drinker’s bones begin to regrow painfully.",
+        "The drinker becomes unable to tell a lie."
+      ],
+      "correct": 3,
+      "rationale": "The calming draught's danger is built into the dose, so excess can deepen calm into an irreversible sleep."
+    },
+    {
+      "item_id": "potions-mcq-023",
+      "kind": "mcq",
+      "material_id": "potions-mind-veritaserum",
+      "prompt": "Which statement best describes a truth potion's real limits?",
+      "difficulty": "explanation",
+      "options": [
+        "It can be countered by an antidote, and its use is strictly controlled.",
+        "It compels every drinker and cannot be resisted or countered.",
+        "It works only when the drinker is already asleep.",
+        "It takes effect instantly and needs no preparation time.",
+        "It forces the drinker to obey spoken commands.",
+        "It reveals lies by changing the drinker's appearance."
+      ],
+      "correct": 0,
+      "rationale": "The potion is powerful but not irresistible: it can be countered, it matures slowly, and its use is controlled."
+    },
+    {
+      "item_id": "potions-mcq-024",
+      "kind": "mcq",
+      "material_id": "potions-transformation-deflating",
+      "prompt": "How does the Deflating Draught relate to the Swelling Solution?",
+      "difficulty": "comparison",
+      "options": [
+        "It undoes the swelling, so the two brews form an opposed pair.",
+        "It makes the swelling permanent and impossible to reverse.",
+        "It enlarges tissue further when applied to skin.",
+        "It puts the swollen patient into a deep sleep.",
+        "It changes the patient's appearance to match another person.",
+        "It shrinks the patient's bones instead of their tissue."
+      ],
+      "correct": 0,
+      "rationale": "One brew undoes the visible effect of another, which turns a dramatic accident into a reversible one."
+    },
+    {
+      "item_id": "potions-mcq-025",
+      "kind": "mcq",
+      "material_id": "potions-transformation-polyjuice",
+      "prompt": "What must a brewer plan for when relying on a Polyjuice disguise?",
+      "difficulty": "scenario",
+      "options": [
+        "Renewing the dose about every hour as the effect fades.",
+        "Waiting a full day before the first dose takes effect.",
+        "Adding the personal element at the very start of the brew.",
+        "Using an animal hair to make the disguise stronger.",
+        "Avoiding all contact with the person being copied.",
+        "Drinking the whole bottle to extend the effect."
+      ],
+      "correct": 0,
+      "rationale": "The dose lasts about an hour and the personal element goes in last, so timing and order both matter."
+    },
+    {
+      "item_id": "potions-short-001",
+      "kind": "short_answer",
+      "material_id": "potions-danger-accidents",
+      "prompt": "Explain why potion accidents are treated as a recognised category of magical injury.",
+      "difficulty": "explanation",
+      "model_answer": "A brewing mistake can injure a whole room rather than only the brewer, because a cauldron can explode or spill its contents over everyone nearby. Hospital guides list cauldron explosion among artefact accidents, alongside wand backfiring and broom crashes. That is why careful method and containment are treated as safety measures, not mere tidiness.",
+      "required_points": [
+        "can injure a whole room",
+        "cauldron explosion",
+        "safety measures"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that a brewing accident can injure people beyond the brewer and gives a sound cause.",
+          4
+        ],
+        [
+          "completeness",
+          "Connects the accident category to careful method and containment as safety measures.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-002",
+      "kind": "short_answer",
+      "material_id": "potions-danger-antidote-limits",
+      "prompt": "Explain why a bezoar does not remove the need to learn how to mix antidotes.",
+      "difficulty": "explanation",
+      "model_answer": "A bezoar protects against most poisons, but it does not work on everything and is rare, so it cannot cover every case. A blended poison needs a remedy that adds something beyond the simple total of its separate antidotes. Antidote work therefore remains a necessary skill, and it should be guided by a qualified healer rather than self-prescribed.",
+      "required_points": [
+        "does not work on everything",
+        "blended poison",
+        "qualified healer"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States the bezoar's limits accurately, including that it is rare and not universal.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains why blended poisons keep antidote work necessary and notes the healer's role.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-003",
+      "kind": "short_answer",
+      "material_id": "potions-danger-contamination",
+      "prompt": "A brewer stores a draught in a dirty cauldron and later finds it unreliable. Explain how this fits the wider idea of contamination.",
+      "difficulty": "application",
+      "model_answer": "A dirty cauldron is a source of contamination, because a clean vessel is what keeps a potion from becoming a poison. Contamination covers any change that makes the preparation unreliable, whether it comes from a dirty cauldron, a spoiled ingredient or a tampered bottle. Cleaning, storing and checking a potion before use are therefore part of the craft.",
+      "required_points": [
+        "dirty cauldron",
+        "spoiled ingredient",
+        "tampered bottle"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Identifies the dirty vessel as contamination and explains the cleanliness rule.",
+          4
+        ],
+        [
+          "completeness",
+          "Extends contamination beyond dirt to spoiled ingredients and tampered bottles, and names prevention.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-004",
+      "kind": "short_answer",
+      "material_id": "potions-danger-poison",
+      "prompt": "Explain why poison is described as both a hazard and a diagnostic problem.",
+      "difficulty": "explanation",
+      "model_answer": "A poison is a substance that harms the body when taken in, and it can be hidden in ordinary drink, so it is a hazard that is easy to conceal. Treating it also requires diagnosis, because a blended poison needs an antidote greater than the sum of its parts. Poison is therefore a substance, a concealment problem and a medical emergency at once.",
+      "required_points": [
+        "harms the body",
+        "blended poison",
+        "concealment problem"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Defines poison as a harmful substance and recognises that it can be hidden in drink.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains the diagnostic demand of blended poisons and ties the hazard to medical urgency.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-005",
+      "kind": "short_answer",
+      "material_id": "potions-foundation-brewing-method",
+      "prompt": "Explain why a single omitted ingredient can ruin an otherwise careful brew.",
+      "difficulty": "explanation",
+      "model_answer": "Brewing is a sequence of controlled steps in which order, quantity and timing all matter, so one missing addition can break the process. A calming draught made without its syrup of hellebore was worthless even though the rest of the method had been followed. A brew is therefore not a recipe to improvise around, because each addition point is a separate variable.",
+      "required_points": [
+        "sequence of controlled steps",
+        "syrup of hellebore",
+        "addition point"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Treats brewing as an ordered, timed process rather than a loose recipe.",
+          4
+        ],
+        [
+          "completeness",
+          "Uses the omitted ingredient to show why one missing step makes the whole brew worthless.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-006",
+      "kind": "short_answer",
+      "material_id": "potions-foundation-cauldron",
+      "prompt": "A brewer chooses a sound cauldron and cleans it before use. Explain why both choices matter.",
+      "difficulty": "application",
+      "model_answer": "A cauldron is the central vessel of potion-making, and a dirty one can turn a brew into a poison, so cleaning is a safety measure rather than housekeeping. A sound vessel also matters because a collapsing cauldron can spill its contents and burn the brewer. Choosing and maintaining the vessel are therefore part of the recipe.",
+      "required_points": [
+        "central vessel",
+        "safety measure",
+        "collapsing cauldron"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains the vessel's central role and the safety value of cleaning it.",
+          4
+        ],
+        [
+          "completeness",
+          "Covers both the dirty-vessel risk and the risk of a failing cauldron spilling its contents.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-007",
+      "kind": "short_answer",
+      "material_id": "potions-foundation-dosing",
+      "prompt": "Explain how the same brewed liquid can be either a medicine or a poison.",
+      "difficulty": "explanation",
+      "model_answer": "Potions are dosed rather than simply drunk, so quantity and concentration decide the effect. Three drops of a truth potion can make a drinker reveal secrets, while too heavy a hand with a calming draught can cause a heavy and sometimes irreversible sleep. A brewer who ignores the difference between a drop and a bottle makes a different and more dangerous potion.",
+      "required_points": [
+        "dosed",
+        "irreversible sleep",
+        "drop and a bottle"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that dose and concentration, not the ingredient list alone, set a potion's effect.",
+          4
+        ],
+        [
+          "completeness",
+          "Supports the point with both a small effective dose and an overdose risk.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-008",
+      "kind": "short_answer",
+      "material_id": "potions-foundation-storage",
+      "prompt": "Explain why a stored potion should be labelled and kept in a clean container.",
+      "difficulty": "explanation",
+      "model_answer": "A label identifies both the brewer and the sample, so a mistake can be traced to its source. A clean container protects the potion from contamination, because cleanliness is what keeps a brew from becoming a poison. Labelling and clean storage are therefore part of what makes a potion safe to use later.",
+      "required_points": [
+        "label identifies",
+        "contamination",
+        "safe to use later"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that a label traces a sample to its brewer and that a clean container limits contamination.",
+          4
+        ],
+        [
+          "completeness",
+          "Ties both practices to making a stored potion safe for later use.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-009",
+      "kind": "short_answer",
+      "material_id": "potions-healing-antidotes",
+      "prompt": "Explain why antidote work is described as a branch of diagnosis rather than a universal cure.",
+      "difficulty": "explanation",
+      "model_answer": "An antidote neutralises a poison already in the body, so the brewer must first identify the poison before choosing a remedy. A blended poison needs a remedy that is more than the simple total of its separate antidotes, which means finding the added component that transforms the mixture. A bezoar helps with many poisons but not all, and a healer should approve any antidote.",
+      "required_points": [
+        "identify the poison",
+        "added component",
+        "blended poison"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that an antidote acts on a poison already present and depends on identifying it.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains the blended-poison rule and why no single remedy covers every case.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-010",
+      "kind": "short_answer",
+      "material_id": "potions-healing-bezoar",
+      "prompt": "A brewer keeps a bezoar in a first-aid kit. Explain what it can and cannot do.",
+      "difficulty": "application",
+      "model_answer": "A bezoar is a stone-like mass from a goat's stomach that can save a drinker from most poisons, so it is useful as a fast first response. It does not work on everything and is rare, so a kit that holds only a bezoar is still incomplete. It stabilises a poisoned patient and buys time, but it is not a substitute for diagnosis.",
+      "required_points": [
+        "most poisons",
+        "does not work on everything",
+        "substitute for diagnosis"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Describes the bezoar's origin and its use against most poisons.",
+          4
+        ],
+        [
+          "completeness",
+          "States its limits and why it cannot replace diagnosis or proper antidote work.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-011",
+      "kind": "short_answer",
+      "material_id": "potions-healing-dittany",
+      "prompt": "Explain why a wound-closing essence is a first-aid measure rather than a complete repair.",
+      "difficulty": "application",
+      "model_answer": "Essence of Dittany is applied drop by drop, and it stops bleeding quickly while making the wound look several days old. It is a first-aid potion rather than a complete repair, because deeper healing is left to a spell or a hospital. Applied immediately, it can also reduce scarring.",
+      "required_points": [
+        "drop by drop",
+        "first-aid potion",
+        "reduce scarring"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Describes the drop-by-drop application and the rapid but partial effect on a wound.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains that deeper healing is left to other means while immediate use limits scarring.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-012",
+      "kind": "short_answer",
+      "material_id": "potions-healing-skele-gro",
+      "prompt": "Explain what Skele-Gro does and why it is not a pleasant or instant remedy.",
+      "difficulty": "explanation",
+      "model_answer": "Skele-Gro is a bone-regrowing potion, so its purpose is to rebuild bone that has been lost. Regrowing bones is a nasty business: the potion burns the mouth and throat as it goes down, and the patient must wait while the bones rebuild. It is a potent restorative with a narrow indication, because it repairs bone but does not spare pain or waiting.",
+      "required_points": [
+        "bone-regrowing potion",
+        "burns the mouth and throat",
+        "narrow indication"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Identifies Skele-Gro as a bone-regrowing potion and notes the burning sensation.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains the slow rebuild and the narrow scope of what the potion repairs.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-013",
+      "kind": "short_answer",
+      "material_id": "potions-legendary-elixir-of-life",
+      "prompt": "Explain why the Elixir of Life is best described as a maintenance dose rather than a cure for death.",
+      "difficulty": "explanation",
+      "model_answer": "The Elixir of Life extends life only while it is taken on a regular schedule, for all eternity. Without that continuing dose the drinker ages and dies like anyone else, so the dependence is a weakness rather than a triumph. It is therefore a maintenance dose, not a cure for mortality.",
+      "required_points": [
+        "extends life",
+        "for all eternity",
+        "maintenance dose"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that the Elixir extends life only while it is taken regularly.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains that the dependence is a weakness and why the drinker would die without the regular dose.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-014",
+      "kind": "short_answer",
+      "material_id": "potions-legendary-felix-felicis",
+      "prompt": "Explain what a luck potion does and does not do.",
+      "difficulty": "explanation",
+      "model_answer": "A correctly brewed luck potion makes the drinker’s endeavours tend to succeed until its effects wear off, and one tiny bottle provides twelve hours of luck. It does not create skill or knowledge; it only tilts circumstances in the drinker’s favour. An excessive measure brings giddiness, recklessness and a dangerous belief in success, which is why organised contests ban it.",
+      "required_points": [
+        "giddiness",
+        "recklessness",
+        "dangerous belief"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the potion tilts success for a limited time rather than granting ability.",
+          4
+        ],
+        [
+          "completeness",
+          "Covers the twelve-hour duration and the risk of an excessive dose.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-015",
+      "kind": "short_answer",
+      "material_id": "potions-mind-amortentia",
+      "prompt": "Explain why a love potion is considered dangerous even though it cannot create love.",
+      "difficulty": "explanation",
+      "model_answer": "A love potion cannot create love, because love cannot be manufactured or imitated; it produces a powerful infatuation or obsession instead. That obsession is why it is treated as the room’s most dangerous brew. The danger lies in the obsession it produces, not in its attractive scent.",
+      "required_points": [
+        "cannot create love",
+        "powerful infatuation or obsession",
+        "most dangerous brew"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Distinguishes infatuation or obsession from genuine love.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains why the resulting obsession, rather than the scent, makes the potion dangerous.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-016",
+      "kind": "short_answer",
+      "material_id": "potions-mind-draught-of-peace",
+      "prompt": "Explain why the method for a calming draught leaves little room for improvisation.",
+      "difficulty": "explanation",
+      "model_answer": "The ingredients must go in a precise order and quantity, the mixture must be stirred a set number of times in alternating directions, and the heat must be lowered for a set period. The method even calls for powdered moonstone, three counterclockwise stirs, seven minutes of simmering and two drops of syrup of hellebore. A single omitted ingredient can make the whole potion worthless.",
+      "required_points": [
+        "precise order",
+        "two drops of syrup of hellebore",
+        "worthless"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Names the controlled variables of order, stirring and heat.",
+          4
+        ],
+        [
+          "completeness",
+          "Gives a concrete step and explains that one omission can waste the whole brew.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-017",
+      "kind": "short_answer",
+      "material_id": "potions-mind-euphoria-elixir",
+      "prompt": "Explain how a brewer can soften the side effects of an elixir that lifts mood.",
+      "difficulty": "application",
+      "model_answer": "The Elixir to Induce Euphoria produces a lift in mood, but its effect can be strong enough to cause excessive singing and nose-tweaking. Adding a sprig of peppermint is an unorthodox touch that counterbalances those occasional side effects. This shows that a brewer can adjust a recipe to soften a potion's behaviour, provided the change is understood.",
+      "required_points": [
+        "excessive singing and nose-tweaking",
+        "sprig of peppermint",
+        "counterbalances"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Identifies the mood-lifting effect and the behavioural side effects it can cause.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains how the peppermint addition offsets those effects and why the adjustment is deliberate.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-018",
+      "kind": "short_answer",
+      "material_id": "potions-mind-love-potion",
+      "prompt": "Explain why a love potion hidden in ordinary food is a serious warning about consent.",
+      "difficulty": "scenario",
+      "model_answer": "A love potion produces infatuation rather than genuine affection, and it can be hidden in ordinary food so that the drinker never agrees to take it. A concealed dose can override judgement and make the drinker act against their own wishes. The effect can also strengthen the longer the potion is kept, which makes the warning about consent sharper.",
+      "required_points": [
+        "infatuation",
+        "concealed dose",
+        "strengthen the longer"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that the potion produces infatuation and can be concealed in food.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains how a concealed dose overrides judgement and why keeping the potion matters.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-019",
+      "kind": "short_answer",
+      "material_id": "potions-mind-sleeping-draught",
+      "prompt": "Explain two uses of a simple sleeping draught and why reliability matters.",
+      "difficulty": "application",
+      "model_answer": "A sleeping draught produces controlled unconsciousness and is valued for reliability and convenience. It can keep a creature calm during transport, and it can make a person sleep long enough for another procedure to be completed. The potion’s value lies in predictable timing rather than in dramatic effects.",
+      "required_points": [
+        "controlled unconsciousness",
+        "transport",
+        "reliability and convenience"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Names controlled unconsciousness and two practical uses.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains why predictable timing is the potion’s value.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-020",
+      "kind": "short_answer",
+      "material_id": "potions-mind-veritaserum",
+      "prompt": "Explain why a truth potion does not settle every question.",
+      "difficulty": "explanation",
+      "model_answer": "A truth potion is powerful, but three drops are needed to make a drinker spill secrets and its use is controlled by strict guidelines. A fresh batch needs a whole lunar month before it is ready, so it cannot be produced at a moment’s notice. Because an able wizard can carry an antidote, the potion is a controlled tool rather than a magical lie detector.",
+      "required_points": [
+        "three drops",
+        "antidote"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Describes the potion's power and its controlled use.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains the slow maturation and the known countermeasure, and rejects the lie-detector claim.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-021",
+      "kind": "short_answer",
+      "material_id": "potions-transformation-deflating",
+      "prompt": "Explain what the pairing of a swelling potion and a deflating draught shows about potion design.",
+      "difficulty": "comparison",
+      "model_answer": "Potions often comes in opposed pairs, with one brew undoing the visible effect of another. A swelling potion enlarges body tissue on contact, and a Deflating Draught given to anyone who was splashed reduces the swelling. That pairing turns a dramatic transformation accident into something reversible, and it gives a room a practical safety net.",
+      "required_points": [
+        "opposed pairs",
+        "Deflating Draught",
+        "reversible"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Identifies the two brews as an opposed pair that counteracts one effect.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains how the counter-potion makes a swelling accident reversible and safer.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-022",
+      "kind": "short_answer",
+      "material_id": "potions-transformation-polyjuice",
+      "prompt": "Explain how a Polyjuice disguise is tied to one specific person.",
+      "difficulty": "explanation",
+      "model_answer": "A Polyjuice Potion changes the drinker's appearance to match another person, and the recipe includes a piece of the person to be copied. That personal element is added last and is what ties the disguise to a specific target, so it must be kept separate until the end. The result is a temporary disguise in liquid form rather than a general change of shape.",
+      "required_points": [
+        "piece of the person to be copied",
+        "added last",
+        "temporary disguise"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the potion copies a specific person and uses a personal element.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that the element is added last and that the resulting disguise is temporary.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-023",
+      "kind": "short_answer",
+      "material_id": "potions-transformation-polyjuice-limits",
+      "prompt": "Explain why a Polyjuice Potion is not a general shapeshifting solution.",
+      "difficulty": "comparison",
+      "model_answer": "A Polyjuice Potion lasts about an hour before the drinker changes back, so a disguise must be renewed on time. It is designed for human use only, and an animal hair produces fur, yellow eyes and pointed ears rather than a usable disguise. The brewer must therefore know the target, the timing and the boundary between human and animal.",
+      "required_points": [
+        "human use only",
+        "animal hair",
+        "boundary between human and animal"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States the one-hour duration and the human-only design.",
+          4
+        ],
+        [
+          "completeness",
+          "Uses the failed animal attempt to explain why the potion is not general shapeshifting.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-024",
+      "kind": "short_answer",
+      "material_id": "potions-transformation-shrinking",
+      "prompt": "Explain how a Shrinking Solution shows both the power and the reversibility of transformation potions.",
+      "difficulty": "application",
+      "model_answer": "A correctly brewed Shrinking Solution reduces the size of a living creature, and a few drops can turn a toad into a tadpole. The change shows reversibility, because a few drops of another bottle restore the tadpole to its full size. The potion therefore shows how strong a transformation brew can be, provided the brewer gets the strength right.",
+      "required_points": [
+        "reduces the size of a living creature",
+        "reversibility",
+        "strength right"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Describes the shrinking effect on a living creature and the reversal.",
+          4
+        ],
+        [
+          "completeness",
+          "Connects both effects to the brewer's control of strength and the nature of transformation potions.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "potions-short-025",
+      "kind": "short_answer",
+      "material_id": "potions-transformation-swelling",
+      "prompt": "Explain how a swelling potion becomes a hazard when it is released by an explosion.",
+      "difficulty": "explanation",
+      "model_answer": "A swelling potion enlarges body tissue on contact, so it is normally applied with care. When an explosion throws it across a room, everyone splashed is affected at once and the potion becomes a hazard rather than a remedy. Its immediate counter-potion is a Deflating Draught, which shows that containment matters as much as the recipe.",
+      "required_points": [
+        "enlarges body tissue",
+        "splashed",
+        "Deflating Draught"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the potion works by contact and that an explosion spreads it widely.",
+          4
+        ],
+        [
+          "completeness",
+          "Names the counter-potion and draws the containment conclusion from the accident.",
+          4
+        ]
+      ]
+    }
+  ]
+}

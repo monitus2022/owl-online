@@ -251,7 +251,7 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 
 ## Phase B: Subject packs and exam bank
 
-Status: all five O.W.L. packs delivered; the DADA and Charms banks 1.0.0 are
+Status: all five O.W.L. packs delivered; the DADA, Charms and Potions banks 1.0.0 are
 published, the hybrid grader is built, the DADA bank eval and judge calibration
 are recorded (#191), and served attempts are built (#193).
 

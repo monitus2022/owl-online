@@ -65,7 +65,7 @@ export const SUBJECTS: Subject[] = [
     professorVariant: "flask",
     crest: "flask",
     personaState: "live",
-    status: "soon",
+    status: "open",
     blurb: "Brewing, antidotes and the standard cautions.",
   },
   {
