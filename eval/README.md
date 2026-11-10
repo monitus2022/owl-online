@@ -558,5 +558,13 @@ fixture change is a deliberate test and record change.
 
 The fixture is used by #219 for the gate confusion matrix and by #184 for the
 residual buckets. Metrics are policy leak, authority bleed, false abstain given
-fact present, unsupported claim rate and clarify precision. The design note is
+fact present, unsupported claim rate and clarify precision. The deterministic
+measurement is:
+
+```text
+uv run python scripts/measure_routing.py
+```
+
+It prints the expected-vs-actual contract matrix and exits non-zero if a policy
+leak or authority bleed appears. The design note is
 `docs/routing-contracts.md`.

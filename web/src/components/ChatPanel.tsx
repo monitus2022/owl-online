@@ -30,13 +30,18 @@ const MODE_LABELS: Record<ChatMode, string> = {
   meta: "Office note",
   personal: "Office note",
   lesson: "Lesson",
+  fact: "Office note",
+  clarify: "Office note",
 };
 
 // The server emits meta and personal only when OWL_PERSONA is on. The badge
 // reads "Professor" when the venue's API-derived persona state is live; the
 // static subject value is only the fallback when /v1/subjects is unreachable.
 function modeLabel(mode: ChatMode, personaState: PersonaState): string {
-  if ((mode === "meta" || mode === "personal") && personaState === "live") {
+  if (
+    (mode === "meta" || mode === "personal" || mode === "fact") &&
+    personaState === "live"
+  ) {
     return "Professor";
   }
   return MODE_LABELS[mode];

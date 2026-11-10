@@ -233,3 +233,104 @@ def test_exam_room_questions_stay_on_the_answer_path():
         )
         == "answer"
     )
+
+
+def test_contract_gates_route_closed_facts_and_clarify():
+    assert (
+        classify(
+            "where did you study when you are young",
+            requested_mode="lesson",
+            persona=True,
+        )
+        == "meta"
+    )
+    assert (
+        classify(
+            "what is included in DADA?", requested_mode="lesson", persona=True
+        )
+        == "clarify"
+    )
+    assert (
+        classify("what does DADA cover?", requested_mode="lesson", persona=True)
+        == "fact"
+    )
+    assert (
+        classify("where is Ashcombe?", requested_mode="lesson", persona=True)
+        == "fact"
+    )
+    assert (
+        classify(
+            "who is professor raman?",
+            requested_mode="lesson",
+            persona=True,
+            subject="charms",
+        )
+        == "meta"
+    )
+    assert (
+        classify(
+            "what is charms?",
+            requested_mode="lesson",
+            persona=True,
+            subject="charms",
+        )
+        == "meta"
+    )
+    assert (
+        classify(
+            "what does charms cover?",
+            requested_mode="lesson",
+            persona=True,
+            subject="charms",
+        )
+        == "meta"
+    )
+    assert (
+        classify("what is a boggart?", requested_mode="lesson", persona=True)
+        == "lesson"
+    )
+    assert (
+        classify(
+            "who are you?",
+            requested_mode="lesson",
+            persona=False,
+        )
+        == "lesson"
+    )
+
+
+def test_route_sets_the_fact_ids_for_a_lore_fact():
+    update = route(
+        {
+            "question": "Where is Ashcombe?",
+            "requested_mode": "lesson",
+            "subject": "dada",
+            "persona_enabled": True,
+        },
+        persona=True,
+    )
+    assert update["mode"] == "fact"
+    assert update["fact_ids"] == ["lore:school-001"]
+
+
+def test_contract_gate_has_no_policy_leaks_or_authority_bleed():
+    from pathlib import Path
+
+    from app.agent.router import contract_decision
+    from eval.routing.fixtures import load_routing_items
+
+    items = load_routing_items(
+        Path(__file__).resolve().parents[1]
+        / "eval"
+        / "routing"
+        / "fixtures"
+        / "contracts.jsonl"
+    )
+    for item in items:
+        actual = contract_decision(
+            item.utterance, subject="dada", requested_mode="lesson"
+        ).contract
+        if item.contract == "policy":
+            assert actual == "policy", item.item_id
+        if item.contract in {"persona", "lore"}:
+            assert actual not in {"lesson", "answer"}, item.item_id

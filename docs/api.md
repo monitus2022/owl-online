@@ -96,8 +96,8 @@ Request:
 is active, and omitted means `OWL_PERSONA_SUBJECT`. An unknown subject is a
 `422`. `mode` is `auto`, `answer`, `practice`, `feedback` or `lesson`. `student_answer`
 is at most 6000 characters and is only valid with `auto` or `feedback`. When the
-persona is on, the server may also route to `meta` or `personal`; those are not
-accepted as request modes. `lesson` is explicit only, never inferred, and is
+persona is on, the server may also route to `meta`, `personal`, `fact` or
+`clarify`; those are not accepted as request modes. `lesson` is explicit only, never inferred, and is
 rejected with `400` unless `OWL_LESSON_MODE` is on and the request subject has a
 published pack loaded.
 It is a preference for the answer path, not an absolute route: practice,

@@ -8,8 +8,9 @@ a separate offline pipeline with stored mark schemes and deterministic scoring.
 """
 
 import re
+from dataclasses import dataclass
 
-from app.agent.persona import PERSONA
+from app.agent.persona import PERSONA, PERSONAS, Persona
 from app.agent.state import AgentState, Mode, RequestedMode
 from app.trace import current_tracer
 
@@ -192,6 +193,268 @@ def meta_topic(question: str) -> str | None:
     return None
 
 
+POLICY_TOPICS = frozenset({"exam", "syllabus", "grading"})
+_POLICY_NEAR = re.compile(
+    r"\b(exam paper|test paper|mark scheme|marking scheme|assessment key|"
+    r"answer key|model answer|examiner|invigilator|grade boundaries|pass mark|"
+    r"what will (?:i|we) be tested on|what will you test|"
+    r"how will .* (?:graded|marked)|what is on the test|what is on the exam|"
+    r"assessment)\b",
+    re.IGNORECASE,
+)
+_POLICY_PATTERNS = (
+    re.compile(
+        r"\b(exam|examination|test(?:ed|ing)?|assessment|paper|examin(?:ed|able))\b"
+        r".*\b(what|how|when|which|format|question|topic|date|long|many|"
+        r"pass|score|mark|grade|prediction|examiner|invigilator|answer|key|"
+        r"scheme|criteria|rubric|boundary|cut-off|outstanding|essay|practical|"
+        r"guidance|setter|board|come up)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(what|how|when|which|tell|show|give|can|could|will)\b.*"
+        r"\b(exam|examination|test(?:ed|ing)?|assessment|paper|examin(?:ed|able))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(syllabus|assessment|mark scheme|marking scheme|answer key|model answer|"
+        r"examiner|invigilators?|grade boundaries|pass mark|cut-off|assessable|"
+        r"examinable|scoring rule|marking criteria|grading rubric|exam board|"
+        r"exam setter|exam answers|O and (?:an? )?E|panel.*grade|grade.*panel)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(ignore|override|reveal|pretend)\b.*"
+        r"\b(instructions|rules|prompt|exam|paper|answers|mark scheme)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(you are the exam setter|system prompt|mark my exam|before i sit|"
+        r"questions? (?:will )?come up|what will .* ask|"
+        r"what topics will be examined|format of the practical|practical format|"
+        r"marks?.*(?:essay|short answers?|paper|question))\b",
+        re.IGNORECASE,
+    ),
+)
+
+_SCOPE_AMBIGUOUS = re.compile(
+    r"\b(what is included in|what is on the .* course|what does .* involve|"
+    r"what does the .* course include|what is the .* course about|"
+    r"what is the .* course)\b",
+    re.IGNORECASE,
+)
+_SCHOOL_AMBIGUOUS = re.compile(
+    r"\b(tell me about (?:the|your) (?:old )?school|which school are you from|"
+    r"what is your school)\b",
+    re.IGNORECASE,
+)
+_EDUCATION = re.compile(
+    r"\b(where did you (?:study|learn|go to school)|what school did you attend|"
+    r"where were you educated|your education|when you were young|"
+    r"where did you study|which academy did you attend|in your youth|"
+    r"when you were a lad|where did you learn magic|did you go to|"
+    r"study at hogwarts|train as a young wizard|where did you train)\b",
+    re.IGNORECASE,
+)
+_TEACHING_RECORD = re.compile(
+    r"\b(set texts|teaching record|policy on the set texts)\b", re.IGNORECASE
+)
+_SCHOOL = re.compile(
+    r"\b(ashcombe|the school|this school|the academy|founders? of ashcombe|"
+    r"who founded|when was ashcombe founded|where is ashcombe|"
+    r"how many students|house system|five departments|school's history|"
+    r"school's founding|departments does ashcombe)\b",
+    re.IGNORECASE,
+)
+_AUROR = re.compile(
+    r"\b(auror office|become an auror|auror pathway|auror training|"
+    r"post-war scheme|ministry's post-war)\b",
+    re.IGNORECASE,
+)
+_TIMELINE_1998 = re.compile(r"\b(1998|battle of hogwarts)\b", re.IGNORECASE)
+_TIMELINE_2008 = re.compile(r"\b2008\b")
+_TIMELINE_2026 = re.compile(r"\b2026\b|present year", re.IGNORECASE)
+_PUBLIC_RECORD = re.compile(
+    r"\b(public record|public-record|people in the books|private knowledge)\b",
+    re.IGNORECASE,
+)
+_SUBJECT_SCOPE = re.compile(
+    r"\b(what does .* cover|what topics are in|what is the .* curriculum|"
+    r"what is the .* department|what is the .* department's focus|"
+    r"what is the defense department|is .* compulsory|"
+    r"where does practical work)\b",
+    re.IGNORECASE,
+)
+_IDENTITY = re.compile(
+    r"\b(who are you|what(?:'s| is) your name|introduce yourself|"
+    r"who am i speaking to)\b",
+    re.IGNORECASE,
+)
+_BACKGROUND = re.compile(
+    r"\b(your background|tell me about yourself|your experience|your story|"
+    r"were you an auror|how long were you in the auror office|"
+    r"why did you leave the aurors|after the war|what did you do after)\b",
+    re.IGNORECASE,
+)
+_SCOPE = re.compile(
+    r"\b(what is your subject|what subjects do you teach|what do you teach|"
+    r"what is your field)\b",
+    re.IGNORECASE,
+)
+_BOUNDARIES = re.compile(
+    r"\b(what can i ask you|what are your limits|what will you not answer)\b",
+    re.IGNORECASE,
+)
+_GREETING = re.compile(
+    r"^\s*(hello|hi|good morning|good evening|good afternoon)"
+    r"(?:,\s*(?:professor|prof\.?))?[.!]?\s*$",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class ContractDecision:
+    """The answer contract the router selects before retrieval."""
+
+    contract: str
+    meta_topic: str | None = None
+    fact_ids: tuple[str, ...] = ()
+    reason: str = ""
+
+
+def _policy_topic(question: str) -> str:
+    topic = meta_topic(question)
+    if topic in POLICY_TOPICS:
+        return topic
+    if re.search(r"\b(syllabus|curriculum|assessment)\b", question, re.IGNORECASE):
+        return "syllabus"
+    if re.search(r"\b(grade|mark|score|examiner|invigilator)\b", question, re.IGNORECASE):
+        return "grading"
+    return "exam"
+
+
+def _subject_terms(subject: str) -> str:
+    card = PERSONAS.get(subject)
+    if card is None:
+        return ""
+    if subject == "dada":
+        return _SUBJECT_NAME
+    return re.escape(card.subject.lower())
+
+
+def _mentions_subject(question: str, subject: str) -> bool:
+    terms = _subject_terms(subject)
+    return bool(terms and re.search(rf"\b{terms}\b", question, re.IGNORECASE))
+
+
+def _subject_definition(question: str, subject: str) -> bool:
+    terms = _subject_terms(subject)
+    if not terms:
+        return False
+    return bool(
+        re.search(
+            rf"\b(?:what is|what's|what does|define|explain|meaning of) "
+            rf"(?:the )?{terms}\b",
+            question,
+            re.IGNORECASE,
+        )
+    )
+
+
+def _name_topic(question: str, card: Persona) -> str | None:
+    lowered = question.lower()
+    names = (card.address.lower(), card.name.lower())
+    if not any(name in lowered for name in names):
+        return None
+    if re.search(r"\b(who is|who's|are you)\b", question, re.IGNORECASE):
+        return "identity"
+    if re.search(
+        r"\b(tell me about|background|story|experience)\b", question, re.IGNORECASE
+    ):
+        return "professor"
+    return None
+
+
+def contract_decision(
+    question: str,
+    *,
+    subject: str = "dada",
+    requested_mode: str = "auto",
+) -> ContractDecision:
+    """The policy, closed-fact and teaching gates, in that order."""
+    card = PERSONAS.get(subject) or PERSONA
+
+    if _PRACTICE_REQUEST.search(question) and re.search(
+        r"\bpractice\b", question, re.IGNORECASE
+    ):
+        return ContractDecision("answer", reason="explicit practice request")
+
+    if re.search(r"\bcurriculum\b", question, re.IGNORECASE):
+        if _mentions_subject(question, subject):
+            if subject == "dada":
+                return ContractDecision("lore", fact_ids=("lore:dada-001",))
+            return ContractDecision("persona", meta_topic="subject")
+        return ContractDecision("clarify", reason="curriculum scope or assessment")
+
+    topic = meta_topic(question)
+    if topic in POLICY_TOPICS and not _BOOK_CONTEXT.search(question):
+        return ContractDecision("policy", meta_topic=topic)
+    if any(p.search(question) for p in _POLICY_PATTERNS) and not _BOOK_CONTEXT.search(question):
+        return ContractDecision("policy", meta_topic=_policy_topic(question))
+
+    if _SCHOOL_AMBIGUOUS.search(question) or _SCOPE_AMBIGUOUS.search(question):
+        return ContractDecision("clarify", reason="scope or assessment")
+
+    if _EDUCATION.search(question):
+        return ContractDecision(
+            "persona",
+            meta_topic="professor",
+            fact_ids=("persona:professor.education",),
+        )
+    if _TEACHING_RECORD.search(question):
+        return ContractDecision("lore", fact_ids=("lore:teaching-record",))
+    if _AUROR.search(question):
+        return ContractDecision("lore", fact_ids=("lore:auror-001",))
+    if _TIMELINE_1998.search(question):
+        return ContractDecision("lore", fact_ids=("lore:timeline-1998",))
+    if _TIMELINE_2008.search(question):
+        return ContractDecision("lore", fact_ids=("lore:timeline-2008",))
+    if _TIMELINE_2026.search(question):
+        return ContractDecision("lore", fact_ids=("lore:timeline-2026",))
+    if _PUBLIC_RECORD.search(question):
+        return ContractDecision("lore", fact_ids=("lore:public-record-war",))
+    if _SCHOOL.search(question):
+        return ContractDecision("lore", fact_ids=("lore:school-001",))
+    if subject == "dada" and re.search(
+        r"\b(defense|defence) department|practical work\b", question, re.IGNORECASE
+    ):
+        return ContractDecision("lore", fact_ids=("lore:dada-001",))
+    if _SUBJECT_SCOPE.search(question) and _mentions_subject(question, subject):
+        if subject == "dada":
+            return ContractDecision("lore", fact_ids=("lore:dada-001",))
+        return ContractDecision("persona", meta_topic="subject")
+    if _subject_definition(question, subject):
+        return ContractDecision("persona", meta_topic="subject")
+
+    name_topic = _name_topic(question, card)
+    if name_topic is not None:
+        return ContractDecision("persona", meta_topic=name_topic)
+    if _IDENTITY.search(question):
+        return ContractDecision("persona", meta_topic="identity")
+    if _BACKGROUND.search(question):
+        return ContractDecision("persona", meta_topic="professor")
+    if _SCOPE.search(question):
+        return ContractDecision("persona", meta_topic="scope")
+    if _BOUNDARIES.search(question):
+        return ContractDecision("persona", meta_topic="boundaries")
+    if _GREETING.search(question):
+        return ContractDecision("persona", meta_topic="greeting")
+
+    if requested_mode == "lesson":
+        return ContractDecision("lesson")
+    return ContractDecision("answer")
+
+
 def _auto_mode(
     question: str,
     *,
@@ -228,6 +491,7 @@ def classify(
     requested_mode: RequestedMode = "auto",
     student_answer: str | None = None,
     persona: bool = False,
+    subject: str = "dada",
 ) -> Mode:
     auto = _auto_mode(
         question, student_answer=student_answer, persona=persona
@@ -236,7 +500,22 @@ def classify(
         # Lesson is a preference for the answer path, not an absolute route:
         # persona, practice and feedback keep their normal handling, so a
         # venue that defaults to lesson still greets and tests correctly.
-        return "lesson" if auto == "answer" else auto
+        if not persona:
+            return "lesson" if auto == "answer" else auto
+        decision = contract_decision(
+            question, subject=subject, requested_mode="lesson"
+        )
+        if decision.contract == "policy":
+            return "meta"
+        if decision.contract == "persona":
+            return "meta"
+        if decision.contract == "lore":
+            return "fact"
+        if decision.contract == "clarify":
+            return "clarify"
+        if auto != "answer":
+            return auto
+        return "lesson"
     if requested_mode != "auto":
         return requested_mode
     return auto
@@ -244,15 +523,26 @@ def classify(
 
 def route(state: AgentState, *, persona: bool = False) -> dict[str, object]:
     question = state["question"]
+    subject = state.get("subject", "dada")
+    requested = state.get("requested_mode", "auto")
     mode = classify(
         question,
-        requested_mode=state.get("requested_mode", "auto"),
+        requested_mode=requested,
         student_answer=state.get("student_answer"),
         persona=persona and state.get("persona_enabled", True),
+        subject=subject,
     )
     payload: dict[str, object] = {"mode": mode}
-    if mode == "meta":
-        payload["meta_topic"] = meta_topic(question) or "identity"
+    if mode in ("meta", "fact", "clarify"):
+        decision = contract_decision(
+            question, subject=subject, requested_mode=requested
+        )
+        if mode == "meta":
+            payload["meta_topic"] = (
+                decision.meta_topic or meta_topic(question) or "identity"
+            )
+        if mode == "fact":
+            payload["fact_ids"] = list(decision.fact_ids)
     tracer = current_tracer()
     if tracer is not None:
         tracer.emit(

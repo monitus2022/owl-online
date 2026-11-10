@@ -12,7 +12,7 @@ from langgraph.graph.state import CompiledStateGraph
 from app.agent.nodes.answer import answer_node
 from app.agent.nodes.feedback import feedback_node
 from app.agent.nodes.lesson import lesson_node
-from app.agent.nodes.persona import meta_node, personal_node
+from app.agent.nodes.persona import clarify_node, fact_node, meta_node, personal_node
 from app.agent.nodes.practice import practice_node
 from app.agent.persona import Persona
 from app.agent.router import route
@@ -94,6 +94,19 @@ def build_graph(
     )
     graph.add_edge("meta", END)
     graph.add_edge("personal", END)
+    graph.add_node(
+        "fact",
+        partial(
+            fact_node,
+            lore=lore,
+            persona=persona,
+            personas=personas,
+            default_subject=default_subject,
+        ),
+    )
+    graph.add_node("clarify", clarify_node)
+    graph.add_edge("fact", END)
+    graph.add_edge("clarify", END)
 
     for name, node in (
         ("practice", practice_node),
@@ -119,6 +132,8 @@ def build_graph(
         "feedback": "feedback",
         "meta": "meta",
         "personal": "personal",
+        "fact": "fact",
+        "clarify": "clarify",
     }
     if lesson is not None:
         graph.add_node(

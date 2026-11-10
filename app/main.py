@@ -565,10 +565,6 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         subject = body.subject or app_settings.persona_subject
         if body.subject and body.subject not in SUBJECT_KEYS:
             raise HTTPException(status_code=422, detail="unknown subject")
-        if body.mode == "lesson" and not lesson_available(
-            app_settings, runtime, subject
-        ):
-            raise HTTPException(status_code=400, detail="lesson mode is not enabled")
         session = request.state.session_id
         limiter: ChatLimiter = app.state.limiter
         llm = runtime.llm
@@ -579,7 +575,14 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             requested_mode=body.mode,
             student_answer=body.student_answer,
             persona=persona_enabled,
+            subject=subject,
         )
+        if (
+            body.mode == "lesson"
+            and intent == "lesson"
+            and not lesson_available(app_settings, runtime, subject)
+        ):
+            raise HTTPException(status_code=400, detail="lesson mode is not enabled")
         # Only corpus-only answers are shared; feedback is personalised,
         # practice is meant to vary, and meta/personal are scripted.
         key = (

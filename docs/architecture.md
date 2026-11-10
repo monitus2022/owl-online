@@ -486,7 +486,7 @@ excerpts.
 ## Chat intents vs exam bank
 
 The chat graph is the online surface. Its three core intents are intentionally
-lightweight. Two persona intents are added when `OWL_PERSONA` is on:
+lightweight. Four persona-adjacent intents are added when `OWL_PERSONA` is on:
 
 | Intent | Trigger | Output | Persisted | Authoritative |
 |---|---|---|---|---|
@@ -495,6 +495,8 @@ lightweight. Two persona intents are added when `OWL_PERSONA` is on:
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
 | `meta` | persona on; identity, subject scope, subject definition, exam (non-disclosure), syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
+| `fact` | persona on; a closed lore fact matched by the contract gate | reviewed setting text from the lore pack, `[lore:<id>]` citations, no model call | no | no |
+| `clarify` | persona on; an ambiguous scope/assessment ask | one scripted disambiguation line, no model call | no | no |
 | `lesson` | classification would be answer, explicit `mode=lesson`, `OWL_LESSON_MODE` on | persona-first teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
 
 Lesson mode is the one intent grounded in a subject pack first; the corpus is a

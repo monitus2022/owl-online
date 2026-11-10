@@ -9,6 +9,8 @@ from collections.abc import Mapping
 
 from app.agent.persona import Persona, active_persona
 from app.agent.state import AgentState
+from app.knowledge import LoreStore
+from app.pipeline.generate.generate import ABSTAIN_MESSAGE
 
 
 def _result(text: str) -> dict[str, object]:
@@ -74,3 +76,46 @@ def personal_node(
         state, persona=persona, personas=personas, default_subject=default_subject
     )
     return _result(active.personal_response() if active is not None else "")
+
+
+CLARIFY_RESPONSE = (
+    "Do you mean what the subject covers, or what the examination will assess?"
+)
+
+
+def fact_node(
+    state: AgentState,
+    *,
+    lore: LoreStore | None,
+    persona: Persona | None = None,
+    personas: Mapping[str, Persona] | None = None,
+    default_subject: str = "dada",
+) -> dict[str, object]:
+    """A closed lore fact, returned from the reviewed setting pack."""
+    active = _active(
+        state, persona=persona, personas=personas, default_subject=default_subject
+    )
+    entries: list[str] = []
+    citations: list[str] = []
+    for fact_id in state.get("fact_ids", []):
+        if not fact_id.startswith("lore:") or lore is None:
+            continue
+        entry = lore.get(fact_id[5:])
+        if entry is None:
+            continue
+        entries.append(entry.body.strip())
+        citations.append(entry.id)
+    if not entries:
+        text = active.abstain_response() if active is not None else ABSTAIN_MESSAGE
+        result = _result(text)
+        result["abstained"] = True
+        result["abstain_reason"] = "no_evidence"
+        return result
+    result = _result("\n\n".join(entries))
+    result["lore_citations"] = citations
+    return result
+
+
+def clarify_node(state: AgentState) -> dict[str, object]:
+    """A scripted disambiguation for an ambiguous closed-fact ask."""
+    return _result(CLARIFY_RESPONSE)

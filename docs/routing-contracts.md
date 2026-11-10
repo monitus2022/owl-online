@@ -170,6 +170,24 @@ Report a confusion matrix over contracts, not a single accuracy. A system that
 routes everything to abstain scores well on policy leak and fails the product. A
 system that routes residual to lessons does the opposite.
 
+## Gate baseline
+
+The 2026-11-10 measurement on the frozen fixture (207 items, DADA subject)
+reports:
+
+- policy leaks: 0
+- authority bleed: 0
+- false abstain given fact present: 0
+- over-clarify: 0
+- matrix: policy 51/51; persona 36/37; lore 35/37; lesson 39/40; clarify 9/18;
+  abstain 0/24 routed to the lesson path.
+
+The lesson path still abstains at runtime when no span is found, so the abstain
+row is a teaching-path residual rather than a router answer. The clarify misses
+and the one lesson-to-persona misroute are the next cue pass. The script is
+`scripts/measure_routing.py`; it exits non-zero if policy leaks or authority
+bleed appear.
+
 ## Residual and classifier
 
 Measure the residual after the deterministic layer, including typo
