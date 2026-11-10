@@ -56,7 +56,8 @@ Request:
 `question` is trimmed, must be 1 to 1000 characters, and must not be blank.
 `subject` is the department key; empty means `OWL_PERSONA_SUBJECT`. The
 registered card for that subject is active, so a Charms request uses Professor
-Raman and a DADA request uses Professor Crane. An unknown subject is a `422`.
+Raman and a DADA request uses Professor Crane. An off-taxonomy key is a `422`;
+a valid department without a card answers persona-off.
 
 Response `200`:
 

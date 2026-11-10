@@ -35,7 +35,7 @@ def build_graph(
     multi_book: bool = False,
     persona: Persona | None = None,
     personas: Mapping[str, Persona] | None = None,
-    default_subject: str = "dada",
+    default_subject: str | None = None,
     lore: LoreStore | None = None,
     lore_subject: str = "dada",
     small_llm: Llm | None = None,
@@ -46,6 +46,7 @@ def build_graph(
     lesson_fallback: bool = True,
 ) -> CompiledStateGraph:
     """Build the stateless per-request graph; no checkpointer in D4."""
+    default_subject = default_subject or lesson_subject or lore_subject or "dada"
     if personas is None and persona is not None:
         personas = {default_subject: persona}
     persona_enabled = personas is not None

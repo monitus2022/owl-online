@@ -1185,3 +1185,54 @@ def test_subjects_reports_per_subject_persona_and_lesson_lists():
         "transfiguration",
     ]
     assert body["lesson_subjects"] == ["dada"]
+
+
+class _RecordingLlm(_Llm):
+    def __init__(self) -> None:
+        self.systems: list[str] = []
+
+    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        self.systems.append(system)
+        return await super().generate(system, prompt, context=context)
+
+
+def test_ask_accepts_a_valid_subject_without_a_card():
+    llm = _RecordingLlm()
+    app = create_app(
+        app_settings=Settings(persona=True),
+        runtime=Runtime(retriever=_Retriever(), llm=llm),
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/ask", json={"question": "Who trims the wick?", "subject": "astronomy"}
+        )
+        lesson = client.post(
+            "/ask/stream",
+            json={
+                "question": "Who trims the wick?",
+                "subject": "astronomy",
+                "mode": "lesson",
+            },
+        )
+    assert response.status_code == 200
+    assert llm.systems
+    assert "Professor Crane" not in llm.systems[0]
+    assert "Professor Raman" not in llm.systems[0]
+    assert lesson.status_code == 400
+
+
+def test_lesson_flag_uses_the_api_default_subject():
+    app = create_app(
+        app_settings=Settings(
+            lesson_mode=True,
+            persona=True,
+            lore_subject="charms",
+            persona_subject="dada",
+        ),
+        runtime=_persona_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        body = client.get("/v1/subjects").json()
+    assert body["lesson"] is True
+    assert body["lesson_subject"] == "dada"
+    assert body["lesson_subjects"] == ["dada"]

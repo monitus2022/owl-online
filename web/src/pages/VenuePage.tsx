@@ -101,9 +101,9 @@ export function VenuePage() {
     personaState,
   };
   const lesson = Boolean(
-    department?.lesson &&
-      (lessonSubjects.includes(subject.apiSubject) ||
-        department.lesson_subject === subject.apiSubject) &&
+    (lessonSubjects.includes(subject.apiSubject) ||
+      (department?.lesson &&
+        department.lesson_subject === subject.apiSubject)) &&
       summary?.status === "published" &&
       isOpen,
   );
@@ -130,7 +130,7 @@ export function VenuePage() {
           <h2>The classroom is being furnished</h2>
           <p>
             {room.blurb} This department opens when its subject pack is
-            validated and its professor takes the post.
+            validated.
           </p>
         </div>
       </main>

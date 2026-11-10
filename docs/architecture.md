@@ -366,10 +366,11 @@ sequenceDiagram
   participant RR as Reranker
   participant LLM as Llm adapter
 
-  C->>API: POST /ask/stream {question, mode, student_answer}
+  C->>API: POST /ask/stream {question, subject, mode, student_answer}
+  API->>API: resolve the subject card; lesson gate for that subject
   API->>API: cache.get when the intent is answer
   API->>API: limiter.admit (429 / 503)
-  API->>G: astream(state)
+  API->>G: astream(state with subject)
   G->>G: router -> answer | practice | feedback | meta | personal | lesson
   G-->>API: mode update
   API-->>C: event: mode
