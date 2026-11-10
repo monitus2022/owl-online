@@ -94,10 +94,11 @@ are `eval/exam/` (#191), run with
 `uv run python scripts/run_exam_eval.py`; the record is
 `docs/runs/2026-11-09-191-dada-bank-eval.md`.
 
-The Charms bank 1.0.0 is recorded at `docs/exams/charms-1.0.0.md`. It uses the
-subject-neutral `owl-bank-judge-v3` prompt; DADA keeps `dada-bank-judge-v2` so
-its calibration record stays reproducible. The grader accepts both pins and
-selects the matching system prompt.
+The Charms and Potions banks 1.0.0 are recorded at `docs/exams/charms-1.0.0.md`
+and `docs/exams/potions-1.0.0.md`. They use the subject-neutral
+`owl-bank-judge-v3` prompt; DADA keeps `dada-bank-judge-v2` so its calibration
+record stays reproducible. The grader accepts both pins and selects the
+matching system prompt.
 
 ## Serving
 
@@ -112,8 +113,8 @@ JSONL:
 | `GET /v1/attempts/{attempt_id}` | the same persisted view on a reload |
 | `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one judge call, then the deterministic band |
 
-The paper id is `<subject>-<version>`, so the served papers are `dada-1.0.0`
-and `charms-1.0.0`. Each venue requests its own subject; the API default stays
+The paper id is `<subject>-<version>`, so the served papers are `dada-1.0.0`,
+`charms-1.0.0` and `potions-1.0.0`. Each venue requests its own subject; the API default stays
 `OWL_EXAM_SUBJECT`. A sampled MCQ serves the correct option and three random
 distractors in a shuffled order; the correct option id stays on the persisted
 attempt and is never in the pre-submission view. The attempt view contains no
