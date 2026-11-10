@@ -601,7 +601,8 @@ persists exam attempts and chat history.
 | #162/#163 | Starter prompts and routing contract | V3 - Product |
 | #19/#33 | Cost and latency instrumentation and a minimal dashboard | V3 - Product |
 | #182 | Persona name/background routing with fuzzy spellings | V3 - Product |
-| #216 | Contract and authority routing (#217-#220; #184 is the residual) | V3 - Product |
+| #216 | Contract and authority routing (#217-#220, #222; #184 is the residual) | V3 - Product |
+| #222 | Multi-subject persona registry and policy for all five departments | V3 - Product |
 
 ### Next - complete the loop
 
