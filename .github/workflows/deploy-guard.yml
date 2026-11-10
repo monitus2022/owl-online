@@ -1,11 +1,12 @@
 # Rollout guard for #214.
 #
 # The deploy workflow normally creates `build-and-push` and `deploy`. On
-# 2026-11-09 a run completed `build-and-push` but GitHub never created the
-# `deploy` job, so the old container kept serving and the run still looked like
-# a success. This guard runs after the deploy workflow and fails when the
-# `deploy` job is missing or did not succeed, so a silent non-rollout is a red
-# check instead of a green build.
+# 2026-11-09 run 42671829253 concluded `failure` with no jobs at all, and the
+# manual-dispatch run 42673727721 concluded `failure` with only
+# `build-and-push`; the old container kept serving. This guard runs after the
+# deploy workflow. The conclusion check fails a failed run, and the job check
+# fails a future run that concludes success but has no successful `deploy`
+# job, so a silent non-rollout is a red check.
 
 name: deploy-guard
 
