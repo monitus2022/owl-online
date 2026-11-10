@@ -4,12 +4,12 @@
 - Subject: `potions`
 - Version: `1.0.0`
 - Status: `published`
-- Fingerprint: `578f4b2cb74569a7`
+- Fingerprint: `bc75045e02412ffe`
 - Index text hash: `aca4c57462d449f5`
 - Materials: 34
 - Concepts: 34
 - Topics: 6
-- Source refs: 119
+- Source refs: 120
 - Reviewed materials: 34/34
 
 ## Validation
@@ -17,7 +17,7 @@
 ```text
 validate_pack: ok=True errors=0 warnings=0
 materials=34 concepts=34 topics=6
-fingerprint=578f4b2cb74569a7
+fingerprint=bc75045e02412ffe
 ```
 
 The pack directory is gitignored. This record is structure-only and
@@ -69,7 +69,7 @@ the data backup.
 | `potions-healing-skele-gro` | `potions-healing` | `potions-potion-skele-gro` | 3 |
 | `potions-legendary-elixir-of-life` | `potions-legendary` | `potions-potion-elixir-of-life` | 3 |
 | `potions-legendary-felix-felicis` | `potions-legendary` | `potions-potion-felix-felicis` | 4 |
-| `potions-legendary-living-death` | `potions-legendary` | `potions-potion-living-death` | 5 |
+| `potions-legendary-living-death` | `potions-legendary` | `potions-potion-living-death` | 6 |
 | `potions-legendary-wolfsbane` | `potions-legendary` | `potions-potion-wolfsbane` | 4 |
 | `potions-mind-amortentia` | `potions-mind` | `potions-potion-amortentia` | 3 |
 | `potions-mind-confusing-concoction` | `potions-mind` | `potions-potion-confusing-concoction` | 2 |

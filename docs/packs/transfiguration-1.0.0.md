@@ -4,7 +4,7 @@
 - Subject: `transfiguration`
 - Version: `1.0.0`
 - Status: `published`
-- Fingerprint: `5fc160ce6bf12f34`
+- Fingerprint: `fcc1c3f2500e29e3`
 - Index text hash: `aca4c57462d449f5`
 - Materials: 34
 - Concepts: 29
@@ -17,7 +17,7 @@
 ```text
 validate_pack: ok=True errors=0 warnings=0
 materials=34 concepts=29 topics=6
-fingerprint=5fc160ce6bf12f34
+fingerprint=fcc1c3f2500e29e3
 ```
 
 The pack directory is gitignored. This record is structure-only and
