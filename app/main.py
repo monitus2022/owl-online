@@ -196,7 +196,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         allow_origins=app_settings.cors_origin_list,
         allow_origin_regex=app_settings.cors_origin_regex,
         allow_credentials=True,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["*"],
         # Let a cross-origin chat page read the request id for support.
         expose_headers=["X-Request-ID", "Retry-After"],

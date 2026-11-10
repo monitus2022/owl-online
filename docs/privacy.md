@@ -9,29 +9,38 @@ and not a data processing agreement.
 
 | Data | Where | Contents | Prompt or answer text |
 |---|---|---|---|
-| Chat transcript | Browser tab only | The messages in the open tab | Yes, in the browser; not on the server |
+| Chat transcript | Browser tab only | The messages in the open tab | Yes, in the browser; not persisted as a chat record |
+| Answer cache | Process memory | Corpus-only answers, keyed by question, model and index scope; 256 entries, 1 hour TTL, cleared on restart | The cached answer text is in memory; it is not a chat record and is not session-keyed |
 | Usage log | Process log | Session id, intent, model, cache flag, token counts, cost, latency | No |
-| Trace | Process log and optional capped file | Request id, span names, timings, counts, cited chunk and lore ids, prompt hash and length | No |
+| Trace | Process log and optional capped file | Request id, span names, timings, counts, retrieved chunk and lore ids, prompt hash and length | No |
 | Exam attempt | SQLite `attempts` and `attempt_questions` | Paper, questions served, answers, grade, session id, timestamps | The attempt stores the served question prompts and the student's answers; it does not store chat prompts |
+| Judge cache | `data/exam_judge_cache.jsonl` (optional) | Bank/item/rubric/judge pins, answer hash, raw response hash, grade and feedback | The raw answer is not stored; the feedback may quote it |
 | Session cookie | Browser | `owl_session`, a signed random id | No |
 
 The trace sink caps its optional file at 20 MB and keeps one rotated file. The
 usage log line is the one in `app/main.py`; it never includes the question or
-the answer. The trace emits `question_chars`, `prompt_sha` and `prompt_chars`,
-not the text.
+the answer. The trace emits prompt hashes and lengths and, on the router span,
+`question_chars`; not the text. The exact answer cache is in process memory and
+disappears on restart; it is not a chat record and has no per-session key. The
+judge cache is an operator-managed file keyed by bank, item and answer hash; it
+does not store the raw answer, but its feedback may quote it.
 
 ## Retention
 
 | Data | Retention |
 |---|---|
 | Chat transcript | Until the tab closes or the page reloads; the API keeps no chat record |
+| Answer cache | Up to 1 hour (TTL) or 256 entries, whichever comes first; cleared on restart |
+| Judge cache | Operator-managed; delete `data/exam_judge_cache.jsonl` to clear |
 | Session cookie | 24 hours (`max_age=86400`); the next request gets a new session id |
 | Usage log | Host log rotation |
 | Trace | Process log rotation; the optional file caps at 20 MB with one rotation |
 | Exam attempt | Until the session deletes it or the operator prunes it; the documented manual window is 90 days |
 
 The anonymous delete path is `DELETE /v1/attempts`, which deletes every attempt
-owned by the current session. The operator retention path is:
+owned by the current session. It does not clear the in-memory answer cache or
+the operator-managed judge cache; both are process/operator scoped and have no
+session key. The operator retention path is:
 
 ```text
 uv run python scripts/prune_attempts.py --days 90 --dry-run

@@ -19,7 +19,9 @@ export function PrivacyPage() {
         <ul>
           <li>
             Chat is ephemeral. The transcript lives in your browser tab; the
-            API does not store the prompt or the answer as a chat record.
+            API does not persist it as a chat record. Corpus-only answers are
+            cached in process memory for up to an hour; the cache clears on
+            restart and has no per-session key.
           </li>
           <li>
             Usage logs record the session id, intent, model, cache flag, token
@@ -28,7 +30,7 @@ export function PrivacyPage() {
           </li>
           <li>
             Traces record the request id, span names, timings, counts, cited
-            chunk and lore ids, and a prompt hash with its length. They do not
+            retrieved chunk and lore ids, and a prompt hash with its length. They do not
             record the prompt or answer text.
           </li>
           <li>
@@ -91,8 +93,9 @@ export function PrivacyPage() {
           </li>
           <li>
             Delete: <code>DELETE /v1/attempts</code> deletes the current
-            session's attempts. Clearing cookies starts a new session; the old
-            attempts remain until the operator prunes them.
+            session's attempts. It does not clear the in-memory answer cache or
+            the operator-managed judge cache. Clearing cookies starts a new
+            session; the old attempts remain until the operator prunes them.
           </li>
           <li>
             Accounts, cross-device history and a per-user delete/export path

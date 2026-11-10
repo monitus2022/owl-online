@@ -70,7 +70,10 @@ def test_prompt_and_answer_text_do_not_reach_logs_or_traces(caplog):
     with TestClient(app) as client:
         body = client.post("/ask", json={"question": PROMPT}).json()
     assert ANSWER in body["answer"]
-    text = "\n".join(record.getMessage() for record in caplog.records)
+    messages = [record.getMessage() for record in caplog.records]
+    text = "\n".join(messages)
+    assert any("chat usage" in message for message in messages)
+    assert any('"span":' in message for message in messages)
     assert PROMPT not in text
     assert ANSWER not in text
 
@@ -84,6 +87,30 @@ def test_session_cookie_flags():
     assert "HttpOnly" in cookie
     assert "SameSite=lax" in cookie
     assert "Max-Age=86400" in cookie
+
+
+def test_session_cookie_is_cross_site_secure_on_https():
+    app = create_app(runtime=Runtime(retriever=_Retriever(), llm=_Llm()))
+    with TestClient(app, base_url="https://testserver") as client:
+        response = client.get("/health")
+    cookie = response.headers.get("set-cookie", "")
+    assert "SameSite=none" in cookie
+    assert "Secure" in cookie
+
+
+def test_delete_preflight_allows_the_pages_origin():
+    app = create_app(runtime=Runtime(retriever=_Retriever(), llm=_Llm()))
+    with TestClient(app) as client:
+        response = client.options(
+            "/v1/attempts",
+            headers={
+                "Origin": "https://owl-online.pages.dev",
+                "Access-Control-Request-Method": "DELETE",
+            },
+        )
+    assert response.status_code == 200
+    methods = response.headers.get("access-control-allow-methods", "")
+    assert "DELETE" in methods
 
 
 def test_delete_attempts_is_session_scoped(tmp_path):
