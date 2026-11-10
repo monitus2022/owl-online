@@ -8,9 +8,12 @@ a separate offline pipeline with stored mark schemes and deterministic scoring.
 """
 
 import re
+from collections.abc import Callable
+from dataclasses import dataclass
 
-from app.agent.persona import PERSONA
+from app.agent.persona import PERSONA, PERSONAS, Persona
 from app.agent.state import AgentState, Mode, RequestedMode
+from app.knowledge.terms import content_terms
 from app.trace import current_tracer
 
 _FEEDBACK_ACTION = re.compile(
@@ -24,7 +27,7 @@ _FEEDBACK_ASK = re.compile(
 )
 _FEEDBACK_TARGET = re.compile(
     r"\b(answer|response|essay|work|student|script|submission|"
-    r"following|this|it)\b",
+    r"following|this)\b",
     re.IGNORECASE,
 )
 _FEEDBACK_REQUEST = re.compile(
@@ -47,6 +50,16 @@ _PRACTICE_PHRASE = re.compile(
     r"\b(quiz|test) (me|my knowledge)\b",
     re.IGNORECASE,
 )
+# Explicit practice requests keep their route even when the wording mentions an
+# exam. The quantifier keeps "give me the exam format" on the policy path.
+_PRACTICE_EXEMPT = re.compile(
+    r"\b(generate|create|make|write|draft|compose|produce|build|design)\b"
+    r"[^.?!]*\b(practice|exercises?|drills?|quiz|quizzes|worksheets?)\b"
+    r"|\b(generate|create|make|give|ask)\b[^.?!]*\b"
+    r"(?:a|an|some|one|two|three|four|five|\d+)\b[^.?!]*\bquestions?\b"
+    r"|\bquiz (?:me|my knowledge)\b",
+    re.IGNORECASE,
+)
 # A curriculum question with a book context is a book question, not a syllabus
 # question. The guard keeps "What is the DADA curriculum at Hogwarts?" on the
 # answer path while "What is the DADA curriculum?" routes to the syllabus.
@@ -55,7 +68,8 @@ _BOOK_CONTEXT = re.compile(
     r"book four|book five|book six|book seven|first year|second year|"
     r"third year|fourth year|fifth year|sixth year|seventh year|"
     r"year (?:one|two|three|four|five|six|seven)|quirrell|lockhart|lupin|"
-    r"moody|umbridge|snape|carrow|crouch|o\.?w\.?l\.?)\b",
+    r"moody|umbridge|snape|carrow|crouch|tonks|pomfrey|o\.?w\.?l\.?|"
+    r"exam room|exam hall)\b",
     re.IGNORECASE,
 )
 _SUBJECT_NAME = (
@@ -192,11 +206,425 @@ def meta_topic(question: str) -> str | None:
     return None
 
 
+POLICY_TOPICS = frozenset({"exam", "syllabus", "grading"})
+_POLICY_PATTERNS = (
+    re.compile(
+        r"\b(exam|examination|test(?:ed|ing)?|assessment|paper|examin(?:ed|able))\b"
+        r".*\b(what|how|when|which|format|question|topic|date|long|many|"
+        r"pass|score|mark|grade|prediction|examiner|invigilator|answer|key|"
+        r"scheme|criteria|rubric|boundary|cut-off|outstanding|essay|practical|"
+        r"guidance|setter|board|come up)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(what|how|when|which|tell|show|give|can|could|will)\b.*"
+        r"\b(exam|examination|test(?:ed|ing)?|assessment|paper|examin(?:ed|able))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(syllabus|assessment|mark scheme|marking scheme|answer key|model answer|"
+        r"examiner|invigilators?|grade boundaries|pass mark|cut-off|assessable|"
+        r"examinable|scoring rule|marking criteria|grading rubric|exam board|"
+        r"exam setter|exam answers|O and (?:an? )?E|panel.*grade|grade.*panel)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(ignore|override|reveal|pretend)\b.*"
+        r"\b(instructions|rules|prompt|exam|paper|answers|mark scheme)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(you are the exam setter|system prompt|mark my exam|before i sit|"
+        r"questions? (?:will )?come up|what will .* ask|"
+        r"what topics will be examined|format of the practical|practical format|"
+        r"marks?.*(?:essay|short answers?|paper|question))\b",
+        re.IGNORECASE,
+    ),
+)
+
+_POLICY_NEGATIVE = re.compile(
+    r"\b(exam room|exam hall|test whether|test if|test for|paper bird|"
+    r"paper trail|paper plane|paper aeroplane)\b",
+    re.IGNORECASE,
+)
+_OFF_TOPIC = re.compile(
+    r"\b(bake bread|the best pizza|the weather tomorrow|capital of "
+    r"(?:france|germany|spain|italy|america|the united states)|meaning of life|"
+    r"tell me a joke|stock price|fix my car|write my essay|favourite colour|"
+    r"do you have a girlfriend|dream last night|password to my email|"
+    r"professor[\w' ]* breakfast|favourite quidditch team|football team|"
+    r"professor's cat|stop taking my medicine|give me legal advice|"
+    r"legal advice about|sue my neigh?bour|dangerous potion at home|"
+    r"password to the .*common room|privately thinks|private opinion)\b",
+    re.IGNORECASE,
+)
+_DADA_ONLY = re.compile(
+    r"\b(professor crane|alistair crane|dada|defence against the dark arts|"
+    r"defense against the dark arts)\b",
+    re.IGNORECASE,
+)
+
+_SCOPE_AMBIGUOUS = re.compile(
+    r"\b(what is included in|what is on the .* course|what does .* involve|"
+    r"what does the .* course include|what is the .* course about|"
+    r"what is the .* course)\b",
+    re.IGNORECASE,
+)
+_SCHOOL_AMBIGUOUS = re.compile(
+    r"\b(tell me about (?:the|your) (?:old )?school|which school are you from|"
+    r"what is your school)\b",
+    re.IGNORECASE,
+)
+_EDUCATION = re.compile(
+    r"\b(where did you (?:study|learn|go to school)|what school did you attend|"
+    r"where were you educated|your education|when you were young|"
+    r"where did you study|which academy did you attend|in your youth|"
+    r"when you were a lad|where did you learn magic|did you go to|"
+    r"study at hogwarts|train as a young wizard|where did you train)\b",
+    re.IGNORECASE,
+)
+_TEACHING_RECORD = re.compile(
+    r"\b(set texts|teaching record|policy on the set texts)\b", re.IGNORECASE
+)
+_SCHOOL = re.compile(
+    r"\b(ashcombe|the school|this school|the academy|founders? of ashcombe|"
+    r"who founded|when was ashcombe founded|where is ashcombe|"
+    r"how many students|house system|five departments|school's history|"
+    r"school's founding|departments does ashcombe)\b",
+    re.IGNORECASE,
+)
+_AUROR = re.compile(
+    r"\b(auror office|become an auror|auror pathway|auror training|"
+    r"post-war scheme|ministry's post-war)\b",
+    re.IGNORECASE,
+)
+_TIMELINE_1998 = re.compile(r"\b(1998|battle of hogwarts)\b", re.IGNORECASE)
+_TIMELINE_2008 = re.compile(r"\b2008\b")
+_TIMELINE_2026 = re.compile(r"\b2026\b|present year", re.IGNORECASE)
+_PUBLIC_RECORD = re.compile(
+    r"\b(public record|public-record|people in the books|private knowledge)\b",
+    re.IGNORECASE,
+)
+_SUBJECT_SCOPE = re.compile(
+    r"\b(what does .* cover|what topics are in|what is the .* curriculum|"
+    r"what is the .* department|what is the .* department's focus|"
+    r"what does .* department (?:specialise|focus)|"
+    r"what is the defense department|is .* compulsory|"
+    r"where does practical work)\b",
+    re.IGNORECASE,
+)
+_IDENTITY = re.compile(
+    r"\b(who are you|what(?:'s| is) your name|introduce yourself|"
+    r"who am i speaking to)\b",
+    re.IGNORECASE,
+)
+_BACKGROUND = re.compile(
+    r"\b(your background|tell me about yourself|your experience|your story|"
+    r"were you an auror|how long were you in the auror office|"
+    r"why did you leave the aurors|after the war|what did you do after)\b",
+    re.IGNORECASE,
+)
+_SCOPE = re.compile(
+    r"\b(what is your subject|what subjects do you teach|what do you teach|"
+    r"what do you cover|what is your field)\b",
+    re.IGNORECASE,
+)
+_BOUNDARIES = re.compile(
+    r"\b(what can i ask you|what are your limits|what will you not answer)\b",
+    re.IGNORECASE,
+)
+_GREETING = re.compile(
+    r"^\s*(hello|hi|hey|good morning|good evening|good afternoon)"
+    r"(?:,\s*(?:professor|prof\.?))?[.!]?\s*$",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class ContractDecision:
+    """The answer contract the router selects before retrieval."""
+
+    contract: str
+    meta_topic: str | None = None
+    fact_ids: tuple[str, ...] = ()
+    reason: str = ""
+
+
+def _policy_topic(question: str) -> str:
+    topic = meta_topic(question)
+    if topic in POLICY_TOPICS:
+        return topic
+    if re.search(r"\b(syllabus|curriculum|assessment)\b", question, re.IGNORECASE):
+        return "syllabus"
+    if re.search(r"\b(grade|mark|score|examiner|invigilator)\b", question, re.IGNORECASE):
+        return "grading"
+    return "exam"
+
+
+def _subject_terms(subject: str) -> str:
+    card = PERSONAS.get(subject)
+    if card is None:
+        return ""
+    if subject == "dada":
+        return _SUBJECT_NAME
+    return re.escape(card.subject.lower())
+
+
+def _mentions_subject(question: str, subject: str) -> bool:
+    terms = _subject_terms(subject)
+    return bool(terms and re.search(rf"\b{terms}\b", question, re.IGNORECASE))
+
+
+def _subject_definition(question: str, subject: str) -> bool:
+    terms = _subject_terms(subject)
+    if not terms:
+        return False
+    return bool(
+        re.search(
+            rf"^\s*(?:what is|what's) (?:the )?{terms}\s*[?.!]*\s*$|"
+            rf"^\s*(?:what does|what's) {terms} mean\s*[?.!]*\s*$|"
+            rf"^\s*(?:define|explain) (?:the )?{terms}\s*[?.!]*\s*$|"
+            rf"^\s*(?:the )?meaning of {terms}\s*[?.!]*\s*$",
+            question,
+            re.IGNORECASE,
+        )
+    )
+
+def _name_topic(question: str, card: Persona) -> str | None:
+    names = "|".join(
+        re.escape(name) for name in (card.address.lower(), card.name.lower())
+    )
+    if re.search(rf"(?:{names})(?![\w-])(?!['’]s\b)", question, re.IGNORECASE) is None:
+        return None
+    if re.search(r"\b(who is|who's|are you)\b", question, re.IGNORECASE):
+        return "identity"
+    if re.search(
+        r"\b(tell me about|background|story|experience)\b", question, re.IGNORECASE
+    ):
+        return "professor"
+    return None
+
+
+def contract_decision(
+    question: str,
+    *,
+    subject: str = "dada",
+    requested_mode: str = "auto",
+    teaching_terms: set[str] | None = None,
+) -> ContractDecision:
+    """The policy, closed-fact and teaching gates, in that order."""
+    card = PERSONAS.get(subject) or PERSONA
+    book_context = bool(_BOOK_CONTEXT.search(question))
+
+    if _PRACTICE_EXEMPT.search(question):
+        return ContractDecision("answer", reason="explicit practice request")
+    if (
+        _FEEDBACK_REQUEST.search(question)
+        or (_FEEDBACK_NOUN_REQUEST.search(question) and _FEEDBACK_TARGET.search(question))
+        or (_FEEDBACK_ACTION.search(question) and _FEEDBACK_TARGET.search(question))
+        or (_FEEDBACK_ASK.search(question) and _FEEDBACK_TARGET.search(question))
+    ):
+        return ContractDecision("answer", reason="explicit feedback request")
+
+    if re.search(
+        r"\b(what does the course cover|what is on the course|"
+        r"what will you teach me|what does the course include|"
+        r"what is the course about|what does the department (?:actually )?"
+        r"(?:put in front|cover|include))\b",
+        question,
+        re.IGNORECASE,
+    ):
+        return ContractDecision("clarify", reason="course scope or assessment")
+    if re.search(r"\bcompare .* (?:levitation|summoning) charm\b", question, re.IGNORECASE):
+        return ContractDecision("clarify", reason="cross-subject comparison")
+    if re.search(
+        r"\b(what did you study|what do you teach|what is your field)\b",
+        question,
+        re.IGNORECASE,
+    ):
+        return ContractDecision("clarify", reason="study or teaching role")
+
+    if re.search(r"\bcurriculum\b", question, re.IGNORECASE):
+        if book_context:
+            return ContractDecision(
+                "lesson" if requested_mode == "lesson" else "answer",
+                reason="book context",
+            )
+        if _mentions_subject(question, subject):
+            if subject == "dada":
+                return ContractDecision("lore", fact_ids=("lore:dada-001",))
+            return ContractDecision(
+            "persona", meta_topic="subject", fact_ids=("persona:subject",)
+        )
+        return ContractDecision("clarify", reason="curriculum scope or assessment")
+
+    topic = meta_topic(question)
+    if topic in POLICY_TOPICS and not (topic == "syllabus" and book_context):
+        return ContractDecision("policy", meta_topic=topic)
+    if (
+        any(p.search(question) for p in _POLICY_PATTERNS)
+        and not _POLICY_NEGATIVE.search(question)
+        and (
+            not book_context
+            or re.search(
+                r"\b(exam|examination|test|graded|mark scheme|examiner|"
+                r"invigilator|answer key|model answer|ignore|override|"
+                r"system prompt)\b",
+                question,
+                re.IGNORECASE,
+            )
+        )
+    ):
+        return ContractDecision("policy", meta_topic=_policy_topic(question))
+
+    # Closed setting facts run before the book-context guard: a persona
+    # education question or a school-history question is not a book question.
+    if _EDUCATION.search(question):
+        return ContractDecision(
+            "persona",
+            meta_topic="professor",
+            fact_ids=("persona:professor.education",),
+        )
+    if _TEACHING_RECORD.search(question):
+        return ContractDecision("lore", fact_ids=("lore:teaching-record",))
+    if re.search(
+        r"\b(were you an auror|how long were you in the auror office|"
+        r"why did you leave the aurors|your auror service)\b",
+        question,
+        re.IGNORECASE,
+    ):
+        return ContractDecision(
+            "persona",
+            meta_topic="professor",
+            fact_ids=("persona:professor.background",),
+        )
+    if _AUROR.search(question):
+        if book_context:
+            return ContractDecision(
+                "lesson" if requested_mode == "lesson" else "answer",
+                reason="book character",
+            )
+        return ContractDecision("lore", fact_ids=("lore:auror-001",))
+    if _TIMELINE_1998.search(question):
+        return ContractDecision("lore", fact_ids=("lore:timeline-1998",))
+    if _TIMELINE_2008.search(question):
+        return ContractDecision("lore", fact_ids=("lore:timeline-2008",))
+    if _TIMELINE_2026.search(question):
+        return ContractDecision("lore", fact_ids=("lore:timeline-2026",))
+    if re.search(r"\btimeline of the school\b", question, re.IGNORECASE):
+        return ContractDecision(
+            "lore",
+            fact_ids=(
+                "lore:timeline-1998",
+                "lore:timeline-2008",
+                "lore:timeline-2026",
+            ),
+        )
+    if re.search(
+        r"\bpublic-record limit|private knowledge|memory is not evidence\b",
+        question,
+        re.IGNORECASE,
+    ):
+        return ContractDecision("lore", fact_ids=("lore:public-record-limits",))
+    if re.search(r"\bpeople in the books|public figures\b", question, re.IGNORECASE):
+        return ContractDecision("lore", fact_ids=("lore:public-record-people",))
+    if _PUBLIC_RECORD.search(question):
+        return ContractDecision("lore", fact_ids=("lore:public-record-war",))
+    if _SCHOOL.search(question):
+        if _OFF_TOPIC.search(question):
+            return ContractDecision(
+                "abstain" if requested_mode == "lesson" else "answer",
+                reason="off topic",
+            )
+        if book_context:
+            return ContractDecision(
+                "lesson" if requested_mode == "lesson" else "answer",
+                reason="book context",
+            )
+        return ContractDecision("lore", fact_ids=("lore:school-001",))
+    if subject == "dada" and re.search(
+        r"\b(defense|defence) department|practical work|training room\b",
+        question,
+        re.IGNORECASE
+    ):
+        return ContractDecision("lore", fact_ids=("lore:dada-001",))
+
+    if book_context:
+        return ContractDecision(
+            "lesson" if requested_mode == "lesson" else "answer",
+            reason="book context",
+        )
+    if subject != "dada" and _DADA_ONLY.search(question):
+        return ContractDecision(
+            "abstain" if requested_mode == "lesson" else "answer",
+            reason="cross-subject",
+        )
+
+    if _SCHOOL_AMBIGUOUS.search(question) or _SCOPE_AMBIGUOUS.search(question):
+        return ContractDecision("clarify", reason="scope or assessment")
+    if _SUBJECT_SCOPE.search(question) and _mentions_subject(question, subject):
+        if subject == "dada":
+            return ContractDecision("lore", fact_ids=("lore:dada-001",))
+        return ContractDecision(
+            "persona", meta_topic="subject", fact_ids=("persona:subject",)
+        )
+    if _subject_definition(question, subject):
+        return ContractDecision(
+            "persona", meta_topic="subject", fact_ids=("persona:subject",)
+        )
+
+    name_topic = _name_topic(question, card)
+    if name_topic is not None:
+        return ContractDecision(
+            "persona", meta_topic=name_topic,
+            fact_ids=(
+                "persona:identity"
+                if name_topic == "identity"
+                else "persona:professor.background",
+            ),
+        )
+    if _IDENTITY.search(question):
+        return ContractDecision(
+            "persona", meta_topic="identity", fact_ids=("persona:identity",)
+        )
+    if _BACKGROUND.search(question):
+        return ContractDecision(
+            "persona", meta_topic="professor",
+            fact_ids=("persona:professor.background",),
+        )
+    if _SCOPE.search(question):
+        return ContractDecision(
+            "persona", meta_topic="scope", fact_ids=("persona:subject",)
+        )
+    if _BOUNDARIES.search(question):
+        return ContractDecision(
+            "persona", meta_topic="boundaries", fact_ids=("persona:boundaries",)
+        )
+    if _GREETING.search(question):
+        return ContractDecision(
+            "persona", meta_topic="greeting", fact_ids=("persona:greeting",)
+        )
+
+    if _OFF_TOPIC.search(question):
+        return ContractDecision(
+            "abstain" if requested_mode == "lesson" else "answer",
+            reason="off topic",
+        )
+
+    if requested_mode == "lesson":
+        if teaching_terms is not None:
+            if content_terms(question) & teaching_terms:
+                return ContractDecision("lesson")
+            return ContractDecision("abstain", reason="no teaching term")
+        return ContractDecision("lesson")
+    return ContractDecision("answer")
+
 def _auto_mode(
     question: str,
     *,
     student_answer: str | None,
     persona: bool,
+    subject: str = "dada",
 ) -> Mode:
     """The intent without an explicit request override."""
     if student_answer and student_answer.strip():
@@ -212,7 +640,7 @@ def _auto_mode(
     if _PRACTICE_REQUEST.search(question) or _PRACTICE_PHRASE.search(question):
         return "practice"
     if persona:
-        topic = meta_topic(question)
+        topic = meta_topic(question) if subject == "dada" else None
         if topic is not None and not (
             topic in {"exam", "syllabus", "subject"} and _BOOK_CONTEXT.search(question)
         ):
@@ -228,31 +656,76 @@ def classify(
     requested_mode: RequestedMode = "auto",
     student_answer: str | None = None,
     persona: bool = False,
+    subject: str = "dada",
+    teaching_terms: set[str] | None = None,
 ) -> Mode:
     auto = _auto_mode(
-        question, student_answer=student_answer, persona=persona
+        question,
+        student_answer=student_answer,
+        persona=persona,
+        subject=subject,
     )
+    decision = contract_decision(
+        question,
+        subject=subject,
+        requested_mode=requested_mode,
+        teaching_terms=teaching_terms,
+    )
+    if decision.contract == "policy":
+        return "policy"
+    if persona and decision.contract == "persona":
+        return "meta"
+    if decision.contract == "lore":
+        return "fact"
+    if decision.contract == "clarify":
+        return "clarify"
+    if requested_mode in ("answer", "practice", "feedback"):
+        return requested_mode
+    if auto in ("practice", "feedback", "personal"):
+        return auto
+    if persona and auto == "meta":
+        return "meta"
+    if decision.contract == "abstain":
+        return "abstain"
     if requested_mode == "lesson":
-        # Lesson is a preference for the answer path, not an absolute route:
-        # persona, practice and feedback keep their normal handling, so a
-        # venue that defaults to lesson still greets and tests correctly.
-        return "lesson" if auto == "answer" else auto
+        return "lesson"
     if requested_mode != "auto":
         return requested_mode
     return auto
 
 
-def route(state: AgentState, *, persona: bool = False) -> dict[str, object]:
+def route(
+    state: AgentState,
+    *,
+    persona: bool = False,
+    teaching_terms: Callable[[str], set[str]] | None = None,
+) -> dict[str, object]:
     question = state["question"]
+    subject = state.get("subject", "dada")
+    requested = state.get("requested_mode", "auto")
+    terms = teaching_terms(subject) if teaching_terms is not None else None
     mode = classify(
         question,
-        requested_mode=state.get("requested_mode", "auto"),
+        requested_mode=requested,
         student_answer=state.get("student_answer"),
         persona=persona and state.get("persona_enabled", True),
+        subject=subject,
+        teaching_terms=terms,
     )
     payload: dict[str, object] = {"mode": mode}
-    if mode == "meta":
-        payload["meta_topic"] = meta_topic(question) or "identity"
+    if mode in ("meta", "policy", "fact", "clarify", "abstain"):
+        decision = contract_decision(
+            question,
+            subject=subject,
+            requested_mode=requested,
+            teaching_terms=terms,
+        )
+        if mode in ("meta", "policy"):
+            payload["meta_topic"] = (
+                decision.meta_topic or meta_topic(question) or "identity"
+            )
+        if mode == "fact":
+            payload["fact_ids"] = list(decision.fact_ids)
     tracer = current_tracer()
     if tracer is not None:
         tracer.emit(

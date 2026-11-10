@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import time
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -11,6 +12,7 @@ from app.agent import build_graph
 from app.agent.persona import PERSONA, PERSONAS
 from app.api.runtime import Runtime
 from app.config import Settings
+from app.knowledge import load_lore
 from app.knowledge.materials import Material, SourceRef
 from app.knowledge.packs import PackSummary
 from app.logging import get_request_id
@@ -1236,3 +1238,56 @@ def test_lesson_flag_uses_the_api_default_subject():
     assert body["lesson"] is True
     assert body["lesson_subject"] == "dada"
     assert body["lesson_subjects"] == ["dada"]
+
+
+def test_lesson_mode_routes_closed_facts_and_clarify():
+    lore = load_lore(
+        Path(__file__).resolve().parents[1] / "eval" / "fixtures" / "lore"
+    )
+    selector = _LessonSelector()
+    graph = build_graph(
+        _Retriever(),
+        _Llm(),
+        lesson=selector,
+        lesson_top_k=3,
+        personas=PERSONAS,
+        default_subject="dada",
+        lore=lore,
+    )
+    app = create_app(
+        app_settings=Settings(lesson_mode=True, persona=True),
+        runtime=Runtime(
+            retriever=_Retriever(),
+            llm=_Llm(),
+            agent=graph,
+            lesson=selector,
+            lore=lore,
+        ),
+    )
+    with TestClient(app) as client:
+        for question, expected, needle in (
+            ("Where is Ashcombe?", "fact", "Cotswolds"),
+            ("What is included in DADA?", "clarify", "Do you mean"),
+            ("Where did you study when you are young?", "meta", "Hogwarts"),
+            ("What is the mark scheme?", "policy", "examination"),
+            ("What is the capital of France?", "abstain", "will not guess"),
+        ):
+            with client.stream(
+                "POST",
+                "/ask/stream",
+                json={"question": question, "mode": "lesson"},
+            ) as response:
+                body = "".join(response.iter_text())
+            events = _parse_sse(body)
+            modes = [data["mode"] for name, data in events if name == "mode"]
+            finals = [data for name, data in events if name == "final"]
+            assert modes[0] == expected
+            assert needle in finals[0]["answer"]
+        with client.stream(
+            "POST",
+            "/ask/stream",
+            json={"question": "Where is Ashcombe?", "mode": "lesson"},
+        ) as response:
+            body = "".join(response.iter_text())
+    final = [data for name, data in _parse_sse(body) if name == "final"][0]
+    assert "school-001" in final["lore_citations"]

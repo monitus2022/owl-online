@@ -147,7 +147,7 @@ async def test_candidate_improves_voice_without_losing_citations():
         PersonaScenario(
             scenario_id="s3",
             question="What is the capital of France?",
-            route="lesson",
+            route="abstain",
             category="off_topic",
             citation="none",
             scopes=("abstained",),
@@ -184,7 +184,7 @@ async def test_abstention_on_a_citation_expected_scenario_is_a_miss():
         PersonaScenario(
             scenario_id="s4",
             question="What is the capital of France?",
-            route="lesson",
+            route="abstain",
             category="off_topic",
             citation="material",
             scopes=("abstained",),
@@ -205,4 +205,4 @@ async def test_abstention_on_a_citation_expected_scenario_is_a_miss():
     assert report.candidate.abstention_accuracy == 1.0
     assert report.candidate.citation_retention == 0.0
     assert report.candidate.persona_pass_rate == 0.0
-    assert report.candidate.expected_judged == 1
+    assert report.candidate.expected_judged == 0

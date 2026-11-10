@@ -198,9 +198,9 @@ def test_meta_topics_cover_greeting_syllabus_and_grading():
 
     assert classify("Hello", persona=True) == "meta"
     assert classify("Good morning.", persona=True) == "meta"
-    assert classify("What is the syllabus?", persona=True) == "meta"
-    assert classify("What is the DADA curriculum?", persona=True) == "meta"
-    assert classify("How is the exam graded?", persona=True) == "meta"
+    assert classify("What is the syllabus?", persona=True) == "policy"
+    assert classify("What is the DADA curriculum?", persona=True) == "fact"
+    assert classify("How is the exam graded?", persona=True) == "policy"
 
 
 def test_a_greeting_prefix_does_not_steal_a_question():

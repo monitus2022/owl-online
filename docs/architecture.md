@@ -371,7 +371,7 @@ sequenceDiagram
   API->>API: cache.get when the intent is answer
   API->>API: limiter.admit (429 / 503)
   API->>G: astream(state with subject)
-  G->>G: router -> answer | practice | feedback | meta | personal | lesson
+  G->>G: router -> policy | fact | clarify | abstain | answer | practice | feedback | meta | personal | lesson
   G-->>API: mode update
   API-->>C: event: mode
   G->>R: retrieve(question, top_k)
@@ -405,13 +405,16 @@ SSE events:
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
 `/ask/stream` uses the compiled graph from `app/agent/`. The router is
-deterministic. An explicit `answer`, `practice` or `feedback` wins. A supplied
-student answer is a feedback request, a practice request is a question or short
-set of questions, and everything else is answer. When `OWL_PERSONA` is on, narrow
-meta and personal cues route to scripted replies before the answer path.
-`mode=lesson` is a preference, not an override: it applies only when the
-classification would otherwise be `answer`; practice, feedback, meta and
-personal keep their routes, so a lesson-default venue still greets and tests.
+deterministic and applies the policy, closed-fact and teaching gates before any
+retrieval. An explicit `answer`, `practice` or `feedback` wins over the gates
+except that policy still fails closed; a supplied student answer is a feedback
+request, and a practice request is a question or short set of questions. When
+`OWL_PERSONA` is on, meta, fact, clarify, policy and abstain cues route to
+scripted replies before the answer path. `mode=lesson` is a preference, not an
+override: the teaching gate sends an explanatory request with a pack term to
+lesson, unclassified or off-topic traffic abstains, and practice, feedback,
+meta and personal keep their routes, so a lesson-default venue still greets and
+tests.
 Name variants and fuzzy spellings of the professor are normalised before the
 persona cues; book professors such as Snape stay on the answer path.
 Meta and personal skip retrieval and the model, so they stream no tokens. Tokens
@@ -486,16 +489,20 @@ excerpts.
 ## Chat intents vs exam bank
 
 The chat graph is the online surface. Its three core intents are intentionally
-lightweight. Two persona intents are added when `OWL_PERSONA` is on:
+lightweight. Four persona-adjacent intents are added when `OWL_PERSONA` is on:
 
 | Intent | Trigger | Output | Persisted | Authoritative |
 |---|---|---|---|---|
 | `answer` | a question about the books | grounded explanation with citations | no | no |
 | `practice` | "give me a practice question on ..." | one or two grounded questions, streamed | no | no |
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
-| `meta` | persona on; identity, subject scope, subject definition, exam (non-disclosure), syllabus, grading, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
+| `meta` | persona on; identity, subject scope, subject definition, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
+| `policy` | exam, syllabus, grading, mark scheme or a jailbreak | reviewed refusal from the card, or a generic refusal when persona is off | no | no |
+| `abstain` | unclassified, off-topic or unsafe | the in-world abstention line, no model call | no | no |
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
-| `lesson` | classification would be answer, explicit `mode=lesson`, `OWL_LESSON_MODE` on | persona-first teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
+| `fact` | a closed lore fact matched by the contract gate | reviewed setting text from the lore pack, `[lore:<id>]` citations, no model call | no | no |
+| `clarify` | an ambiguous scope/assessment ask | one scripted disambiguation line, no model call | no | no |
+| `lesson` | contract gates miss, a teaching term matches, explicit `mode=lesson`, `OWL_LESSON_MODE` on | persona-first teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
 
 Lesson mode is the one intent grounded in a subject pack first; the corpus is a
 labelled fallback when the pack is thin. The selector is derived at startup by
@@ -503,8 +510,9 @@ embedding material texts in memory and scoring a question by cosine; the corpus 
 grounding check, not the selector. A pack-backed lesson answer cites material ids
 in `material_citations` and their book chunks in `citations`; an off-pack answer
 has empty `material_citations` and cites the retrieved book chunks directly.
-With the flag off the request is rejected and the measured corpus path is
-unchanged.
+With the flag off a request whose classified intent is lesson is rejected;
+a `mode=lesson` request that the gates route to policy, fact, clarify or
+abstain is served, and the measured corpus path is unchanged.
 
 The #216 target is answer contract and knowledge authority, not whether a
 phrasing is already in the cue list: policy, closed facts and teaching are
@@ -795,7 +803,7 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, scope, lore_chars, abstained, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, chat mode, meta topic, student answer, chunks, answer, citations, lore_citations, material_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

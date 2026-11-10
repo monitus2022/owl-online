@@ -13,7 +13,11 @@ export type ChatMode =
   | "feedback"
   | "meta"
   | "personal"
-  | "lesson";
+  | "lesson"
+  | "fact"
+  | "clarify"
+  | "policy"
+  | "abstain";
 
 export type LessonScope = "in_pack" | "mixed" | "off_pack" | "abstained";
 
