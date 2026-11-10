@@ -31,14 +31,17 @@ from eval.routing.fixtures import (  # noqa: E402
 FIXTURE = REPO / "eval" / "routing" / "fixtures" / "subjects.jsonl"
 
 
-def teaching_terms(subject: str) -> set[str] | None:
+def subject_pack(subject: str):
     path = REPO / "data" / "subjects" / subject
     if not path.exists():
         return None
-    pack = load_subject_pack(path)
+    return load_subject_pack(path)
+
+
+def teaching_terms(pack) -> set[str]:
     terms: set[str] = set()
-    terms.update(content_terms(subject))
-    terms.update(content_terms(SUBJECT_NAMES.get(subject, subject)))
+    terms.update(content_terms(pack.manifest.subject))
+    terms.update(content_terms(SUBJECT_NAMES.get(pack.manifest.subject, pack.manifest.subject)))
     for concept in pack.concepts:
         terms.update(content_terms(concept.title))
         for alias in concept.aliases:
@@ -52,12 +55,14 @@ def main() -> int:
     items = load_routing_items(FIXTURE)
     validate_subject_fixture(items)
     terms_by_subject: dict[str, set[str]] = {}
+    materials_by_subject: dict[str, set[str]] = {}
     for subject in sorted({item.subject for item in items}):
-        terms = teaching_terms(subject)
-        if terms is None:
+        pack = subject_pack(subject)
+        if pack is None:
             print(f"data/subjects/{subject} is missing; cannot measure")
             return 2
-        terms_by_subject[subject] = terms
+        terms_by_subject[subject] = teaching_terms(pack)
+        materials_by_subject[subject] = {m.material_id for m in pack.materials}
 
     overall: Counter[tuple[str, str]] = Counter()
     policy_leaks: list[str] = []
@@ -66,6 +71,7 @@ def main() -> int:
     fact_mismatch: list[str] = []
     over_clarify: list[str] = []
     abstain_misroute: list[str] = []
+    fact_id_errors: list[str] = []
 
     for subject in sorted(terms_by_subject):
         rows = [item for item in items if item.subject == subject]
@@ -99,6 +105,15 @@ def main() -> int:
                 over_clarify.append(item.item_id)
             if item.contract == "abstain" and actual != "abstain":
                 abstain_misroute.append(item.item_id)
+            if item.contract == "lesson":
+                for fact_id in item.fact_ids:
+                    if fact_id.removeprefix("lesson:") not in materials_by_subject[subject]:
+                        fact_id_errors.append(item.item_id)
+            if item.contract == "clarify":
+                scope = "lore:dada-001" if subject == "dada" else "persona:subject"
+                expected = {scope, f"policy:assessment.{subject}"}
+                if not expected <= set(item.fact_ids):
+                    fact_id_errors.append(item.item_id)
 
         print(f"== {subject} ({len(rows)} items)")
         for expected in CONTRACTS:
@@ -123,6 +138,7 @@ def main() -> int:
     print(f"fact mismatch: {len(fact_mismatch)} {fact_mismatch}")
     print(f"over-clarify: {len(over_clarify)} {over_clarify}")
     print(f"abstain misroute: {len(abstain_misroute)} {abstain_misroute}")
+    print(f"fixture fact id errors: {len(fact_id_errors)} {fact_id_errors}")
     gate_ok = (
         not policy_leaks
         and not authority_bleed
@@ -130,6 +146,7 @@ def main() -> int:
         and not fact_mismatch
         and not over_clarify
         and not abstain_misroute
+        and not fact_id_errors
     )
     print("gate:", "PASS" if gate_ok else "FAIL")
     return 0 if gate_ok else 1

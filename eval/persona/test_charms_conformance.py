@@ -45,7 +45,11 @@ class EmptyRetriever:
 class CharmsLlm:
     name = "fake/charms"
 
+    def __init__(self, prompts: list[str]):
+        self.prompts = prompts
+
     async def generate(self, system, prompt, *, context=None):
+        self.prompts.append(system)
         return (
             "The Levitation Charm lifts an object into the air with Wingardium "
             f"Leviosa. [mat:{MATERIAL_ID}]"
@@ -148,11 +152,12 @@ async def test_charms_lesson_uses_the_charms_card_and_pack():
             boundary="exam_nondisclosure",
         ),
     ]
+    prompts: list[str] = []
     stack = PersonaEvalStack(
         persona=PERSONAS["charms"],
         selector=selector,
         retriever=EmptyRetriever(),
-        llm_for_sample=lambda sample: CharmsLlm(),
+        llm_for_sample=lambda sample: CharmsLlm(prompts),
         judge=CharmsJudge(),
         pack=pack,
         chunks_by_id={CHUNK_ID: _chunk()},
@@ -167,6 +172,8 @@ async def test_charms_lesson_uses_the_charms_card_and_pack():
     assert candidate.boundary_violations == 0
     samples = {sample.scenario_id: sample for sample in candidate.samples}
     assert f"[mat:{MATERIAL_ID}]" in samples["c1"].answer
+    assert any("Professor Raman" in prompt for prompt in prompts)
+    assert all("Crane" not in prompt for prompt in prompts)
     assert "Professor Raman" in samples["c2"].answer
     assert "Crane" not in samples["c2"].answer
     assert "examination" in samples["c3"].answer.lower()

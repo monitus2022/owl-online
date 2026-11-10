@@ -190,10 +190,15 @@ def validate_subject_fixture(items: list[RoutingItem]) -> None:
         if not any(row.holdout for row in rows):
             raise ValueError(f"{subject}: needs a held-out item")
         required = f"what is included in {subject}"
-        if required not in {
-            row.utterance.lower().rstrip("?.!") for row in rows
-        }:
+        clarify_rows = [
+            row
+            for row in rows
+            if row.utterance.lower().rstrip("?.!") == required
+        ]
+        if not clarify_rows:
             raise ValueError(f"{subject}: missing {required!r}")
+        if any(row.contract != "clarify" for row in clarify_rows):
+            raise ValueError(f"{subject}: {required!r} must be a clarify item")
         if any(
             row.contract in {"persona", "lore", "lesson"} and not row.fact_present
             for row in rows

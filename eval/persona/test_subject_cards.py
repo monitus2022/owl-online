@@ -48,10 +48,10 @@ def test_each_card_answers_its_own_routes():
             assert answer in card.meta[topic], scenario.scenario_id
             if topic == "identity":
                 assert card.address in answer, scenario.scenario_id
-                for other in PERSONAS.values():
-                    if other.name != card.name:
-                        assert other.address not in answer, scenario.scenario_id
-                        assert other.name not in answer, scenario.scenario_id
+            for other in PERSONAS.values():
+                if other.name != card.name:
+                    assert other.address not in answer, scenario.scenario_id
+                    assert other.name not in answer, scenario.scenario_id
             if topic == "subject":
                 assert card.subject.lower() in answer.lower(), scenario.scenario_id
             if topic == "scope":
@@ -63,3 +63,7 @@ def test_each_card_answers_its_own_routes():
             assert answer in card.meta[topic], scenario.scenario_id
             lowered = answer.lower()
             assert "examination" in lowered or "will not" in lowered or "do not" in lowered
+            for other in PERSONAS.values():
+                if other.name != card.name:
+                    assert other.address not in answer, scenario.scenario_id
+                    assert other.name not in answer, scenario.scenario_id
