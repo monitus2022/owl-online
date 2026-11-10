@@ -1,7 +1,9 @@
 """Persona card loader: the professor's voice, boundaries and scripted replies.
 
-The card lives in `config/persona.toml`; the human copy is `docs/persona.md`.
-This module is the single source of truth the prompts and the meta nodes read.
+The DADA card lives in `config/persona.toml`; the other four cards live in
+`config/personas/<subject>.toml` and are merged over `config/personas/spine.toml`.
+The human copy is `docs/persona.md`. This module is the single source of truth
+the prompts and the meta nodes read.
 """
 
 from __future__ import annotations
@@ -11,7 +13,11 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-PERSONA_PATH = Path(__file__).resolve().parents[2] / "config" / "persona.toml"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PERSONA_PATH = REPO_ROOT / "config" / "persona.toml"
+PERSONAS_DIR = REPO_ROOT / "config" / "personas"
+SPINE_PATH = PERSONAS_DIR / "spine.toml"
+PERSONA_SUBJECTS = ("dada", "potions", "transfiguration", "charms", "herbology")
 
 META_TOPICS = (
     "identity",
@@ -126,13 +132,8 @@ def _variants(value: object, where: str) -> tuple[str, ...]:
     return tuple(texts)
 
 
-def load_persona(path: Path = PERSONA_PATH) -> Persona:
-    """Read and validate the persona card.
-
-    A missing section or meta topic fails at startup: a half-loaded persona
-    should not quietly answer in the wrong voice.
-    """
-    data = tomllib.loads(path.read_text(encoding="utf-8"))
+def _persona_from_data(data: dict[str, object]) -> Persona:
+    """Validate one card, after the shared spine has been merged in."""
     try:
         identity = data["identity"]
         register = data["register"]
@@ -188,4 +189,48 @@ def load_persona(path: Path = PERSONA_PATH) -> Persona:
     )
 
 
-PERSONA = load_persona()
+def load_persona(path: Path = PERSONA_PATH) -> Persona:
+    """Read and validate one standalone card.
+
+    A missing section or meta topic fails at startup: a half-loaded persona
+    should not quietly answer in the wrong voice.
+    """
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    return _persona_from_data(data)
+
+
+def _deep_merge(
+    base: dict[str, object], override: dict[str, object]
+) -> dict[str, object]:
+    """Merge nested TOML tables; lists and scalars replace the spine value."""
+    merged = dict(base)
+    for key, value in override.items():
+        current = merged.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            merged[key] = _deep_merge(current, value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def load_personas() -> dict[str, Persona]:
+    """Load the DADA seed and the four cards merged over the shared spine."""
+    spine = tomllib.loads(SPINE_PATH.read_text(encoding="utf-8"))
+    personas = {"dada": load_persona(PERSONA_PATH)}
+    for subject in PERSONA_SUBJECTS[1:]:
+        path = PERSONAS_DIR / f"{subject}.toml"
+        card = tomllib.loads(path.read_text(encoding="utf-8"))
+        personas[subject] = _persona_from_data(_deep_merge(spine, card))
+    return personas
+
+
+PERSONAS = load_personas()
+PERSONA = PERSONAS["dada"]
+
+
+def for_subject(subject: str) -> Persona:
+    """The reviewed card for one subject key."""
+    try:
+        return PERSONAS[subject]
+    except KeyError as error:
+        raise KeyError(f"no persona card for subject {subject!r}") from error

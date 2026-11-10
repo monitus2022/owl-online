@@ -1,7 +1,10 @@
 # Persona card: Professor Alistair Crane
 
-This is the human-readable copy of `config/persona.toml`. The TOML is the source
-of truth the app reads; this page is for review, onboarding and changelog.
+The DADA card is `config/persona.toml`; the other four cards live in
+`config/personas/<subject>.toml` and are merged over
+`config/personas/spine.toml`. The TOML files are the source of truth the app
+reads; this page is for review, onboarding and changelog. The variant tables
+below are the DADA card; the registry table names the other four.
 
 ## Identity
 
@@ -216,15 +219,27 @@ violations. The record is
 
 ## Multiple professors
 
-The five founders share one spine. Each department gets a persona card keyed
-by subject (planned: `config/personas/<subject>.toml`, with Crane as the DADA
-seed): register description, its own variant-bank section, and boundaries
-imported from the common spine. The router selects the active professor from
-the subject in play and hands cross-subject questions over with an explicit
-line ("that is Professor Hale's province"). Tier 2 composition stays bounded
-by the lore pack entries for that professor's subject; persona facts about the
-school and founders live in the shared lore entries, not in five prompt files
-that can drift apart.
+The five founders share one policy spine. The registry loads the DADA seed from
+`config/persona.toml` and the other four cards from `config/personas/`:
+
+| Subject | Professor | Address | Card |
+|---|---|---|---|
+| DADA | Alistair Crane | Professor Crane | `config/persona.toml` |
+| Potions | Edith Vale | Professor Vale | `config/personas/potions.toml` |
+| Transfiguration | Marcus Hale | Professor Hale | `config/personas/transfiguration.toml` |
+| Charms | Priya Raman | Professor Raman | `config/personas/charms.toml` |
+| Herbology | Nell Ashby | Professor Ashby | `config/personas/herbology.toml` |
+
+The shared spine in `config/personas/spine.toml` carries the school facts, the
+exam/syllabus/grading refusals, the public-history boundary, the Auror pathway,
+the greeting and the abstention line. Each card carries its own identity, role,
+subject definition, teaching stance and professor background. The registry is
+loaded at startup and exposed as `PERSONAS`; `PERSONA` remains the DADA alias.
+The router and API still select DADA until #222 wires the subject through, so a
+Charms or Potions request does not yet use its card. Tier 2 composition stays
+bounded by the lore pack entries for that professor's subject; persona facts
+about the school and founders live in the shared lore entries, not in five
+prompt files that can drift apart.
 
 ## Changelog
 
@@ -237,3 +252,4 @@ that can drift apart.
 | 2026-11-08 | Response tiers 0-2 recorded as the persona scope; tier 3 (invented non-canon flavor) declared out of scope; multi-professor card model noted |
 | 2026-11-09 | Subject-definition reply added; "what is DADA" and "what is Defence Against the Dark Arts" route to the reviewed definition, while book-context forms stay on the answer path |
 | 2026-11-09 | Lesson voice: persona-first prompt, teaching shape, 250-word target, inline chunk ids hidden from the note prompt, and the #176 conformance fixture; pass rate 0.00 to 0.40 with citation retention 0.79 |
+| 2026-11-10 | Multi-subject registry: shared policy spine plus Potions, Transfiguration, Charms and Herbology cards; DADA remains the seed card |
