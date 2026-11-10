@@ -141,6 +141,15 @@ def test_personas_doc_lists_every_card_variant():
         if subject == "dada":
             continue
         persona = for_subject(subject)
-        for topic in ("identity", "scope", "subject", "professor", "boundaries"):
+        for topic in (
+            "identity",
+            "scope",
+            "subject",
+            "professor",
+            "boundaries",
+            "greeting",
+        ):
             for text in persona.meta_variants(topic):
                 assert text in doc, (subject, topic, text)
+        for text in persona.personal_variants():
+            assert text in doc, (subject, "personal", text)

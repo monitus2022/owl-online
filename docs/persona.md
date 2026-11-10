@@ -4,7 +4,7 @@ The DADA card is `config/persona.toml`; the other four cards live in
 `config/personas/<subject>.toml` and are merged over
 `config/personas/spine.toml`. The TOML files are the source of truth the app
 reads; this page is for review, onboarding and changelog. The variant tables
-below are the DADA card; the registry table names the other four.
+below are the DADA card; the four non-DADA cards are in `docs/personas.md`.
 
 ## Identity
 

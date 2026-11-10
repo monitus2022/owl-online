@@ -549,3 +549,10 @@ def test_lore_rejects_a_front_matter_body_key(tmp_path):
     )
     with pytest.raises(ValueError, match="must not set body"):
         load_lore(directory)
+
+
+def test_auror_pathway_is_shared_across_subjects():
+    store = load_lore(FIXTURE)
+    entry = store.get("auror-001")
+    assert entry is not None
+    assert entry.subject == "all"
