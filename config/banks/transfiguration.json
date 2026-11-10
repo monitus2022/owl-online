@@ -1,0 +1,1052 @@
+{
+  "items": [
+    {
+      "item_id": "transfiguration-mcq-001",
+      "kind": "mcq",
+      "material_id": "transfiguration-conjuring",
+      "prompt": "What distinguishes Conjuring from Vanishing?",
+      "difficulty": "recall",
+      "options": [
+        "Conjuring removes an object completely, while Vanishing brings one into existence.",
+        "Conjuring brings a real object into existence, while Vanishing removes one.",
+        "Conjuring changes an object's shape, while Vanishing changes its material.",
+        "Conjuring produces illusions, while Vanishing produces solid objects.",
+        "Conjuring works only on living creatures, while Vanishing works on objects.",
+        "Conjuring reverses a transformation, while Vanishing completes one."
+      ],
+      "correct": 1,
+      "rationale": "Conjuring begins from nothing and produces a real object, the reverse of Vanishing."
+    },
+    {
+      "item_id": "transfiguration-mcq-002",
+      "kind": "mcq",
+      "material_id": "transfiguration-conjuring-limits",
+      "prompt": "Why can conjuring not solve a shortage of food?",
+      "difficulty": "explanation",
+      "options": [
+        "Conjured food spoils as soon as the caster looks away from it.",
+        "Food is a Principal Exception to Gamp's Law and cannot be made from nothing.",
+        "Food can be conjured only by a caster who has fasted first.",
+        "Conjured food is an illusion and cannot be eaten.",
+        "Food may be conjured only in quantities smaller than a meal.",
+        "Food can be conjured but loses all taste once it appears."
+      ],
+      "correct": 1,
+      "rationale": "Food is the first of five Principal Exceptions, so it can be summoned, transformed or increased but not created."
+    },
+    {
+      "item_id": "transfiguration-mcq-003",
+      "kind": "mcq",
+      "material_id": "transfiguration-evanesco",
+      "prompt": "A caster uses the incantation Evanesco on a failed potion. What has the caster done?",
+      "difficulty": "application",
+      "options": [
+        "Changed the potion into a harmless solid.",
+        "Removed the potion completely.",
+        "Made the potion invisible for a short time.",
+        "Sealed the potion inside its cauldron.",
+        "Turned the potion into an empty vessel.",
+        "Restored the potion to its original ingredients."
+      ],
+      "correct": 1,
+      "rationale": "Evanesco is the incantation for vanishing, which removes the target completely."
+    },
+    {
+      "item_id": "transfiguration-mcq-004",
+      "kind": "mcq",
+      "material_id": "transfiguration-inanimatus-conjurus",
+      "prompt": "What does the spell name Inanimatus Conjurus identify?",
+      "difficulty": "recall",
+      "options": [
+        "The conjuring of inanimate objects.",
+        "The vanishing of inanimate objects.",
+        "The animation of stone figures.",
+        "The reversal of object transformations.",
+        "The switching of one object part for another.",
+        "The conjuring of living creatures."
+      ],
+      "correct": 0,
+      "rationale": "The name marks the spell's scope: it produces objects rather than creatures."
+    },
+    {
+      "item_id": "transfiguration-short-001",
+      "kind": "short_answer",
+      "material_id": "transfiguration-conjuring",
+      "prompt": "Explain why conjuring an object requires more control than changing the form of an existing object.",
+      "difficulty": "explanation",
+      "model_answer": "Conjuring produces a real object out of nothing, rather than working from existing material, so it needs more control than a change of form. The objects produced are solid and usable, not illusions. That is why conjuring is treated as a distinct and demanding branch of the subject.",
+      "required_points": [
+        "real object out of nothing",
+        "not illusions",
+        "existing material"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that conjuring starts from nothing and yields a real object.",
+          4
+        ],
+        [
+          "completeness",
+          "Contrasts the result with an illusion and notes the greater control required.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-002",
+      "kind": "short_answer",
+      "material_id": "transfiguration-conjuring-limits",
+      "prompt": "Distinguish the two kinds of limit on conjuring, giving one example of each.",
+      "difficulty": "comparison",
+      "model_answer": "One limit is a law of magic: food is the first of the five Principal Exceptions to Gamp's Law, so nobody can produce it out of thin air. The other is local, a protection on one object: a potion that cannot be Vanished or Transfigured, and that no caster can change.",
+      "required_points": [
+        "five Principal Exceptions to Gamp's Law",
+        "a protection on one object",
+        "cannot be Vanished or Transfigured"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Distinguishes a universal law of magic from a local protection.",
+          4
+        ],
+        [
+          "completeness",
+          "Gives one example of each kind of limit.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-003",
+      "kind": "short_answer",
+      "material_id": "transfiguration-vanishing-complexity",
+      "prompt": "Explain how the difficulty of a Vanishing Spell changes with the creature being vanished.",
+      "difficulty": "explanation",
+      "model_answer": "Difficulty rises with the complexity of the creature rather than with its size alone: a snail, an invertebrate, is far easier to vanish than a mouse, a mammal. The caster must hold a more complicated living thing steadily in the spell, so progress from snail to mouse marks real improvement.",
+      "required_points": [
+        "complexity of the creature rather than with its size alone",
+        "a snail, an invertebrate, is far easier to vanish than a mouse, a mammal",
+        "hold a more complicated living thing steadily"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "States that complexity, not size alone, sets the difficulty.",
+          4
+        ],
+        [
+          "completeness",
+          "Contrasts a snail with a mouse as the scale of difficulty.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-004",
+      "kind": "short_answer",
+      "material_id": "transfiguration-vanishing-spell",
+      "prompt": "Describe what the Vanishing Spell does to its target and what it demands of the caster.",
+      "difficulty": "explanation",
+      "model_answer": "The spell removes its target completely rather than hiding it or moving it elsewhere. It demands that the caster hold the whole object in mind while the incantation takes effect, which is why a spell that works on one creature may fail on a more complex one.",
+      "required_points": [
+        "removes its target completely",
+        "hold the whole object in mind",
+        "may fail on a more complex one"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the spell removes the target rather than hiding or moving it.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains that the caster must hold the whole target in mind.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-mcq-005",
+      "kind": "mcq",
+      "material_id": "transfiguration-creature-animation",
+      "prompt": "What must a caster add to an object for animation to succeed?",
+      "difficulty": "explanation",
+      "options": [
+        "A living shape and a set of responses that fit its new role.",
+        "A softer material so that it can bend without breaking.",
+        "A spoken command that the object must repeat aloud.",
+        "A second object to act as its model and guide.",
+        "A charm that hides its original outline from view.",
+        "A borrowed body taken from a real living creature."
+      ],
+      "correct": 0,
+      "rationale": "Animation gives an object a living shape and responses that fit its role, while the material stays the same."
+    },
+    {
+      "item_id": "transfiguration-mcq-006",
+      "kind": "mcq",
+      "material_id": "transfiguration-creature-conjured-creatures",
+      "prompt": "What best describes a conjured creature?",
+      "difficulty": "explanation",
+      "options": [
+        "A natural animal brought from another place.",
+        "A temporary production that can act in the world and be dismissed.",
+        "A transformed object that keeps its original material.",
+        "An illusion that cannot touch or move anything.",
+        "A creature that must be entered in a ministry record.",
+        "A creature permanently bound to its caster's will."
+      ],
+      "correct": 1,
+      "rationale": "A conjured creature is a real, temporary production; it acts in the world but has no natural place and can be dismissed."
+    },
+    {
+      "item_id": "transfiguration-mcq-007",
+      "kind": "mcq",
+      "material_id": "transfiguration-creature-cross-species-switching",
+      "prompt": "Why is a cross-species switch such as replacing a creature's fangs so difficult?",
+      "difficulty": "application",
+      "options": [
+        "The replacement must fit the new body and behave as the original did.",
+        "The spell can be cast only on creatures smaller than the caster.",
+        "The original part must be destroyed before the switch begins.",
+        "The caster must first restore the creature to an earlier form.",
+        "The switch always leaves the creature unable to move again.",
+        "The replacement must be made of the same material as the original."
+      ],
+      "correct": 0,
+      "rationale": "Cross-species work asks the substituted part to suit the creature's anatomy and habits, not merely to remove a danger."
+    },
+    {
+      "item_id": "transfiguration-mcq-008",
+      "kind": "mcq",
+      "material_id": "transfiguration-creature-scale-limit",
+      "prompt": "What sets the practical ceiling on what a caster can transform?",
+      "difficulty": "explanation",
+      "options": [
+        "The size and complexity of the target as well as the caster's skill.",
+        "The distance between the caster and the target of the spell.",
+        "The number of witnesses present while the change is made.",
+        "The age of the material that is being transformed.",
+        "The time of day at which the transformation is attempted.",
+        "The colour of the target before the change is begun."
+      ],
+      "correct": 0,
+      "rationale": "The ceiling comes from the size and complexity of the target, not from a rule that is written down."
+    },
+    {
+      "item_id": "transfiguration-short-005",
+      "kind": "short_answer",
+      "material_id": "transfiguration-creature-animation",
+      "prompt": "Explain what animation adds to an object and what it does not change.",
+      "difficulty": "explanation",
+      "model_answer": "Animation gives an object a living shape and a set of responses that fit its new role, so that it moves with purpose and can take instructions. It does not turn the object into a biological creature: the animated chessmen are still stone.",
+      "required_points": [
+        "a living shape and a set of responses that fit its new role",
+        "still stone",
+        "does not turn the object into a biological creature"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that animation adds a living shape and fitting responses.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that the object keeps its original material.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-006",
+      "kind": "short_answer",
+      "material_id": "transfiguration-creature-conjured-creatures",
+      "prompt": "Explain the power and the limit of a conjured creature.",
+      "difficulty": "explanation",
+      "model_answer": "A conjured creature is real enough to act in the world, raising itself and frightening those present, so it is more than an illusion. Its limit is that it is a temporary production rather than a natural animal with a history or a place in an ecosystem, and a capable caster can dismiss it.",
+      "required_points": [
+        "real enough to act in the world",
+        "temporary production",
+        "a capable caster can dismiss it"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that a conjured creature is real enough to act in the world.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that it is temporary and can be dismissed.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-007",
+      "kind": "short_answer",
+      "material_id": "transfiguration-creature-cross-species-switching",
+      "prompt": "Explain why a cross-species switch tests knowledge of both creatures involved.",
+      "difficulty": "comparison",
+      "model_answer": "The substituted part has to suit the new body and behave as the original did, so the caster must understand the anatomy and habits of the creature that receives it. Removing a dangerous feature is not enough if the replacement would leave the creature unable to eat.",
+      "required_points": [
+        "suit the new body and behave as the original did",
+        "anatomy and habits",
+        "leave the creature unable to eat"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the substituted part must suit the new body.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that the replacement must let the creature keep functioning.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-008",
+      "kind": "short_answer",
+      "material_id": "transfiguration-creature-trans-species-theory",
+      "prompt": "Explain what trans-species transformation covers as a field of study.",
+      "difficulty": "explanation",
+      "model_answer": "Trans-species transformation is the academic study of changes between kinds of creature, argued in print as well as attempted under pressure. Its practical side can be a single change such as a shark's head for swimming, while its scholarly side treats anatomy, behaviour and the boundaries between species as a family of problems.",
+      "required_points": [
+        "academic study of changes between kinds of creature",
+        "a single change such as a shark's head",
+        "a family of problems"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Defines the field as the study of changes between kinds of creature.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes both the published research and the practical borrowing of a feature.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-mcq-009",
+      "kind": "mcq",
+      "material_id": "transfiguration-foundation-definition",
+      "prompt": "What makes a change count as Transfiguration rather than a cosmetic effect?",
+      "difficulty": "recall",
+      "options": [
+        "Material and shape are replaced, and the result is recognised as new.",
+        "The object keeps its shape but takes on a brighter colour and shine.",
+        "The object is hidden from view for a short time.",
+        "The object is moved from one place to another.",
+        "The object gains a new behaviour without changing form.",
+        "The object is made to look new while staying the same."
+      ],
+      "correct": 0,
+      "rationale": "Transfiguration replaces material and shape; a surface change is not a finished transformation."
+    },
+    {
+      "item_id": "transfiguration-mcq-010",
+      "kind": "mcq",
+      "material_id": "transfiguration-foundation-gamps-law",
+      "prompt": "A caster has a loaf of bread and wants more food. What does Gamp's Law allow?",
+      "difficulty": "application",
+      "options": [
+        "The existing bread may be increased, but food cannot be made from nothing.",
+        "Any food may be conjured from nothing once the caster is skilled enough.",
+        "The bread may be duplicated only if the caster fasts beforehand.",
+        "Food may be conjured, but only in portions smaller than a meal.",
+        "The bread may be changed into any food except meat.",
+        "Food may be conjured only from an object of the same weight."
+      ],
+      "correct": 0,
+      "rationale": "Food already present can be summoned, transformed or increased; it cannot be created from nothing."
+    },
+    {
+      "item_id": "transfiguration-mcq-011",
+      "kind": "mcq",
+      "material_id": "transfiguration-foundation-concentration",
+      "prompt": "A caster's snail looks slightly paler after a long attempt but has not vanished. What does the result show?",
+      "difficulty": "scenario",
+      "options": [
+        "The caster did not hold the transformation steadily enough for it to complete.",
+        "The caster used the wrong incantation for that kind of target.",
+        "The snail was too complex a creature to be vanished at all.",
+        "The caster's wand was damaged beyond any repair.",
+        "The spell was reversed before it could take effect.",
+        "The snail had already been vanished once before."
+      ],
+      "correct": 0,
+      "rationale": "A partial result shows that the caster did not hold the transformation steadily enough for it to complete."
+    },
+    {
+      "item_id": "transfiguration-mcq-012",
+      "kind": "mcq",
+      "material_id": "transfiguration-foundation-practice",
+      "prompt": "Why does a harder target make a transformation harder to complete?",
+      "difficulty": "explanation",
+      "options": [
+        "It adds more parts and demands that must be accounted for.",
+        "It requires a different wand.",
+        "It cannot be reversed.",
+        "It is immune to magic.",
+        "It needs no concentration.",
+        "It changes the caster instead."
+      ],
+      "correct": 0,
+      "rationale": "Each harder target adds a new demand, so more parts and responses must be accounted for."
+    },
+    {
+      "item_id": "transfiguration-short-009",
+      "kind": "short_answer",
+      "material_id": "transfiguration-foundation-definition",
+      "prompt": "Explain why Transfiguration is described as complex and dangerous magic.",
+      "difficulty": "explanation",
+      "model_answer": "The change is not cosmetic: the object's material and shape are replaced, and the result must be recognised as the new thing. The danger comes from the gap between a convincing result and a complete one, since a change that only looks right has not finished the work.",
+      "required_points": [
+        "material and shape are replaced",
+        "the gap between a convincing result and a complete one",
+        "a change that only looks right"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that material and shape are replaced, not merely covered.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains the gap between a convincing result and a complete one.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-010",
+      "kind": "short_answer",
+      "material_id": "transfiguration-foundation-gamps-law",
+      "prompt": "Explain how Gamp's Law separates transformation from conjuration.",
+      "difficulty": "comparison",
+      "model_answer": "A spell can alter what is already present: food that exists may be Summoned, transformed or increased in quantity. It cannot supply the substance of a meal, because food is one of the five Principal Exceptions and cannot be produced out of thin air, which is the boundary between transformation and conjuration.",
+      "required_points": [
+        "alter what is already present",
+        "cannot supply the substance of a meal",
+        "the boundary between transformation and conjuration"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that existing food can be altered or increased but not created.",
+          4
+        ],
+        [
+          "completeness",
+          "Places the exception at the boundary between transformation and conjuration.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-011",
+      "kind": "short_answer",
+      "material_id": "transfiguration-foundation-practice",
+      "prompt": "Explain why a transformation is mastered through repeated attempts rather than through description alone.",
+      "difficulty": "explanation",
+      "model_answer": "A transformation is mastered by repeated attempts rather than by description: a caster works on one small change until it is complete, and each harder target adds a new demand. Earlier failures teach what a complete change requires, which a description alone cannot supply.",
+      "required_points": [
+        "repeated attempts",
+        "each harder target adds a new demand",
+        "complete change requires"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that each harder target adds a new demand to the last.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains that earlier failures teach what a complete change requires.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-012",
+      "kind": "short_answer",
+      "material_id": "transfiguration-self-animagus",
+      "prompt": "Explain why an Animagus has a fixed animal form rather than choosing one at each use.",
+      "difficulty": "explanation",
+      "model_answer": "An Animagus can transform at will into an animal, but the form is fixed rather than selected each time. The ability is learned, and the animal is recognisably the same person. The fixed form is what separates the Animagus from a general shape-change.",
+      "required_points": [
+        "fixed rather than selected",
+        "recognisably the same person",
+        "general shape-change"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the Animagus form is fixed and learned.",
+          4
+        ],
+        [
+          "completeness",
+          "Contrasts the fixed animal form with a general shape-change.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-mcq-013",
+      "kind": "mcq",
+      "material_id": "transfiguration-object-match-to-needle",
+      "prompt": "A match has turned silver but is still blunt and has no eye. Why is it not a finished needle?",
+      "difficulty": "application",
+      "options": [
+        "A surface effect is achieved, but material and shape have not fully changed.",
+        "The match was too large for the spell to work on.",
+        "The caster reversed the spell before it had finished.",
+        "The wood was unsuitable for any kind of transformation.",
+        "The spell works only on targets that are already metal.",
+        "A needle must always be made from a smaller object."
+      ],
+      "correct": 0,
+      "rationale": "A complete change must replace the original material and shape, not only the surface."
+    },
+    {
+      "item_id": "transfiguration-mcq-014",
+      "kind": "mcq",
+      "material_id": "transfiguration-object-mouse-to-snuffbox",
+      "prompt": "Why does a snuffbox that still has whiskers count as incomplete?",
+      "difficulty": "comparison",
+      "options": [
+        "It keeps a trace of the animal, so the change is incomplete.",
+        "It has been made from the wrong kind of wood.",
+        "It is too pretty to be a proper snuffbox.",
+        "It has been reversed before the result was judged.",
+        "It still contains the living animal inside it.",
+        "It was made without any wand movement at all."
+      ],
+      "correct": 0,
+      "rationale": "The whisker rule makes completeness visible: a convincing outline is not the same as a finished change."
+    },
+    {
+      "item_id": "transfiguration-mcq-015",
+      "kind": "mcq",
+      "material_id": "transfiguration-object-switching-spell",
+      "prompt": "How does a Switching Spell differ from a full Transfiguration?",
+      "difficulty": "comparison",
+      "options": [
+        "It exchanges one part or property while leaving the rest of the object intact.",
+        "It changes the whole object into a new kind of thing.",
+        "It removes the object and leaves nothing behind.",
+        "It gives the object movement without changing its form.",
+        "It reverses another caster's transformation.",
+        "It creates an object where none existed before."
+      ],
+      "correct": 0,
+      "rationale": "A switch is useful because it is partial: it can remove a danger or substitute a material without creating something new."
+    },
+    {
+      "item_id": "transfiguration-mcq-016",
+      "kind": "mcq",
+      "material_id": "transfiguration-object-teapot-to-tortoise",
+      "prompt": "A tortoise produced from a teapot still has a spout where its tail should be. What does this indicate?",
+      "difficulty": "scenario",
+      "options": [
+        "The transformation has not fully reorganised the original object.",
+        "The caster chose a teapot that was too small for the spell.",
+        "The tortoise is a more complex creature than a mammal.",
+        "The caster used a switching spell by mistake.",
+        "The shell has kept the wrong pattern on its back.",
+        "The spell was cast without any incantation."
+      ],
+      "correct": 0,
+      "rationale": "Each part of a structured object must be accounted for; a spout for a tail means the change is incomplete."
+    },
+    {
+      "item_id": "transfiguration-short-013",
+      "kind": "short_answer",
+      "material_id": "transfiguration-object-inanimate",
+      "prompt": "Explain why an inanimate object is easier to check after transformation than a living creature.",
+      "difficulty": "explanation",
+      "model_answer": "A small inanimate object can be handled, compared and reversed, so the result is easy to inspect: a set of buttons either has the right shape and holes or it does not. A living target adds behaviour and movement that are harder to judge, and a damaged wand can spoil the attempt regardless of the target.",
+      "required_points": [
+        "handled, compared and reversed",
+        "right shape and holes",
+        "damaged wand"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that a small object can be handled, compared and reversed.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that the tool and technique matter as much as the target.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-014",
+      "kind": "short_answer",
+      "material_id": "transfiguration-object-match-to-needle",
+      "prompt": "Explain what a complete transformation requires, using a simple object as the example.",
+      "difficulty": "explanation",
+      "model_answer": "A complete change replaces both material and shape: wood becomes metal, and the blunt head becomes an eye and a point. A result that merely looks metallic has not become a needle, so the narrow scope makes the difference between a surface effect and a finished object easy to see.",
+      "required_points": [
+        "both material and shape",
+        "wood becomes metal",
+        "difference between a surface effect and a finished object"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains the complete change of material and shape.",
+          4
+        ],
+        [
+          "completeness",
+          "Distinguishes a surface effect from a finished object.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-015",
+      "kind": "short_answer",
+      "material_id": "transfiguration-object-mouse-to-snuffbox",
+      "prompt": "Explain why a trace of the original animal marks a transformation as incomplete.",
+      "difficulty": "explanation",
+      "model_answer": "A caster can produce a box-shaped result while leaving traces of the original animal, and those traces count against the transformation. The aim is a box that is no longer a mouse, not a box that merely hides one.",
+      "required_points": [
+        "leaving traces",
+        "no longer a mouse",
+        "merely hides one"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that leftover traces count against the change.",
+          4
+        ],
+        [
+          "completeness",
+          "Distinguishes a box that hides a mouse from a box that is no longer one.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-016",
+      "kind": "short_answer",
+      "material_id": "transfiguration-object-teapot-to-tortoise",
+      "prompt": "Explain why turning a teapot into a tortoise is harder than turning a match into a needle.",
+      "difficulty": "comparison",
+      "model_answer": "A match has little structure, while a teapot has a handle, spout, lid and pattern, and each part must be accounted for in the new creature. Because the original has more features, it is easier for a spout or a willow pattern to survive into the result.",
+      "required_points": [
+        "a teapot has a handle, spout, lid and pattern",
+        "each part must be accounted for in the new creature",
+        "a spout or a willow pattern to survive"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that a teapot has more structure than a match.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains that every part must be accounted for in the new creature.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-017",
+      "kind": "short_answer",
+      "material_id": "transfiguration-object-to-animal",
+      "prompt": "Why is a dog made from a rock judged by how it behaves as well as by how it looks?",
+      "difficulty": "application",
+      "model_answer": "The difficulty of object-to-animal work lies in the behaviour as much as the shape, because a dog that cannot run would not serve the purpose it was made for. A working creature has to act like the animal it resembles, not merely carry an animal outline.",
+      "required_points": [
+        "behaviour as much as the shape",
+        "a dog that cannot run would not serve",
+        "act like the animal it resembles"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the creature must behave like the animal it resembles.",
+          4
+        ],
+        [
+          "completeness",
+          "Notes that shape alone does not make a working creature.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-mcq-017",
+      "kind": "mcq",
+      "material_id": "transfiguration-reversal-accidental",
+      "prompt": "What marks a transformation as accidental?",
+      "difficulty": "explanation",
+      "options": [
+        "It is performed without the use of a wand.",
+        "It affects only inanimate objects.",
+        "It is reversed immediately afterwards.",
+        "It is performed on a living creature rather than an object.",
+        "It happens without a clear intention or a controlled result.",
+        "It is performed by more than one caster at once."
+      ],
+      "correct": 4,
+      "rationale": "Accidental transformation is uncontrolled, and the caster may not know how to reverse it."
+    },
+    {
+      "item_id": "transfiguration-mcq-018",
+      "kind": "mcq",
+      "material_id": "transfiguration-reversal-partial",
+      "prompt": "What do leftover features such as a spout or a willow pattern show about a transformation?",
+      "difficulty": "explanation",
+      "options": [
+        "The caster's concentration or understanding failed before the change was complete.",
+        "The original object was too old to be transformed.",
+        "The spell was reversed too soon after it was cast.",
+        "The creature was too large for the spell to hold.",
+        "The caster used the wrong kind of wand for the work.",
+        "The transformation was never intended to be complete."
+      ],
+      "correct": 0,
+      "rationale": "Leftover features are evidence of the original object and mark where the work stopped short of complete."
+    },
+    {
+      "item_id": "transfiguration-mcq-019",
+      "kind": "mcq",
+      "material_id": "transfiguration-reversal-untransfiguration",
+      "prompt": "A transformation was cast by another caster and must be undone. Which approach belongs to Untransfiguration?",
+      "difficulty": "application",
+      "options": [
+        "A reversal spell cast by a capable caster.",
+        "A Switching Spell that swaps the changed part for another.",
+        "A Vanishing Spell applied to the changed part.",
+        "A conjured remedy produced from nothing.",
+        "A repeated attempt at the original transformation.",
+        "A counterspell spoken by the victim alone."
+      ],
+      "correct": 0,
+      "rationale": "Untransfiguration is the reversal of a transformation by a capable caster."
+    },
+    {
+      "item_id": "transfiguration-mcq-020",
+      "kind": "mcq",
+      "material_id": "transfiguration-reversal-untransfiguration",
+      "prompt": "Why is Untransfiguration treated as a skill in its own right?",
+      "difficulty": "explanation",
+      "options": [
+        "Because a change that cannot be reversed is a permanent alteration.",
+        "Because only Untransfiguration can remove a conjured object.",
+        "Because it can be performed without knowing the first spell.",
+        "Because it must be cast before a new transformation.",
+        "Because it works only on creatures once inanimate.",
+        "Because it replaces the need for a restorative potion."
+      ],
+      "correct": 0,
+      "rationale": "Reversal belongs with the forward spell: safety depends on restoring the original form, so the reverse tests understanding."
+    },
+    {
+      "item_id": "transfiguration-short-018",
+      "kind": "short_answer",
+      "material_id": "transfiguration-reversal-accidental",
+      "prompt": "Explain why accidental transformations justify strict warnings about the subject.",
+      "difficulty": "explanation",
+      "model_answer": "A transformation can occur without a clear intention or a controlled result, as when a dinner plate mutates into a large mushroom and nobody knows how. An uncontrolled change may be impossible for the caster to reverse, so a caster who cannot predict a spell's result should not aim it at a person or a living creature.",
+      "required_points": [
+        "without a clear intention or a controlled result",
+        "may be impossible for the caster to reverse",
+        "a caster who cannot predict a spell's result"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that an accidental change is uncontrolled and may be irreversible.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains why an unpredictable spell should not be aimed at a living target.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-019",
+      "kind": "short_answer",
+      "material_id": "transfiguration-reversal-partial",
+      "prompt": "Explain what makes a transformation partial rather than finished.",
+      "difficulty": "explanation",
+      "model_answer": "A partial transformation has done enough to be recognisable but not enough to be complete, so features of the original object or body survive into the result. Those leftovers show where the caster's concentration or understanding failed, even when the result is still useful.",
+      "required_points": [
+        "done enough to be recognisable but not enough to be complete",
+        "features of the original object or body survive",
+        "where the caster's concentration or understanding failed"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that a partial change is recognisable but incomplete.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains that leftover features show where the work stopped short.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-020",
+      "kind": "short_answer",
+      "material_id": "transfiguration-reversal-self",
+      "prompt": "Explain why self-transfiguration must be reversible and what can go wrong if it is not.",
+      "difficulty": "application",
+      "model_answer": "Self-transfiguration is not a one-way ticket: the caster must be able to resume human form, or someone else must be able to help them. A transformation that cannot be reversed leaves the caster stuck in the changed form, so reversibility is part of the safety of the work. The return is therefore as important as the change itself.",
+      "required_points": [
+        "resume human form",
+        "someone else must be able to help"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that self-transformation must be reversible or helped.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains why reversibility is part of the safety of the work.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-021",
+      "kind": "short_answer",
+      "material_id": "transfiguration-reversal-untransfiguration",
+      "prompt": "A caster has transformed a desk into a pig. Explain what the ability to turn it back demonstrates.",
+      "difficulty": "application",
+      "model_answer": "The return is not an afterthought: a transformation that cannot be reversed is a permanent alteration, so the reverse tests whether the first spell was understood. Turning the pig back into a desk therefore shows the caster's ability to restore the original form, not merely a convincing result.",
+      "required_points": [
+        "a transformation that cannot be reversed is a permanent alteration",
+        "tests whether the first spell was understood",
+        "ability to restore the original form"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that reversal shows the first spell was understood.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains why an irreversible change is a permanent alteration.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-mcq-021",
+      "kind": "mcq",
+      "material_id": "transfiguration-self-animagus",
+      "prompt": "What defines an Animagus?",
+      "difficulty": "recall",
+      "options": [
+        "A witch or wizard who takes one fixed animal form at will.",
+        "A witch or wizard born able to change human appearance at will.",
+        "A caster who takes an animal shape once by potion.",
+        "A caster who turns other people into animals.",
+        "A creature that can imitate a human voice.",
+        "A caster who vanishes and reappears elsewhere."
+      ],
+      "correct": 0,
+      "rationale": "An Animagus transformation is a learned ability, used at will, with a fixed animal form."
+    },
+    {
+      "item_id": "transfiguration-mcq-022",
+      "kind": "mcq",
+      "material_id": "transfiguration-self-animagus-register",
+      "prompt": "What does the register of Animagi record?",
+      "difficulty": "recall",
+      "options": [
+        "The animal each Animagus becomes and their markings.",
+        "The number of transformations each Animagus has performed.",
+        "The family of each Animagus and their home.",
+        "The spells each Animagus used to learn the change.",
+        "The age at which each Animagus first transformed.",
+        "The caster who trained each Animagus in the change."
+      ],
+      "correct": 0,
+      "rationale": "The register records the animal form and markings, so a sighting of an animal can be checked against a known person."
+    },
+    {
+      "item_id": "transfiguration-mcq-023",
+      "kind": "mcq",
+      "material_id": "transfiguration-self-animagus-vs-metamorphmagus",
+      "prompt": "Which statement separates a Metamorphmagus from an Animagus?",
+      "difficulty": "comparison",
+      "options": [
+        "The Metamorphmagus has inborn control of appearance; the Animagus learns one animal form.",
+        "The Metamorphmagus learns one animal form; the Animagus has inborn control.",
+        "The Metamorphmagus must be registered; the Animagus needs no record.",
+        "The Metamorphmagus becomes an animal; the Animagus changes colour only.",
+        "The Metamorphmagus needs a potion; the Animagus needs only a wand.",
+        "The Metamorphmagus takes several animal forms; the Animagus has one."
+      ],
+      "correct": 0,
+      "rationale": "One ability is inborn and changes human appearance; the other is learned and takes a single animal species."
+    },
+    {
+      "item_id": "transfiguration-mcq-024",
+      "kind": "mcq",
+      "material_id": "transfiguration-vanishing-complexity",
+      "prompt": "Why is vanishing a mouse harder than vanishing a snail?",
+      "difficulty": "explanation",
+      "options": [
+        "The mouse is a mammal and presents a more complex living target.",
+        "The mouse is always larger than a snail.",
+        "The snail is protected by its shell.",
+        "The mouse is already invisible.",
+        "The snail is already dead.",
+        "Both present exactly the same difficulty."
+      ],
+      "correct": 0,
+      "rationale": "Complexity, not size alone, sets the difficulty: a mammal is harder to hold in the spell than an invertebrate."
+    },
+    {
+      "item_id": "transfiguration-mcq-025",
+      "kind": "mcq",
+      "material_id": "transfiguration-self-transformation-risk",
+      "prompt": "A self-transformation leaves a caster with a shark's head but lets them swim and bite through ropes. What does the case show?",
+      "difficulty": "scenario",
+      "options": [
+        "A partial self-change can still work, so a working result may be unfinished.",
+        "A shark's head is a complete change with no drawbacks.",
+        "Self-transformation always fails when the caster is in water.",
+        "A damaged wand stopped the change before it finished.",
+        "A partial change can never be reversed by any means.",
+        "A shark's head is easier to produce than a full shark body."
+      ],
+      "correct": 0,
+      "rationale": "The case shows the risk: a partial self-change can function well enough to tempt the caster to stop too early."
+    },
+    {
+      "item_id": "transfiguration-short-022",
+      "kind": "short_answer",
+      "material_id": "transfiguration-self-animagus-risk",
+      "prompt": "Explain why becoming an Animagus is described as slow and closely watched.",
+      "difficulty": "explanation",
+      "model_answer": "The transformation can go horribly wrong, and working out how to do it has taken skilled casters the best part of three years. Because a failed change is dangerous and an animal form can be used to escape notice, the process is learned slowly and under close watch.",
+      "required_points": [
+        "can go horribly wrong",
+        "the best part of three years",
+        "learned slowly and under close watch"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the process can go badly wrong.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains why the process is slow and watched.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-023",
+      "kind": "short_answer",
+      "material_id": "transfiguration-self-human-transfiguration",
+      "prompt": "Explain why a small cosmetic self-change is safer than a full-body self-transformation.",
+      "difficulty": "explanation",
+      "model_answer": "A mistake on an object can be reversed or discarded, while a mistake on a body may leave a permanent feature. A small cosmetic change limits the damage if the caster loses control. That is why self-transformation starts with a feature that can be seen and corrected before it attempts a full change.",
+      "required_points": [
+        "permanent feature",
+        "cosmetic"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains why a mistake on a body is more serious than one on an object.",
+          4
+        ],
+        [
+          "completeness",
+          "Explains why a small cosmetic change limits the damage.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-024",
+      "kind": "short_answer",
+      "material_id": "transfiguration-self-metamorphmagus",
+      "prompt": "Explain what a Metamorphmagus can do and why the ability is not learned.",
+      "difficulty": "explanation",
+      "model_answer": "A Metamorphmagus can change their appearance at will without a spell, altering how they look rather than taking an animal form. The gift is innate, since Metamorphmagi are born rather than made, so copying the visible result will not give another caster the ability.",
+      "required_points": [
+        "change their appearance at will without a spell",
+        "Metamorphmagi are born rather than made",
+        "copying the visible result"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the change is inborn and needs no spell.",
+          4
+        ],
+        [
+          "completeness",
+          "Distinguishes it from a learned animal transformation.",
+          4
+        ]
+      ]
+    },
+    {
+      "item_id": "transfiguration-short-025",
+      "kind": "short_answer",
+      "material_id": "transfiguration-foundation-concentration",
+      "prompt": "Explain why concentration matters when a transformation goes wrong.",
+      "difficulty": "application",
+      "model_answer": "Transfiguration depends on holding the intended result steadily while the spell takes effect. A distracted attempt produces a partial result: the target may look slightly changed but not complete the change. Knowing the spell is not enough; the caster must sustain the transformation long enough for it to finish.",
+      "required_points": [
+        "holding the intended result steadily",
+        "partial result",
+        "sustain the transformation"
+      ],
+      "rubric": [
+        [
+          "correctness",
+          "Explains that the caster must hold the intended result steadily.",
+          4
+        ],
+        [
+          "completeness",
+          "Uses the partial result to show why concentration cannot be replaced by knowing the spell.",
+          4
+        ]
+      ]
+    }
+  ]
+}

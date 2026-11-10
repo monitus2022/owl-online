@@ -7,7 +7,7 @@ O.W.L. Online - a grounded, agentic RAG application. Read this before making cha
 A retrieval-augmented question-answering engine with two surfaces: a chat that
 answers, sets practice and gives formative feedback, and a static exam bank with
 offline generation and hybrid grading. All five O.W.L. packs are published at
-1.0.0, and the DADA, Charms and Potions exam banks are published at 1.0.0; the professor
+1.0.0, and the DADA, Charms, Potions and Transfiguration exam banks are published at 1.0.0; the professor
 persona is live behind `OWL_PERSONA`; lesson mode is live behind `OWL_LESSON_MODE` with a
 labelled corpus fallback when the pack is thin; hybrid grading is built, the bank
 eval and judge calibration are recorded, and served papers are live; attempt

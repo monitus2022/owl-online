@@ -78,7 +78,7 @@ export const SUBJECTS: Subject[] = [
     professorVariant: "witch-hat",
     crest: "butterfly",
     personaState: "live",
-    status: "soon",
+    status: "open",
     blurb: "Switches, anomalies and the laws of Gamp.",
   },
   {
