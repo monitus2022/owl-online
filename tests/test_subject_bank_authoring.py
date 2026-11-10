@@ -8,7 +8,11 @@ from pathlib import Path
 import pytest
 
 import scripts.author_subject_bank as bank_authoring
-from scripts.author_subject_bank import _check_prose, _longest_common_run
+from scripts.author_subject_bank import (
+    _check_prose,
+    _check_quote_overlap,
+    _longest_common_run,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 BANK_DIR = ROOT / "config" / "banks"
@@ -22,6 +26,26 @@ def test_batches_validate() -> None:
 
 def test_longest_common_run() -> None:
     assert _longest_common_run("a b c d e", "x c d e y") == 3
+
+
+def test_quote_overlap_gate_rejects_copied_run_and_missing_chunk() -> None:
+    from types import SimpleNamespace
+
+    item = SimpleNamespace(
+        prompt="alpha beta gamma delta epsilon zeta eta",
+        model_answer="",
+        rationale="",
+        options=(),
+        rubric=(),
+        source_refs=(SimpleNamespace(chunk_id="b1-c01-0001"),),
+    )
+    chunk = SimpleNamespace(text="alpha beta gamma delta epsilon zeta eta theta")
+    assert _check_quote_overlap([item], {"b1-c01-0001": chunk})
+    assert _check_quote_overlap([item], {})
+    item.prompt = "alpha beta gamma delta epsilon zeta"
+    assert not _check_quote_overlap(
+        [item], {"b1-c01-0001": chunk}, limit=7
+    )
 
 
 def _batches() -> list[tuple[str, dict]]:

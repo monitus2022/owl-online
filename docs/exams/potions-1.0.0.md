@@ -148,3 +148,21 @@
 - Errors: 0
 - Warnings: 0
 - Detailed messages stay in the CLI output; this record is structure only.
+
+## Evaluation
+
+- Run id `exam-20261110-potions-1.0.0`; record
+  `docs/runs/2026-11-10-213-potions-bank-eval.md`.
+- Near-duplicates: max token Jaccard 0.4348 (limit 0.75), max embedding cosine
+  0.8826 (limit 0.90).
+- Independent verifier: 25/25 MCQ keys agree, 0 ambiguities; 25/25 golden
+  answers accepted, 0 missing required points.
+- Option lengths: correct option strictly longest in 56.0% of MCQs, mean gap
+  0.76 words.
+
+## Review
+
+- The owner reviewed the item set and approved the final concept-only bank.
+- The read-only review found story/lesson framing, cross-bank duplicates and
+  verbatim corpus runs. All were fixed, including a full-chunk overlap gate and
+  paraphrased item prose; the final pass is clean.
