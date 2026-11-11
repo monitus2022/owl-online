@@ -533,3 +533,36 @@ def test_education_cues_do_not_steal_exam_synonyms(question):
     decision = contract_decision(question, subject="dada", requested_mode="lesson")
     assert decision.contract == "policy"
     assert "persona:professor.education" not in decision.fact_ids
+
+
+def test_meta_question_about_the_exam_is_policy_not_practice():
+    from app.agent.router import contract_decision
+
+    assert (
+        classify(
+            "Can I ask a question about exam?",
+            requested_mode="lesson",
+            persona=True,
+        )
+        == "policy"
+    )
+    decision = contract_decision(
+        "Can I ask a question about exam?", subject="dada", requested_mode="lesson"
+    )
+    assert decision.contract == "policy"
+    assert (
+        classify(
+            "Can I ask a question about the Marauder's Map?",
+            requested_mode="lesson",
+            persona=True,
+        )
+        in {"lesson", "answer"}
+    )
+    assert (
+        classify(
+            "Ask me a question about the Marauder's Map",
+            requested_mode="lesson",
+            persona=True,
+        )
+        == "practice"
+    )

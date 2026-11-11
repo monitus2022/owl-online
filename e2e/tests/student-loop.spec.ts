@@ -73,3 +73,10 @@ test("the education paraphrase answers from the persona fact", async ({
   await expect(page.getByText("I studied at Hogwarts")).toBeVisible();
   await expect(page.getByText("persona:professor.education")).toBeVisible();
 });
+
+test("a meta question about the exam is refused", async ({ page }) => {
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("Can I ask a question about exam?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByText(/examination/)).toBeVisible();
+});

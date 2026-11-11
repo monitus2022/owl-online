@@ -41,7 +41,7 @@ _FEEDBACK_NOUN_REQUEST = re.compile(
 )
 _PRACTICE_REQUEST = re.compile(
     r"\b(generate|create|make|write|draft|compose|produce|build|design|"
-    r"give|ask|quiz|test)\b[^.?!]*\b"
+    r"give|quiz|test|ask me)\b[^.?!]*\b"
     r"(question|questions|practice|exercise|exercises|drill|drills|"
     r"quiz|quizzes|exam|exams|test|tests|worksheet|worksheets)\b",
     re.IGNORECASE,
@@ -55,8 +55,9 @@ _PRACTICE_PHRASE = re.compile(
 _PRACTICE_EXEMPT = re.compile(
     r"\b(generate|create|make|write|draft|compose|produce|build|design)\b"
     r"[^.?!]*\b(practice|exercises?|drills?|quiz|quizzes|worksheets?)\b"
-    r"|\b(generate|create|make|give|ask)\b[^.?!]*\b"
+    r"|\b(generate|create|make|give)\b[^.?!]*\b"
     r"(?:a|an|some|one|two|three|four|five|\d+)\b[^.?!]*\bquestions?\b"
+    r"|\bask me\b[^.?!]*\bquestions?\b"
     r"|\bquiz (?:me|my knowledge)\b",
     re.IGNORECASE,
 )
