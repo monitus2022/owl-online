@@ -499,3 +499,20 @@ def test_education_paraphrases_route_to_the_persona_fact(question):
     )
     assert update["mode"] == "fact"
     assert update["fact_ids"] == ["persona:professor.education"]
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Did you attend the school exam?",
+        "Did you study at school for the exam?",
+        "Did you study for the exam?",
+    ],
+)
+def test_education_cues_do_not_steal_exam_questions(question):
+    from app.agent.router import contract_decision
+
+    decision = contract_decision(question, subject="dada", requested_mode="lesson")
+    assert decision.contract == "policy"
+    assert "persona:professor.education" not in decision.fact_ids
+    assert classify(question, requested_mode="lesson", persona=True) == "policy"

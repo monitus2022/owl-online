@@ -241,8 +241,14 @@ _POLICY_PATTERNS = (
         re.IGNORECASE,
     ),
     re.compile(
-        r"\b(did|do|will|would|can|could) you (?:go|going|sit|take|see) "
-        r"(?:to |for )?(?:the )?(?:exam|test|assessment)\b",
+        r"\b(did|do|will|would|can|could) you "
+        r"(?:go|going|sit|take|see|attend) "
+        r"(?:to |for )?(?:the )?(?:\w+ )?(?:exam|test|assessment)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(did|do|will|would|can|could) you (?:study|learn|train)\b.*"
+        r"\b(?:exam|test|assessment)\b",
         re.IGNORECASE,
     ),
 )
@@ -292,7 +298,8 @@ _EDUCATION = re.compile(
     r"were you (?:a student )?at hogwarts|"
     r"have you studied (?:at|in) hogwarts|"
     r"study at hogwarts|train as a young wizard|"
-    r"where did you train (?:as a (?:young )?(?:wizard|witch)|in magic))\b",
+    r"where did you train (?:as a (?:young )?(?:wizard|witch)|in magic))\b"
+    r"(?!.*\b(?:exam|test|assessment|paper|mark scheme)\b)",
     re.IGNORECASE,
 )
 _TEACHING_RECORD = re.compile(
