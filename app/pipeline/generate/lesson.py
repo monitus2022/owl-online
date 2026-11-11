@@ -459,6 +459,7 @@ def ground_lesson_answer(
         for ref in material.source_refs:
             if ref.chunk_id not in source_ids:
                 source_ids.append(ref.chunk_id)
+            typed.append(f"lesson:{ref.chunk_id}#{ref.chunk_id}")
     typed.extend(f"lesson:{chunk_id}#{chunk_id}" for chunk_id in cited_chunks)
     return AskResult(
         answer=cleaned,

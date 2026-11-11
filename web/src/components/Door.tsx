@@ -15,10 +15,10 @@ export function Door({ subject }: { subject: Subject }) {
         style={{ "--accent": subject.accent } as CSSProperties}
         aria-label={
           closed
-            ? `${subject.name} — the department is not yet open`
+            ? `${subject.plaque} ${subject.name} — the department is not yet open`
             : subject.professor === "Professor not yet appointed"
-              ? `Enter ${subject.name}`
-              : `Enter ${subject.name}, taught by ${subject.professor}`
+              ? `Enter ${subject.plaque} ${subject.name}`
+              : `Enter ${subject.plaque} ${subject.name}, taught by ${subject.professor}`
         }
       >
         <svg viewBox="0 0 120 200" className="door-art" aria-hidden="true">
@@ -38,8 +38,8 @@ export function Door({ subject }: { subject: Subject }) {
           </text>
           <circle className="door-handle" cx="88" cy="128" r="5" />
           <circle className="door-handle" cx="32" cy="128" r="5" />
-        </svg>
-        <h3 className="door-name">{subject.name}</h3>
+        </svg>{" "}
+        <h2 className="door-name">{subject.name}</h2>
       </Link>
       <p className="door-status">
         {closed ? "Opens soon" : subject.professor}
