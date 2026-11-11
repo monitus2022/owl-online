@@ -63,11 +63,14 @@ _PRACTICE_EXEMPT = re.compile(
     r"|\bquiz (?:me|my knowledge)\b",
     re.IGNORECASE,
 )
-# A practice request that also asks for the format, contents or schedule is a
-# policy question, not a practice request, even when the wording matches the
-# practice cue.
+# A request for the format of a practice exam/test/paper is a policy question,
+# not a practice request. A practice request that merely mentions the format as
+# a topic ("questions about the format") is still practice.
 _PRACTICE_FORMAT_GUARD = re.compile(
-    r"\b(format|contents?|schedule|date)\b", re.IGNORECASE
+    r"\b(?:give me\s+)?(?:a\s+|an\s+|some\s+)?practice\s+"
+    r"(?:exam|test|paper)\s+(?:question\s+)?"
+    r"(?:format|contents?|schedule|date)\b",
+    re.IGNORECASE,
 )
 # A curriculum question with a book context is a book question, not a syllabus
 # question. The guard keeps "What is the DADA curriculum at Hogwarts?" on the

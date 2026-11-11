@@ -597,3 +597,9 @@ def test_practice_exam_variants_stay_practice_but_the_format_is_policy():
         "Give me a practice test question format",
     ):
         assert classify(question, requested_mode="lesson", persona=True) == "policy", question
+    for question in (
+        "Give me a practice exam questions about the format",
+        "Ask me a question about the exam format",
+        "Generate five exam questions about the exam format",
+    ):
+        assert classify(question, requested_mode="lesson", persona=True) == "practice", question
