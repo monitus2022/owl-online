@@ -213,7 +213,7 @@ flowchart TD
 ## API surface
 
 The served contract is documented in `docs/api.md`: the current `/` JSON
-descriptor, `/health`, `/v1/chat`, `/v1/chat/stream`, `/v1/subjects` and exam serving
+descriptor, `/health`, `/v1/chat`, `/v1/chat/stream`, `/v1/subjects`, `/v1/metrics` and exam serving
 routes, the SSE event schema, the error shapes, and the remaining planned `/v1`
 surface for persona only. The split is by purpose, not by subject: a subject is request data,
 chat intents stay internal, and the exam bank and grading are separate

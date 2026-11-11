@@ -41,6 +41,7 @@ restart and contain no prompt, answer or session id:
 ```json
 {
   "window": "process lifetime",
+  "updated_at": "2026-11-11T00:00:00Z",
   "requests": 12,
   "sample_size": 12,
   "p50_latency_ms": 840.2,
@@ -54,9 +55,11 @@ restart and contain no prompt, answer or session id:
 }
 ```
 
-The rolling latency/cost sample is bounded at 1000 requests. The per-request
-usage log remains the detailed record; this endpoint is the aggregate view for
-the dashboard (#33).
+The rolling latency sample is bounded at 1000 requests; the counters and
+`total_cost_usd` are lifetime totals. Failed or timed-out requests are not
+counted; the endpoint reports completed chat responses. The per-request usage
+log remains the detailed record; this endpoint is the aggregate view for the
+dashboard (#33).
 
 ### `GET /`
 

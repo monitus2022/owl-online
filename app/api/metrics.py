@@ -28,12 +28,12 @@ def _percentile(values: list[float], fraction: float) -> float:
 
 
 class Metrics:
-    """Bounded rolling latency/cost samples plus lifetime counters."""
+    """Bounded rolling latency samples plus lifetime counters and cost."""
 
     def __init__(self, sample_size: int = 1000) -> None:
         self._lock = Lock()
         self._latencies: deque[float] = deque(maxlen=sample_size)
-        self._costs: deque[float] = deque(maxlen=sample_size)
+        self._total_cost = 0.0
         self._requests = 0
         self._cache_hits = 0
         self._abstentions = 0
@@ -55,7 +55,7 @@ class Metrics:
         with self._lock:
             self._requests += 1
             self._latencies.append(float(latency_ms))
-            self._costs.append(float(cost_usd))
+            self._total_cost += float(cost_usd)
             if cache_hit:
                 self._cache_hits += 1
             if abstained:
@@ -69,7 +69,6 @@ class Metrics:
     def snapshot(self) -> dict[str, object]:
         with self._lock:
             latencies = list(self._latencies)
-            costs = list(self._costs)
             return {
                 "window": "process lifetime",
                 "updated_at": datetime.now(UTC)
@@ -80,7 +79,7 @@ class Metrics:
                 "sample_size": len(latencies),
                 "p50_latency_ms": round(_percentile(latencies, 0.50), 2),
                 "p95_latency_ms": round(_percentile(latencies, 0.95), 2),
-                "total_cost_usd": round(sum(costs), 6),
+                "total_cost_usd": round(self._total_cost, 6),
                 "cache_hits": self._cache_hits,
                 "abstentions": self._abstentions,
                 "refusals": self._refusals,

@@ -1448,5 +1448,9 @@ def test_metrics_report_latency_and_cost():
     assert metrics["p50_latency_ms"] >= 0
     assert metrics["p95_latency_ms"] >= metrics["p50_latency_ms"]
     assert metrics["total_cost_usd"] >= 0
+    assert metrics["cache_hits"] >= 0
+    assert metrics["abstentions"] >= 0
+    assert metrics["refusals"] >= 0
+    assert metrics["updated_at"].endswith("Z")
     assert metrics["by_intent"]["answer"] >= 1
     assert metrics["by_subject"]["dada"] >= 1
