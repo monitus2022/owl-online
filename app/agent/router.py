@@ -210,7 +210,7 @@ def meta_topic(question: str) -> str | None:
 POLICY_TOPICS = frozenset({"exam", "syllabus", "grading"})
 _POLICY_PATTERNS = (
     re.compile(
-        r"\b(exam|examination|test(?:ed|ing)?|assessment|paper|examin(?:ed|able))\b"
+        r"\b(exams?|examinations?|test(?:s|ed|ing)?|assessments?|papers?|examin(?:ed|able))\b"
         r".*\b(what|how|when|which|format|question|topic|date|long|many|"
         r"pass|score|mark|grade|prediction|examiner|invigilator|answer|key|"
         r"scheme|criteria|rubric|boundary|cut-off|outstanding|essay|practical|"
@@ -219,11 +219,11 @@ _POLICY_PATTERNS = (
     ),
     re.compile(
         r"\b(what|how|when|which|tell|show|give|can|could|will)\b.*"
-        r"\b(exam|examination|test(?:ed|ing)?|assessment|paper|examin(?:ed|able))\b",
+        r"\b(exams?|examinations?|test(?:s|ed|ing)?|assessments?|papers?|examin(?:ed|able))\b",
         re.IGNORECASE,
     ),
     re.compile(
-        r"\b(syllabus|assessment|mark scheme|marking scheme|answer key|model answer|"
+        r"\b(syllabus|assessments?|mark schemes?|marking schemes?|answer keys?|model answers?|"
         r"examiner|invigilators?|grade boundaries|pass mark|cut-off|assessable|"
         r"examinable|scoring rule|marking criteria|grading rubric|exam board|"
         r"exam setter|exam answers|O and (?:an? )?E|panel.*grade|grade.*panel)\b",
@@ -249,7 +249,11 @@ _POLICY_PATTERNS = (
     ),
     re.compile(
         r"\b(did|do|will|would|can|could) you (?:study|learn|train)\b.*"
-        r"\b(?:exam|test|assessment)\b",
+        r"\b(?:exams?|tests?|assessments?)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:ask|tell|show|give) me (?:about|on) (?:the )?exams?\b",
         re.IGNORECASE,
     ),
 )
@@ -378,7 +382,7 @@ def _policy_topic(question: str) -> str:
     topic = meta_topic(question)
     if topic in POLICY_TOPICS:
         return topic
-    if re.search(r"\b(syllabus|curriculum|assessment)\b", question, re.IGNORECASE):
+    if re.search(r"\b(syllabus|curriculum|assessments?)\b", question, re.IGNORECASE):
         return "syllabus"
     if re.search(r"\b(grade|mark|score|examiner|invigilator)\b", question, re.IGNORECASE):
         return "grading"
