@@ -56,7 +56,7 @@ imports them. The runtime image installs base only (`uv sync
 
 Layout:
 
-- `app/api/` - FastAPI HTTP surface (`/v1/chat`, `/v1/chat/stream` with deprecated `/ask` aliases, `/v1/subjects`, and the `/v1/exams` and `/v1/attempts` serving routes)
+- `app/api/` - FastAPI HTTP surface (`/v1/chat`, `/v1/chat/stream` with deprecated `/ask` aliases, `/v1/subjects`, `/v1/metrics`, and the `/v1/exams` and `/v1/attempts` serving routes)
 - `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam build is planned; `ingest/lexicon/` holds the hp-lexicon canon-index harvester (spike grammar and parsers plus the #126 discovery/fetch/harvest modules)
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
 - `app/agent/` - LangGraph chat graph, node functions, state (V2); the policy, closed-fact and teaching gates plus the typed citation routes; lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`

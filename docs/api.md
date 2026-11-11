@@ -17,6 +17,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 | `GET` | `/health` | liveness; returns `{"status": "ok"}` |
 | `GET` | `/` | JSON service descriptor; the API host does not serve a chat page |
 | `GET` | `/v1/subjects` | published subject packs plus the `lesson`, `lesson_subjects`, `lesson_fallback`, `persona` and `persona_subjects` flags |
+| `GET` | `/v1/metrics` | process-local p50/p95 latency, cost and refusal counters |
 | `POST` | `/v1/chat` | one-shot grounded answer |
 | `POST` | `/v1/chat/stream` | chat over server-sent events |
 | `POST` | `/ask` | deprecated alias of `/v1/chat` |
@@ -31,6 +32,34 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 The API host serves only the API. The academy frontend is the Cloudflare Pages
 build; `GET /` is a small JSON descriptor, not a chat page. The old single-file
 chat page was removed so the API origin cannot be used as a second chat surface.
+
+### `GET /v1/metrics`
+
+Process-local aggregate metrics for the chat surface. The counters reset on
+restart and contain no prompt, answer or session id:
+
+```json
+{
+  "window": "process lifetime",
+  "updated_at": "2026-11-11T00:00:00Z",
+  "requests": 12,
+  "sample_size": 12,
+  "p50_latency_ms": 840.2,
+  "p95_latency_ms": 2140.5,
+  "total_cost_usd": 0.003412,
+  "cache_hits": 3,
+  "abstentions": 1,
+  "refusals": 2,
+  "by_intent": {"answer": 8, "lesson": 2, "policy": 1, "abstain": 1},
+  "by_subject": {"dada": 12}
+}
+```
+
+The rolling latency sample is bounded at 1000 requests; the counters and
+`total_cost_usd` are lifetime totals. Failed or timed-out requests are not
+counted; the endpoint reports completed chat responses. The per-request usage
+log remains the detailed record; this endpoint is the aggregate view for the
+dashboard (#33).
 
 ### `GET /`
 

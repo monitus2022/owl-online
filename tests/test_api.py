@@ -1437,3 +1437,20 @@ def test_v1_chat_stream_lesson_mode():
     assert modes[0]["mode"] == "lesson"
     assert finals[0]["scope"] == "in_pack"
     assert finals[0]["material_citations"] == ["dada-test-material"]
+
+
+def test_metrics_report_latency_and_cost():
+    with _client() as client:
+        client.post("/v1/chat", json={"question": "Who?"})
+        metrics = client.get("/v1/metrics").json()
+    assert metrics["requests"] >= 1
+    assert metrics["sample_size"] >= 1
+    assert metrics["p50_latency_ms"] >= 0
+    assert metrics["p95_latency_ms"] >= metrics["p50_latency_ms"]
+    assert metrics["total_cost_usd"] >= 0
+    assert metrics["cache_hits"] >= 0
+    assert metrics["abstentions"] >= 0
+    assert metrics["refusals"] >= 0
+    assert metrics["updated_at"].endswith("Z")
+    assert metrics["by_intent"]["answer"] >= 1
+    assert metrics["by_subject"]["dada"] >= 1

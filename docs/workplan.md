@@ -603,7 +603,7 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #19/#33 | Cost and latency instrumentation and a minimal dashboard | V3 - Product |
+| #33 | Minimal dashboard over `/v1/metrics` | V3 - Product |
 | #128 | Pack wiring: reference prefill and coverage maintenance | V3 - Product |
 
 ### Next - complete the loop
@@ -657,6 +657,7 @@ persists exam attempts and chat history.
 | Privacy and retention | #180 |
 | Browser E2E and accessibility | #179 |
 | Versioned chat aliases and OpenAPI | #181 |
+| Latency and cost metrics | #19 |
 | Open trackers (work delivered, ticket open) | #178, #187, #38-#42, #182 |
 
 ## Backlog policy
@@ -668,7 +669,7 @@ persists exam attempts and chat history.
 - An active ticket needs a `Done when` and a verification step.
 
 The #216 epic is delivered; the active work is #19/#33 and #128. #30 follows.
-The remaining Next items are #35/#44. On the pack
+The remaining Now items are #33 and #128; Next is #35/#44. On the pack
 line, the canon index is harvested (#125, #126) and resolved (#127 closed);
 #128 carries reference prefill and coverage maintenance. The #87 schema,
 validator and all five 1.0.0 packs are delivered. #16, #120, #170, #172, #174
