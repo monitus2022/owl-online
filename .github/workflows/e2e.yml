@@ -38,17 +38,9 @@ jobs:
 
       - name: Install Chromium
         working-directory: e2e
-        run: |
-          # The apt mirror is occasionally flaky on hosted runners; retry the
-          # dependency install instead of failing the whole E2E check.
-          for attempt in 1 2 3; do
-            if npx playwright install --with-deps chromium; then
-              exit 0
-            fi
-            echo "Chromium install attempt $attempt failed; retrying"
-            sleep 15
-          done
-          exit 1
+        # The hosted runner already carries the browser libraries; installing
+        # only the browser avoids the flaky apt mirror.
+        run: npx playwright install chromium
 
       - name: Run the student loop and axe checks
         working-directory: e2e
