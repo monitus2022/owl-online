@@ -63,3 +63,13 @@ test("the venue stays open when the subjects API is unreachable", async ({
     "reviewed notes are not loaded",
   );
 });
+
+test("the education paraphrase answers from the persona fact", async ({
+  page,
+}) => {
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("did you study in hogwarts?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByText("I studied at Hogwarts")).toBeVisible();
+  await expect(page.getByText("persona:professor.education")).toBeVisible();
+});

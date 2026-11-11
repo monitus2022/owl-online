@@ -286,6 +286,11 @@ _EDUCATION = re.compile(
     r"where did you study|which academy did you attend|in your youth|"
     r"when you were a lad|where did you learn magic|"
     r"did you go to (?:hogwarts|school|the school|a wizarding school)|"
+    r"did you (?:study|learn|train) (?:at|in) "
+    r"(?:hogwarts|school|the school|a wizarding school)|"
+    r"did you attend (?:hogwarts|school|the school)|"
+    r"were you (?:a student )?at hogwarts|"
+    r"have you studied (?:at|in) hogwarts|"
     r"study at hogwarts|train as a young wizard|"
     r"where did you train (?:as a (?:young )?(?:wizard|witch)|in magic))\b",
     re.IGNORECASE,

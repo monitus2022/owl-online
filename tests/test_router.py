@@ -476,3 +476,26 @@ def test_exam_room_and_book_medical_asks_stay_on_the_book_path():
         )
         == "lesson"
     )
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "did you study in hogwarts?",
+        "did you attend hogwarts?",
+        "were you a student at hogwarts?",
+        "have you studied at hogwarts?",
+    ],
+)
+def test_education_paraphrases_route_to_the_persona_fact(question):
+    update = route(
+        {
+            "question": question,
+            "requested_mode": "lesson",
+            "subject": "dada",
+            "persona_enabled": True,
+        },
+        persona=True,
+    )
+    assert update["mode"] == "fact"
+    assert update["fact_ids"] == ["persona:professor.education"]
