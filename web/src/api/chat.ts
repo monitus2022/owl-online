@@ -1,7 +1,7 @@
 import { apiBase } from "./base";
 import type { PersonaState } from "../data/subjects";
 
-// Client for POST /ask/stream, the SSE contract in docs/api.md. The server
+// Client for POST /v1/chat/stream, the SSE contract in docs/api.md. The server
 // routes answer/practice/feedback itself, so the UI sends one question and
 // reads the `mode` event to learn which route it took. Status copy
 // addresses the professor as the addressee in every state; only the 503
@@ -53,7 +53,7 @@ export async function* askStream(
 ): AsyncGenerator<StreamEvent> {
   let response: Response;
   try {
-    response = await fetch(`${apiBase()}/ask/stream`, {
+    response = await fetch(`${apiBase()}/v1/chat/stream`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

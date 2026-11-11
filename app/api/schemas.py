@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.grading import Band, QuestionGrade
 from app.knowledge.packs import PackSummary
@@ -10,6 +10,14 @@ from app.knowledge.packs import PackSummary
 
 class AskRequest(BaseModel):
     """A single revision question."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {"question": "What is a Boggart?", "subject": "dada"}
+            ]
+        }
+    )
 
     question: str = Field(min_length=1, max_length=1000)
     # The department the question is asked in. Empty means the exam/persona
@@ -27,6 +35,18 @@ class AskRequest(BaseModel):
 
 class StreamRequest(AskRequest):
     """A question plus an optional chat-intent override and answer to review."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "question": "What is a Boggart?",
+                    "subject": "dada",
+                    "mode": "lesson",
+                }
+            ]
+        }
+    )
 
     mode: Literal["auto", "answer", "practice", "feedback", "lesson"] = "auto"
     student_answer: str | None = Field(default=None, max_length=6000)
@@ -48,6 +68,24 @@ class StreamRequest(AskRequest):
 
 class AskResponse(BaseModel):
     """A grounded answer with the book chunk ids and lore ids it cites."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "answer": "A Boggart takes the shape of what the watcher fears most.",
+                    "citations": ["b1-c01-0000"],
+                    "abstained": False,
+                    "lore_citations": [],
+                    "material_citations": [],
+                    "typed_citations": [
+                        "lesson:b1-c01-0000#b1-c01-0000"
+                    ],
+                    "citation_errors": [],
+                }
+            ]
+        }
+    )
 
     answer: str
     citations: list[str]

@@ -213,7 +213,7 @@ flowchart TD
 ## API surface
 
 The served contract is documented in `docs/api.md`: the current `/` JSON
-descriptor, `/health`, `/ask`, `/ask/stream`, `/v1/subjects` and exam serving
+descriptor, `/health`, `/v1/chat`, `/v1/chat/stream`, `/v1/subjects` and exam serving
 routes, the SSE event schema, the error shapes, and the remaining planned `/v1`
 surface for chat and persona. The split is by purpose, not by subject: a subject is request data,
 chat intents stay internal, and the exam bank and grading are separate
@@ -224,7 +224,7 @@ already ships as its own static build.
 
 `web/` is a React + Vite single-page app, built to static assets and served on
 Cloudflare Pages, separate from the API container (docs/deploy.md). Only the
-venue chat calls `POST /ask/stream`; the gate and the cloister are static over
+venue chat calls `POST /v1/chat/stream`; the gate and the cloister are static over
 the session-scoped result store. The build imports no Python, renders no model
 output as HTML, and runs no request-time generation.
 Two interfaces keep the boundary between the UI and the services:
@@ -249,7 +249,7 @@ every pull request and push to main, and deploy-preview origins are covered by
 the API's CORS origin regex. `web/README.md` carries the component map and the
 honesty rules.
 
-## Request flow: POST /ask
+## Request flow: POST /v1/chat
 
 ```mermaid
 sequenceDiagram
@@ -262,7 +262,7 @@ sequenceDiagram
   participant L as LoreStore
   participant LLM as OpenRouterLlm
 
-  C->>API: POST /ask {question, subject}
+  C->>API: POST /v1/chat {question, subject}
   API->>API: resolve the subject card; cache.get (hit -> return)
   API->>API: session cookie, limiter.admit (429 / 503)
   API->>R: get_retriever / get_llm
@@ -304,8 +304,8 @@ sequenceDiagram
 ```
 
 One deadline covers the whole request: `OWL_ASK_TIMEOUT_S` (default 30 s) wraps
-retrieve plus generate. On expiry `/ask` returns 504 with `{error, request_id}`
-and logs the stage that was running; `/ask/stream` is not bounded, because a
+retrieve plus generate. On expiry `/v1/chat` returns 504 with `{error, request_id}`
+and logs the stage that was running; `/v1/chat/stream` is not bounded, because a
 legitimate stream can outlive it. The deadline frees the response, not the
 worker: a provider call already running in a thread is not cancellable, so a
 timed-out request can keep its thread busy until the client's own timeout.
@@ -353,9 +353,9 @@ computed from the lines that survive binding, so a book whose only line was
 dropped is reported as having no evidence rather than being claimed as covered. This path does not use the single-pass retry: a
 synthesis with no supported citation abstains instead of retrying. A provider or
 per-book retrieval failure is not converted to no evidence; it propagates and
-`/ask` returns 502.
+`/v1/chat` returns 502.
 
-## Request flow: POST /ask/stream
+## Request flow: POST /v1/chat/stream
 
 ```mermaid
 sequenceDiagram
@@ -366,7 +366,7 @@ sequenceDiagram
   participant RR as Reranker
   participant LLM as Llm adapter
 
-  C->>API: POST /ask/stream {question, subject, mode, student_answer}
+  C->>API: POST /v1/chat/stream {question, subject, mode, student_answer}
   API->>API: resolve the subject card; lesson gate for that subject
   API->>API: cache.get when the intent is answer
   API->>API: limiter.admit (429 / 503)
@@ -404,7 +404,7 @@ SSE events:
 | `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
-`/ask/stream` uses the compiled graph from `app/agent/`. The router is
+`/v1/chat/stream` uses the compiled graph from `app/agent/`. The router is
 deterministic and applies the policy, closed-fact and teaching gates before any
 retrieval. An explicit `answer`, `practice` or `feedback` wins over the gates
 except that policy still fails closed; a supplied student answer is a feedback
@@ -571,8 +571,8 @@ flags are on. The persona's exam boundary is qualified to the school
 examination, so a question about a book exam, such as an O.W.L., is still
 answerable from the excerpts.
 
-The non-stream `/ask` endpoint is the grounded answer API. Meta and personal are
-chat intents on `/ask/stream`; `/ask` does not route them.
+The non-stream `/v1/chat` endpoint is the grounded answer API. Meta and personal are
+chat intents on `/v1/chat/stream`; `/v1/chat` does not route them.
 
 `app/knowledge/lore.py` holds authored setting facts with a canonicity tier
 (`book`, `product`, `secondary`). It is raw Markdown with TOML front matter, one
@@ -586,7 +586,7 @@ published at 1.0.0; the lore eval follows (#97) and the lesson voice is
 delivered (#176).
 
 The exam bank is a separate, offline surface. It is not a chat intent and it does
-not run inside `/ask` or `/ask/stream`. Exam generation reads from versioned
+not run inside `/v1/chat` or `/v1/chat/stream`. Exam generation reads from versioned
 subject knowledge packs; lesson mode reads from packs first and may use the
 labelled corpus fallback:
 
@@ -873,7 +873,7 @@ Planned storage types, once the remaining #38 surface lands:
 ## Keeping this current
 
 - Update the contracts diagram when a Protocol or an adapter changes.
-- Update the sequence diagrams when the `/ask` or `/ask/stream` flow changes.
+- Update the sequence diagrams when the `/v1/chat` or `/v1/chat/stream` flow changes.
 - Update the SSE event contract in this page when `app/main.py` changes an event
   name or payload field.
 - Update the Frontend surface section when `web/` gains a server component,
