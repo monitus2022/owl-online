@@ -26,6 +26,7 @@ Run these from the repository root.
 - Run API: `uvicorn app.main:app --reload`
 - Frontend install: `npm --prefix web ci`
 - Frontend build: `npm --prefix web run build` (type-checks too; matches the Pages build and the `web` CI job)
+- Browser E2E: `npm --prefix e2e test` (after `npm ci --prefix e2e` and `npx --prefix e2e playwright install chromium`; runs the stub API and the Vite frontend)
 - Tests: `pytest`
 - Eval harness tests: `pytest eval/`
 - Eval gate: `uv run python scripts/run_eval.py --check`

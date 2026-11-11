@@ -109,9 +109,9 @@ export function VenuePage() {
   );
   const lessonFallback = Boolean(department?.lesson_fallback ?? true);
   const packMissing =
-    department !== null &&
+    departmentChecked &&
     subject.status === "open" &&
-    summary?.status !== "published";
+    (department === null || summary?.status !== "published");
 
   if (room.status === "soon") {
     return (
