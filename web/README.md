@@ -11,7 +11,7 @@ Cloudflare Pages. The API stays separate; the API host serves only the API and
 |---|---|
 | `src/data/subjects.ts` | The five departments: URL slug, API subject key, professor, accent, crest, status, and the curated starter prompts. The static status is the product open/soon decision; the pack version and lesson/persona flags come from `GET /v1/subjects`. |
 | `src/api/subjects.ts` | Live client for `GET /v1/subjects`; the venue merges the response into the static presentation metadata. |
-| `src/api/chat.ts` | Live client for `POST /ask/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for a venue whose subject is in `lesson_subjects` when the API reports it, and renders typed citation chips with a legacy fallback. |
+| `src/api/chat.ts` | Live client for `POST /v1/chat/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for a venue whose subject is in `lesson_subjects` when the API reports it, and renders typed citation chips with a legacy fallback. |
 | `src/api/exams.ts` | Live client for the served exam bank: paper descriptors, attempt creation and grading; the API can return the same persisted attempt by id. The browser never sees the MCQ key before the grade response. |
 | `src/api/results.ts` | `ResultsStore` interface; `HttpResultsStore` reads the session-scoped `GET /v1/attempts` history. The server is the source of truth; records are provisional until #35. |
 | `src/pages/` | Front gate, about page, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |

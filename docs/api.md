@@ -1,12 +1,12 @@
 # API
 
-The served surface is FastAPI. Chat is unversioned today; `GET /v1/subjects`
-and the exam serving routes are versioned. The remaining planned `/v1` aliases
-are listed below. The academy frontend has already split into its own static
-build (`web/`, served on Cloudflare Pages) and calls the chat routes and the
-served exam bank, relying on the CORS origin regex and the session cookie. The
-remaining versioned aliases are listed below. The chat request already carries
-an optional subject so the request uses that department's persona card.
+The served surface is FastAPI. Chat is versioned at `POST /v1/chat` and
+`POST /v1/chat/stream`; `POST /ask` and `POST /ask/stream` remain deprecated
+aliases for one release. `GET /v1/subjects` and the exam serving routes are
+versioned. The academy frontend calls the versioned chat stream and the served
+exam bank, relying on the CORS origin regex and the session cookie. The chat
+request carries an optional subject so the request uses that department's
+persona card.
 
 Base URL: the deployment origin, for example `https://api.monitus.org`.
 
@@ -17,8 +17,10 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 | `GET` | `/health` | liveness; returns `{"status": "ok"}` |
 | `GET` | `/` | JSON service descriptor; the API host does not serve a chat page |
 | `GET` | `/v1/subjects` | published subject packs plus the `lesson`, `lesson_subjects`, `lesson_fallback`, `persona` and `persona_subjects` flags |
-| `POST` | `/ask` | one-shot grounded answer |
-| `POST` | `/ask/stream` | chat over server-sent events |
+| `POST` | `/v1/chat` | one-shot grounded answer |
+| `POST` | `/v1/chat/stream` | chat over server-sent events |
+| `POST` | `/ask` | deprecated alias of `/v1/chat` |
+| `POST` | `/ask/stream` | deprecated alias of `/v1/chat/stream` |
 | `GET` | `/v1/exams` | published paper descriptors, filtered by subject and version |
 | `POST` | `/v1/exams/{paper_id}/attempts` | sample and persist a paper attempt |
 | `GET` | `/v1/attempts` | graded attempts for the current session, newest first |
@@ -46,7 +48,9 @@ Response `200`:
 }
 ```
 
-### `POST /ask`
+### `POST /v1/chat`
+
+The deprecated `/ask` alias behaves identically and returns the `Deprecation: true` and `Link: </v1/chat>; rel="successor-version"` headers.
 
 Request:
 
@@ -76,7 +80,7 @@ Response `200`:
 
 `citations` are book chunk ids. `lore_citations` are setting-entry ids in the
 `[lore:<id>]` space. `material_citations` are lesson-material ids; it is always
-empty on `/ask`, which stays corpus-only, and lesson answers are stream-only.
+empty on `/v1/chat`, which stays corpus-only, and lesson answers are stream-only.
 `typed_citations` is the authoritative typed set (#218):
 
 - `policy:script:<id>`
@@ -95,7 +99,9 @@ are validated separately; an unknown id of any kind is stripped from the text. `
 evidence, the draft cites nothing, or the model refuses. The answer text is
 always returned; an abstention is a `200`, not an error.
 
-### `POST /ask/stream`
+### `POST /v1/chat/stream`
+
+The deprecated `/ask/stream` alias behaves identically and returns the `Deprecation: true` and `Link: </v1/chat/stream>; rel="successor-version"` headers.
 
 Request:
 
@@ -108,7 +114,7 @@ Request:
 }
 ```
 
-`subject` follows the same rule as `/ask`: the registered card for that subject
+`subject` follows the same rule as `/v1/chat`: the registered card for that subject
 is active, and omitted means `OWL_PERSONA_SUBJECT`. An unknown subject is a
 `422`. `mode` is `auto`, `answer`, `practice`, `feedback` or `lesson`. `student_answer`
 is at most 6000 characters and is only valid with `auto` or `feedback`. When the
@@ -434,16 +440,19 @@ down.
 
 | Status | Shape | When |
 |---|---|---|
-| `422` | FastAPI validation detail | malformed request |
+| `422` | FastAPI validation detail, or `{"detail": "unknown subject"}` | malformed request or unknown subject |
 | `400` | `{"detail": "lesson mode is not enabled"}` | `mode=lesson` while `OWL_LESSON_MODE` is off or no pack loaded |
+| `404` | `{"detail": "attempt not found"}` / `{"detail": "paper not found"}` | unknown attempt or paper |
 | `429` | `{"error": "rate limited", "reason": "...", "retry_after": n}` | minute, day or concurrency limit |
-| `503` | `{"error": "chat temporarily unavailable", "reason": "..."}` | daily token budget or degraded mode |
-| `502` | `{"detail": "model provider unavailable"}` | normalized provider failure on `/ask` |
-| `504` | `{"error": "deadline exceeded", "request_id": "..."}` | `/ask` exceeded `OWL_ASK_TIMEOUT_S` |
+| `503` | `{"error": "chat temporarily unavailable", "reason": "..."}` | chat daily token budget or degraded mode |
+| `503` | `{"detail": "exam bank unavailable"}` / `{"detail": "grading unavailable"}` | exam serving or grading is not configured |
+| `502` | `{"detail": "model provider unavailable"}` | normalized provider failure on `/v1/chat` |
+| `504` | `{"error": "deadline exceeded", "request_id": "..."}` | `/v1/chat` exceeded `OWL_ASK_TIMEOUT_S` |
 
-`429` and `503` carry `Retry-After`. Every response carries `X-Request-ID`.
+`429` carries `Retry-After`; the chat `503` carries it too. The exam `503`
+uses the `detail` shape. Every response carries `X-Request-ID`.
 
-`/ask` has a deadline (`OWL_ASK_TIMEOUT_S`, default 30s). `/ask/stream` is not
+`/v1/chat` has a deadline (`OWL_ASK_TIMEOUT_S`, default 30s). `/v1/chat/stream` is not
 bounded, because a legitimate stream can outlive the deadline.
 
 ## Session, CORS and limits
@@ -466,16 +475,12 @@ bounded, because a legitimate stream can outlive the deadline.
 - The lore pack is loaded from `OWL_LORE_PATH` (a Markdown directory or a JSONL
   file). Absent means the answer path stays book-only.
 
-## Planned versioned surface
+## Versioned chat aliases
 
-These routes are not built yet. The shape is the contract for the next frontend steps: the doors, the exam
-room and the records.
-
-| Method | Path | Status | Purpose |
-|---|---|---|---|
-| `GET` | `/v1/persona` | planned | persona summary: name, subject, school, boundaries |
-| `POST` | `/v1/chat` | planned alias of `/ask` | one-shot grounded answer |
-| `POST` | `/v1/chat/stream` | planned alias of `/ask/stream` | SSE chat |
+`POST /v1/chat` and `POST /v1/chat/stream` are built and are the canonical chat
+routes. The unversioned `/ask` and `/ask/stream` routes are deprecated aliases:
+they behave identically and carry the deprecation headers. `GET /v1/persona`
+remains planned.
 
 The earlier planned `GET /v1/exams/{paper_id}` shape is superseded: a served
 paper is now an attempt, sampled and persisted by
@@ -498,7 +503,24 @@ the subject and pack version.
 
 ## Versioning and migration
 
-1. Add `/v1/chat` and `/v1/chat/stream` as aliases of the current handlers.
-2. Add the `subject` field with a `"dada"` default.
-3. Announce `/ask` and `/ask/stream` as deprecated.
+1. Add `/v1/chat` and `/v1/chat/stream` as aliases of the current handlers. Done.
+2. Add the `subject` field with a `"dada"` default. Done.
+3. Announce `/ask` and `/ask/stream` as deprecated. Done: the response headers
+   and the OpenAPI `deprecated` flag mark them.
 4. Remove the unversioned routes after the academy frontend points at `/v1`.
+   The frontend now calls `/v1/chat/stream`; the aliases stay for one release.
+
+## OpenAPI
+
+`GET /openapi.json` is the machine contract and `GET /docs` is the interactive
+page. The operations are tagged `service`, `chat`, `subjects`, `exams` and
+`attempts`; the chat request and response models carry examples, and the
+deprecated `/ask` and `/ask/stream` operations are marked `deprecated: true`.
+
+The custom error responses use a small envelope. `429` carries
+`{"error", "reason", "retry_after"}` with `Retry-After`; the chat `503`
+carries `{"error", "reason"}` with `Retry-After`; the exam `503` carries
+`{"detail": ...}`; `504` carries `{"error": "deadline exceeded", "request_id"}`;
+`400`, `404`, `422` and `502` carry FastAPI's `{"detail": ...}`. The status code
+is the stable part; clients should read `error` first and fall back to
+`detail`.

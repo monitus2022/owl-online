@@ -1343,3 +1343,97 @@ def test_lesson_mode_routes_closed_facts_and_clarify():
             body = "".join(response.iter_text())
     final = [data for name, data in _parse_sse(body) if name == "final"][0]
     assert "school-001" in final["lore_citations"]
+
+
+def test_v1_chat_alias_matches_ask():
+    with _client() as client:
+        old = client.post("/ask", json={"question": "Who?"})
+        new = client.post("/v1/chat", json={"question": "Who?"})
+    assert old.status_code == new.status_code == 200
+    assert old.json() == new.json()
+
+
+def test_v1_chat_stream_alias_matches_ask_stream():
+    with _client() as client:
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who?"}
+        ) as response:
+            old_body = "".join(response.iter_text())
+        with client.stream(
+            "POST", "/v1/chat/stream", json={"question": "Who?"}
+        ) as response:
+            new_body = "".join(response.iter_text())
+    old_events = _parse_sse(old_body)
+    new_events = _parse_sse(new_body)
+    old_final = [data for name, data in old_events if name == "final"][0]
+    new_final = [data for name, data in new_events if name == "final"][0]
+    assert old_final == new_final
+    assert [data for name, data in old_events if name == "mode"] == [
+        data for name, data in new_events if name == "mode"
+    ]
+
+
+def test_deprecated_ask_aliases_carry_headers():
+    with _client() as client:
+        old = client.post("/ask", json={"question": "Who?"})
+        new = client.post("/v1/chat", json={"question": "Who?"})
+        with client.stream(
+            "POST", "/ask/stream", json={"question": "Who?"}
+        ) as response:
+            assert response.headers.get("deprecation") == "true"
+            assert "/v1/chat/stream" in response.headers.get("link", "")
+            response.read()
+        with client.stream(
+            "POST", "/v1/chat/stream", json={"question": "Who?"}
+        ) as response:
+            assert response.headers.get("deprecation") is None
+            response.read()
+        bad = client.post("/ask", json={"question": ""})
+    assert old.headers.get("deprecation") == "true"
+    assert "/v1/chat" in old.headers.get("link", "")
+    assert new.headers.get("deprecation") is None
+    assert bad.status_code == 422
+    assert bad.headers.get("deprecation") == "true"
+
+
+def test_openapi_lists_chat_aliases_and_tags():
+    with _client() as client:
+        spec = client.get("/openapi.json").json()
+    assert "/v1/chat" in spec["paths"]
+    assert "/v1/chat/stream" in spec["paths"]
+    assert spec["paths"]["/ask"]["post"]["deprecated"] is True
+    assert spec["paths"]["/ask/stream"]["post"]["deprecated"] is True
+    assert spec["paths"]["/v1/chat"]["post"]["tags"] == ["chat"]
+    assert {tag["name"] for tag in spec["tags"]} >= {
+        "service",
+        "chat",
+        "subjects",
+        "exams",
+        "attempts",
+    }
+    schemas = spec["components"]["schemas"]
+    for name in ("AskRequest", "StreamRequest", "AskResponse", "SubjectsResponse"):
+        assert schemas[name].get("examples"), name
+    stream = spec["paths"]["/v1/chat/stream"]["post"]["responses"]["200"]
+    assert "text/event-stream" in stream["content"]
+    assert stream["content"]["text/event-stream"].get("example")
+
+
+def test_v1_chat_stream_lesson_mode():
+    app = create_app(
+        app_settings=Settings(lesson_mode=True),
+        runtime=_lesson_runtime(),
+    )
+    with TestClient(app) as client:
+        with client.stream(
+            "POST",
+            "/v1/chat/stream",
+            json={"question": "How does the counter-jinx work?", "mode": "lesson"},
+        ) as response:
+            body = "".join(response.iter_text())
+    events = _parse_sse(body)
+    modes = [data for name, data in events if name == "mode"]
+    finals = [data for name, data in events if name == "final"]
+    assert modes[0]["mode"] == "lesson"
+    assert finals[0]["scope"] == "in_pack"
+    assert finals[0]["material_citations"] == ["dada-test-material"]

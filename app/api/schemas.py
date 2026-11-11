@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.grading import Band, QuestionGrade
 from app.knowledge.packs import PackSummary
@@ -10,6 +10,14 @@ from app.knowledge.packs import PackSummary
 
 class AskRequest(BaseModel):
     """A single revision question."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {"question": "What is a Boggart?", "subject": "dada"}
+            ]
+        }
+    )
 
     question: str = Field(min_length=1, max_length=1000)
     # The department the question is asked in. Empty means the exam/persona
@@ -27,6 +35,18 @@ class AskRequest(BaseModel):
 
 class StreamRequest(AskRequest):
     """A question plus an optional chat-intent override and answer to review."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "question": "What is a Boggart?",
+                    "subject": "dada",
+                    "mode": "lesson",
+                }
+            ]
+        }
+    )
 
     mode: Literal["auto", "answer", "practice", "feedback", "lesson"] = "auto"
     student_answer: str | None = Field(default=None, max_length=6000)
@@ -49,6 +69,24 @@ class StreamRequest(AskRequest):
 class AskResponse(BaseModel):
     """A grounded answer with the book chunk ids and lore ids it cites."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "answer": "A Boggart takes the shape of what the watcher fears most.",
+                    "citations": ["b1-c01-0000"],
+                    "abstained": False,
+                    "lore_citations": [],
+                    "material_citations": [],
+                    "typed_citations": [
+                        "lesson:b1-c01-0000#b1-c01-0000"
+                    ],
+                    "citation_errors": [],
+                }
+            ]
+        }
+    )
+
     answer: str
     citations: list[str]
     abstained: bool
@@ -60,6 +98,23 @@ class AskResponse(BaseModel):
 
 class SubjectsResponse(BaseModel):
     """The published subject packs the API can serve, plus the live flags."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "subjects": [],
+                    "lesson": True,
+                    "lesson_subject": "dada",
+                    "lesson_subjects": ["dada"],
+                    "lesson_fallback": True,
+                    "persona": True,
+                    "persona_subject": "dada",
+                    "persona_subjects": ["dada"],
+                }
+            ]
+        }
+    )
 
     subjects: list[PackSummary]
     lesson: bool = False
@@ -73,6 +128,24 @@ class SubjectsResponse(BaseModel):
 
 class ExamPaper(BaseModel):
     """One served paper descriptor; the questions are sampled per attempt."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "paper_id": "dada-1.0.0",
+                    "subject": "dada",
+                    "version": "1.0.0",
+                    "title": "Defense Against the Dark Arts",
+                    "question_count": 10,
+                    "mcq_count": 6,
+                    "short_answer_count": 4,
+                    "marks": 50,
+                    "duration_minutes": 120,
+                }
+            ]
+        }
+    )
 
     paper_id: str
     subject: str
@@ -120,6 +193,23 @@ class GradeAttemptRequest(BaseModel):
 
 class ExamGradeResponse(BaseModel):
     """The graded attempt: per-question results and the deterministic band."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
+                    "paper_id": "dada-1.0.0",
+                    "total": 45,
+                    "max_marks": 50,
+                    "band": "O",
+                    "needs_review": False,
+                    "graded_at": "2026-11-11T00:00:00Z",
+                    "questions": [],
+                }
+            ]
+        }
+    )
 
     attempt_id: str
     paper_id: str

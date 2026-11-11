@@ -56,6 +56,41 @@ logger = logging.getLogger(__name__)
 
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 _SUBJECT_TITLES = dict(SUBJECTS)
+_SSE_EXAMPLE = (
+    'event: mode\ndata: {"mode": "answer"}\n\n'
+    'event: final\ndata: {"answer": "...", "citations": [], '
+    '"abstained": false, "mode": "answer"}\n\n'
+)
+_ATTEMPT_EXAMPLE = {
+    "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
+    "paper_id": "dada-1.0.0",
+    "subject": "dada",
+    "version": "1.0.0",
+    "created_at": "2026-11-11T00:00:00Z",
+    "marks": 50,
+    "questions": [
+        {
+            "position": 0,
+            "item_id": "dada-1.0.0-mcq-01",
+            "kind": "mcq",
+            "prompt": "Which spell disarms an opponent?",
+            "marks": 3,
+            "options": [{"option_id": "A", "text": "..."}],
+        }
+    ],
+}
+_ATTEMPT_SUMMARY_EXAMPLE = {
+    "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
+    "paper_id": "dada-1.0.0",
+    "subject": "dada",
+    "version": "1.0.0",
+    "created_at": "2026-11-11T00:00:00Z",
+    "graded_at": "2026-11-11T00:10:00Z",
+    "total": 45,
+    "max_marks": 50,
+    "band": "O",
+    "needs_review": False,
+}
 
 
 def _typed_and_errors(
@@ -190,7 +225,27 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         finally:
             await app.state.runtime.aclose()
 
-    app = FastAPI(title=app_settings.app_name, version="0.1.0", lifespan=lifespan)
+    app = FastAPI(
+        title=app_settings.app_name,
+        version="0.1.0",
+        lifespan=lifespan,
+        openapi_tags=[
+            {"name": "service", "description": "Health and service discovery."},
+            {
+                "name": "chat",
+                "description": "Grounded chat, practice, feedback and lesson answers.",
+            },
+            {
+                "name": "subjects",
+                "description": "Published subject packs and live flags.",
+            },
+            {"name": "exams", "description": "Served exam papers and attempts."},
+            {
+                "name": "attempts",
+                "description": "Session-scoped attempt history, grading and deletion.",
+            },
+        ],
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=app_settings.cors_origin_list,
@@ -224,6 +279,14 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             raise
         elapsed_ms = (time.perf_counter() - start) * 1000
         response.headers["X-Request-ID"] = request_id
+        if request.url.path in {"/ask", "/ask/stream"}:
+            response.headers["Deprecation"] = "true"
+            successor = (
+                "/v1/chat/stream"
+                if request.url.path.endswith("/stream")
+                else "/v1/chat"
+            )
+            response.headers["Link"] = f'<{successor}>; rel="successor-version"'
         if issue_cookie:
             secure = request.url.scheme == "https" or (
                 request.headers.get("x-forwarded-proto") == "https"
@@ -411,11 +474,16 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             latency_ms,
         )
 
-    @app.get("/health")
+    @app.get("/health", tags=["service"], summary="Liveness probe")
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.get("/v1/subjects", response_model=SubjectsResponse)
+    @app.get(
+        "/v1/subjects",
+        response_model=SubjectsResponse,
+        tags=["subjects"],
+        summary="Published subject packs and live flags",
+    )
     def subjects(request: Request) -> SubjectsResponse:
         """Published packs only; drafts stay invisible to the frontend."""
         runtime = request.app.state.runtime
@@ -438,7 +506,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             ),
         )
 
-    @app.get("/")
+    @app.get("/", tags=["service"], summary="Service descriptor")
     def service_root() -> dict[str, str]:
         """A JSON descriptor, not a chat page.
 
@@ -459,7 +527,19 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             subject or app_settings.persona_subject
         ) in PERSONAS
 
-    @app.post("/ask", response_model=AskResponse)
+    @app.post(
+        "/v1/chat",
+        response_model=AskResponse,
+        tags=["chat"],
+        summary="Ask one grounded question",
+    )
+    @app.post(
+        "/ask",
+        response_model=AskResponse,
+        tags=["chat"],
+        summary="Ask one grounded question (deprecated alias)",
+        deprecated=True,
+    )
     async def ask_endpoint(
         body: AskRequest,
         request: Request,
@@ -583,7 +663,33 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             except ValueError:
                 pass
 
-    @app.post("/ask/stream", response_model=None)
+    @app.post(
+        "/v1/chat/stream",
+        response_model=None,
+        tags=["chat"],
+        summary="Stream a chat answer over SSE",
+        responses={
+            200: {
+                "content": {
+                    "text/event-stream": {"example": _SSE_EXAMPLE}
+                }
+            }
+        },
+    )
+    @app.post(
+        "/ask/stream",
+        response_model=None,
+        tags=["chat"],
+        summary="Stream a chat answer over SSE (deprecated alias)",
+        deprecated=True,
+        responses={
+            200: {
+                "content": {
+                    "text/event-stream": {"example": _SSE_EXAMPLE}
+                }
+            }
+        },
+    )
     async def ask_stream_endpoint(
         body: StreamRequest, request: Request
     ) -> EventSourceResponse | JSONResponse:
@@ -829,7 +935,12 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             background=BackgroundTask(release_lease),
         )
 
-    @app.get("/v1/exams", response_model=list[ExamPaper])
+    @app.get(
+        "/v1/exams",
+        response_model=list[ExamPaper],
+        tags=["exams"],
+        summary="Published paper descriptors",
+    )
     def exams(
         request: Request,
         subject: str | None = None,
@@ -868,6 +979,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         "/v1/exams/{paper_id}/attempts",
         response_model=AttemptView,
         status_code=201,
+        tags=["exams"],
+        summary="Sample and persist a paper attempt",
+        responses={
+            201: {
+                "content": {"application/json": {"example": _ATTEMPT_EXAMPLE}}
+            }
+        },
     )
     def start_attempt(
         paper_id: str, request: Request
@@ -907,7 +1025,21 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             ) from error
         return record.view()
 
-    @app.get("/v1/attempts", response_model=list[AttemptSummary])
+    @app.get(
+        "/v1/attempts",
+        response_model=list[AttemptSummary],
+        tags=["attempts"],
+        summary="Graded attempts for the current session",
+        responses={
+            200: {
+                "content": {
+                    "application/json": {
+                        "example": [_ATTEMPT_SUMMARY_EXAMPLE]
+                    }
+                }
+            }
+        },
+    )
     def list_attempts(
         request: Request,
         subject: str | None = None,
@@ -923,7 +1055,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             limit=limit,
         )
 
-    @app.delete("/v1/attempts")
+    @app.delete(
+        "/v1/attempts",
+        tags=["attempts"],
+        summary="Delete the current session attempts",
+    )
     def delete_attempts(request: Request) -> dict[str, int]:
         """Delete the current session's attempts (the anonymous delete path)."""
         store = request.app.state.runtime.exam_store
@@ -931,7 +1067,17 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             raise HTTPException(status_code=503, detail="exam bank unavailable")
         return {"deleted": store.delete_attempts(request.state.session_id)}
 
-    @app.get("/v1/attempts/{attempt_id}", response_model=AttemptView)
+    @app.get(
+        "/v1/attempts/{attempt_id}",
+        response_model=AttemptView,
+        tags=["attempts"],
+        summary="Persisted pre-submission attempt",
+        responses={
+            200: {
+                "content": {"application/json": {"example": _ATTEMPT_EXAMPLE}}
+            }
+        },
+    )
     def get_attempt(attempt_id: str, request: Request) -> AttemptView:
         """The same persisted view on a reload; options are not reshuffled."""
         store = request.app.state.runtime.exam_store
@@ -943,6 +1089,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     @app.post(
         "/v1/attempts/{attempt_id}/grade",
         response_model=ExamGradeResponse,
+        tags=["attempts"],
+        summary="Grade an attempt",
     )
     async def grade_attempt_endpoint(
         attempt_id: str,
