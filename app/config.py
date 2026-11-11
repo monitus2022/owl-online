@@ -151,7 +151,9 @@ class Settings(BaseSettings):
     # directories (data/subjects/<subject>/). Empty means no packs present:
     # exam generation and lesson mode stay disabled until a pack validates.
     subjects_path: Path | None = Path("data/subjects")
-    cors_origins: str = "http://localhost:5500,http://127.0.0.1:5500"
+    cors_origins: str = (
+        "http://localhost:5500,http://127.0.0.1:5500,https://owl.monitus.org"
+    )
     cors_origin_regex: str = r"https://([a-z0-9-]+\.)?owl-online\.pages\.dev"
 
     # Reranking (V1, #6). Set OWL_RERANK_PROVIDER=none to disable.

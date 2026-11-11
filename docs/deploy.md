@@ -161,8 +161,8 @@ Repo secrets required:
 
 The workflow settings live in the `env:` block at the top of the file (region,
 ECR repository, instance id, container name, host port, env-file path, data
-dir, and the three lesson/persona values in the table below). Trigger it by
-pushing to `main`, or run it manually with `workflow_dispatch`.
+dir, and the runtime values in the table below). Trigger it by pushing to
+`main`, or run it manually with `workflow_dispatch`.
 
 Repository variables (Settings > Secrets and variables > Actions > Variables)
 control the non-secret runtime toggles. The workflow passes them with `-e`, and
@@ -175,13 +175,14 @@ control the non-secret runtime toggles. The workflow passes them with `-e`, and
 | `OWL_LESSON_FALLBACK` | `true` | answer from labelled set texts when the pack does not cover the question |
 | `OWL_PERSONA` | `false` | enable the professor voice |
 | `OWL_PERSONA_SUBJECT` | `dada` | default API chat subject and card; independent of `OWL_LORE_SUBJECT`, which is the eval/direct-call default |
+| `OWL_CORS_ORIGINS` | `https://owl.monitus.org` | comma-separated browser origins allowed to call the API; the Pages preview regex is separate |
 
 Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
 `/data/subjects/dada/pack.toml` exists on the volume, then run the deploy
 workflow. `docker restart` does not re-read env; the workflow recreates the
 container with the variables.
 
-The workflow always injects these five keys (the repository variable or its
+The workflow always injects these six keys (the repository variable or its
 default), so they override `owl.env` even when no repository variable is set.
 The file entries are only for manual `docker run` or Compose.
 `OWL_LESSON_MODE` also needs a valid published pack for the request subject;
@@ -336,8 +337,8 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_CHAT_DAILY_TOKEN_BUDGET=200000
    OWL_TRACE_FILE=/data/traces.jsonl
    OWL_AWS_REGION=ap-northeast-1
-   OWL_CORS_ORIGINS=https://your-chat-page.pages.dev
-   # The deploy workflow injects these five with -e; set the repository
+   OWL_CORS_ORIGINS=https://owl.monitus.org
+   # The deploy workflow injects these six with -e; set the repository
    # variables to true to enable lesson and persona. The file entries are for
    # manual docker run or Compose use.
    OWL_LESSON_MODE=false
@@ -347,9 +348,9 @@ The pipeline ships only the image. Do these once on the instance:
    ```
 
    The workflow always injects `OWL_SUBJECTS_PATH`, `OWL_LESSON_MODE`,
-   `OWL_LESSON_FALLBACK`, `OWL_PERSONA` and `OWL_PERSONA_SUBJECT` (repository
-   variable or default), so they override the file even when no variable is
-   set.
+   `OWL_LESSON_FALLBACK`, `OWL_PERSONA`, `OWL_PERSONA_SUBJECT` and
+   `OWL_CORS_ORIGINS` (repository variable or default), so they override the
+   file even when no variable is set.
 
 3. The data at `/data`: `chunks.jsonl`, the index built with the same
    embedder, `lore/` and `subjects/`. Build the Titan index locally, then
@@ -392,9 +393,12 @@ will not reveal. `public/_redirects` serves `index.html` for deep links, so
 `/venue/...` routes load on refresh. The `web` workflow
 (`.github/workflows/web.yml`) runs the same build on every pull request.
 
-CORS already allows `https://*.pages.dev` - deploy previews included - through
-`OWL_CORS_ORIGIN_REGEX`. For a custom domain, add the exact origin to
-`OWL_CORS_ORIGINS` on the host and restart the API.
+CORS allows the project's Pages origin and previews through the scoped
+`OWL_CORS_ORIGIN_REGEX` (`https://([a-z0-9-]+\.)?owl-online\.pages\.dev`); an
+unrelated `*.pages.dev` project is rejected. The workflow injects
+`OWL_CORS_ORIGINS` with `-e` (default `https://owl.monitus.org`), so set the
+repository variable for a comma-separated list of additional origins. A host
+`owl.env` edit does not take effect while the workflow injects the key.
 
 Exam history and the attempt limits depend on the signed `owl_session` cookie.
 When the Pages site is on `*.pages.dev` and the API is on `api.monitus.org`, the
@@ -410,9 +414,9 @@ only Chrome.
 The API host serves only the API. `GET /` returns a small JSON service
 descriptor; the academy frontend is the Cloudflare Pages build. The old
 single-file chat page (`app/api/static/index.html`) was removed so the API
-origin cannot be used as a second chat surface. CORS still allows
-`https://*.pages.dev` via `OWL_CORS_ORIGIN_REGEX`; add the exact origin to
-`OWL_CORS_ORIGINS` if you use a custom domain.
+origin cannot be used as a second chat surface. CORS allows the scoped
+`https://([a-z0-9-]+\.)?owl-online\.pages\.dev` regex and the
+`OWL_CORS_ORIGINS` list injected by the workflow.
 
 ## Check it
 
