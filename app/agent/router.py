@@ -63,6 +63,12 @@ _PRACTICE_EXEMPT = re.compile(
     r"|\bquiz (?:me|my knowledge)\b",
     re.IGNORECASE,
 )
+# A practice request that also asks for the format, contents or schedule is a
+# policy question, not a practice request, even when the wording matches the
+# practice cue.
+_PRACTICE_FORMAT_GUARD = re.compile(
+    r"\b(format|contents?|schedule|date)\b", re.IGNORECASE
+)
 # A curriculum question with a book context is a book question, not a syllabus
 # question. The guard keeps "What is the DADA curriculum at Hogwarts?" on the
 # answer path while "What is the DADA curriculum?" routes to the syllabus.
@@ -447,7 +453,9 @@ def contract_decision(
     card = PERSONAS.get(subject) or PERSONA
     book_context = bool(_BOOK_CONTEXT.search(question))
 
-    if _PRACTICE_EXEMPT.search(question):
+    if _PRACTICE_EXEMPT.search(question) and not _PRACTICE_FORMAT_GUARD.search(
+        question
+    ):
         return ContractDecision("answer", reason="explicit practice request")
     if (
         _FEEDBACK_REQUEST.search(question)
