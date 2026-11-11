@@ -28,6 +28,7 @@ from app.agent.persona import PERSONAS
 from app.agent.router import classify
 from app.api.cache import AnswerCache, cache_key
 from app.api.limits import ChatLimiter, Decision, ExamAttemptLimiter
+from app.api.metrics import Metrics
 from app.api.runtime import Runtime, build_runtime, lesson_available
 from app.api.schemas import (
     AskRequest,
@@ -220,6 +221,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         app.state.cache = AnswerCache(
             app_settings.chat_cache_entries, app_settings.chat_cache_ttl_s
         )
+        app.state.metrics = Metrics()
         try:
             yield
         finally:
@@ -461,6 +463,15 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         )
         if not cache_hit and not scripted:
             limiter.record(input_tokens, output_tokens)
+        app.state.metrics.record(
+            latency_ms=latency_ms,
+            cost_usd=cost,
+            intent=intent,
+            subject=subject,
+            cache_hit=cache_hit,
+            abstained=result.abstained,
+            refused=intent in {"policy", "abstain"},
+        )
         logger.info(
             "chat usage session=%s intent=%s model=%s cache=%s in_tokens=%d "
             "out_tokens=%d cost_usd=%.6f latency_ms=%.0f",
@@ -505,6 +516,15 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 sorted(PERSONAS) if app_settings.persona else []
             ),
         )
+
+    @app.get(
+        "/v1/metrics",
+        tags=["service"],
+        summary="Process-local chat latency and cost metrics",
+    )
+    def metrics(request: Request) -> dict[str, object]:
+        """Aggregate latency, cost and refusal counters; reset on restart."""
+        return request.app.state.metrics.snapshot()
 
     @app.get("/", tags=["service"], summary="Service descriptor")
     def service_root() -> dict[str, str]:
