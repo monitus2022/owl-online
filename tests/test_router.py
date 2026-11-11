@@ -476,3 +476,60 @@ def test_exam_room_and_book_medical_asks_stay_on_the_book_path():
         )
         == "lesson"
     )
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "did you study in hogwarts?",
+        "did you attend hogwarts?",
+        "were you a student at hogwarts?",
+        "have you studied at hogwarts?",
+    ],
+)
+def test_education_paraphrases_route_to_the_persona_fact(question):
+    update = route(
+        {
+            "question": question,
+            "requested_mode": "lesson",
+            "subject": "dada",
+            "persona_enabled": True,
+        },
+        persona=True,
+    )
+    assert update["mode"] == "fact"
+    assert update["fact_ids"] == ["persona:professor.education"]
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Did you attend the school exam?",
+        "Did you study at school for the exam?",
+        "Did you study for the exam?",
+    ],
+)
+def test_education_cues_do_not_steal_exam_questions(question):
+    from app.agent.router import contract_decision
+
+    decision = contract_decision(question, subject="dada", requested_mode="lesson")
+    assert decision.contract == "policy"
+    assert "persona:professor.education" not in decision.fact_ids
+    assert classify(question, requested_mode="lesson", persona=True) == "policy"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "For the exam, did you study at school?",
+        "Did you study at school for the examination?",
+        "Did you attend the school exams?",
+        "Did you study at school for the O.W.L.s?",
+    ],
+)
+def test_education_cues_do_not_steal_exam_synonyms(question):
+    from app.agent.router import contract_decision
+
+    decision = contract_decision(question, subject="dada", requested_mode="lesson")
+    assert decision.contract == "policy"
+    assert "persona:professor.education" not in decision.fact_ids
