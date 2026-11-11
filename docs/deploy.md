@@ -177,6 +177,12 @@ control the non-secret runtime toggles. The workflow passes them with `-e`, and
 | `OWL_PERSONA_SUBJECT` | `dada` | default API chat subject and card; independent of `OWL_LORE_SUBJECT`, which is the eval/direct-call default |
 | `OWL_CORS_ORIGINS` | `https://owl.monitus.org` | comma-separated browser origins allowed to call the API; the Pages preview regex is separate |
 
+Short-term chat memory is on by default (`OWL_MEMORY_ENABLED=true`) and only
+used when a request sends a `thread_id`. `OWL_MEMORY_WINDOW` (default 6) and
+`OWL_MEMORY_TOKEN_BUDGET` (default 1200) bound the recent window and rolling
+summary. Set these in `owl.env` if the defaults are wrong; the deploy workflow
+does not inject them. Threads live in process memory and reset on restart.
+
 Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
 `/data/subjects/dada/pack.toml` exists on the volume, then run the deploy
 workflow. `docker restart` does not re-read env; the workflow recreates the

@@ -10,6 +10,7 @@ and not a data processing agreement.
 | Data | Where | Contents | Prompt or answer text |
 |---|---|---|---|
 | Chat transcript | Browser tab only | The messages in the open tab | Yes, in the browser; not persisted as a chat record |
+| Chat thread | Process memory (LangGraph checkpointer) | Recent messages, rolling summary, last named entity, last mode and pending clarify for an opt-in anonymous `thread_id` | Yes, question and answer text in process memory; no account, no disk write, cleared on restart |
 | Answer cache | Process memory | Corpus-only answers, keyed by question, model and index scope; default 256 entries and 1 hour TTL (configurable), cleared on restart | The cached answer text is in memory; it is not a chat record and is not session-keyed |
 | Usage log | Process log | Session id, intent, model, cache flag, token counts, cost, latency | No |
 | Trace | Process log and optional capped file | Request id, span names, timings, counts, retrieved chunk and lore ids, prompt hash and length | No |
@@ -17,12 +18,19 @@ and not a data processing agreement.
 | Judge cache | `data/exam_judge_cache.jsonl` (optional) | Bank/item/rubric/judge pins, answer hash, raw response hash, grade and feedback | The raw answer is not stored; the feedback may quote it |
 | Session cookie | Browser | `owl_session`, a signed random id | No |
 
+A chat thread is keyed only by the client-supplied `thread_id`. It is a bearer
+key, not an identity: anyone who knows the id can continue that thread while the
+API process lives. The frontend keeps the id in `sessionStorage` and never puts
+it in a URL.
+
 The trace sink caps its optional file at 20 MB and keeps one rotated file. The
 usage log line is the one in `app/main.py`; it never includes the question or
 the answer. The trace emits prompt hashes and lengths and, on the router span,
 `question_chars`; not the text. The exact answer cache is in process memory and
-disappears on restart; it is not a chat record and has no per-session key. The
-judge cache is an operator-managed file keyed by bank, item and answer hash; it
+disappears on restart; it is not a chat record and has no per-session key. A
+request with a `thread_id` is not cached, because the same question can mean
+different things after different turns. The judge cache is an operator-managed
+file keyed by bank, item and answer hash; it
 does not store the raw answer, but its feedback may quote it.
 
 ## Retention
@@ -30,6 +38,7 @@ does not store the raw answer, but its feedback may quote it.
 | Data | Retention |
 |---|---|
 | Chat transcript | Until the tab closes or the page reloads; the API keeps no chat record |
+| Chat thread | Process memory only; until the API restarts or the client starts a new thread id |
 | Answer cache | Up to 1 hour (TTL) or 256 entries, whichever comes first; cleared on restart |
 | Judge cache | Operator-managed; delete `data/exam_judge_cache.jsonl` and restart the API to clear the in-process copy |
 | Session cookie | 24 hours (`max_age=86400`); the next request gets a new session id |
@@ -38,9 +47,12 @@ does not store the raw answer, but its feedback may quote it.
 | Exam attempt | Until the session deletes it or the operator prunes it; the documented manual window is 90 days |
 
 The anonymous delete path is `DELETE /v1/attempts`, which deletes every attempt
-owned by the current session. It does not clear the in-memory answer cache or
-the operator-managed judge cache; both are process/operator scoped and have no
-session key. The operator retention path is:
+owned by the current session. It does not clear the in-memory answer cache, the
+process-local chat threads or the operator-managed judge cache; all three are
+process/operator scoped. A thread remains in process memory until the API
+restarts; a client that stops using its id simply stops adding turns. There is
+no read or delete route because the server keeps no durable chat record. The
+operator retention path is:
 
 ```text
 uv run python scripts/prune_attempts.py --days 90 --dry-run

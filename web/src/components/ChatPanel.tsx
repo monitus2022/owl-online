@@ -100,6 +100,19 @@ export function ChatPanel({
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
   const nextId = useRef(1);
+  const [threadId] = useState(() => {
+    // One anonymous thread per venue in this tab. A reload keeps it in
+    // sessionStorage; closing the tab starts a new thread.
+    const key = `owl-thread-${subject.apiSubject}`;
+    const existing = window.sessionStorage.getItem(key);
+    const id =
+      existing ??
+      (typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `thread-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    window.sessionStorage.setItem(key, id);
+    return id;
+  });
 
   function updateProfessor(id: number, patch: (draft: Message) => Message) {
     setMessages((current) =>
@@ -127,6 +140,7 @@ export function ChatPanel({
         subject.personaState,
         subject.apiSubject,
         lesson ? "lesson" : "auto",
+        threadId,
       )) {
         if (streamEvent.name === "mode") {
           const data = streamEvent.data as { mode: ChatMode };

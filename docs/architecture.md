@@ -12,7 +12,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | Layer | Path | Responsibility |
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
-| Agent | `app/agent/` | LangGraph state, contract-aware router, answer / practice / feedback / meta / personal / lesson / fact / clarify / policy / abstain nodes |
+| Agent | `app/agent/` | LangGraph state, short-term memory resolver, contract-aware router, answer / practice / feedback / meta / personal / lesson / fact / clarify / policy / abstain nodes |
 | Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper and the curated concept-title/alias matcher; the DADA, Charms, Potions, Transfiguration and Herbology packs are published; reference prefill and coverage maintenance remain on #128 |
 | Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); the DADA (#190), Charms (#213), Potions (#228), Transfiguration (#230) and Herbology (#231) banks 1.0.0 are published |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
@@ -29,7 +29,7 @@ Pipeline stages, in order:
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
 | Generate | `app/pipeline/generate/` | `ask`, `ask_lesson` (pack-first scope with a labelled corpus fallback), `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
-| Agent | `app/agent/` | `build_graph`, `route`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node`, `lesson_node`, `fact_node`, `clarify_node`, `policy_node`, `abstain_node` |
+| Agent | `app/agent/` | `build_graph`, `route`, `resolve_node`, `remember_node`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node`, `lesson_node`, `fact_node`, `clarify_node`, `policy_node`, `abstain_node` |
 
 `parse_chapters` drops the front matter before book 1 and trims the previous
 book's trailing copyright page plus the next book's dedication and contents from
@@ -401,7 +401,7 @@ SSE events:
 | `mode` | `{"mode": "answer"}` | after the router update |
 | `token` | `{"text": "..."}` | for each streamed token |
 | `reset` | `{"reason": "retry"}` before a retry draft, `{"reason": "fallback"}` before a routing fallback; `{}` before `error` and before `final` when `abstained` | clears the draft; a no-op when nothing was streamed |
-| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode`, `thread_id` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
 `/v1/chat/stream` uses the compiled graph from `app/agent/`. The router is
@@ -423,6 +423,34 @@ stream emits `reset` before the authoritative `final` event. A failed
 deterministic verification emits `reset` and streams one retry when the budget
 allows; the client drops the rejected draft on the same event. Provider failures
 arrive as an `error` event because HTTP headers are already sent.
+
+### Short-term memory
+
+`app/agent/memory.py` is the deterministic discourse layer (#30). The graph runs
+`resolve` before the router and `remember` after every terminal node. `resolve`
+trims the stored messages to a recent window, folds older user turns into a
+rolling summary under a character budget derived from
+`OWL_MEMORY_TOKEN_BUDGET`, and rewrites a pronoun, "there" or "what about"
+follow-up into a standalone question. A pending clarify consumes the next turn.
+`remember` appends the completed turn, updates the summary, and records the last
+named entity and the last mode. The resolver recovers a missing entity from the
+recent window or the summary.
+
+The rewrite changes only the question. Generation receives the standalone
+question, not the stored window, so a thread does not grow the prompt or the
+token spend. The router still owns the contract, so a persona follow-up stays
+persona and a teaching follow-up stays teaching; the typed citation checker is
+the final guard. Resolution is rule-based, not a model call.
+
+`build_graph` accepts an optional `BaseCheckpointSaver`. The runtime builds
+`agent` with a `MemorySaver` and `stateless_agent` without one. `/v1/chat/stream`
+selects the memory graph only when the request carries a valid `thread_id` and
+`OWL_MEMORY_ENABLED` is on; requests without a thread keep the stateless graph
+and the exact answer cache. Threaded answers skip the cache because context
+changes their meaning. Thread state is process memory: it is not written to
+disk and is lost on restart, which is the privacy boundary until auth (#35).
+The saver has no per-thread TTL or eviction; the process lifetime and restart
+bound it. A multi-tenant deployment needs a bounded or durable store.
 
 ### Lesson branch
 
@@ -749,10 +777,11 @@ go through validation and versioning, not write directly.
 
 ### Memory and identity
 
-The chat is stateless today. Short-term memory is a later phase: a `thread_id`, a
-graph checkpointer, recent messages plus a rolling summary, and a rewrite node
-that resolves follow-ups. Anonymous threads are enough for a continuous
-professor chat.
+Short-term memory is built (#30). A client opts in with a `thread_id`; the graph
+checkpointer stores the recent messages, rolling summary, last entity, last mode
+and pending clarify in process memory. Threads are anonymous and are not tied to
+the session cookie or an account. A request without a thread id stays stateless
+and keeps the exact answer cache.
 
 Per-user long-term memory is the last optional phase. It needs Google OIDC, a
 users table, per-user ownership on top of the session ownership that already
@@ -807,7 +836,7 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, standalone question, messages, summary, last entity, last mode, pending clarify, forced mode, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
@@ -815,9 +844,9 @@ generate) for the per-call detail.
 | `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
 | `AttemptAnswer` / `AttemptGrade` / `QuestionGrade` / `CriterionGrade` | `app/grading/models.py` | pydantic | answer shape, per-question criteria and marks, per-attempt total and band |
 | `JudgeConfig` | `app/grading/models.py` | dataclass | pinned judge model, temperature, prompt version, provider and max tokens |
-| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled agent graph, index hash, published pack summaries, pack store, derived lesson selector, exam store, exam judge and judge cache |
+| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled memory and stateless agent graphs, index hash, published pack summaries, pack store, derived lesson selector, exam store, exam judge and judge cache |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
-| `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review |
+| `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review, optional thread id |
 
 Subject-knowledge types (schema landed on #87; all five O.W.L. packs are
 published; reference prefill and coverage maintenance remain on #128):

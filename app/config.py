@@ -87,6 +87,9 @@ class Settings(BaseSettings):
     chat_daily_token_budget: int = Field(default=200_000, ge=1)
     chat_cache_entries: int = Field(default=256, ge=1)
     chat_cache_ttl_s: int = Field(default=3600, ge=1)
+    memory_enabled: bool = True
+    memory_window: int = Field(default=6, ge=2, le=20)
+    memory_token_budget: int = Field(default=1200, ge=200)
     # Model routing (#82). Off keeps one model on every intent.
     routing: Literal["off", "intent"] = "off"
     small_provider: Literal["openrouter", "bedrock"] = "openrouter"

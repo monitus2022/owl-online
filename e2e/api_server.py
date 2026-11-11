@@ -21,8 +21,10 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 import uvicorn  # noqa: E402
+from langgraph.checkpoint.memory import MemorySaver  # noqa: E402
 
 from app.agent import build_graph  # noqa: E402
+from app.agent.memory import memory_saver  # noqa: E402
 from app.agent.persona import PERSONAS
 from app.api.runtime import Runtime
 from app.config import Settings
@@ -68,11 +70,26 @@ class StubRetriever:
 class StubLlm:
     name = "e2e/stub"
 
-    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+    @staticmethod
+    def _answer(prompt: str) -> str:
+        # The memory spec asks "Who is Professor Lupin?" then "who trained
+        # him?". The second prompt only names Lupin when the resolver replaced
+        # the pronoun, so this branch proves the thread carried the entity.
+        lowered = prompt.lower()
+        if "who trained" in lowered and "lupin" in lowered:
+            return f"Remus Lupin trained Professor Lupin [mat:{MATERIAL_ID}] [{CHUNK_ID}]."
+        if "lupin" in lowered:
+            return (
+                "Professor Lupin taught Defence Against the Dark Arts "
+                f"[mat:{MATERIAL_ID}] [{CHUNK_ID}]."
+            )
         return ANSWER
 
+    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        return self._answer(prompt)
+
     async def stream(self, system: str, prompt: str, *, context=None):
-        for piece in ANSWER.split(" "):
+        for piece in self._answer(prompt).split(" "):
             yield piece + " "
 
 
@@ -148,16 +165,22 @@ def build_app():
     lore = load_lore(REPO / "eval" / "fixtures" / "lore")
     retriever = StubRetriever()
     llm = StubLlm()
-    graph = build_graph(
-        retriever,
-        llm,
-        lesson=selector,
-        lesson_subject="dada",
-        lesson_top_k=3,
-        personas=PERSONAS,
-        default_subject="dada",
-        lore=lore,
-    )
+
+    def graph(checkpointer: MemorySaver | None):
+        return build_graph(
+            retriever,
+            llm,
+            lesson=selector,
+            lesson_subject="dada",
+            lesson_top_k=3,
+            personas=PERSONAS,
+            default_subject="dada",
+            lore=lore,
+            checkpointer=checkpointer,
+        )
+
+    agent = graph(memory_saver())
+    stateless_agent = graph(None)
     summary = PackSummary(
         subject="dada",
         title="Defense Against the Dark Arts",
@@ -173,7 +196,8 @@ def build_app():
     runtime = Runtime(
         retriever=retriever,
         llm=llm,
-        agent=graph,
+        agent=agent,
+        stateless_agent=stateless_agent,
         packs=(summary,),
         pack_store=store,
         lesson=selector,

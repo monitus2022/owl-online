@@ -29,6 +29,20 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("a pronoun follow-up resolves across turns", async ({ page }) => {
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("Who is Professor Lupin?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(
+    page.getByText("Professor Lupin taught Defence Against the Dark Arts"),
+  ).toBeVisible();
+  await page.getByLabel("Your question").fill("who trained him?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(
+    page.getByText("Remus Lupin trained Professor Lupin"),
+  ).toBeVisible();
+});
+
 test("the identity answer is scripted", async ({ page }) => {
   await page.goto("/venue/defence-against-the-dark-arts");
   await page.getByLabel("Your question").fill("Who are you?");

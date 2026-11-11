@@ -714,7 +714,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         body: StreamRequest, request: Request
     ) -> EventSourceResponse | JSONResponse:
         runtime = request.app.state.runtime
-        agent = runtime.agent
+        thread_id = body.thread_id
+        use_memory = bool(thread_id) and app_settings.memory_enabled
+        agent = (
+            runtime.agent
+            if use_memory
+            else (runtime.stateless_agent or runtime.agent)
+        )
         if agent is None:
             raise RuntimeError("agent graph was not built")
         subject = body.subject or app_settings.persona_subject
@@ -738,15 +744,16 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             and not lesson_available(app_settings, runtime, subject)
         ):
             raise HTTPException(status_code=400, detail="lesson mode is not enabled")
-        # Only corpus-only answers are shared; feedback is personalised,
-        # practice is meant to vary, and meta/personal are scripted.
+        # Only corpus-only one-shot answers are shared; feedback is
+        # personalised, practice is meant to vary, meta/personal are scripted,
+        # and a thread answer depends on the conversation history.
         key = (
             cache_key(
                 body.question,
                 cache_scope(runtime, model, persona_enabled, subject),
                 model,
             )
-            if intent == "answer"
+            if intent == "answer" and not use_memory
             else None
         )
         cached = app.state.cache.get(key) if key else None
@@ -763,6 +770,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             "persona_enabled": persona_enabled,
             "top_k": DEFAULT_TOP_K,
         }
+        graph_config = (
+            {"configurable": {"thread_id": thread_id}}
+            if use_memory
+            else None
+        )
         headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 
         if cached is not None:
@@ -812,6 +824,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                                 "needs_input": False,
                                 "attempts": cached.attempts,
                                 "mode": "answer",
+                                "thread_id": "",
                             },
                             ensure_ascii=False,
                         ),
@@ -837,7 +850,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             start = time.perf_counter()
             try:
                 async for mode, chunk in agent.astream(
-                    initial, stream_mode=["custom", "updates"]
+                    initial,
+                    config=graph_config,
+                    stream_mode=["custom", "updates"],
                 ):
                     if mode == "custom":
                         payload = dict(chunk)
@@ -928,6 +943,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         "needs_input": final.get("needs_input", False),
                         "attempts": final.get("attempts", 1),
                         "mode": mode,
+                        "thread_id": thread_id if use_memory else "",
                     },
                     ensure_ascii=False,
                 ),

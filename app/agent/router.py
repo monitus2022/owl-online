@@ -748,7 +748,13 @@ def route(
     persona: bool = False,
     teaching_terms: Callable[[str], set[str]] | None = None,
 ) -> dict[str, object]:
-    question = state["question"]
+    question = state.get("standalone_question") or state["question"]
+    forced = state.get("forced_mode")
+    if forced:
+        payload: dict[str, object] = {"mode": forced}
+        if forced == "policy":
+            payload["meta_topic"] = "exam"
+        return payload
     subject = state.get("subject", "dada")
     requested = state.get("requested_mode", "auto")
     terms = teaching_terms(subject) if teaching_terms is not None else None

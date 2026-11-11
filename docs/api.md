@@ -139,14 +139,22 @@ Request:
   "question": "Who teaches Defense Against the Dark Arts in book 4?",
   "subject": "dada",
   "mode": "auto",
-  "student_answer": null
+  "student_answer": null,
+  "thread_id": null
 }
 ```
 
 `subject` follows the same rule as `/v1/chat`: the registered card for that subject
 is active, and omitted means `OWL_PERSONA_SUBJECT`. An unknown subject is a
 `422`. `mode` is `auto`, `answer`, `practice`, `feedback` or `lesson`. `student_answer`
-is at most 6000 characters and is only valid with `auto` or `feedback`. When the
+is at most 6000 characters and is only valid with `auto` or `feedback`.
+`thread_id` is optional: 8 to 64 letters, digits, hyphens or underscores. A
+thread keeps short-term context across requests in the same API process; a
+request without one is stateless and keeps the exact answer cache. Threaded
+answers are not cached, because the same question can mean different things
+after different turns. The checkpointer is process memory, so a thread is lost
+on restart; there is no account and no cross-process or cross-device history.
+When the
 persona is on, the server may also route to `meta`, `personal`, `fact` or
 `clarify`; `policy` and `abstain` are server routes too. Those are not accepted
 as request modes. `lesson` is explicit only, never inferred. A request is
@@ -165,12 +173,41 @@ The response is `text/event-stream`. Events:
 | `mode` | `{"mode": "answer"}` | after the router; can be `policy`, `fact`, `clarify`, `abstain`, `answer`, `practice`, `feedback`, `meta`, `personal` or `lesson` |
 | `token` | `{"text": "..."}` | each streamed token |
 | `reset` | `{}` or `{"reason": "retry"}` / `{"reason": "fallback"}` | clear the draft before a retry, a fallback, an error, or an abstained final |
-| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode`, `thread_id` | once, authoritative |
 | `error` | `{"detail": "..."}` | terminal; always preceded by `reset` |
 
 `final` is the authoritative payload. A client should replace the draft on
-`reset` and render `final` when it arrives. Once the stream has started, a
-provider failure is an `error` event, not an HTTP status.
+`reset` and render `final` when it arrives. `thread_id` echoes the request
+thread when memory served the turn and is an empty string otherwise. Once the
+stream has started, a provider failure is an `error` event, not an HTTP status.
+
+### Short-term memory
+
+A request with a `thread_id` is one turn in an anonymous conversation. The
+graph resolves a deterministic follow-up against the thread before the router
+runs:
+
+- a pronoun or "there" refers to the last named entity in the thread, so
+  "Who is Professor Lupin?" then "who trained him?" becomes "who trained
+  Professor Lupin?";
+- "what about ..." inherits the previous teaching or answer authority;
+- a pending clarify consumes the next turn as the answer to the clarify.
+
+Resolution changes the question, never the authority: a persona follow-up stays
+persona, a teaching follow-up stays teaching, and the typed citation checker
+still rejects drift. The recent message window and a rolling summary are bounded
+by `OWL_MEMORY_WINDOW` (default 6 messages) and `OWL_MEMORY_TOKEN_BUDGET`
+(default 1200 tokens, approximated at four characters per token). The resolver
+reads the bounded window and summary to recover a missing last entity; the
+answer, lesson, practice and feedback prompts receive only the rewritten
+standalone question, so a thread does not grow the prompt.
+
+Threads are process-local and anonymous. A new thread id starts a new
+conversation; a restart drops every thread. There is no endpoint to read or
+delete a thread, because the server keeps no durable chat record. A client that
+wants a fresh conversation should generate a new id. A thread id is a bearer key
+for that conversation: anyone who knows it can continue the thread while the
+process lives, so it is not an identity or an authorization token.
 
 ### Lesson mode
 
