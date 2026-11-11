@@ -108,7 +108,7 @@ is a versioned, validated set of subject materials, each linked to source chunks
 
 | Surface | Runtime | Persistence | Authority |
 |---|---|---|---|
-| Chat | online, streamed | ephemeral today; threads later | formative |
+| Chat | online, streamed | stateless by default; opt-in process-local threads (#30) | formative |
 | Exam bank | static content, online serving | database | authoritative |
 
 Chat intents are answer, practice and feedback. Chat practice and feedback are

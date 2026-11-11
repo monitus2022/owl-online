@@ -51,7 +51,7 @@ class StreamRequest(AskRequest):
 
     mode: Literal["auto", "answer", "practice", "feedback", "lesson"] = "auto"
     student_answer: str | None = Field(default=None, max_length=6000)
-    thread_id: str | None = Field(default=None, max_length=64)
+    thread_id: str | None = Field(default=None, max_length=256)
 
     @field_validator("thread_id")
     @classmethod

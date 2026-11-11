@@ -152,10 +152,11 @@ is at most 6000 characters and is only valid with `auto` or `feedback`.
 thread keeps short-term context across requests in the same API process; a
 request without one is stateless and keeps the exact answer cache. Threaded
 answers are not cached, because the same question can mean different things
-after different turns. The checkpointer is process memory, so a thread is lost
-on restart; there is no account and no cross-process or cross-device history.
-When the
-persona is on, the server may also route to `meta`, `personal`, `fact` or
+after different turns, and because a cache hit would also skip the turn the
+thread needs to remember. The checkpointer is process memory, so a thread is
+lost on restart; there is no account and no cross-process or cross-device
+history. When the persona is on, the server may also route to `meta`,
+`personal`, `fact` or
 `clarify`; `policy` and `abstain` are server routes too. Those are not accepted
 as request modes. `lesson` is explicit only, never inferred. A request is
 rejected with `400` only when the classified intent is `lesson` and
@@ -187,15 +188,18 @@ A request with a `thread_id` is one turn in an anonymous conversation. The
 graph resolves a deterministic follow-up against the thread before the router
 runs:
 
-- a pronoun or "there" refers to the last named entity in the thread, so
-  "Who is Professor Lupin?" then "who trained him?" becomes "who trained
-  Professor Lupin?";
-- "what about ..." inherits the previous teaching or answer authority;
-- a pending clarify consumes the next turn as the answer to the clarify.
+- a personal pronoun refers to the last person, "there" to the last place, and
+  "they/them" to the most recent named entity, so "Who is Professor Lupin?"
+  then "who trained him?" becomes "who trained Professor Lupin?";
+- "what about ..." inherits the previous teaching or answer question form;
+- a pending clarify consumes a short answer; a new question escapes it and is
+  resolved normally.
 
-Resolution changes the question, never the authority: a persona follow-up stays
-persona, a teaching follow-up stays teaching, and the typed citation checker
-still rejects drift. The recent message window and a rolling summary are bounded
+Resolution changes the question. The only route hint is teaching: an elliptical
+follow-up in a lesson thread stays lesson, but only after the policy, fact,
+clarify and abstain gates run and only when the request mode is `auto`. Persona
+and policy answers stay on their contract, and the typed citation checker still
+rejects drift. The recent message window and a rolling summary are bounded
 by `OWL_MEMORY_WINDOW` (default 6 messages) and `OWL_MEMORY_TOKEN_BUDGET`
 (default 1200 tokens, approximated at four characters per token). The resolver
 reads the bounded window and summary to recover a missing last entity; the

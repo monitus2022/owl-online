@@ -10,7 +10,7 @@ and not a data processing agreement.
 | Data | Where | Contents | Prompt or answer text |
 |---|---|---|---|
 | Chat transcript | Browser tab only | The messages in the open tab | Yes, in the browser; not persisted as a chat record |
-| Chat thread | Process memory (LangGraph checkpointer) | Recent messages, rolling summary, last named entity, last mode and pending clarify for an opt-in anonymous `thread_id` | Yes, question and answer text in process memory; no account, no disk write, cleared on restart |
+| Chat thread | Process memory (LangGraph checkpointer) | Recent messages, rolling summary, last entity/person/place, last mode and pending clarify for an opt-in anonymous `thread_id` | Yes, question and answer text in process memory; no account, no disk write, cleared on restart |
 | Answer cache | Process memory | Corpus-only answers, keyed by question, model and index scope; default 256 entries and 1 hour TTL (configurable), cleared on restart | The cached answer text is in memory; it is not a chat record and is not session-keyed |
 | Usage log | Process log | Session id, intent, model, cache flag, token counts, cost, latency | No |
 | Trace | Process log and optional capped file | Request id, span names, timings, counts, retrieved chunk and lore ids, prompt hash and length | No |
@@ -27,10 +27,11 @@ The trace sink caps its optional file at 20 MB and keeps one rotated file. The
 usage log line is the one in `app/main.py`; it never includes the question or
 the answer. The trace emits prompt hashes and lengths and, on the router span,
 `question_chars`; not the text. The exact answer cache is in process memory and
-disappears on restart; it is not a chat record and has no per-session key. A
-request with a `thread_id` is not cached, because the same question can mean
-different things after different turns. The judge cache is an operator-managed
-file keyed by bank, item and answer hash; it
+disappears on restart; it is not a chat record and has no per-session key. When
+memory is enabled, a request with a `thread_id` is not cached, because the same
+question can mean different things after different turns; with
+`OWL_MEMORY_ENABLED=false` the request is stateless and cacheable. The judge
+cache is an operator-managed file keyed by bank, item and answer hash; it
 does not store the raw answer, but its feedback may quote it.
 
 ## Retention
@@ -38,7 +39,7 @@ does not store the raw answer, but its feedback may quote it.
 | Data | Retention |
 |---|---|
 | Chat transcript | Until the tab closes or the page reloads; the API keeps no chat record |
-| Chat thread | Process memory only; until the API restarts or the client starts a new thread id |
+| Chat thread | Process memory only; until the API restarts. A new thread id starts a separate thread |
 | Answer cache | Up to 1 hour (TTL) or 256 entries, whichever comes first; cleared on restart |
 | Judge cache | Operator-managed; delete `data/exam_judge_cache.jsonl` and restart the API to clear the in-process copy |
 | Session cookie | 24 hours (`max_age=86400`); the next request gets a new session id |

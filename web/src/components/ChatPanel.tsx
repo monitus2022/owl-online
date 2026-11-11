@@ -7,9 +7,9 @@ import type { PersonaState, Subject } from "../data/subjects";
 import { Silhouette } from "./Silhouette";
 
 // Chat. Every affordance addresses the professor; the greeting, abstention
-// note and status copy follow the department's personaState. The transcript
-// is session-local: the API is stateless until threads land (#30), so
-// earlier turns are context for the reader, not sent to the model. Model
+// note and status copy follow the department's personaState. Each venue keeps
+// one anonymous thread in sessionStorage, so the API can resolve a follow-up
+// against earlier turns; requests without a thread stay stateless. Model
 // output is rendered as plain text only — never HTML — per the project rule.
 
 interface Message {
@@ -23,6 +23,31 @@ interface Message {
   scope?: LessonScope;
   abstained?: boolean;
   failed?: boolean;
+}
+
+const THREAD_ID = /^[A-Za-z0-9_-]{8,64}$/;
+
+function readThread(key: string): string | null {
+  try {
+    const existing = window.sessionStorage.getItem(key);
+    return existing && THREAD_ID.test(existing) ? existing : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeThread(key: string, id: string): void {
+  try {
+    window.sessionStorage.setItem(key, id);
+  } catch {
+    // A blocked or full store still leaves the in-memory id usable.
+  }
+}
+
+function newThreadId(): string {
+  return typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `thread-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 const MODE_LABELS: Record<ChatMode, string> = {
@@ -104,13 +129,8 @@ export function ChatPanel({
     // One anonymous thread per venue in this tab. A reload keeps it in
     // sessionStorage; closing the tab starts a new thread.
     const key = `owl-thread-${subject.apiSubject}`;
-    const existing = window.sessionStorage.getItem(key);
-    const id =
-      existing ??
-      (typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `thread-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    window.sessionStorage.setItem(key, id);
+    const id = readThread(key) ?? newThreadId();
+    writeThread(key, id);
     return id;
   });
 

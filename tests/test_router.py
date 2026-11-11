@@ -79,7 +79,7 @@ def test_lesson_is_an_answer_path_hint():
 
 def test_route_returns_a_state_update():
     state = {"question": "Who is the Head of Gryffindor House?"}
-    assert route(state) == {"mode": "answer"}
+    assert route(state) == {"mode": "answer", "routed_mode": "answer"}
 
 
 @pytest.mark.parametrize(

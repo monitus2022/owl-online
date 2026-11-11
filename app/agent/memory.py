@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Literal
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
@@ -24,21 +25,48 @@ WINDOW_MESSAGES = 6
 TOKEN_BUDGET = 1200
 _CHARS_PER_TOKEN = 4
 
-_WHO = re.compile(r"^\s*who is\s+(.+?)[?.!]*\s*$", re.IGNORECASE)
-_WHAT = re.compile(r"^\s*what is\s+(?:a |an |the )?(.+?)[?.!]*\s*$", re.IGNORECASE)
+EntityKind = Literal["person", "place", "thing"]
+
+_WHO = re.compile(r"^\s*who(?:'s| is| was)\s+(.+?)[?.!]*\s*$", re.IGNORECASE)
+_WHAT = re.compile(
+    r"^\s*(?:what's|what is|what are|what do you know about)\s+"
+    r"(?:a |an |the )?(.+?)[?.!]*\s*$",
+    re.IGNORECASE,
+)
 _TELL = re.compile(r"^\s*tell me about\s+(.+?)[?.!]*\s*$", re.IGNORECASE)
 _WHERE = re.compile(r"^\s*where is\s+(.+?)[?.!]*\s*$", re.IGNORECASE)
 _GO = re.compile(r"^\s*did you go to\s+(.+?)[?.!]*\s*$", re.IGNORECASE)
 _WHAT_ABOUT = re.compile(r"^\s*what about\s+(.+?)[?.!]*\s*$", re.IGNORECASE)
-_PRONOUN = re.compile(r"\b(him|her|them|they|he|she)\b", re.IGNORECASE)
+_PERSON_PRONOUN = re.compile(r"\b(him|her|he|she)\b", re.IGNORECASE)
+_THEY = re.compile(r"\b(them|they)\b", re.IGNORECASE)
 _THERE = re.compile(r"\bthere\b", re.IGNORECASE)
+_THERE_QUESTION = re.compile(
+    r"\b(is|are|was|were)\s+there\b", re.IGNORECASE
+)
+_NEW_QUESTION = re.compile(
+    r"^\s*(who|what|when|where|why|how|which|whose|did|do|does|is|are|was|"
+    r"were|can|could|should|would|tell me|give me|show me|explain|describe|"
+    r"compare|teach me|quiz me|test me)\b",
+    re.IGNORECASE,
+)
+_PRACTICE = re.compile(
+    r"\b(test me|quiz me|practice|practice questions?|questions?)\b",
+    re.IGNORECASE,
+)
 _EXAM = re.compile(
     r"\b(exams?|examinations?|tests?|assessments?|papers?|grading|"
-    r"mark schemes?|marks?)\b",
+    r"mark schemes?|marks?|o\.?w\.?l\.?s?)\b",
     re.IGNORECASE,
 )
 _SCOPE = re.compile(
-    r"\b(topics?|cover|covers|include|includes|subject|curriculum|syllabus)\b",
+    r"\b(topics?|subjects?|cover|covered|covers|include|includes|included|"
+    r"curriculum|syllabus|course|practical|grade)\b",
+    re.IGNORECASE,
+)
+_SELF = re.compile(r"^\s*(your|you|my|me)\b", re.IGNORECASE)
+_COMPOUND = re.compile(
+    r"\s+and\s+(?:what|who|how|why|where|when|which|does|did|is|are|can|"
+    r"could|should|would)\b.*$",
     re.IGNORECASE,
 )
 
@@ -50,44 +78,61 @@ def memory_saver() -> MemorySaver:
     serializer warns about unregistered types and will block them in a future
     release, so name the one type the state carries.
     """
-    return MemorySaver(serde=JsonPlusSerializer(allowed_msgpack_modules=[("app.schemas", "Chunk")]))
+    return MemorySaver(
+        serde=JsonPlusSerializer(allowed_msgpack_modules=[("app.schemas", "Chunk")])
+    )
+
+
+@dataclass(frozen=True)
+class Entity:
+    """A named entity and the pronoun class it can satisfy."""
+
+    text: str
+    kind: EntityKind
 
 
 @dataclass(frozen=True)
 class Resolution:
-    """The standalone query and an optional forced contract mode."""
+    """The standalone query, an optional forced mode and an authority hint."""
 
     standalone: str
     forced_mode: str | None = None
+    preferred_mode: str | None = None
 
 
-def extract_entity(question: str) -> str | None:
+def extract_entity(question: str) -> Entity | None:
     """The named entity a follow-up pronoun is likely to refer to."""
-    for pattern in (_WHO, _TELL, _WHERE, _GO):
+    for pattern, kind in (
+        (_WHO, "person"),
+        (_TELL, "thing"),
+        (_WHERE, "place"),
+        (_GO, "place"),
+    ):
         match = pattern.match(question)
         if match:
-            return match.group(1).strip()
+            text = _COMPOUND.sub("", match.group(1)).strip()
+            if kind == "person" and _SELF.match(text):
+                return None
+            return Entity(text, kind)
     match = _WHAT.match(question)
     if match:
-        return match.group(1).strip()
+        return Entity(_COMPOUND.sub("", match.group(1)).strip(), "thing")
     return None
 
 
-def _entity_from_messages(messages: list[dict[str, str]]) -> str | None:
+def _recent_entity(
+    messages: list[dict[str, str]], summary: str, kind: EntityKind | None
+) -> str | None:
     for message in reversed(messages):
         if message.get("role") != "user":
             continue
         entity = extract_entity(message.get("content", ""))
-        if entity:
-            return entity
-    return None
-
-
-def _entity_from_summary(summary: str) -> str | None:
+        if entity and (kind is None or entity.kind == kind):
+            return entity.text
     for segment in reversed(summary.split("Earlier:")):
         entity = extract_entity(segment.strip())
-        if entity:
-            return entity
+        if entity and (kind is None or entity.kind == kind):
+            return entity.text
     return None
 
 
@@ -97,6 +142,8 @@ def resolve_followup(
     messages: list[dict[str, str]] | None = None,
     summary: str = "",
     last_entity: str | None = None,
+    last_person: str | None = None,
+    last_place: str | None = None,
     last_mode: str | None = None,
     pending_clarify: bool = False,
     subject: str = "dada",
@@ -104,26 +151,51 @@ def resolve_followup(
     """Resolve a follow-up against the thread state without changing authority."""
     text = question.strip()
     if pending_clarify:
+        if _PRACTICE.search(text):
+            return Resolution(text, forced_mode="practice")
         if _EXAM.search(text):
             return Resolution(text, forced_mode="policy")
         if _SCOPE.search(text):
             name = SUBJECT_NAMES.get(subject, subject)
             return Resolution(f"What does {name} cover?")
-        return Resolution(text, forced_mode="clarify")
+        if not _NEW_QUESTION.match(text) and "?" not in text:
+            return Resolution(text, forced_mode="clarify")
 
-    entity = last_entity or _entity_from_messages(messages or []) or _entity_from_summary(summary)
-    if entity:
-        if _PRONOUN.search(text):
-            return Resolution(_PRONOUN.sub(entity, text, count=1))
-        if _THERE.search(text):
-            return Resolution(_THERE.sub(entity, text, count=1))
+    messages = messages or []
+    person = last_person or _recent_entity(messages, summary, "person")
+    place = last_place or _recent_entity(messages, summary, "place")
+    any_entity = (
+        last_entity
+        or person
+        or place
+        or _recent_entity(messages, summary, None)
+    )
+    lesson_hint = "lesson" if last_mode == "lesson" else None
+    if _PERSON_PRONOUN.search(text) and person:
+        return Resolution(
+            _PERSON_PRONOUN.sub(lambda _: person, text, count=1),
+            preferred_mode=lesson_hint,
+        )
+    if _THEY.search(text) and any_entity:
+        return Resolution(
+            _THEY.sub(lambda _: any_entity, text, count=1),
+            preferred_mode=lesson_hint,
+        )
+    if _THERE.search(text) and place and not _THERE_QUESTION.search(text):
+        return Resolution(
+            _THERE.sub(lambda _: place, text, count=1),
+            preferred_mode=lesson_hint,
+        )
 
-    match = _WHAT_ABOUT.match(text)
-    if match:
-        target = match.group(1).strip()
-        if last_mode in {"lesson", "answer"}:
-            return Resolution(f"What is {target}?")
-        return Resolution(f"Tell me about {target}.")
+    if last_mode is not None:
+        match = _WHAT_ABOUT.match(text)
+        if match:
+            target = match.group(1).strip()
+            if last_mode == "lesson":
+                return Resolution(f"What is {target}?", preferred_mode="lesson")
+            if last_mode == "answer":
+                return Resolution(f"What is {target}?")
+            return Resolution(f"Tell me about {target}.")
 
     return Resolution(text)
 
@@ -166,6 +238,7 @@ def context_chars(messages: list[dict[str, str]], summary: str) -> int:
 
 
 __all__ = [
+    "Entity",
     "Resolution",
     "TOKEN_BUDGET",
     "WINDOW_MESSAGES",

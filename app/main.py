@@ -24,6 +24,7 @@ from sse_starlette.sse import EventSourceResponse
 from starlette.background import BackgroundTask
 
 from app.agent import build_graph
+from app.agent.memory import memory_saver
 from app.agent.persona import PERSONAS
 from app.agent.router import classify
 from app.api.cache import AnswerCache, cache_key
@@ -60,7 +61,7 @@ _SUBJECT_TITLES = dict(SUBJECTS)
 _SSE_EXAMPLE = (
     'event: mode\ndata: {"mode": "answer"}\n\n'
     'event: final\ndata: {"answer": "...", "citations": [], '
-    '"abstained": false, "mode": "answer"}\n\n'
+    '"abstained": false, "mode": "answer", "thread_id": ""}\n\n'
 )
 _ATTEMPT_EXAMPLE = {
     "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
@@ -190,9 +191,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         # Built once, here, never per request.
         built = runtime or await build_runtime(app_settings)
         if built.agent is None:
-            built = replace(
-                built,
-                agent=build_graph(
+
+            def graph(checkpointer):
+                return build_graph(
                     built.retriever,
                     built.llm,
                     max_retries=app_settings.retry_budget,
@@ -205,8 +206,20 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     lesson_top_k=app_settings.lesson_top_k,
                     lesson_min_score=app_settings.lesson_min_score,
                     lesson_fallback=app_settings.lesson_fallback,
-                ),
-            )
+                    checkpointer=checkpointer,
+                    memory_window=app_settings.memory_window,
+                    memory_token_budget=app_settings.memory_token_budget,
+                )
+
+            if app_settings.memory_enabled:
+                built = replace(
+                    built,
+                    agent=graph(memory_saver()),
+                    stateless_agent=graph(None),
+                )
+            else:
+                agent = graph(None)
+                built = replace(built, agent=agent, stateless_agent=agent)
         app.state.runtime = built
         if not app_settings.session_secret:
             logger.warning(
@@ -716,6 +729,8 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         runtime = request.app.state.runtime
         thread_id = body.thread_id
         use_memory = bool(thread_id) and app_settings.memory_enabled
+        if use_memory and getattr(runtime.agent, "checkpointer", None) is None:
+            use_memory = False
         agent = (
             runtime.agent
             if use_memory
@@ -723,6 +738,12 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         )
         if agent is None:
             raise RuntimeError("agent graph was not built")
+        if (
+            not use_memory
+            and runtime.stateless_agent is None
+            and getattr(runtime.agent, "checkpointer", None) is not None
+        ):
+            raise RuntimeError("stateless chat graph was not built")
         subject = body.subject or app_settings.persona_subject
         if body.subject and body.subject not in SUBJECT_KEYS:
             raise HTTPException(status_code=422, detail="unknown subject")

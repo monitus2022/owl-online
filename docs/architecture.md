@@ -366,11 +366,13 @@ sequenceDiagram
   participant RR as Reranker
   participant LLM as Llm adapter
 
-  C->>API: POST /v1/chat/stream {question, subject, mode, student_answer}
+  C->>API: POST /v1/chat/stream {question, subject, mode, student_answer, thread_id?}
   API->>API: resolve the subject card; lesson gate for that subject
-  API->>API: cache.get when the intent is answer
+  API->>API: select the memory graph when thread_id and OWL_MEMORY_ENABLED; else stateless
+  API->>API: cache.get when the intent is answer and the request is stateless
   API->>API: limiter.admit (429 / 503)
-  API->>G: astream(state with subject)
+  API->>G: astream(state, config thread_id when threaded)
+  G->>G: resolve -> rewrite a follow-up, bound window and summary
   G->>G: router -> policy | fact | clarify | abstain | answer | practice | feedback | meta | personal | lesson
   G-->>API: mode update
   API-->>C: event: mode
@@ -389,9 +391,10 @@ sequenceDiagram
     G-->>API: custom {type: token}
     API-->>C: event: token
   end
+  G->>G: remember -> append the turn, update last entity and mode
   G-->>API: final state
   API-->>C: event: reset when abstained
-  API-->>C: event: final {answer, citations, lore_citations, material_citations, typed_citations, citation_errors, scope, abstained, needs_input, attempts, mode}
+  API-->>C: event: final {answer, citations, lore_citations, material_citations, typed_citations, citation_errors, scope, abstained, needs_input, attempts, mode, thread_id}
 ```
 
 SSE events:
@@ -436,18 +439,21 @@ follow-up into a standalone question. A pending clarify consumes the next turn.
 named entity and the last mode. The resolver recovers a missing entity from the
 recent window or the summary.
 
-The rewrite changes only the question. Generation receives the standalone
+The rewrite changes the question. Generation receives the standalone
 question, not the stored window, so a thread does not grow the prompt or the
-token spend. The router still owns the contract, so a persona follow-up stays
-persona and a teaching follow-up stays teaching; the typed citation checker is
-the final guard. Resolution is rule-based, not a model call.
+token spend. The router still owns the contract: the only memory hint is
+teaching for an elliptical follow-up in a lesson thread, and it applies only
+after the policy, fact, clarify and abstain gates. Persona and policy answers
+stay on their contract, and the typed citation checker is the final guard.
+Resolution is rule-based, not a model call.
 
 `build_graph` accepts an optional `BaseCheckpointSaver`. The runtime builds
 `agent` with a `MemorySaver` and `stateless_agent` without one. `/v1/chat/stream`
 selects the memory graph only when the request carries a valid `thread_id` and
 `OWL_MEMORY_ENABLED` is on; requests without a thread keep the stateless graph
 and the exact answer cache. Threaded answers skip the cache because context
-changes their meaning. Thread state is process memory: it is not written to
+changes their meaning and a cache hit would skip the turn the thread needs to
+remember. Thread state is process memory: it is not written to
 disk and is lost on restart, which is the privacy boundary until auth (#35).
 The saver has no per-thread TTL or eviction; the process lifetime and restart
 bound it. A multi-tenant deployment needs a bounded or durable store.
@@ -836,7 +842,7 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, standalone question, messages, summary, last entity, last mode, pending clarify, forced mode, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, standalone question, messages, summary, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
