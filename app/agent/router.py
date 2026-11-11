@@ -68,8 +68,8 @@ _PRACTICE_EXEMPT = re.compile(
 # a topic ("questions about the format") is still practice.
 _PRACTICE_FORMAT_GUARD = re.compile(
     r"\b(?:give me\s+)?(?:a\s+|an\s+|some\s+)?practice\s+"
-    r"(?:exam|test|paper)\s+(?:question\s+)?"
-    r"(?:format|contents?|schedule|date)\b",
+    r"(?:exam|test|paper)\s+(?:questions?\s+)?"
+    r"(?:formats?|contents?|schedules?|dates?)\b",
     re.IGNORECASE,
 )
 # A curriculum question with a book context is a book question, not a syllabus
