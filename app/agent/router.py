@@ -253,7 +253,8 @@ _POLICY_PATTERNS = (
         re.IGNORECASE,
     ),
     re.compile(
-        r"\b(?:ask|tell|show|give) me (?:about|on) (?:the )?exams?\b",
+        r"\b(?:ask|tell|show|give) me (?:about|on) (?:the )?"
+        r"(?:exams?|examinations?|tests?|assessments?|papers?)\b",
         re.IGNORECASE,
     ),
 )

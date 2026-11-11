@@ -573,6 +573,10 @@ def test_meta_question_about_the_exam_is_policy_not_practice():
         "Can I ask about papers?",
         "Ask me about the exam",
         "Tell me about the exam",
+        "Ask me about examinations",
+        "Ask me about tests",
+        "Ask me about assessments",
+        "Ask me about papers",
     ):
         assert (
             classify(question, requested_mode="lesson", persona=True) == "policy"
