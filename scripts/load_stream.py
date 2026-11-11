@@ -79,6 +79,9 @@ async def one_request(
 
 async def run(args: argparse.Namespace) -> int:
     semaphore = asyncio.Semaphore(args.concurrency)
+    usage_offset = 0
+    if args.usage_log and Path(args.usage_log).exists():
+        usage_offset = Path(args.usage_log).stat().st_size
 
     async with httpx.AsyncClient(timeout=args.timeout) as client:
         async def bounded():
@@ -98,10 +101,15 @@ async def run(args: argparse.Namespace) -> int:
         1 for _, status, final, failed in results if status != 200 or failed or not final
     )
     usage = {"in": 0, "out": 0, "cost": 0.0}
+    usage_lines = 0
     if args.usage_log and Path(args.usage_log).exists():
-        for line in Path(args.usage_log).read_text(encoding="utf-8").splitlines():
+        with Path(args.usage_log).open(encoding="utf-8") as handle:
+            handle.seek(usage_offset)
+            lines = handle.read().splitlines()
+        for line in lines:
             match = _USAGE.search(line)
             if match:
+                usage_lines += 1
                 usage["in"] += int(match.group(1))
                 usage["out"] += int(match.group(2))
                 usage["cost"] += float(match.group(3))
@@ -122,13 +130,15 @@ async def run(args: argparse.Namespace) -> int:
             f"| p95 latency | {percentile(latencies, 0.95):.3f} s |",
             f"| Mean latency | {statistics.fmean(latencies):.3f} s |",
             f"| Error rate | {errors / len(results):.1%} ({errors}/{len(results)}) |",
+            f"| Usage lines | {usage_lines} |",
             f"| Input tokens | {usage['in']} |",
             f"| Output tokens | {usage['out']} |",
             f"| Cost (USD) | {usage['cost']:.6f} |",
             "",
-            "Token spend is read from the server usage log. The SSE final does not",
-            "carry token counts. A stub-API run reports the stub's estimated usage;",
-            "a release run must point `--usage-log` at the real API log.",
+            "Token spend is read only from usage lines appended to the server log",
+            "after the run starts; the SSE final does not carry token counts. A",
+            "stub-API run reports the stub's estimated usage; a release run must",
+            "point `--usage-log` at the real API log.",
             "",
             "This check is manual/release-only; it is not part of the pull-request",
             "CI gate.",

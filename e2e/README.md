@@ -34,10 +34,10 @@ model test.
 
 ## Accessibility
 
-`tests/a11y.spec.ts` runs axe on the gate, cloister, venue, chat and exam room.
-The current audit has zero critical violations. Serious and moderate findings are triaged
-in the pull request; the test fails on any critical violation. The current
-audit is clean.
+`tests/a11y.spec.ts` runs axe on the gate, cloister, venue, the chat after a
+lesson answer and the exam room. The current audit has no critical, serious or
+moderate findings. The test fails on any critical violation; minor and
+best-practice findings, if any, are triaged in the pull request.
 
 ## Load check
 
@@ -52,5 +52,6 @@ uv run python scripts/load_stream.py \
 ```
 
 The script reports p50/p95 latency, the error rate and the token spend parsed
-from the server usage log. A stub run reports the stub's estimated usage; a
-release run points `--usage-log` at the real API log.
+from the usage lines appended to the server log after the run starts. A stub run
+reports the stub's estimated usage; a release run points `--usage-log` at the
+real API log.

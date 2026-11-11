@@ -26,7 +26,7 @@ Run these from the repository root.
 - Run API: `uvicorn app.main:app --reload`
 - Frontend install: `npm --prefix web ci`
 - Frontend build: `npm --prefix web run build` (type-checks too; matches the Pages build and the `web` CI job)
-- Browser E2E: `npm --prefix e2e test` (after `npm ci --prefix e2e` and `npx --prefix e2e playwright install chromium`; runs the stub API and the Vite frontend)
+- Browser E2E: `npm --prefix e2e test` (after `npm ci --prefix web`, `npm ci --prefix e2e` and `npx --prefix e2e playwright install chromium`; runs the stub API and the Vite frontend)
 - Tests: `pytest`
 - Eval harness tests: `pytest eval/`
 - Eval gate: `uv run python scripts/run_eval.py --check`
@@ -76,6 +76,8 @@ Layout:
 - `docs/runs/` - one committed Markdown record per eval run, plus the template and index
 - `eval/` - harness, gold set, thresholds; `eval/exam/` holds the DADA bank evaluation and judge calibration (#191)
 - `web/` - React + Vite academy frontend, deployed separately on Cloudflare Pages (docs/deploy.md); it calls the versioned contract in `docs/api.md` and never imports Python code
+- `e2e/` - Playwright browser suite against the stub API and the Vite frontend; axe checks and the student loop (#179)
+- `docs/load/` - committed stream load reports; the check is manual/release-only
 
 Every model call goes through an adapter; the provider is a config value.
 

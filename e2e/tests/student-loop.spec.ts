@@ -6,7 +6,7 @@ test("gate -> cloister -> DADA venue", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Enter the grounds" }).click();
   await expect(page.getByRole("heading", { name: "The Cloister" })).toBeVisible();
-  await page.getByRole("link", { name: new RegExp(`Enter ${DADA}`) }).click();
+  await page.getByRole("link", { name: new RegExp(DADA) }).click();
   await expect(
     page.getByRole("region", { name: "Chat with the professor" }),
   ).toBeVisible();
@@ -23,6 +23,9 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   await expect(page.getByText("Lesson notes")).toBeVisible();
   await expect(
     page.getByText("dada-test-material", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("lesson:b1-c01-0000#b1-c01-0000", { exact: true }),
   ).toBeVisible();
 });
 
