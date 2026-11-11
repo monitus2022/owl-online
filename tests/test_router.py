@@ -516,3 +516,20 @@ def test_education_cues_do_not_steal_exam_questions(question):
     assert decision.contract == "policy"
     assert "persona:professor.education" not in decision.fact_ids
     assert classify(question, requested_mode="lesson", persona=True) == "policy"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "For the exam, did you study at school?",
+        "Did you study at school for the examination?",
+        "Did you attend the school exams?",
+        "Did you study at school for the O.W.L.s?",
+    ],
+)
+def test_education_cues_do_not_steal_exam_synonyms(question):
+    from app.agent.router import contract_decision
+
+    decision = contract_decision(question, subject="dada", requested_mode="lesson")
+    assert decision.contract == "policy"
+    assert "persona:professor.education" not in decision.fact_ids

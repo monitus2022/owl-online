@@ -298,8 +298,12 @@ _EDUCATION = re.compile(
     r"were you (?:a student )?at hogwarts|"
     r"have you studied (?:at|in) hogwarts|"
     r"study at hogwarts|train as a young wizard|"
-    r"where did you train (?:as a (?:young )?(?:wizard|witch)|in magic))\b"
-    r"(?!.*\b(?:exam|test|assessment|paper|mark scheme)\b)",
+    r"where did you train (?:as a (?:young )?(?:wizard|witch)|in magic))\b",
+    re.IGNORECASE,
+)
+_EXAM_WORDS = re.compile(
+    r"\b(exam(?:ination)?s?|test(?:s|ed|ing)?|assessment(?:s)?|"
+    r"paper(?:s)?|mark scheme)\b|(?<![a-z])o\.?w\.?l\.?(?![a-z])",
     re.IGNORECASE,
 )
 _TEACHING_RECORD = re.compile(
@@ -499,6 +503,8 @@ def contract_decision(
     # Closed setting facts run before the book-context guard: a persona
     # education question or a school-history question is not a book question.
     if _EDUCATION.search(question):
+        if _EXAM_WORDS.search(question):
+            return ContractDecision("policy", meta_topic=_policy_topic(question))
         return ContractDecision(
             "persona",
             meta_topic="professor",
