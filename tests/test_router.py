@@ -581,3 +581,21 @@ def test_meta_question_about_the_exam_is_policy_not_practice():
         assert (
             classify(question, requested_mode="lesson", persona=True) == "policy"
         ), question
+
+
+def test_practice_exam_variants_stay_practice_but_the_format_is_policy():
+    for question in (
+        "Give me a practice test",
+        "Give me a practice exam",
+        "Give me a practice paper",
+        "Give me a practice exam questions",
+    ):
+        assert classify(question, requested_mode="lesson", persona=True) == "practice", question
+    assert (
+        classify(
+            "Give me a practice exam format",
+            requested_mode="lesson",
+            persona=True,
+        )
+        == "policy"
+    )

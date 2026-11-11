@@ -58,6 +58,8 @@ _PRACTICE_EXEMPT = re.compile(
     r"|\b(generate|create|make|give)\b[^.?!]*\b"
     r"(?:a|an|some|one|two|three|four|five|\d+)\b[^.?!]*\bquestions?\b"
     r"|\bask me\b[^.?!]*\bquestions?\b"
+    r"|\bgive me (?:a|an|some) practice (?:test|exam|paper)\b"
+    r"(?!\s+(?:format|contents?|schedule|date))"
     r"|\bquiz (?:me|my knowledge)\b",
     re.IGNORECASE,
 )
