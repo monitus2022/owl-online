@@ -175,13 +175,14 @@ control the non-secret runtime toggles. The workflow passes them with `-e`, and
 | `OWL_LESSON_FALLBACK` | `true` | answer from labelled set texts when the pack does not cover the question |
 | `OWL_PERSONA` | `false` | enable the professor voice |
 | `OWL_PERSONA_SUBJECT` | `dada` | default API chat subject and card; independent of `OWL_LORE_SUBJECT`, which is the eval/direct-call default |
+| `OWL_CORS_ORIGINS` | `https://owl.monitus.org` | browser origin allowed to call the API; the Pages preview regex is separate |
 
 Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
 `/data/subjects/dada/pack.toml` exists on the volume, then run the deploy
 workflow. `docker restart` does not re-read env; the workflow recreates the
 container with the variables.
 
-The workflow always injects these five keys (the repository variable or its
+The workflow always injects these six keys (the repository variable or its
 default), so they override `owl.env` even when no repository variable is set.
 The file entries are only for manual `docker run` or Compose.
 `OWL_LESSON_MODE` also needs a valid published pack for the request subject;

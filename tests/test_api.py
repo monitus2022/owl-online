@@ -188,6 +188,24 @@ def test_cors_allows_the_pages_origin():
     assert response.headers.get("access-control-allow-origin") == "https://owl-online.pages.dev"
 
 
+def test_cors_allows_the_production_origin():
+    with _client() as client:
+        response = client.options(
+            "/ask/stream",
+            headers={
+                "Origin": "https://owl.monitus.org",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+    assert response.status_code == 200
+    assert (
+        response.headers.get("access-control-allow-origin")
+        == "https://owl.monitus.org"
+    )
+    assert "POST" in response.headers.get("access-control-allow-methods", "")
+
+
 def test_unexpected_error_returns_500_without_a_traceback():
     class _BoomRetriever:
         async def retrieve(self, query: str, top_k: int) -> list[Chunk]:

@@ -33,6 +33,7 @@ env:
   OWL_LESSON_FALLBACK: ${{ vars.OWL_LESSON_FALLBACK || 'true' }}
   OWL_PERSONA: ${{ vars.OWL_PERSONA || 'false' }}
   OWL_PERSONA_SUBJECT: ${{ vars.OWL_PERSONA_SUBJECT || 'dada' }}
+  OWL_CORS_ORIGINS: ${{ vars.OWL_CORS_ORIGINS || 'https://owl.monitus.org' }}
 
 jobs:
   build-and-push:
@@ -114,6 +115,7 @@ jobs:
             -e OWL_LESSON_FALLBACK="__OWL_LESSON_FALLBACK__" \
             -e OWL_PERSONA="__OWL_PERSONA__" \
             -e OWL_PERSONA_SUBJECT="__OWL_PERSONA_SUBJECT__" \
+            -e OWL_CORS_ORIGINS="__OWL_CORS_ORIGINS__" \
             -v __DATA_DIR__:/data \
             __IMAGE__
           for i in $(seq 1 30); do
@@ -143,6 +145,7 @@ jobs:
           SCRIPT="${SCRIPT//__OWL_LESSON_FALLBACK__/$OWL_LESSON_FALLBACK}"
           SCRIPT="${SCRIPT//__OWL_PERSONA__/$OWL_PERSONA}"
           SCRIPT="${SCRIPT//__OWL_PERSONA_SUBJECT__/$OWL_PERSONA_SUBJECT}"
+          SCRIPT="${SCRIPT//__OWL_CORS_ORIGINS__/$OWL_CORS_ORIGINS}"
 
           # Validate before touching the host: a typo must not remove the
           # running container and leave the deploy without a rollback.
