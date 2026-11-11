@@ -41,7 +41,8 @@ _PERSON_PRONOUN = re.compile(r"\b(him|her|he|she)\b", re.IGNORECASE)
 _THEY = re.compile(r"\b(them|they)\b", re.IGNORECASE)
 _THERE = re.compile(r"\bthere\b", re.IGNORECASE)
 _THERE_QUESTION = re.compile(
-    r"\b(is|are|was|were)\s+there\b", re.IGNORECASE
+    r"\b(is|are|was|were)\s+there\s+(a|an|any|some|something|anything)\b",
+    re.IGNORECASE,
 )
 _NEW_QUESTION = re.compile(
     r"^\s*(who|what|when|where|why|how|which|whose|did|do|does|is|are|was|"
@@ -50,20 +51,32 @@ _NEW_QUESTION = re.compile(
     re.IGNORECASE,
 )
 _PRACTICE = re.compile(
-    r"\b(test me|quiz me|practice|practice questions?|questions?)\b",
+    r"\b(test me|quiz me|give me (?:a |some )?practice|practice questions?)\b",
     re.IGNORECASE,
 )
 _EXAM = re.compile(
     r"\b(exams?|examinations?|tests?|assessments?|papers?|grading|"
-    r"mark schemes?|marks?|o\.?w\.?l\.?s?)\b",
+    r"mark schemes?|marks?|o\.?w\.?l\.?s?|practical|grades?)\b",
     re.IGNORECASE,
 )
 _SCOPE = re.compile(
     r"\b(topics?|subjects?|cover|covered|covers|include|includes|included|"
-    r"curriculum|syllabus|course|practical|grade)\b",
+    r"curriculum|syllabus|course)\b",
     re.IGNORECASE,
 )
-_SELF = re.compile(r"^\s*(your|you|my|me)\b", re.IGNORECASE)
+_SELF = re.compile(r"^\s*(your|you|yourself|yourselves|my|me)\b", re.IGNORECASE)
+_PERSON_CUE = re.compile(
+    r"\b(professor|prof\.?|mr\.?|mrs\.?|ms\.?|miss|sir|madam|lord|lady|"
+    r"harry|hermione|ron|dumbledore|snape|hagrid|lupin|sirius|voldemort|"
+    r"draco|mcgonagall|crane|raman)\b",
+    re.IGNORECASE,
+)
+_PLACE_CUE = re.compile(
+    r"\b(hogwarts|hogsmeade|diagon alley|azkaban|gryffindor|slytherin|"
+    r"ravenclaw|hufflepuff|durmstrang|beauxbatons|ministry|the burrow|"
+    r"privet drive|knockturn alley|forbidden forest)\b",
+    re.IGNORECASE,
+)
 _COMPOUND = re.compile(
     r"\s+and\s+(?:what|who|how|why|where|when|which|does|did|is|are|can|"
     r"could|should|would)\b.*$",
@@ -100,6 +113,14 @@ class Resolution:
     preferred_mode: str | None = None
 
 
+def _infer_kind(text: str, default: EntityKind) -> EntityKind:
+    if _PERSON_CUE.search(text):
+        return "person"
+    if _PLACE_CUE.search(text):
+        return "place"
+    return default
+
+
 def extract_entity(question: str) -> Entity | None:
     """The named entity a follow-up pronoun is likely to refer to."""
     for pattern, kind in (
@@ -111,12 +132,15 @@ def extract_entity(question: str) -> Entity | None:
         match = pattern.match(question)
         if match:
             text = _COMPOUND.sub("", match.group(1)).strip()
-            if kind == "person" and _SELF.match(text):
+            if _SELF.match(text):
                 return None
-            return Entity(text, kind)
+            return Entity(text, _infer_kind(text, kind))
     match = _WHAT.match(question)
     if match:
-        return Entity(_COMPOUND.sub("", match.group(1)).strip(), "thing")
+        text = _COMPOUND.sub("", match.group(1)).strip()
+        if _SELF.match(text):
+            return None
+        return Entity(text, _infer_kind(text, "thing"))
     return None
 
 
@@ -153,12 +177,14 @@ def resolve_followup(
     if pending_clarify:
         if _PRACTICE.search(text):
             return Resolution(text, forced_mode="practice")
-        if _EXAM.search(text):
+        if _NEW_QUESTION.match(text) or "?" in text:
+            pass
+        elif _EXAM.search(text):
             return Resolution(text, forced_mode="policy")
-        if _SCOPE.search(text):
+        elif _SCOPE.search(text):
             name = SUBJECT_NAMES.get(subject, subject)
             return Resolution(f"What does {name} cover?")
-        if not _NEW_QUESTION.match(text) and "?" not in text:
+        else:
             return Resolution(text, forced_mode="clarify")
 
     messages = messages or []
@@ -191,10 +217,11 @@ def resolve_followup(
         match = _WHAT_ABOUT.match(text)
         if match:
             target = match.group(1).strip()
-            if last_mode == "lesson":
-                return Resolution(f"What is {target}?", preferred_mode="lesson")
-            if last_mode == "answer":
-                return Resolution(f"What is {target}?")
+            if last_mode in {"lesson", "answer"}:
+                return Resolution(
+                    f"Tell me about {target}.",
+                    preferred_mode="lesson" if last_mode == "lesson" else None,
+                )
             return Resolution(f"Tell me about {target}.")
 
     return Resolution(text)
