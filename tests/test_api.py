@@ -1388,9 +1388,12 @@ def test_deprecated_ask_aliases_carry_headers():
         ) as response:
             assert response.headers.get("deprecation") is None
             response.read()
+        bad = client.post("/ask", json={"question": ""})
     assert old.headers.get("deprecation") == "true"
     assert "/v1/chat" in old.headers.get("link", "")
     assert new.headers.get("deprecation") is None
+    assert bad.status_code == 422
+    assert bad.headers.get("deprecation") == "true"
 
 
 def test_openapi_lists_chat_aliases_and_tags():
@@ -1408,6 +1411,12 @@ def test_openapi_lists_chat_aliases_and_tags():
         "exams",
         "attempts",
     }
+    schemas = spec["components"]["schemas"]
+    for name in ("AskRequest", "StreamRequest", "AskResponse", "SubjectsResponse"):
+        assert schemas[name].get("examples"), name
+    stream = spec["paths"]["/v1/chat/stream"]["post"]["responses"]["200"]
+    assert "text/event-stream" in stream["content"]
+    assert stream["content"]["text/event-stream"].get("example")
 
 
 def test_v1_chat_stream_lesson_mode():

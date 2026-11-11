@@ -56,6 +56,41 @@ logger = logging.getLogger(__name__)
 
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 _SUBJECT_TITLES = dict(SUBJECTS)
+_SSE_EXAMPLE = (
+    'event: mode\ndata: {"mode": "answer"}\n\n'
+    'event: final\ndata: {"answer": "...", "citations": [], '
+    '"abstained": false, "mode": "answer"}\n\n'
+)
+_ATTEMPT_EXAMPLE = {
+    "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
+    "paper_id": "dada-1.0.0",
+    "subject": "dada",
+    "version": "1.0.0",
+    "created_at": "2026-11-11T00:00:00Z",
+    "marks": 50,
+    "questions": [
+        {
+            "position": 0,
+            "item_id": "dada-1.0.0-mcq-01",
+            "kind": "mcq",
+            "prompt": "Which spell disarms an opponent?",
+            "marks": 3,
+            "options": [{"option_id": "A", "text": "..."}],
+        }
+    ],
+}
+_ATTEMPT_SUMMARY_EXAMPLE = {
+    "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
+    "paper_id": "dada-1.0.0",
+    "subject": "dada",
+    "version": "1.0.0",
+    "created_at": "2026-11-11T00:00:00Z",
+    "graded_at": "2026-11-11T00:10:00Z",
+    "total": 45,
+    "max_marks": 50,
+    "band": "O",
+    "needs_review": False,
+}
 
 
 def _typed_and_errors(
@@ -244,6 +279,14 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             raise
         elapsed_ms = (time.perf_counter() - start) * 1000
         response.headers["X-Request-ID"] = request_id
+        if request.url.path in {"/ask", "/ask/stream"}:
+            response.headers["Deprecation"] = "true"
+            successor = (
+                "/v1/chat/stream"
+                if request.url.path.endswith("/stream")
+                else "/v1/chat"
+            )
+            response.headers["Link"] = f'<{successor}>; rel="successor-version"'
         if issue_cookie:
             secure = request.url.scheme == "https" or (
                 request.headers.get("x-forwarded-proto") == "https"
@@ -500,13 +543,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
     async def ask_endpoint(
         body: AskRequest,
         request: Request,
-        response: Response,
         retriever: Annotated[Retriever, Depends(get_retriever)],
         llm: Annotated[Llm, Depends(get_llm)],
     ) -> AskResponse | JSONResponse:
-        if request.url.path == "/ask":
-            response.headers["Deprecation"] = "true"
-            response.headers["Link"] = '</v1/chat>; rel="successor-version"'
         session = request.state.session_id
         limiter: ChatLimiter = app.state.limiter
         runtime = request.app.state.runtime
@@ -629,6 +668,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         response_model=None,
         tags=["chat"],
         summary="Stream a chat answer over SSE",
+        responses={
+            200: {
+                "content": {
+                    "text/event-stream": {"example": _SSE_EXAMPLE}
+                }
+            }
+        },
     )
     @app.post(
         "/ask/stream",
@@ -636,6 +682,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         tags=["chat"],
         summary="Stream a chat answer over SSE (deprecated alias)",
         deprecated=True,
+        responses={
+            200: {
+                "content": {
+                    "text/event-stream": {"example": _SSE_EXAMPLE}
+                }
+            }
+        },
     )
     async def ask_stream_endpoint(
         body: StreamRequest, request: Request
@@ -691,9 +744,6 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             "top_k": DEFAULT_TOP_K,
         }
         headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
-        if request.url.path == "/ask/stream":
-            headers["Deprecation"] = "true"
-            headers["Link"] = '</v1/chat/stream>; rel="successor-version"'
 
         if cached is not None:
 
@@ -931,6 +981,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         status_code=201,
         tags=["exams"],
         summary="Sample and persist a paper attempt",
+        responses={
+            201: {
+                "content": {"application/json": {"example": _ATTEMPT_EXAMPLE}}
+            }
+        },
     )
     def start_attempt(
         paper_id: str, request: Request
@@ -975,6 +1030,15 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         response_model=list[AttemptSummary],
         tags=["attempts"],
         summary="Graded attempts for the current session",
+        responses={
+            200: {
+                "content": {
+                    "application/json": {
+                        "example": [_ATTEMPT_SUMMARY_EXAMPLE]
+                    }
+                }
+            }
+        },
     )
     def list_attempts(
         request: Request,
@@ -1008,6 +1072,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         response_model=AttemptView,
         tags=["attempts"],
         summary="Persisted pre-submission attempt",
+        responses={
+            200: {
+                "content": {"application/json": {"example": _ATTEMPT_EXAMPLE}}
+            }
+        },
     )
     def get_attempt(attempt_id: str, request: Request) -> AttemptView:
         """The same persisted view on a reload; options are not reshuffled."""

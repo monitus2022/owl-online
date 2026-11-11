@@ -80,7 +80,7 @@ Response `200`:
 
 `citations` are book chunk ids. `lore_citations` are setting-entry ids in the
 `[lore:<id>]` space. `material_citations` are lesson-material ids; it is always
-empty on `/ask`, which stays corpus-only, and lesson answers are stream-only.
+empty on `/v1/chat`, which stays corpus-only, and lesson answers are stream-only.
 `typed_citations` is the authoritative typed set (#218):
 
 - `policy:script:<id>`
@@ -114,7 +114,7 @@ Request:
 }
 ```
 
-`subject` follows the same rule as `/ask`: the registered card for that subject
+`subject` follows the same rule as `/v1/chat`: the registered card for that subject
 is active, and omitted means `OWL_PERSONA_SUBJECT`. An unknown subject is a
 `422`. `mode` is `auto`, `answer`, `practice`, `feedback` or `lesson`. `student_answer`
 is at most 6000 characters and is only valid with `auto` or `feedback`. When the
@@ -440,14 +440,17 @@ down.
 
 | Status | Shape | When |
 |---|---|---|
-| `422` | FastAPI validation detail | malformed request |
+| `422` | FastAPI validation detail, or `{"detail": "unknown subject"}` | malformed request or unknown subject |
 | `400` | `{"detail": "lesson mode is not enabled"}` | `mode=lesson` while `OWL_LESSON_MODE` is off or no pack loaded |
+| `404` | `{"detail": "attempt not found"}` / `{"detail": "paper not found"}` | unknown attempt or paper |
 | `429` | `{"error": "rate limited", "reason": "...", "retry_after": n}` | minute, day or concurrency limit |
-| `503` | `{"error": "chat temporarily unavailable", "reason": "..."}` | daily token budget or degraded mode |
-| `502` | `{"detail": "model provider unavailable"}` | normalized provider failure on `/ask` |
-| `504` | `{"error": "deadline exceeded", "request_id": "..."}` | `/ask` exceeded `OWL_ASK_TIMEOUT_S` |
+| `503` | `{"error": "chat temporarily unavailable", "reason": "..."}` | chat daily token budget or degraded mode |
+| `503` | `{"detail": "exam bank unavailable"}` / `{"detail": "grading unavailable"}` | exam serving or grading is not configured |
+| `502` | `{"detail": "model provider unavailable"}` | normalized provider failure on `/v1/chat` |
+| `504` | `{"error": "deadline exceeded", "request_id": "..."}` | `/v1/chat` exceeded `OWL_ASK_TIMEOUT_S` |
 
-`429` and `503` carry `Retry-After`. Every response carries `X-Request-ID`.
+`429` carries `Retry-After`; the chat `503` carries it too. The exam `503`
+uses the `detail` shape. Every response carries `X-Request-ID`.
 
 `/v1/chat` has a deadline (`OWL_ASK_TIMEOUT_S`, default 30s). `/v1/chat/stream` is not
 bounded, because a legitimate stream can outlive the deadline.
@@ -514,8 +517,10 @@ page. The operations are tagged `service`, `chat`, `subjects`, `exams` and
 `attempts`; the chat request and response models carry examples, and the
 deprecated `/ask` and `/ask/stream` operations are marked `deprecated: true`.
 
-The custom error responses use a small envelope. `429` and `503` carry
-`{"error", "reason", "retry_after"}` with `Retry-After`; `504` carries
-`{"error": "deadline exceeded", "request_id"}`; `400`, `404`, `422` and `502`
-carry FastAPI's `{"detail": ...}`. The status code is the stable part; clients
-should read `error` first and fall back to `detail`.
+The custom error responses use a small envelope. `429` carries
+`{"error", "reason", "retry_after"}` with `Retry-After`; the chat `503`
+carries `{"error", "reason"}` with `Retry-After`; the exam `503` carries
+`{"detail": ...}`; `504` carries `{"error": "deadline exceeded", "request_id"}`;
+`400`, `404`, `422` and `502` carry FastAPI's `{"detail": ...}`. The status code
+is the stable part; clients should read `error` first and fall back to
+`detail`.

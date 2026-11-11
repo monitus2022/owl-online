@@ -99,6 +99,23 @@ class AskResponse(BaseModel):
 class SubjectsResponse(BaseModel):
     """The published subject packs the API can serve, plus the live flags."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "subjects": [],
+                    "lesson": True,
+                    "lesson_subject": "dada",
+                    "lesson_subjects": ["dada"],
+                    "lesson_fallback": True,
+                    "persona": True,
+                    "persona_subject": "dada",
+                    "persona_subjects": ["dada"],
+                }
+            ]
+        }
+    )
+
     subjects: list[PackSummary]
     lesson: bool = False
     lesson_subject: str = ""
@@ -111,6 +128,24 @@ class SubjectsResponse(BaseModel):
 
 class ExamPaper(BaseModel):
     """One served paper descriptor; the questions are sampled per attempt."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "paper_id": "dada-1.0.0",
+                    "subject": "dada",
+                    "version": "1.0.0",
+                    "title": "Defense Against the Dark Arts",
+                    "question_count": 10,
+                    "mcq_count": 6,
+                    "short_answer_count": 4,
+                    "marks": 50,
+                    "duration_minutes": 120,
+                }
+            ]
+        }
+    )
 
     paper_id: str
     subject: str
@@ -158,6 +193,23 @@ class GradeAttemptRequest(BaseModel):
 
 class ExamGradeResponse(BaseModel):
     """The graded attempt: per-question results and the deterministic band."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
+                    "paper_id": "dada-1.0.0",
+                    "total": 45,
+                    "max_marks": 50,
+                    "band": "O",
+                    "needs_review": False,
+                    "graded_at": "2026-11-11T00:00:00Z",
+                    "questions": [],
+                }
+            ]
+        }
+    )
 
     attempt_id: str
     paper_id: str

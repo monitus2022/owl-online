@@ -215,7 +215,7 @@ flowchart TD
 The served contract is documented in `docs/api.md`: the current `/` JSON
 descriptor, `/health`, `/v1/chat`, `/v1/chat/stream`, `/v1/subjects` and exam serving
 routes, the SSE event schema, the error shapes, and the remaining planned `/v1`
-surface for chat and persona. The split is by purpose, not by subject: a subject is request data,
+surface for persona only. The split is by purpose, not by subject: a subject is request data,
 chat intents stay internal, and the exam bank and grading are separate
 resources. The versioned aliases still gate per-subject chat; the frontend
 already ships as its own static build.
