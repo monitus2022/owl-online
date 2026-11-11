@@ -533,3 +533,77 @@ def test_education_cues_do_not_steal_exam_synonyms(question):
     decision = contract_decision(question, subject="dada", requested_mode="lesson")
     assert decision.contract == "policy"
     assert "persona:professor.education" not in decision.fact_ids
+
+
+def test_meta_question_about_the_exam_is_policy_not_practice():
+    from app.agent.router import contract_decision
+
+    assert (
+        classify(
+            "Can I ask a question about exam?",
+            requested_mode="lesson",
+            persona=True,
+        )
+        == "policy"
+    )
+    decision = contract_decision(
+        "Can I ask a question about exam?", subject="dada", requested_mode="lesson"
+    )
+    assert decision.contract == "policy"
+    assert (
+        classify(
+            "Can I ask a question about the Marauder's Map?",
+            requested_mode="lesson",
+            persona=True,
+        )
+        in {"lesson", "answer"}
+    )
+    assert (
+        classify(
+            "Ask me a question about the Marauder's Map",
+            requested_mode="lesson",
+            persona=True,
+        )
+        == "practice"
+    )
+    for question in (
+        "Can I ask a question about exams?",
+        "Can I ask about tests?",
+        "Can I ask about assessments?",
+        "Can I ask about papers?",
+        "Ask me about the exam",
+        "Tell me about the exam",
+        "Ask me about examinations",
+        "Ask me about tests",
+        "Ask me about assessments",
+        "Ask me about papers",
+    ):
+        assert (
+            classify(question, requested_mode="lesson", persona=True) == "policy"
+        ), question
+
+
+def test_practice_exam_variants_stay_practice_but_the_format_is_policy():
+    for question in (
+        "Give me a practice test",
+        "Give me a practice exam",
+        "Give me a practice paper",
+        "Give me a practice exam questions",
+    ):
+        assert classify(question, requested_mode="lesson", persona=True) == "practice", question
+    for question in (
+        "Give me a practice exam format",
+        "Give me a practice exam question format",
+        "Give me a practice test question format",
+        "Give me a practice exam questions format",
+        "Give me a practice exam question formats",
+        "Give me a practice exam question schedules",
+        "Give me a practice exam question dates",
+    ):
+        assert classify(question, requested_mode="lesson", persona=True) == "policy", question
+    for question in (
+        "Give me a practice exam questions about the format",
+        "Ask me a question about the exam format",
+        "Generate five exam questions about the exam format",
+    ):
+        assert classify(question, requested_mode="lesson", persona=True) == "practice", question

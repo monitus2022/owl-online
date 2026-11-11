@@ -41,7 +41,7 @@ _FEEDBACK_NOUN_REQUEST = re.compile(
 )
 _PRACTICE_REQUEST = re.compile(
     r"\b(generate|create|make|write|draft|compose|produce|build|design|"
-    r"give|ask|quiz|test)\b[^.?!]*\b"
+    r"give|quiz|test|ask me)\b[^.?!]*\b"
     r"(question|questions|practice|exercise|exercises|drill|drills|"
     r"quiz|quizzes|exam|exams|test|tests|worksheet|worksheets)\b",
     re.IGNORECASE,
@@ -55,9 +55,21 @@ _PRACTICE_PHRASE = re.compile(
 _PRACTICE_EXEMPT = re.compile(
     r"\b(generate|create|make|write|draft|compose|produce|build|design)\b"
     r"[^.?!]*\b(practice|exercises?|drills?|quiz|quizzes|worksheets?)\b"
-    r"|\b(generate|create|make|give|ask)\b[^.?!]*\b"
+    r"|\b(generate|create|make|give)\b[^.?!]*\b"
     r"(?:a|an|some|one|two|three|four|five|\d+)\b[^.?!]*\bquestions?\b"
+    r"|\bask me\b[^.?!]*\bquestions?\b"
+    r"|\bgive me (?:a|an|some) practice (?:test|exam|paper)\b"
+    r"(?!\s+(?:format|contents?|schedule|date))"
     r"|\bquiz (?:me|my knowledge)\b",
+    re.IGNORECASE,
+)
+# A request for the format of a practice exam/test/paper is a policy question,
+# not a practice request. A practice request that merely mentions the format as
+# a topic ("questions about the format") is still practice.
+_PRACTICE_FORMAT_GUARD = re.compile(
+    r"\b(?:give me\s+)?(?:a\s+|an\s+|some\s+)?practice\s+"
+    r"(?:exam|test|paper)\s+(?:questions?\s+)?"
+    r"(?:formats?|contents?|schedules?|dates?)\b",
     re.IGNORECASE,
 )
 # A curriculum question with a book context is a book question, not a syllabus
@@ -209,7 +221,7 @@ def meta_topic(question: str) -> str | None:
 POLICY_TOPICS = frozenset({"exam", "syllabus", "grading"})
 _POLICY_PATTERNS = (
     re.compile(
-        r"\b(exam|examination|test(?:ed|ing)?|assessment|paper|examin(?:ed|able))\b"
+        r"\b(exams?|examinations?|test(?:s|ed|ing)?|assessments?|papers?|examin(?:ed|able))\b"
         r".*\b(what|how|when|which|format|question|topic|date|long|many|"
         r"pass|score|mark|grade|prediction|examiner|invigilator|answer|key|"
         r"scheme|criteria|rubric|boundary|cut-off|outstanding|essay|practical|"
@@ -218,11 +230,11 @@ _POLICY_PATTERNS = (
     ),
     re.compile(
         r"\b(what|how|when|which|tell|show|give|can|could|will)\b.*"
-        r"\b(exam|examination|test(?:ed|ing)?|assessment|paper|examin(?:ed|able))\b",
+        r"\b(exams?|examinations?|test(?:s|ed|ing)?|assessments?|papers?|examin(?:ed|able))\b",
         re.IGNORECASE,
     ),
     re.compile(
-        r"\b(syllabus|assessment|mark scheme|marking scheme|answer key|model answer|"
+        r"\b(syllabus|assessments?|mark schemes?|marking schemes?|answer keys?|model answers?|"
         r"examiner|invigilators?|grade boundaries|pass mark|cut-off|assessable|"
         r"examinable|scoring rule|marking criteria|grading rubric|exam board|"
         r"exam setter|exam answers|O and (?:an? )?E|panel.*grade|grade.*panel)\b",
@@ -248,7 +260,12 @@ _POLICY_PATTERNS = (
     ),
     re.compile(
         r"\b(did|do|will|would|can|could) you (?:study|learn|train)\b.*"
-        r"\b(?:exam|test|assessment)\b",
+        r"\b(?:exams?|tests?|assessments?)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:ask|tell|show|give) me (?:about|on) (?:the )?"
+        r"(?:exams?|examinations?|tests?|assessments?|papers?)\b",
         re.IGNORECASE,
     ),
 )
@@ -377,7 +394,7 @@ def _policy_topic(question: str) -> str:
     topic = meta_topic(question)
     if topic in POLICY_TOPICS:
         return topic
-    if re.search(r"\b(syllabus|curriculum|assessment)\b", question, re.IGNORECASE):
+    if re.search(r"\b(syllabus|curriculum|assessments?)\b", question, re.IGNORECASE):
         return "syllabus"
     if re.search(r"\b(grade|mark|score|examiner|invigilator)\b", question, re.IGNORECASE):
         return "grading"
@@ -439,7 +456,9 @@ def contract_decision(
     card = PERSONAS.get(subject) or PERSONA
     book_context = bool(_BOOK_CONTEXT.search(question))
 
-    if _PRACTICE_EXEMPT.search(question):
+    if _PRACTICE_EXEMPT.search(question) and not _PRACTICE_FORMAT_GUARD.search(
+        question
+    ):
         return ContractDecision("answer", reason="explicit practice request")
     if (
         _FEEDBACK_REQUEST.search(question)
