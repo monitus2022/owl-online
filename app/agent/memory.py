@@ -51,7 +51,7 @@ _NEW_QUESTION = re.compile(
     re.IGNORECASE,
 )
 _PRACTICE = re.compile(
-    r"\b(test me|quiz me|give me (?:a |some )?practice|practice questions?)\b",
+    r"\b(test me|quiz me|practice questions?)\b",
     re.IGNORECASE,
 )
 _EXAM = re.compile(
@@ -64,11 +64,16 @@ _SCOPE = re.compile(
     r"curriculum|syllabus|course)\b",
     re.IGNORECASE,
 )
-_SELF = re.compile(r"^\s*(your|you|yourself|yourselves|my|me)\b", re.IGNORECASE)
+_SELF = re.compile(
+    r"^\s*(?:yourself|yourselves|you|me|myself)\s*[?.!]*\s*$",
+    re.IGNORECASE,
+)
 _PERSON_CUE = re.compile(
     r"\b(professor|prof\.?|mr\.?|mrs\.?|ms\.?|miss|sir|madam|lord|lady|"
-    r"harry|hermione|ron|dumbledore|snape|hagrid|lupin|sirius|voldemort|"
-    r"draco|mcgonagall|crane|raman)\b",
+    r"head of|harry|hermione|ron|neville|luna|ginny|cedric|tonks|moody|"
+    r"umbridge|fred|george|percy|bill|charlie|fleur|krum|cho|dean|seamus|"
+    r"lavender|parvati|padma|dumbledore|snape|hagrid|lupin|sirius|voldemort|"
+    r"draco|mcgonagall|crane|raman|bellatrix|lucius|narcissa|pettigrew)\b",
     re.IGNORECASE,
 )
 _PLACE_CUE = re.compile(
@@ -134,7 +139,10 @@ def extract_entity(question: str) -> Entity | None:
             text = _COMPOUND.sub("", match.group(1)).strip()
             if _SELF.match(text):
                 return None
-            return Entity(text, _infer_kind(text, kind))
+            # "Who is ..." is a person question even when the target names a
+            # house or school; the other patterns infer from the target.
+            inferred = kind if pattern is _WHO else _infer_kind(text, kind)
+            return Entity(text, inferred)
     match = _WHAT.match(question)
     if match:
         text = _COMPOUND.sub("", match.group(1)).strip()

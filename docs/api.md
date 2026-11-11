@@ -188,10 +188,13 @@ A request with a `thread_id` is one turn in an anonymous conversation. The
 graph resolves a deterministic follow-up against the thread before the router
 runs:
 
-- a personal pronoun refers to the last person, "there" to the last place, and
-  "they/them" to the most recent named entity, so "Who is Professor Lupin?"
-  then "who trained him?" becomes "who trained Professor Lupin?";
-- "what about ..." inherits the previous teaching or answer question form;
+- a personal pronoun refers to the last recognized person, "there" to the last
+  recognized place, and "they/them" to the most recent named entity, so "Who is
+  Professor Lupin?" then "who trained him?" becomes "who trained Professor
+  Lupin?";
+- "what about ..." becomes "Tell me about ..."; in a lesson thread the router
+  keeps the lesson contract unless a policy, fact, clarify or abstain gate wins,
+  and in an answer thread it stays on the answer path;
 - a pending clarify consumes a short answer; a new question escapes it and is
   resolved normally.
 

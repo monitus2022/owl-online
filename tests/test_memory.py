@@ -30,6 +30,15 @@ def test_extract_entity():
     where_person = extract_entity("Where is Professor Lupin?")
     assert where_person is not None
     assert where_person.kind == "person"
+    head = extract_entity("Who is the Head of Gryffindor House?")
+    assert head is not None
+    assert head.kind == "person"
+    neville = extract_entity("Tell me about Neville")
+    assert neville is not None
+    assert neville.kind == "person"
+    your_professor = extract_entity("Tell me about your professor")
+    assert your_professor is not None
+    assert your_professor.kind == "person"
 
 
 def test_a_compound_question_keeps_the_first_entity():
@@ -94,6 +103,39 @@ def test_where_is_a_person_supports_a_pronoun():
         ],
     )
     assert resolution.standalone == "who trained Professor Lupin?"
+
+
+def test_who_is_a_house_head_still_supports_a_pronoun():
+    resolution = resolve_followup(
+        "who trained him?",
+        messages=[
+            {"role": "user", "content": "Who is the Head of Gryffindor House?"},
+            {"role": "assistant", "content": "A professor."},
+        ],
+    )
+    assert resolution.standalone == "who trained the Head of Gryffindor House?"
+
+
+def test_a_named_character_supports_a_pronoun():
+    resolution = resolve_followup(
+        "who trained him?",
+        messages=[
+            {"role": "user", "content": "Tell me about Neville"},
+            {"role": "assistant", "content": "A student."},
+        ],
+    )
+    assert resolution.standalone == "who trained Neville?"
+
+
+def test_a_relative_person_supports_a_pronoun():
+    resolution = resolve_followup(
+        "who trained him?",
+        messages=[
+            {"role": "user", "content": "Tell me about your professor"},
+            {"role": "assistant", "content": "A professor."},
+        ],
+    )
+    assert resolution.standalone == "who trained your professor?"
 
 
 def test_an_intervening_thing_does_not_replace_the_person():
@@ -168,6 +210,7 @@ def test_a_new_question_escapes_a_pending_clarify():
         "What questions will be on the exam?",
         "What is the practice exam format?",
         "What is the course?",
+        "Give me a practice exam format",
     ):
         resolution = resolve_followup(question, pending_clarify=True)
         assert resolution.standalone == question
