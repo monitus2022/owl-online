@@ -160,6 +160,15 @@ Serving settings: `OWL_EXAM_STORE_PATH` (default `data/exams/exams.db`),
 `OWL_EXAM_ATTEMPTS_PER_DAY_IP` (9). On the host the store and judge-cache paths
 must be absolute and on the writable `/data` volume.
 
+Snapshot, validate and upload the store with
+`uv run python scripts/upload_exam_store.py --presign`. It refuses fewer than
+five servable subjects, counted as the latest published version per subject, a
+bank whose stored item count does not match its manifest, an integrity failure,
+or a snapshot carrying local attempts unless `--allow-attempts` is set. The host
+install is a separate step: download the short-lived URL to
+`/data/exams/exams.db`, verify the printed sha256, then recreate the container
+so it reads the store.
+
 ## Bank 1.0.0 quality notes
 
 The bank eval gates the share of MCQs whose correct option is strictly the

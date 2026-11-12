@@ -377,21 +377,34 @@ The pipeline ships only the image. Do these once on the instance:
    override the file even when no variable is set.
 
 3. The data at `/data`: `chunks.jsonl`, the index built with the same
-   embedder, `lore/`, `subjects/` and `exams/exams.db`. Build the Titan index
-   locally, then upload them:
+   embedder, `lore/` and `subjects/`. Build the Titan index locally, then
+   upload them:
 
    ```
    uv run python scripts/build_index.py --provider bedrock --index data/index/titan
-   # copy data/chunks.jsonl, data/index/titan/, data/lore/, data/subjects/ and
-   # data/exams/exams.db to /data
+   # copy data/chunks.jsonl, data/index/titan/, data/lore/ and data/subjects/ to /data
    ls /data/subjects/dada/pack.toml
-   ls -l /data/exams/exams.db
    ```
 
-   The bank database is uploaded out of band and is not in the image. The
-   deploy injects `/data/exams/exams.db`, so create the directory first and
-   leave the file writable: the API persists attempts and grades in the same
-   database.
+   The bank database is uploaded out of band and is not in the image. Snapshot,
+   validate and upload it with:
+
+   ```
+   uv run python scripts/upload_exam_store.py --presign
+   ```
+
+   It writes a timestamped object plus `deploy/owl-exams.db` in the private
+   bucket and prints a short-lived URL and the sha256. If the local store has
+   served attempts, the script refuses it; pass `--allow-attempts` only if the
+   host should inherit that local session history. Download the URL on the
+   host to `/data/exams/exams.db`, verify the hash, then leave the file
+   writable: the API persists attempts and grades in the same database. The
+   rollout creates `/data/exams` and fails before replacing the container if
+   the volume is not writable.
+
+   ```
+   ls -l /data/exams/exams.db
+   ```
 
    After the next deploy, verify with the `/v1/subjects` check in the CI/CD
    section; lesson is true only when `OWL_LESSON_MODE` and the pack are set.
