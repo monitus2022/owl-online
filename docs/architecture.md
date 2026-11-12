@@ -444,12 +444,16 @@ The rewrite changes the retrieval query; the prompt keeps the student's wording
 and adds the bounded conversation block. The answer, lesson, practice and
 feedback prompts include that block, so the model can relate a follow-up to
 earlier turns and decide whether to compare two topics. A "what about X?"
-follow-up in a lesson or answer thread is retrieved as "Compare <previous topic>
-with X." so both sides have evidence. The block is capped by
+follow-up in a lesson or answer thread is retrieved as "Compare <previous
+same-kind entity> with X." so both sides have evidence. Entity kind comes from a
+small role/name/place/thing cue set; an unknown target defaults to thing and is
+compared only with another thing. The block is capped by
 `OWL_MEMORY_TOKEN_BUDGET`; the full prompt also contains the system, evidence and
-current question. Prior citations are stripped from the block, the model is
-told the conversation is untrusted and not evidence, and the typed citation
-checker accepts only ids in the current retrieval set. The experimental multi-book
+current question. Prior citations are stripped from the block, grouped forms
+included, and the model is told the conversation is untrusted and not evidence.
+The typed citation checker accepts only ids in the current retrieval set; it
+checks membership, not provenance, so a model could still restate a conversation
+fact and cite a current excerpt. Provenance-aware checking is future work. The experimental multi-book
 path does not consume the block yet.
 
 The router still owns the contract: the only memory hint is teaching for an

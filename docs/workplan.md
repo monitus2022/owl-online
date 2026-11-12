@@ -701,6 +701,7 @@ maintainer decision.
 | Anonymous threads before auth | Continuous chat without identity work |
 | Memory is opt-in and process-local | A `thread_id` turns on the checkpointer; requests without one keep the exact answer cache, and a restart drops every thread so no durable chat record exists before auth |
 | Threaded generation gets a bounded conversation block | The model decides follow-ups, including comparisons; the block is not evidence and is capped by the memory budget. Retrieval still uses the standalone query. The experimental multi-book path is excluded |
+| Conversation provenance is not yet checked | Prior citations are stripped and the block is marked untrusted, but the citation checker only verifies membership in the current retrieval set; a model could restate a conversation fact and cite a current excerpt. Provenance-aware verification is future work |
 | Threaded web chats skip the exact answer cache | Continuity needs the turn stored, and a cache hit would skip the checkpoint write. The cache still serves stateless API clients; lesson mode was already uncached, and the cost is bounded by the existing per-session and per-IP limits |
 | Auth and long-term memory last | Largest privacy and security surface; not needed for a usable exam |
 | Model routing for practice/feedback is rejected | Mistral was cheaper and faster but lost citations and specific error naming; the flag stays off |

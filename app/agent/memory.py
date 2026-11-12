@@ -71,22 +71,33 @@ _SELF = re.compile(
     re.IGNORECASE,
 )
 _CITATION = re.compile(
-    r"\[(?:b\d+-c\d+-\d+|lore:[^\]]+|mat:[^\]]+|policy:[^\]]+|"
-    r"persona:[^\]]+|lesson:[^\]]+)\]",
+    r"\[[^\]]*(?:b\d+-c\d+-\d+|lore:|mat:|policy:|persona:|lesson:)[^\]]*\]",
     re.IGNORECASE,
 )
-_PERSON_CUE = re.compile(
+_PERSON_ROLE = re.compile(
     r"\b(professor|prof\.?|mr\.?|mrs\.?|ms\.?|miss|sir|madam|lord|lady|"
-    r"head of|harry|hermione|ron|neville|luna|ginny|cedric|tonks|moody|"
-    r"umbridge|fred|george|percy|bill|charlie|fleur|krum|cho|dean|seamus|"
-    r"lavender|parvati|padma|dumbledore|snape|hagrid|lupin|sirius|voldemort|"
-    r"draco|mcgonagall|crane|raman|bellatrix|lucius|narcissa|pettigrew)\b",
+    r"head of|headmaster|headmistress|minister for magic|teacher|student|"
+    r"auror|seeker|keeper|chaser|beater|prefect)\b",
+    re.IGNORECASE,
+)
+_PERSON_NAME = re.compile(
+    r"\b(Harry|Hermione|Ron|Neville|Luna|Ginny|Cedric|Tonks|Moody|Umbridge|"
+    r"Fred|George|Percy|Bill|Charlie|Fleur|Krum|Cho|Dean|Seamus|Lavender|"
+    r"Parvati|Padma|Dumbledore|Snape|Hagrid|Lupin|Sirius|Voldemort|Draco|"
+    r"McGonagall|Crane|Raman|Bellatrix|Lucius|Narcissa|Pettigrew)\b"
+)
+_THING_CUE = re.compile(
+    r"\b(spell|charm|curse|jinx|hex|potion|wand|broom|uniform|book|creature|"
+    r"beast|plant|herb|ingredient|cauldron|cloak|map|stone|cup|diary|locket|"
+    r"snake|dragon|boggart|dementor|patronus|expelliarmus|avifors|lumos)\b",
     re.IGNORECASE,
 )
 _PLACE_CUE = re.compile(
     r"\b(hogwarts|hogsmeade|diagon alley|azkaban|gryffindor|slytherin|"
     r"ravenclaw|hufflepuff|durmstrang|beauxbatons|ministry|the burrow|"
-    r"privet drive|knockturn alley|forbidden forest)\b",
+    r"privet drive|knockturn alley|forbidden forest|school|library|"
+    r"great hall|common room|classroom|castle|grounds|dormitory|tower|"
+    r"dungeon|greenhouse|quidditch pitch|hospital wing)\b",
     re.IGNORECASE,
 )
 _COMPOUND = re.compile(
@@ -124,8 +135,10 @@ class Resolution:
 
 
 def _infer_kind(text: str, default: EntityKind) -> EntityKind:
-    if _PERSON_CUE.search(text):
+    if _PERSON_ROLE.search(text) or _PERSON_NAME.search(text):
         return "person"
+    if _THING_CUE.search(text):
+        return "thing"
     if _PLACE_CUE.search(text):
         return "place"
     return default

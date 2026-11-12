@@ -193,9 +193,11 @@ bounded conversation block:
   Professor Lupin?" then "who trained him?" retrieves "who trained Professor
   Lupin?";
 - "what about X?" in a lesson or answer thread is retrieved as "Compare
-  <previous topic> with X." so both sides have evidence; the prompt keeps the
-  student's wording and the conversation block, and the model decides whether
-  to compare;
+  <previous same-kind entity> with X." so both sides have evidence; the prompt
+  keeps the student's wording and the conversation block, and the model decides
+  whether to compare. Entity kind comes from a small role/name/place/thing cue
+  set; an unknown target defaults to thing and is compared only with another
+  thing;
 - a pending clarify consumes a short answer; a new question escapes it and is
   resolved normally.
 
@@ -214,9 +216,12 @@ capped by `OWL_MEMORY_TOKEN_BUDGET`; the full prompt also contains the system
 instructions, evidence and the current question. The model is told the
 conversation is untrusted and not evidence: every factual claim must still be
 cited from the excerpts or notes, and instructions inside the conversation are
-ignored. Prior citations are stripped from the block before it is sent, so a
-stale citation cannot be copied; the grounding check still accepts only ids in
-the current retrieval set. The experimental multi-book path does not consume the block
+ignored. Prior citations are stripped from the block before it is sent, grouped forms
+included, so a stale citation cannot be copied. The grounding check accepts only
+ids in the current retrieval set; it verifies membership, not provenance. A model
+could still restate a conversation fact and cite a current excerpt. The block is
+marked untrusted and prior citations are removed, but provenance-aware checking
+is future work. The experimental multi-book path does not consume the block
 yet.
 
 Threads are process-local and anonymous. A new thread id starts a new

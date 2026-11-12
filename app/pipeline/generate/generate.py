@@ -328,6 +328,7 @@ async def ask(
             DEFAULT_FINAL_TOP_K,
             DEFAULT_SELECTION,
             DEFAULT_SELECTION_FLOOR,
+            MULTI_BOOK_SYSTEM,
             PER_BOOK_K,
             ask_multi_book,
         )
@@ -337,7 +338,7 @@ async def ask(
             if decision.reason.startswith("multiple_book_numbers:")
             else None
         )
-        return await ask_multi_book(
+        result = await ask_multi_book(
             question,
             retriever=retriever,
             llm=llm,
@@ -360,6 +361,13 @@ async def ask(
             ),
             on_token=on_token,
             on_stage=on_stage,
+        )
+        # This path does not send the thread context; report a non-zero prompt
+        # so usage accounting does not add it.
+        return replace(
+            result,
+            prompt_chars=result.prompt_chars
+            or len(MULTI_BOOK_SYSTEM) + len(question),
         )
     if on_stage is not None:
         on_stage("retrieve")
