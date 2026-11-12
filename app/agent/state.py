@@ -22,6 +22,7 @@ RequestedMode = Literal["auto", "answer", "practice", "feedback", "lesson"]
 class AgentState(TypedDict, total=False):
     question: str
     standalone_question: str
+    resolved_entity: str
     messages: list[dict[str, str]]
     summary: str
     conversation_context: str

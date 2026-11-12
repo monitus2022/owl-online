@@ -567,7 +567,8 @@ wait on auth or exam mode.
 
 #249 moved multi-turn query accuracy from 0.9444 to 1.0000 and false refusal
 from 0.1515 to 0.0909; the remaining three false refusals are cross-subject
-turns. The record is `docs/runs/2026-11-13-249-context-aware-retrieval.md`.
+turns. The final post-review record is
+`docs/runs/2026-11-13-249-context-aware-retrieval-r2.md`.
 
 The order after #249 is: #258 calibrate the judge, then #251 lesson prompt and
 claim binding, then #252 comparison-aware selection, #259 the comparison router,

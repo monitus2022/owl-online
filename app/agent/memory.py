@@ -71,7 +71,7 @@ _SELF = re.compile(
     re.IGNORECASE,
 )
 _CORRECTION = re.compile(
-    r"^\s*(?:no[, ]+)?(?:i\s+meant|i\s+mean)\s+(.+?)[?.!]*\s*$",
+    r"^\s*(?:no[, ]+)?(?:i\s+meant|i\s+mean)\s*,?\s+(.+?)[?.!]*\s*$",
     re.IGNORECASE,
 )
 _ONE_REFERENT = re.compile(
@@ -96,7 +96,9 @@ _COUNTER_REFERENT = re.compile(
 )
 _WHY_ALONE = re.compile(r"^\s*why\s*[?.!]*$", re.IGNORECASE)
 _HOW_ALONE = re.compile(r"^\s*how\s*[?.!]*$", re.IGNORECASE)
-_IMPLICIT_TARGETS = frozenset({"it", "its", "one", "that", "the same"})
+_IMPLICIT_TARGETS = frozenset(
+    {"it", "its", "one", "that", "the same", "him", "her", "them", "they"}
+)
 _CITATION = re.compile(
     r"\[[^\]]*(?:b\d+-c\d+-\d+|lore:|mat:|policy:|persona:|lesson:)[^\]]*\]",
     re.IGNORECASE,
@@ -162,6 +164,8 @@ class Resolution:
     standalone: str
     forced_mode: str | None = None
     preferred_mode: str | None = None
+    rule: str | None = None
+    entity: str | None = None
 
 
 def _infer_kind(text: str, default: EntityKind) -> EntityKind:
@@ -174,19 +178,39 @@ def _infer_kind(text: str, default: EntityKind) -> EntityKind:
     return default
 
 
+def _is_proper(entity: str, kind: EntityKind) -> bool:
+    """A person, place or spell name keeps its name and takes no article."""
+    if kind in {"person", "place"}:
+        return True
+    return " " not in entity and entity[:1].isupper() and entity.lower().endswith(("us", "um", "o"))
+
+
+def _is_referent_phrase(text: str) -> bool:
+    """True for a noun phrase that is only a referent, not a new topic."""
+    lowered = text.lower().strip()
+    if lowered in _IMPLICIT_TARGETS:
+        return True
+    return any(
+        lowered.startswith(f"{token} ") or lowered.startswith(f"{token}'s ")
+        for token in _IMPLICIT_TARGETS
+    )
+
+
 def _indefinite(entity: str, kind: EntityKind) -> str:
-    """An article for an object follow-up; a person keeps their name."""
-    if kind == "person":
+    """An article for an object follow-up; a proper name keeps its name."""
+    if _is_proper(entity, kind):
         return entity
     lowered = entity.lower()
     if lowered.startswith(("a ", "an ", "the ")):
         return entity
+    if lowered.startswith(("uni", "use", "one", "eu")):
+        return f"a {entity}"
     return f"an {entity}" if entity[:1].lower() in "aeiou" else f"a {entity}"
 
 
 def _definite(entity: str, kind: EntityKind) -> str:
-    """A definite phrase for an object follow-up; a person keeps their name."""
-    if kind == "person":
+    """A definite phrase for an object follow-up; a proper name stays as-is."""
+    if _is_proper(entity, kind):
         return entity
     lowered = entity.lower()
     if lowered.startswith("the "):
@@ -206,6 +230,82 @@ def _last_kind(
     if last_entity and last_entity == last_place:
         return "place"
     return "thing" if last_entity else None
+
+
+def _implicit_resolution(
+    text: str,
+    entity: str,
+    kind: EntityKind,
+    lesson_hint: str | None,
+) -> Resolution | None:
+    """Resolve a short referent question against the last entity."""
+    if _COUNTER_REFERENT.match(text):
+        return Resolution(
+            f"What is the counter to {_definite(entity, kind)}?",
+            preferred_mode=lesson_hint,
+            rule="counter",
+            entity=entity,
+        )
+    if _THAT_REFERENT.match(text):
+        return Resolution(
+            f"What is {_definite(entity, kind)}?",
+            preferred_mode=lesson_hint,
+            rule="implicit_that",
+            entity=entity,
+        )
+    if _WHY_ALONE.match(text):
+        return Resolution(
+            f"Why does that matter for {_definite(entity, kind)}?",
+            preferred_mode=lesson_hint,
+            rule="why",
+            entity=entity,
+        )
+    if _HOW_ALONE.match(text):
+        return Resolution(
+            f"How does that work for {_definite(entity, kind)}?",
+            preferred_mode=lesson_hint,
+            rule="how",
+            entity=entity,
+        )
+    if _TELL_IT.match(text):
+        return Resolution(
+            f"Tell me about {entity}.",
+            preferred_mode=lesson_hint,
+            rule="implicit_tell",
+            entity=entity,
+        )
+    if _ONE_REFERENT.search(text):
+        return Resolution(
+            _ONE_REFERENT.sub(
+                lambda match: f"{match.group(1)} {_indefinite(entity, kind)}",
+                text,
+                count=1,
+            ),
+            preferred_mode=lesson_hint,
+            rule="implicit_one",
+            entity=entity,
+        )
+    if _IT_REFERENT.search(text):
+        return Resolution(
+            _IT_REFERENT.sub(
+                lambda match: f"{match.group(1)} {_definite(entity, kind)}",
+                text,
+                count=1,
+            ),
+            preferred_mode=lesson_hint,
+            rule="implicit_it",
+            entity=entity,
+        )
+    if _ITS_REFERENT.search(text):
+        base = _definite(entity, kind)
+        possessive = base if base.endswith("'s") else f"{base}'s"
+        return Resolution(
+            _ITS_REFERENT.sub(lambda _: possessive, text, count=1),
+            preferred_mode=lesson_hint,
+            rule="implicit_its",
+            entity=entity,
+        )
+    return None
 
 
 def extract_entity(question: str) -> Entity | None:
@@ -288,77 +388,59 @@ def resolve_followup(
         correction = _CORRECTION.match(text)
         if correction:
             target = correction.group(1).strip()
-            if target.lower() in _IMPLICIT_TARGETS:
-                target = last_entity
-            if (
-                target
-                and not _EXAM.search(target)
-                and not _SCOPE.search(target)
-                and not _SELF.match(target)
-            ):
-                return Resolution(f"Tell me about {target}.", preferred_mode=lesson_hint)
-        kind = last_kind or "thing"
-        if _COUNTER_REFERENT.match(text):
-            return Resolution(
-                f"What is the counter to {_definite(last_entity, kind)}?",
-                preferred_mode=lesson_hint,
-            )
-        if _THAT_REFERENT.match(text):
-            return Resolution(
-                f"What is {_definite(last_entity, kind)}?",
-                preferred_mode=lesson_hint,
-            )
-        if _WHY_ALONE.match(text):
-            return Resolution(
-                f"Why does that matter for {_definite(last_entity, kind)}?",
-                preferred_mode=lesson_hint,
-            )
-        if _HOW_ALONE.match(text):
-            return Resolution(
-                f"How does that work for {_definite(last_entity, kind)}?",
-                preferred_mode=lesson_hint,
-            )
-        if _TELL_IT.match(text):
-            return Resolution(f"Tell me about {last_entity}.", preferred_mode=lesson_hint)
-        if _ONE_REFERENT.search(text):
-            return Resolution(
-                _ONE_REFERENT.sub(
-                    lambda match: f"{match.group(1)} {_indefinite(last_entity, kind)}",
-                    text,
-                    count=1,
-                ),
-                preferred_mode=lesson_hint,
-            )
-        if _IT_REFERENT.search(text):
-            return Resolution(
-                _IT_REFERENT.sub(
-                    lambda match: f"{match.group(1)} {_definite(last_entity, kind)}",
-                    text,
-                    count=1,
-                ),
-                preferred_mode=lesson_hint,
-            )
-        if _ITS_REFERENT.search(text):
-            base = _definite(last_entity, kind)
-            possessive = base if base.endswith("'s") else f"{base}'s"
-            return Resolution(
-                _ITS_REFERENT.sub(lambda _: possessive, text, count=1),
-                preferred_mode=lesson_hint,
-            )
+            if _NEW_QUESTION.match(target):
+                # "I mean, what is a Patronus?" is a new question, not a
+                # correction to the old topic.
+                text = target + ("?" if text.rstrip().endswith("?") else "")
+            else:
+                if target.lower() in {"him", "her", "he", "she"} and person:
+                    target = person
+                elif target.lower() in {"them", "they"} and any_entity:
+                    target = any_entity
+                elif target.lower() in _IMPLICIT_TARGETS:
+                    target = last_entity
+                if target and not _SELF.match(target) and len(target.split()) <= 6:
+                    return Resolution(
+                        f"Tell me about {target}.",
+                        preferred_mode=lesson_hint,
+                        rule="correction",
+                        entity=target,
+                    )
+        own = extract_entity(text)
+        implicit_ok = not (
+            own is not None
+            and own.text.lower() != last_entity.lower()
+            and not _is_referent_phrase(own.text)
+        )
+        if (
+            implicit_ok
+            and not _EXAM.search(text)
+            and not _SCOPE.search(text)
+            and not _SELF.match(text)
+        ):
+            implicit = _implicit_resolution(text, last_entity, last_kind or "thing", lesson_hint)
+            if implicit is not None:
+                return implicit
     if _PERSON_PRONOUN.search(text) and person:
         return Resolution(
             _PERSON_PRONOUN.sub(lambda _: person, text, count=1),
             preferred_mode=lesson_hint,
+            rule="person_pronoun",
+            entity=person,
         )
     if _THEY.search(text) and any_entity:
         return Resolution(
             _THEY.sub(lambda _: any_entity, text, count=1),
             preferred_mode=lesson_hint,
+            rule="they",
+            entity=any_entity,
         )
     if _THERE.search(text) and place and not _THERE_QUESTION.search(text):
         return Resolution(
             _THERE.sub(lambda _: place, text, count=1),
             preferred_mode=lesson_hint,
+            rule="there",
+            entity=place,
         )
 
     if last_mode is not None:
@@ -384,8 +466,15 @@ def resolve_followup(
                 return Resolution(
                     f"Compare {last_entity} with {target}.",
                     preferred_mode=hint,
+                    rule="compare",
+                    entity=target,
                 )
-            return Resolution(f"Tell me about {target}.", preferred_mode=hint)
+            return Resolution(
+                f"Tell me about {target}.",
+                preferred_mode=hint,
+                rule="what_about",
+                entity=target,
+            )
 
     return Resolution(text)
 

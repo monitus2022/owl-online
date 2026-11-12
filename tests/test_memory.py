@@ -1,5 +1,7 @@
 """Short-term conversation memory (#30): resolver and bounded context."""
 
+import json
+
 from app.agent.memory import (
     context_chars,
     extract_entity,
@@ -7,7 +9,9 @@ from app.agent.memory import (
     resolve_followup,
     trim_history,
 )
+from app.agent.nodes.memory import remember_node, resolve_node
 from app.agent.router import route
+from app.trace import TraceSink, end_trace, start_trace
 
 
 def test_extract_entity():
@@ -512,3 +516,155 @@ def test_trim_history_bounds_the_context():
     assert len(kept) <= 4
     assert context_chars(kept, summary) <= 400
     assert len(summary) <= 400
+
+
+def test_implicit_referent_does_not_rewrite_a_new_topic():
+    assert (
+        resolve_followup(
+            "What is the Patronus charm and how do I cast it?",
+            last_entity="Boggart",
+            last_mode="lesson",
+        ).standalone
+        == "What is the Patronus charm and how do I cast it?"
+    )
+    assert (
+        resolve_followup(
+            "What is a Patronus and what is its shape?",
+            last_entity="Boggart",
+            last_mode="lesson",
+        ).standalone
+        == "What is a Patronus and what is its shape?"
+    )
+    assert (
+        resolve_followup(
+            "Can I use one of the practice papers?",
+            last_entity="Boggart",
+            last_mode="lesson",
+        ).standalone
+        == "Can I use one of the practice papers?"
+    )
+
+
+def test_remember_node_keeps_the_resolved_entity_across_implicit_turns():
+    first = remember_node(
+        {
+            "question": "Tell me about Boggart.",
+            "answer": "A Boggart changes shape.",
+            "routed_mode": "lesson",
+            "standalone_question": "Tell me about Boggart.",
+            "resolved_entity": "Boggart",
+            "messages": [],
+        }
+    )
+    assert first["last_entity"] == "Boggart"
+    second = remember_node(
+        {
+            "question": "what is its weakness?",
+            "answer": "The counter is Riddikulus.",
+            "routed_mode": "lesson",
+            "standalone_question": "what is the Boggart's weakness?",
+            "resolved_entity": "Boggart",
+            "last_entity": "Boggart",
+            "last_mode": "lesson",
+            "messages": first["messages"],
+            "summary": first["summary"],
+        }
+    )
+    assert second["last_entity"] == "Boggart"
+    third = resolve_followup(
+        "how do I defeat it?",
+        last_entity=second["last_entity"],
+        last_mode="lesson",
+    )
+    assert third.standalone == "how do I defeat the Boggart?"
+
+
+def test_correction_to_a_new_question_does_not_become_a_tell_me_about():
+    assert (
+        resolve_followup(
+            "I mean, what is a Patronus?",
+            last_entity="Boggart",
+            last_mode="lesson",
+        ).standalone
+        == "what is a Patronus?"
+    )
+    assert (
+        resolve_followup(
+            "I mean, how do I cast it?",
+            last_entity="Boggart",
+            last_mode="lesson",
+        ).standalone
+        == "how do I cast the Boggart?"
+    )
+
+
+def test_correction_resolves_a_pronoun_target():
+    resolution = resolve_followup(
+        "no, I meant him",
+        last_entity="Boggart",
+        last_person="Professor Lupin",
+        last_mode="lesson",
+    )
+    assert resolution.standalone == "Tell me about Professor Lupin."
+
+
+def test_correction_to_a_policy_target_keeps_the_router_in_charge():
+    resolution = resolve_followup(
+        "no, I meant the exam",
+        last_entity="Boggart",
+        last_mode="lesson",
+    )
+    assert resolution.standalone == "Tell me about the exam."
+
+
+def test_definite_and_indefinite_keep_proper_names():
+    assert (
+        resolve_followup(
+            "how do I get to it?",
+            last_entity="Hogwarts",
+            last_place="Hogwarts",
+            last_mode="lesson",
+        ).standalone
+        == "how do I get to Hogwarts?"
+    )
+    assert (
+        resolve_followup(
+            "how do I cast it?",
+            last_entity="Expelliarmus",
+            last_mode="lesson",
+        ).standalone
+        == "how do I cast Expelliarmus?"
+    )
+    assert (
+        resolve_followup(
+            "how do I defeat one?",
+            last_entity="Boggart",
+            last_mode="lesson",
+        ).standalone
+        == "how do I defeat a Boggart?"
+    )
+
+
+def test_resolve_node_traces_the_rewrite_without_the_query_text(tmp_path):
+    sink = TraceSink(tmp_path / "trace.jsonl")
+    token = start_trace("resolve-test", sink)
+    try:
+        state = resolve_node(
+            {
+                "question": "how do I defeat one?",
+                "last_entity": "Boggart",
+                "last_mode": "lesson",
+            }
+        )
+    finally:
+        end_trace(token)
+    records = [
+        json.loads(line)
+        for line in (tmp_path / "trace.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    span = next(record for record in records if record["span"] == "resolve")
+    assert span["rewritten"] is True
+    assert span["rule"] == "implicit_one"
+    assert span["query_chars"] == len(state["standalone_question"])
+    assert "Boggart" not in json.dumps(span)

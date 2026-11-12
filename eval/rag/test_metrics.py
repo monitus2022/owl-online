@@ -236,6 +236,35 @@ def test_turn_citation_is_one_per_expected_group():
     assert partial.citation_ok is False
 
 
+def test_turn_query_comparison_is_case_insensitive():
+    turn = Turn(
+        question="Tell me about Boggart.",
+        mode="lesson",
+        expected_standalone="Tell me about Boggart.",
+        expected_mode="lesson",
+        expected_abstained=False,
+    )
+    conversation = Conversation(
+        conversation_id="c-case",
+        subject="dada",
+        slice_name="same_subject_comparison",
+        turns=(turn,),
+    )
+    result = TurnResult(
+        conversation=conversation,
+        turn=turn,
+        turn_index=1,
+        actual_standalone="TELL ME ABOUT BOGGART.",
+        actual_mode="lesson",
+        actual_material_ids=(),
+        actual_abstained=False,
+        actual_referral_subject=None,
+        actual_referral_concept=None,
+        answer="answer",
+    )
+    assert result.query_ok is True
+
+
 def test_turn_result_flags_a_missing_citation_and_wrong_mode():
     result = TurnResult(
         conversation=_conversation(),
