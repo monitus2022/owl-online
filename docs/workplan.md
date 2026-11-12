@@ -536,6 +536,8 @@ Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 ## Phase C: Chat continuity
 
 Status: short-term memory delivered (#30); continuous lesson mode remains (#43).
+The active gate is RAG hardening (#247), because the lesson/chat quality claim
+is ahead of the measured evidence.
 
 This is the continuous professor experience. It needs short-term memory, not
 user accounts.
@@ -556,6 +558,41 @@ Exit criteria:
   off-pack section is labelled and cites set-text chunk ids.
 
 Anonymous threads are enough here. Auth is not a dependency.
+
+## Phase C.1: RAG hardening
+
+Status: active (#247). This is the RAG side of lesson and chat. It is not a new
+product surface and it does not wait on auth or exam mode.
+
+The last full eval run is 2026-11-08, before the memory work. The memory slice
+was gated only by `run_eval.py --check` against that older CSV. There is no
+committed lesson RAG eval and no multi-turn eval. The judged sample is 15
+answers, with 5 multi-part items. Live probes found a false refusal on "How do I
+defeat a Boggart?", a cross-subject abstain on "what about Avifors?", and an
+implicit follow-up that never reached generation.
+
+| Ticket | Scope |
+|---|---|
+| #247 | Epic: RAG hardening for lesson and chat |
+| #248 | Lesson and multi-turn evaluation foundation |
+| #249 | Context-aware retrieval for follow-up turns |
+| #250 | Lesson false refusals from lexical coverage |
+| #251 | Claim-level citation binding for chat and lesson |
+| #252 | Multi-part retrieval, decomposition and reranker tuning |
+| #253 | Cross-subject concept awareness and professor referral |
+
+Exit criteria:
+
+- the lesson and multi-turn fixtures are committed, frozen with hashes and gated
+  by `run_eval.py --check`;
+- the P0 fixes are measured against a committed baseline, not against the older
+  single-turn CSV;
+- a false refusal and a wrong referral are diagnosable from the trace;
+- the existing retrieval, abstention, faithfulness and routing slices do not
+  regress;
+- cross-subject awareness is a referral contract, not multi-pack teaching: the
+  professor knows the concept index and the faculty lore, not another subject's
+  material.
 
 ## Phase D: V4 identity and long-term memory
 
@@ -590,7 +627,8 @@ flowchart LR
   A[Phase A: chat foundation] --> B1[Phase B1: subject packs]
   B1 --> B2[Phase B2: exam bank]
   B2 --> C[Phase C: chat continuity]
-  C --> D[Phase D: auth and long-term memory]
+  C --> C1[Phase C.1: RAG hardening]
+  C1 --> D[Phase D: auth and long-term memory]
   B2 --> D
 ```
 
@@ -599,26 +637,33 @@ persists exam attempts and chat history.
 
 ## Ticket map
 
-### Now - final push
+### Now - RAG hardening
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #33 | Minimal dashboard over `/v1/metrics` | V3 - Product |
-| #128 | Pack wiring: reference prefill and coverage maintenance | V3 - Product |
+| #247 | Epic: RAG hardening for lesson and chat | V3.1 - RAG hardening |
+| #248 | Lesson and multi-turn evaluation foundation | V3.1 - RAG hardening |
+| #249 | Context-aware retrieval for follow-up turns | V3.1 - RAG hardening |
+| #250 | Lesson false refusals from lexical coverage | V3.1 - RAG hardening |
+| #251 | Claim-level citation binding for chat and lesson | V3.1 - RAG hardening |
+| #33 | Minimal dashboard over `/v1/metrics` (blocked on metric definitions) | V3 - Product |
+| #128 | Pack wiring: reference prefill and coverage maintenance (needs private data) | V3 - Product |
 
 ### Next - complete the loop
 
 | Ticket | Scope | Milestone |
 |---|---|---|
+| #252 | Multi-part retrieval, decomposition and reranker tuning | V3.1 - RAG hardening |
+| #253 | Cross-subject concept awareness and professor referral | V3.1 - RAG hardening |
+| #43 | Thread-based continuous lesson mode | V3 - Product |
 | #44 | Progress tracking and weak topics | V3 - Product |
 | #35 | Auth, per-user history and limits | V3 - Product |
-| #181 | Versioned `/v1` chat and OpenAPI | V3 - Product |
 
 ### Later - hardening
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #43 | Thread-based continuous lesson mode | V3 - Product |
+| #195 | Librarian: sixth, non-teaching door for history and referral | V3 - Product |
 | #74/#75 | EBS data volume and GitHub OIDC | V2 - Deepening |
 
 ### Icebox
@@ -668,14 +713,16 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The #216 epic is delivered; #30 is delivered. The active work is #19/#33 and
-#128. The remaining Now items are #33 and #128; Next is #35/#44. On the pack
-line, the canon index is harvested (#125, #126) and resolved (#127 closed);
-#128 carries reference prefill and coverage maintenance. The #87 schema,
-validator and all five 1.0.0 packs are delivered. #16, #120, #170, #172, #174
-and #127 are closed. #107 is deferred and likely superseded by the per-book
-path. The courtesy note to the Lexicon is deferred to project completion by
-maintainer decision.
+The #216 epic is delivered; #30, #19 and #181 are delivered. The active work is
+the RAG hardening line (#247) plus #33 and #128. Exam mode is delegated to a
+separate agent and is not part of this workplan's active set. The remaining Now
+items are #248-#251 and the two blocked product tickets; Next is #252, #253,
+#43, #35 and #44. On the pack line, the canon index is harvested (#125, #126)
+and resolved (#127 closed); #128 carries reference prefill and coverage
+maintenance. The #87 schema, validator and all five 1.0.0 packs are delivered.
+#16, #120, #170, #172, #174 and #127 are closed. #107 is deferred and likely
+superseded by the per-book path. The courtesy note to the Lexicon is deferred to
+project completion by maintainer decision.
 
 ## Decisions
 
@@ -702,6 +749,10 @@ maintainer decision.
 | Memory is opt-in and process-local | A `thread_id` turns on the checkpointer; requests without one keep the exact answer cache, and a restart drops every thread so no durable chat record exists before auth |
 | Threaded generation gets a bounded conversation block | The model decides follow-ups, including comparisons; the block is not evidence and is capped by the memory budget. Retrieval still uses the standalone query. The experimental multi-book path is excluded |
 | Conversation provenance is not yet checked | Prior citations are stripped and the block is marked untrusted, but the citation checker only verifies membership in the current retrieval set; a model could restate a conversation fact and cite a current excerpt. Provenance-aware verification is future work |
+| Measure lesson and multi-turn before changing prompts | The last full run predates the memory work, and the live probes found false refusals and unresolved follow-ups. A prompt change without a lesson and multi-turn baseline cannot be attributed or gated |
+| Cross-subject awareness is a referral contract, not multi-pack teaching | The professor may know that a concept exists and who owns it, but may not teach another subject's content. A referral is a routing outcome with its own authority and citation type |
+| The professor knows the concept index, not another subject's material | The index stores concept ids, titles, aliases, subject and material id, never prose. The other subject's material never enters the prompt, so the no-teaching boundary is enforceable |
+| The referral payload reuses the #195 L4 shape | The librarian and the professors should return one structured referral contract; a second shape would duplicate the UI and the authority checks |
 | Threaded web chats skip the exact answer cache | Continuity needs the turn stored, and a cache hit would skip the checkpoint write. The cache still serves stateless API clients; lesson mode was already uncached, and the cost is bounded by the existing per-session and per-IP limits |
 | Auth and long-term memory last | Largest privacy and security surface; not needed for a usable exam |
 | Model routing for practice/feedback is rejected | Mistral was cheaper and faster but lost citations and specific error naming; the flag stays off |
@@ -746,7 +797,30 @@ Lesson mode adds:
 - every pack-backed lesson section cites a material id and source ref;
 - an off-pack section is labelled and cites book chunk ids; exam generation and
   grading never consume it;
-- comprehension checks use the same subject pack.
+- comprehension checks use the same subject pack;
+- selection precision@3 and recall@3 against expected material ids;
+- scope accuracy across in-pack, mixed, off-pack and abstain;
+- false refusal rate on answerable paraphrases, reported with unanswerable
+  abstention so a recall gain cannot hide a safety loss;
+- citation retention and faithfulness on the lesson answer, with a judged sample
+  large enough to separate a real move from noise.
+
+Multi-turn chat adds:
+
+- retrieval-query accuracy against the expected standalone query;
+- citation accuracy for the turn;
+- comparison correctness for same-topic and cross-subject comparisons;
+- false refusal and context contamination on off-topic turns;
+- third-topic chaining from the most recent topic, not the first.
+
+Cross-subject referral adds:
+
+- target subject and target professor accuracy;
+- content leak: any definition or claim about the other subject;
+- authority violation: another subject's `lesson:` citation;
+- false referral on an in-subject term;
+- false abstain on a known out-of-subject concept;
+- ambiguous terms correctly clarified.
 
 ## Out of scope
 
