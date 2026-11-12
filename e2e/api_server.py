@@ -13,7 +13,9 @@ Run:
 
 from __future__ import annotations
 
+import json
 import sys
+import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -28,6 +30,7 @@ from app.agent.memory import memory_saver  # noqa: E402
 from app.agent.persona import PERSONAS
 from app.api.runtime import Runtime
 from app.config import Settings
+from app.exam.bank import ExamBank  # noqa: E402
 from app.knowledge import load_lore
 from app.knowledge.materials import Material, SourceRef, chunk_text_hash
 from app.knowledge.packs import (
@@ -40,6 +43,8 @@ from app.knowledge.packs import (
 )
 from app.main import create_app
 from app.schemas import Chunk, ChunkMetadata  # noqa: E402
+from app.storage.exam_store import ExamStore  # noqa: E402
+from eval.exam.fixtures import build_bank  # noqa: E402
 
 CHUNK_ID = "b1-c01-0000"
 MATERIAL_ID = "dada-test-material"
@@ -157,6 +162,65 @@ def _pack(material: Material) -> SubjectPack:
     )
 
 
+class StubJudge:
+    """One deterministic judge call: every rubric criterion is fully awarded."""
+
+    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        data = json.loads(prompt)
+        results = {}
+        for question in data["questions"]:
+            evidence = question["evidence"][0]["chunk_id"]
+            results[question["item_id"]] = {
+                "criteria": [
+                    {
+                        "criterion_id": criterion["criterion_id"],
+                        "awarded": criterion["max_marks"],
+                        "max_marks": criterion["max_marks"],
+                        "reason": "Met.",
+                    }
+                    for criterion in question["rubric"]
+                ],
+                "total": question["max_marks"],
+                "feedback": "Met.",
+                "evidence_ids": [evidence],
+            }
+        return json.dumps({"results": results})
+
+    def stream(self, system: str, prompt: str, *, context=None):
+        async def gen():
+            yield ""
+
+        return gen()
+
+
+def _exam_bank() -> ExamBank:
+    """A tiny published bank: six MCQ and four short answers from the fixture."""
+    bank, _, _, _ = build_bank()
+    mcq, short = bank.items[0], bank.items[1]
+    mcqs = [
+        mcq.model_copy(
+            update={
+                "item_id": f"dada-mcq-{index:03d}",
+                "prompt": f"Sample MCQ {index}?",
+            }
+        )
+        for index in range(1, 7)
+    ]
+    shorts = [
+        short.model_copy(
+            update={
+                "item_id": f"dada-short-{index:03d}",
+                "prompt": f"Sample short answer {index}?",
+            }
+        )
+        for index in range(1, 5)
+    ]
+    manifest = bank.manifest.model_copy(
+        update={"mcq_count": 6, "short_answer_count": 4}
+    )
+    return ExamBank(manifest=manifest, items=[*mcqs, *shorts])
+
+
 def build_app():
     material = _material()
     pack = _pack(material)
@@ -193,6 +257,11 @@ def build_app():
         concepts=1,
         materials=1,
     )
+    exam_bank = _exam_bank()
+    exam_store = ExamStore(
+        Path(tempfile.mkdtemp(prefix="owl-e2e-exams-")) / "exams.db"
+    )
+    exam_store.replace_bank(exam_bank)
     runtime = Runtime(
         retriever=retriever,
         llm=llm,
@@ -202,6 +271,8 @@ def build_app():
         pack_store=store,
         lesson=selector,
         lore=lore,
+        exam_store=exam_store,
+        exam_judges={exam_bank.manifest.judge_model: StubJudge()},
     )
     settings = Settings(
         lesson_mode=True,
@@ -213,6 +284,9 @@ def build_app():
         chat_per_day=10000,
         chat_ip_per_day=10000,
         chat_concurrent=32,
+        exam_attempts_per_day_anonymous=1000,
+        exam_attempts_per_day_signed_in=1000,
+        exam_attempts_per_day_ip=1000,
     )
     return create_app(app_settings=settings, runtime=runtime)
 

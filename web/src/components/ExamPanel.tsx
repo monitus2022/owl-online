@@ -115,7 +115,8 @@ export function ExamPanel({ subject }: { subject: Subject }) {
     return (
       <section className="exam" aria-label="Exam room">
         <div className="notice">
-          Practice paper from the published {subject.name} bank. The result is
+          Untimed practice paper from the published {subject.name} bank. There
+          is no clock and no expiry: take as long as you need. The result is
           provisional and is not an official O.W.L. record.
         </div>
         <ResultsCard best={best} failed={bestFailed} />
@@ -253,8 +254,10 @@ export function ExamPanel({ subject }: { subject: Subject }) {
       >
         <h3 className="paper-title">{paper.title}</h3>
         <p className="paper-meta">
-          {attempt.questions.length} questions · {attempt.marks} marks ·
-          suggested {paper.durationMinutes} minutes; the student sets the pace
+          {attempt.questions.length} questions · {attempt.marks} marks ·{" "}
+          {paper.timed
+            ? `suggested ${paper.durationMinutes} minutes`
+            : "untimed practice; the student sets the pace"}
         </p>
         {attempt.questions.map((question, index) => (
           <fieldset key={question.id} className="question">

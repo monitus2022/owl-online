@@ -108,11 +108,12 @@ JSONL:
 
 | Route | Behaviour |
 |---|---|
-| `GET /v1/exams` | paper descriptor: 10 questions, 6 MCQ, 4 short answers, 50 marks, 60 minutes |
+| `GET /v1/exams` | paper descriptor: 10 questions, 6 MCQ, 4 short answers, 50 marks, untimed |
 | `POST /v1/exams/{paper_id}/attempts` | sample 6 MCQ and 4 short answers, persist them, return the attempt view |
 | `GET /v1/attempts` | graded attempts for the current session, newest first, no question detail |
 | `GET /v1/attempts/{attempt_id}` | the same persisted view on a reload |
 | `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one judge call, then the deterministic band |
+| `DELETE /v1/attempts` | delete the current session's attempts; returns the deleted count |
 
 The paper id is `<subject>-<version>`, so the served papers are `dada-1.0.0`,
 `charms-1.0.0`, `potions-1.0.0`, `transfiguration-1.0.0` and `herbology-1.0.0`. Each venue requests its own subject; the API default stays
@@ -120,6 +121,10 @@ The paper id is `<subject>-<version>`, so the served papers are `dada-1.0.0`,
 distractors in a shuffled order; the correct option id stays on the persisted
 attempt and is never in the pre-submission view. The attempt view contains no
 golden answer, rubric or evidence either.
+
+Served papers are untimed practice. The descriptor carries `timed: false` and
+`duration_minutes` is advisory only: the server starts no clock, does not
+expire an attempt, and grades a late submission exactly like an immediate one.
 
 The attempt is persisted before it is returned, so a reload is stable and a
 repeated grade returns the stored result without a second judge call. Grading
@@ -139,16 +144,30 @@ Attempts are capped per session at three per day anonymous and five per day
 signed-in, with a separate nine-per-day per-IP cap; over a cap is `429` with
 `Retry-After`. The signed-in path is reserved for auth (#35), so the route
 currently admits everyone as anonymous. The exam limiter is separate from the
-chat limiter. The exam judge is built when a published bank exists; a missing
-judge configuration is caught at startup, so papers still serve and grading
-returns `503`. A provider failure during grading is `502`.
+chat limiter. The exam judge is built from each bank's pinned judge model at
+startup, so a bank that pins a different model is graded by its own adapter
+rather than the `OWL_EXAM_SUBJECT` one. Adapters are built for the latest
+published version of each subject, which is the version serving selects. A
+missing judge configuration for a bank leaves its papers serving and returns
+`503` for its grades. A provider failure during grading is `502`.
 
 Serving settings: `OWL_EXAM_STORE_PATH` (default `data/exams/exams.db`),
+`OWL_EXAM_JUDGE_CACHE_PATH` (default `data/exam_judge_cache.jsonl`),
 `OWL_EXAM_SUBJECT` (default `dada`), `OWL_EXAM_MCQ_COUNT` (6),
-`OWL_EXAM_SHORT_COUNT` (4), `OWL_EXAM_DURATION_MINUTES` (60),
+`OWL_EXAM_SHORT_COUNT` (4), `OWL_EXAM_DURATION_MINUTES` (60, advisory only),
 `OWL_EXAM_ATTEMPTS_PER_DAY_ANONYMOUS` (3),
 `OWL_EXAM_ATTEMPTS_PER_DAY_SIGNED_IN` (5) and
-`OWL_EXAM_ATTEMPTS_PER_DAY_IP` (9).
+`OWL_EXAM_ATTEMPTS_PER_DAY_IP` (9). On the host the store and judge-cache paths
+must be absolute and on the writable `/data` volume.
+
+Snapshot, validate and upload the store with
+`uv run python scripts/upload_exam_store.py --presign`. It refuses fewer than
+five servable subjects, counted as the latest published version per subject, a
+bank whose stored item count does not match its manifest, an integrity failure,
+or a snapshot carrying local attempts unless `--allow-attempts` is set. The host
+install is a separate step: download the short-lived URL to
+`/data/exams/exams.db`, verify the printed sha256, then recreate the container
+so it reads the store.
 
 ## Bank 1.0.0 quality notes
 

@@ -4,7 +4,7 @@ The API receives wired contracts and never builds a provider per request.
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
@@ -41,13 +41,20 @@ class Runtime:
     pack_store: PackStore | None = None
     lesson: LessonSelector | None = None
     exam_store: ExamStore | None = None
+    # One judge per pinned model slug. Published banks may pin different judge
+    # models, so grading selects the adapter from the attempt's own bank rather
+    # than from OWL_EXAM_SUBJECT. `exam_judge` is an explicit single-judge
+    # injection for tests and the browser stub, used only when the map is empty.
+    exam_judges: dict[str, Llm] = field(default_factory=dict)
     exam_judge: Llm | None = None
     exam_cache: JudgeCache | None = None
 
     async def aclose(self) -> None:
         """Release provider clients and the serving store on shutdown."""
+        components = [self.retriever, self.llm, self.small_llm, self.exam_judge]
+        components.extend(self.exam_judges.values())
         seen: set[int] = set()
-        for component in (self.retriever, self.llm, self.small_llm, self.exam_judge):
+        for component in components:
             if component is None or id(component) in seen:
                 continue
             seen.add(id(component))
@@ -56,6 +63,14 @@ class Runtime:
                 await close()
         if self.exam_store is not None:
             self.exam_store.close()
+
+
+def exam_judge_for(runtime: Runtime, bank: ExamBank) -> Llm | None:
+    """The judge adapter pinned by this bank, never another subject's."""
+    judge = runtime.exam_judges.get(bank.manifest.judge_model)
+    if judge is None and not runtime.exam_judges:
+        return runtime.exam_judge
+    return judge
 
 
 def lesson_available(
@@ -143,30 +158,62 @@ async def build_runtime(settings: Settings) -> Runtime:
         else None
     )
     exam_store: ExamStore | None = None
-    exam_judge: Llm | None = None
+    exam_judges: dict[str, Llm] = {}
     exam_cache: JudgeCache | None = None
     if settings.exam_store_path.exists():
         try:
             exam_store = ExamStore(settings.exam_store_path)
-            bank: ExamBank | None = exam_store.bank(settings.exam_subject)
+            subjects = exam_store.published_subjects()
         except Exception as error:
             logger.warning("exam serving disabled: %s", error)
             if exam_store is not None:
                 exam_store.close()
             exam_store = None
-            bank = None
+            subjects = []
         if exam_store is not None:
-            if bank is None:
-                logger.info(
-                    "no published exam bank for %s; exam routes stay empty",
-                    settings.exam_subject,
-                )
+            manifests = []
+            for subject in subjects:
+                try:
+                    manifest = exam_store.published_manifest(subject)
+                except Exception as error:
+                    # A malformed row disables that subject only; chat and the
+                    # other banks keep serving.
+                    logger.warning("exam bank unreadable for %s: %s", subject, error)
+                    continue
+                if manifest is not None:
+                    manifests.append(manifest)
+            if not manifests:
+                logger.info("no published exam banks; exam routes stay empty")
             else:
                 try:
-                    exam_judge = judge_llm_from_bank(bank)
-                    exam_cache = default_judge_cache()
+                    exam_cache = default_judge_cache(config_settings=settings)
                 except Exception as error:
-                    logger.warning("exam grading disabled: %s", error)
+                    logger.warning("exam grade cache disabled: %s", error)
+                served: list[str] = []
+                for manifest in manifests:
+                    label = f"{manifest.subject} {manifest.version}"
+                    if manifest.judge_model in exam_judges:
+                        served.append(label)
+                        continue
+                    try:
+                        bank = exam_store.bank(manifest.subject, manifest.version)
+                        if bank is None:
+                            logger.warning("exam bank unreadable: %s", label)
+                            continue
+                        exam_judges[manifest.judge_model] = judge_llm_from_bank(
+                            bank, config_settings=settings
+                        )
+                    except Exception as error:
+                        # One bad row must not take the whole app down: chat
+                        # and the other banks keep serving.
+                        logger.warning("exam bank unavailable: %s: %s", label, error)
+                        continue
+                    served.append(label)
+                logger.info(
+                    "exam banks served: %s; judge models: %s",
+                    served or "none",
+                    sorted(exam_judges) or "none",
+                )
     else:
         logger.info(
             "exam bank absent at %s; exam routes stay empty",
@@ -205,6 +252,6 @@ async def build_runtime(settings: Settings) -> Runtime:
         pack_store=pack_store,
         lesson=lesson,
         exam_store=exam_store,
-        exam_judge=exam_judge,
+        exam_judges=exam_judges,
         exam_cache=exam_cache,
     )

@@ -1,11 +1,15 @@
-"""Back up gitignored corpus and lexicon artifacts to the private bucket.
+"""Back up gitignored corpus, lexicon and serving artifacts to the private bucket.
 
 Tar + `aws s3 cp` to s3://$OWL_BACKUP_BUCKET (default monitus-owl-online-data),
 mirroring the existing owl-data.tgz convention. Both bundles are private
 backups of locally-held artifacts; nothing is republished. The lexicon bundle
 carries the site's HTML fetch cache (copyrighted prose) under the same private
 posture as the books corpus: bucket reads are owner-only, serving stays on the
-host volume.
+host volume. The data bundle includes the exam store, which is also gitignored
+and cannot be rebuilt from the image; that member is snapshotted consistently
+and may carry attempt history by design. Use `upload_exam_store.py` for the
+serving copy. `--what data` requires a local exam store, so a checkout without
+one must build or restore it first.
 
   uv run python scripts/backup_lexicon.py --what data --dry-run
   uv run python scripts/backup_lexicon.py --what all
@@ -14,7 +18,6 @@ host volume.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import os
 import shutil
 import subprocess
@@ -24,9 +27,17 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from scripts.upload_exam_store import (  # noqa: E402
+    DEFAULT_BUCKET,
+    DEFAULT_REGION,
+    sha256,
+    snapshot,
+)
+
 DATA = REPO / "data"
-DEFAULT_BUCKET = "monitus-owl-online-data"
-DEFAULT_REGION = "ap-northeast-3"
 
 DATA_MEMBERS = [
     "chunks.jsonl",
@@ -35,6 +46,7 @@ DATA_MEMBERS = [
     "index/chroma",
     "lore",
     "subjects",
+    "exams/exams.db",
 ]
 LEXICON_DIR = "lexicon"
 LEXICON_NAME = "owl-lexicon"
@@ -42,38 +54,44 @@ DATA_NAME = "owl-data"
 SKIP_IF_MISSING = {"subjects", "lore"}
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def build_tar(kind: str, staging: Path) -> Path:
-    stamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     name = LEXICON_NAME if kind == "lexicon" else DATA_NAME
     out = staging / f"{name}-{stamp}.tgz"
     if kind == "lexicon":
         if not (DATA / LEXICON_DIR).is_dir():
             raise SystemExit(f"missing {DATA / LEXICON_DIR}; finish the harvest first")
-        members = [f"{LEXICON_DIR}"]
-    else:
-        members = []
-        for member in DATA_MEMBERS:
-            if not (DATA / member).exists():
-                if member in SKIP_IF_MISSING:
-                    print(f"skip {member}: not present")
-                    continue
-                raise SystemExit(f"missing required artifact: {DATA / member}")
-            members.append(member)
-    # -h follows symlinked artifacts so a worktree pointing at the host data
-    # dir archives real contents, not link entries (the 0-byte backup trap).
-    subprocess.run(
-        ["tar", "-h", "-czf", str(out), "-C", str(REPO),
-         *(f"data/{m}" for m in members)],
-        check=True,
-    )
+        # -h follows symlinked artifacts so a worktree pointing at the host data
+        # dir archives real contents, not link entries (the 0-byte backup trap).
+        subprocess.run(
+            ["tar", "-h", "-czf", str(out), "-C", str(REPO), f"data/{LEXICON_DIR}"],
+            check=True,
+        )
+        return out
+    members = []
+    for member in DATA_MEMBERS:
+        if not (DATA / member).exists():
+            if member in SKIP_IF_MISSING:
+                print(f"skip {member}: not present")
+                continue
+            raise SystemExit(f"missing required artifact: {DATA / member}")
+        members.append(member)
+    # The exam store is a live SQLite database; snapshot it before tarring so a
+    # backup taken while a grade commits cannot restore as a corrupt file. The
+    # other members are symlinked and tar -h dereferences them.
+    tree = staging / "data"
+    tree.mkdir(parents=True, exist_ok=True)
+    for member in members:
+        target = DATA / member
+        link = tree / member
+        link.parent.mkdir(parents=True, exist_ok=True)
+        if member == "exams/exams.db":
+            snapshot(target, link)
+        else:
+            if link.is_symlink():
+                link.unlink()
+            link.symlink_to(target)
+    subprocess.run(["tar", "-h", "-czf", str(out), "-C", str(staging), "data"], check=True)
     return out
 
 

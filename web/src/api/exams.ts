@@ -47,7 +47,9 @@ export interface ExamPaper {
   mcqCount: number;
   shortAnswerCount: number;
   marks: number;
+  // Advisory pace only: the room is untimed practice.
   durationMinutes: number;
+  timed: boolean;
 }
 
 export interface AttemptView {
@@ -144,6 +146,7 @@ interface ApiPaper {
   short_answer_count: number;
   marks: number;
   duration_minutes: number;
+  timed: boolean;
 }
 
 interface ApiCriterion {
@@ -288,6 +291,7 @@ export class HttpExamClient implements ExamClient {
       shortAnswerCount: paper.short_answer_count,
       marks: paper.marks,
       durationMinutes: paper.duration_minutes,
+      timed: paper.timed ?? false,
     }));
   }
 

@@ -686,7 +686,7 @@ film or secondary material.
 | Pack build | batch job over the corpus | validated materials with source refs and pack version |
 | Exam build | batch job over the packs | validated questions, rubrics, evidence snapshots |
 | Exam store | SQLite in `/data` | banks, items, persisted attempts and grades |
-| Exam serving | `GET /v1/exams`, `POST /v1/exams/{paper_id}/attempts` and `DELETE /v1/attempts` | sampled stored paper, attempt view and the session-scoped delete, no model call |
+| Exam serving | `GET /v1/exams`, `POST /v1/exams/{paper_id}/attempts`, `GET /v1/attempts`, `GET /v1/attempts/{attempt_id}` and `DELETE /v1/attempts` | sampled stored paper, persisted attempt view, session history and the session-scoped delete, no model call |
 | Attempt grading | `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one pinned judge call, then a deterministic band |
 
 The bank is authored as `data/exams/<subject>/bank.jsonl` plus `manifest.toml`,
@@ -723,12 +723,16 @@ sequenceDiagram
 
 The attempt is persisted before the client sees it, so a reload returns the same
 options and a repeated grade returns the stored result without a second judge
-call. The server never puts `correct_option_id`, the golden answer, the rubric
+call. Served papers are untimed practice: the descriptor says `timed: false`,
+`duration_minutes` is advisory, and neither serving nor grading enforces an
+expiry. The server never puts `correct_option_id`, the golden answer, the rubric
 or evidence into the pre-submission view. The history list is scoped to the
 signed anonymous session cookie, and another session gets `404` on the attempt
 and grade routes, so an attempt id is not a shared bearer token. The exam limiter
 caps attempts at three per day anonymous, five signed-in and nine per day per
-IP; it is separate from the chat limiter.
+IP; it is separate from the chat limiter. Grading selects the judge adapter
+pinned by the attempt's own bank, so a subject cannot be marked by the
+`OWL_EXAM_SUBJECT` model when its bank pins a different one.
 
 The boundary matters because the two surfaces have different guarantees. Chat
 practice is disposable and formative. Exam-bank papers are validated, versioned
@@ -837,9 +841,9 @@ model, intent, cache hit, cost and latency; a client that disconnects before the
 stream ends may not produce a line. Prices are configuration, not constants.
 
 The `Runtime` (the retriever with its optional reranker, the llm, the compiled
-agent graph, the index text hash used by the cache key, and the loaded pack store
-with its derived lesson selector) is built once in the app lifespan, never per
-request.
+agent graph, the index text hash used by the cache key, the loaded pack store
+with its derived lesson selector, and the exam store with one judge adapter per
+pinned judge model) is built once in the app lifespan, never per request.
 Provider failures surface as a normalized `ProviderError` and become a 502 at
 the edge, or an SSE `error` event once a stream has started.
 
@@ -864,7 +868,7 @@ generate) for the per-call detail.
 | `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
 | `AttemptAnswer` / `AttemptGrade` / `QuestionGrade` / `CriterionGrade` | `app/grading/models.py` | pydantic | answer shape, per-question criteria and marks, per-attempt total and band |
 | `JudgeConfig` | `app/grading/models.py` | dataclass | pinned judge model, temperature, prompt version, provider and max tokens |
-| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled memory and stateless agent graphs, index hash, published pack summaries, pack store, derived lesson selector, exam store, exam judge and judge cache |
+| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled memory and stateless agent graphs, index hash, published pack summaries, pack store, derived lesson selector, exam store, per-bank judge adapters keyed by pinned judge model, optional single-judge injection, judge cache |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
 | `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review, optional thread id |
 

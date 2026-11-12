@@ -176,6 +176,8 @@ control the non-secret runtime toggles. The workflow passes them with `-e`, and
 | `OWL_PERSONA` | `false` | enable the professor voice |
 | `OWL_PERSONA_SUBJECT` | `dada` | default API chat subject and card; independent of `OWL_LORE_SUBJECT`, which is the eval/direct-call default |
 | `OWL_CORS_ORIGINS` | `https://owl.monitus.org` | comma-separated browser origins allowed to call the API; the Pages preview regex is separate |
+| `OWL_EXAM_STORE_PATH` | `/data/exams/exams.db` | the imported bank plus persisted attempts; must be absolute and writable |
+| `OWL_EXAM_JUDGE_CACHE_PATH` | `/data/exam_judge_cache.jsonl` | judge-response cache; must be absolute and writable, and survives a redeploy on the volume |
 
 Short-term chat memory is on by default (`OWL_MEMORY_ENABLED=true`) and only
 used when a request sends a `thread_id`. `OWL_MEMORY_WINDOW` (default 6) and
@@ -190,20 +192,31 @@ Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
 workflow. `docker restart` does not re-read env; the workflow recreates the
 container with the variables.
 
-The workflow always injects these six keys (the repository variable or its
+The workflow always injects these eight keys (the repository variable or its
 default), so they override `owl.env` even when no repository variable is set.
 The file entries are only for manual `docker run` or Compose.
 `OWL_LESSON_MODE` also needs a valid published pack for the request subject;
 the default API subject is `OWL_PERSONA_SUBJECT` (default `dada`).
 
+The exam store is not built by the deploy workflow. Upload `exams.db` to
+`/data/exams/exams.db` out of band, or the exam routes stay empty. The store
+path and the judge cache path must sit on the writable `/data` volume; the
+container reads the bank at startup and writes attempts and grades beside it.
+The rollout creates the store directory and refuses to start if either exam
+path's directory is not writable, so a read-only volume fails before the
+container replaces the running one.
+
 After the deploy, check:
 
 ```
 curl -s https://api.monitus.org/v1/subjects
+curl -s "https://api.monitus.org/v1/exams?subject=dada"
 ```
 
 Expect the DADA summary with `lesson:true` and `persona:true` when the pack is
-present.
+present, and a paper descriptor for every subject whose bank was imported. A
+`503 exam bank unavailable` from `/v1/attempts` means the store is missing or
+not readable at `OWL_EXAM_STORE_PATH`.
 
 ### Rollout guard
 
@@ -346,7 +359,9 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_TRACE_FILE=/data/traces.jsonl
    OWL_AWS_REGION=ap-northeast-1
    OWL_CORS_ORIGINS=https://owl.monitus.org
-   # The deploy workflow injects these six with -e; set the repository
+   OWL_EXAM_STORE_PATH=/data/exams/exams.db
+   OWL_EXAM_JUDGE_CACHE_PATH=/data/exam_judge_cache.jsonl
+   # The deploy workflow injects these eight with -e; set the repository
    # variables to true to enable lesson and persona. The file entries are for
    # manual docker run or Compose use.
    OWL_LESSON_MODE=false
@@ -356,9 +371,10 @@ The pipeline ships only the image. Do these once on the instance:
    ```
 
    The workflow always injects `OWL_SUBJECTS_PATH`, `OWL_LESSON_MODE`,
-   `OWL_LESSON_FALLBACK`, `OWL_PERSONA`, `OWL_PERSONA_SUBJECT` and
-   `OWL_CORS_ORIGINS` (repository variable or default), so they override the
-   file even when no variable is set.
+   `OWL_LESSON_FALLBACK`, `OWL_PERSONA`, `OWL_PERSONA_SUBJECT`,
+   `OWL_CORS_ORIGINS`, `OWL_EXAM_STORE_PATH` and
+   `OWL_EXAM_JUDGE_CACHE_PATH` (repository variable or default), so they
+   override the file even when no variable is set.
 
 3. The data at `/data`: `chunks.jsonl`, the index built with the same
    embedder, `lore/` and `subjects/`. Build the Titan index locally, then
@@ -370,8 +386,35 @@ The pipeline ships only the image. Do these once on the instance:
    ls /data/subjects/dada/pack.toml
    ```
 
+   The bank database is uploaded out of band and is not in the image. Snapshot,
+   validate and upload it with:
+
+   ```
+   uv run python scripts/upload_exam_store.py --presign
+   ```
+
+   It writes a timestamped object plus `deploy/owl-exams.db` in the private
+   bucket and prints a short-lived URL and the sha256. If the local store has
+   served attempts, the script refuses it; pass `--allow-attempts` only if the
+   host should inherit that local session history. Download the URL on the
+   host to `/data/exams/exams.db`, verify the hash, then leave the file
+   writable: the API persists attempts and grades in the same database. The
+   rollout creates `/data/exams` and fails before replacing the container if
+   the volume is not writable.
+
+   ```
+   ls -l /data/exams/exams.db
+   ```
+
    After the next deploy, verify with the `/v1/subjects` check in the CI/CD
    section; lesson is true only when `OWL_LESSON_MODE` and the pack are set.
+   Then check one exam route per imported bank:
+
+   ```
+   for subject in dada charms potions transfiguration herbology; do
+     curl -s "https://api.monitus.org/v1/exams?subject=$subject"
+   done
+   ```
 
 4. TLS. nginx terminates HTTPS on 443 with the Cloudflare Origin Certificate
    (`*.monitus.org`, from `s3://monitus-cloudflare-certs`) and proxies to the

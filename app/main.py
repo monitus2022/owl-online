@@ -30,7 +30,12 @@ from app.agent.router import classify
 from app.api.cache import AnswerCache, cache_key
 from app.api.limits import ChatLimiter, Decision, ExamAttemptLimiter
 from app.api.metrics import Metrics
-from app.api.runtime import Runtime, build_runtime, lesson_available
+from app.api.runtime import (
+    Runtime,
+    build_runtime,
+    exam_judge_for,
+    lesson_available,
+)
 from app.api.schemas import (
     AskRequest,
     AskResponse,
@@ -1033,6 +1038,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 short_answer_count=short_count,
                 marks=mcq_count * MCQ_MARKS + short_count * SHORT_ANSWER_MARKS,
                 duration_minutes=app_settings.exam_duration_minutes,
+                timed=False,
             )
         ]
 
@@ -1056,7 +1062,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         if store is None:
             raise HTTPException(status_code=503, detail="exam bank unavailable")
         subject, version = _parse_paper_id(paper_id)
-        bank = store.bank(subject, version)
+        try:
+            bank = store.bank(subject, version)
+        except Exception as error:
+            logger.warning("exam bank read failed for %s: %s", paper_id, error)
+            raise HTTPException(
+                status_code=503, detail="exam bank cannot serve this paper"
+            ) from error
         if bank is None:
             raise HTTPException(status_code=404, detail="paper not found")
         limiter: ExamAttemptLimiter = app.state.exam_limiter
@@ -1166,10 +1178,14 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         record = owned_attempt(store, attempt_id, request.state.session_id)
         if record.grade is not None:
             return grade_response(record, record.grade)
-        bank = store.bank(record.subject, record.bank_version)
+        try:
+            bank = store.bank(record.subject, record.bank_version)
+        except Exception as error:
+            logger.warning("exam bank read failed for %s: %s", attempt_id, error)
+            raise HTTPException(status_code=503, detail="paper unavailable") from error
         if bank is None:
             raise HTTPException(status_code=503, detail="paper unavailable")
-        judge = runtime.exam_judge
+        judge = exam_judge_for(runtime, bank)
         if judge is None:
             raise HTTPException(status_code=503, detail="grading unavailable")
         by_id = {question.item_id: question for question in record.questions}

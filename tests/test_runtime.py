@@ -153,3 +153,51 @@ async def test_build_runtime_keeps_chat_up_when_lesson_embedding_fails(
 
     assert built.lesson is None
     assert built.pack_store is not None
+
+
+async def test_build_runtime_isolates_a_corrupt_exam_bank(monkeypatch, tmp_path):
+    _patch_runtime(monkeypatch)
+    store_path = tmp_path / "exams.db"
+    store_path.touch()
+    judge = object()
+
+    class _CorruptStore:
+        def __init__(self, _path):
+            pass
+
+        def published_subjects(self):
+            return ["charms", "dada", "potions"]
+
+        def published_manifest(self, subject):
+            if subject == "charms":
+                raise ValueError("malformed manifest row")
+            return SimpleNamespace(
+                subject=subject, version="1.0.0", judge_model=f"{subject}/judge"
+            )
+
+        def bank(self, subject, _version):
+            if subject == "potions":
+                raise ValueError("malformed item row")
+            return object()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(runtime_module, "ExamStore", _CorruptStore)
+    monkeypatch.setattr(
+        runtime_module, "judge_llm_from_bank", lambda *a, **k: judge
+    )
+    monkeypatch.setattr(runtime_module, "default_judge_cache", lambda **k: None)
+
+    built = await runtime_module.build_runtime(
+        Settings(
+            lore_path=tmp_path / "absent-lore",
+            subjects_path=tmp_path / "absent-subjects",
+            exam_store_path=store_path,
+        )
+    )
+
+    # Startup survives both a bad manifest and a bad item row; only the healthy
+    # subject gets an adapter, and the store stays available for serving.
+    assert built.exam_store is not None
+    assert built.exam_judges == {"dada/judge": judge}
