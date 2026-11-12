@@ -108,7 +108,7 @@ is a versioned, validated set of subject materials, each linked to source chunks
 
 | Surface | Runtime | Persistence | Authority |
 |---|---|---|---|
-| Chat | online, streamed | ephemeral today; threads later | formative |
+| Chat | online, streamed | stateless by default; opt-in process-local threads (#30) | formative |
 | Exam bank | static content, online serving | database | authoritative |
 
 Chat intents are answer, practice and feedback. Chat practice and feedback are
@@ -535,14 +535,14 @@ Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 
 ## Phase C: Chat continuity
 
-Status: after the exam bank.
+Status: short-term memory delivered (#30); continuous lesson mode remains (#43).
 
 This is the continuous professor experience. It needs short-term memory, not
 user accounts.
 
 | Ticket | Scope |
 |---|---|
-| #30 | Threads, checkpointer, messages in state, rewrite node for follow-ups |
+| #30 | Delivered: threads, checkpointer, messages in state, deterministic follow-up resolver |
 | #43 | Lesson mode on top of the continuous chat graph |
 
 Exit criteria:
@@ -610,7 +610,6 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #30 | Conversation memory and follow-up rewrite | V3 - Product |
 | #44 | Progress tracking and weak topics | V3 - Product |
 | #35 | Auth, per-user history and limits | V3 - Product |
 | #181 | Versioned `/v1` chat and OpenAPI | V3 - Product |
@@ -657,6 +656,7 @@ persists exam attempts and chat history.
 | Privacy and retention | #180 |
 | Browser E2E and accessibility | #179 |
 | Versioned chat aliases and OpenAPI | #181 |
+| Short-term chat continuity | #30 |
 | Latency and cost metrics | #19 |
 | Open trackers (work delivered, ticket open) | #178, #187, #38-#42, #182 |
 
@@ -668,8 +668,8 @@ persists exam attempts and chat history.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The #216 epic is delivered; the active work is #19/#33 and #128. #30 follows.
-The remaining Now items are #33 and #128; Next is #35/#44. On the pack
+The #216 epic is delivered; #30 is delivered. The active work is #19/#33 and
+#128. The remaining Now items are #33 and #128; Next is #35/#44. On the pack
 line, the canon index is harvested (#125, #126) and resolved (#127 closed);
 #128 carries reference prefill and coverage maintenance. The #87 schema,
 validator and all five 1.0.0 packs are delivered. #16, #120, #170, #172, #174
@@ -699,6 +699,8 @@ maintainer decision.
 | Deterministic totals and bands | The final score is not model-generated |
 | Per-session/day chat caps and exact cache | Chat is the variable-cost surface |
 | Anonymous threads before auth | Continuous chat without identity work |
+| Memory is opt-in and process-local | A `thread_id` turns on the checkpointer; requests without one keep the exact answer cache, and a restart drops every thread so no durable chat record exists before auth |
+| Threaded web chats skip the exact answer cache | Continuity needs the turn stored, and a cache hit would skip the checkpoint write. The cache still serves stateless API clients; lesson mode was already uncached, and the cost is bounded by the existing per-session and per-IP limits |
 | Auth and long-term memory last | Largest privacy and security surface; not needed for a usable exam |
 | Model routing for practice/feedback is rejected | Mistral was cheaper and faster but lost citations and specific error naming; the flag stays off |
 | Multi-book questions use a bounded map-reduce path | Per-book retrieval and extraction make coverage structural; one top-5 pass cannot represent seven books |

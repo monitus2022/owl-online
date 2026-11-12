@@ -1,5 +1,6 @@
 """HTTP request and response models for the API."""
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -50,6 +51,19 @@ class StreamRequest(AskRequest):
 
     mode: Literal["auto", "answer", "practice", "feedback", "lesson"] = "auto"
     student_answer: str | None = Field(default=None, max_length=6000)
+    thread_id: str | None = Field(default=None, max_length=256)
+
+    @field_validator("thread_id")
+    @classmethod
+    def _thread_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            return None
+        if re.fullmatch(r"[A-Za-z0-9_-]{8,64}", stripped) is None:
+            raise ValueError("thread_id must be 8-64 letters, digits, hyphens or underscores")
+        return stripped
 
     @field_validator("student_answer")
     @classmethod

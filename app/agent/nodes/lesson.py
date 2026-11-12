@@ -45,8 +45,9 @@ async def lesson_node(
         personas=cards,
         default_subject=active_subject,
     )
+    question = state.get("standalone_question") or state["question"]
     result = await ask_lesson(
-        state["question"],
+        question,
         selector=selector,
         subject=active_subject,
         llm=llm,

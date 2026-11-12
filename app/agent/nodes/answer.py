@@ -45,8 +45,9 @@ async def answer_node(
         personas=cards,
         default_subject=subject,
     )
+    question = state.get("standalone_question") or state["question"]
     result = await ask(
-        state["question"],
+        question,
         retriever=retriever,
         llm=llm,
         top_k=state.get("top_k", top_k),

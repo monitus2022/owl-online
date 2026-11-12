@@ -21,6 +21,17 @@ RequestedMode = Literal["auto", "answer", "practice", "feedback", "lesson"]
 
 class AgentState(TypedDict, total=False):
     question: str
+    standalone_question: str
+    messages: list[dict[str, str]]
+    summary: str
+    last_entity: str
+    last_person: str
+    last_place: str
+    last_mode: str
+    pending_clarify: bool
+    forced_mode: str | None
+    preferred_mode: str | None
+    routed_mode: str
     requested_mode: RequestedMode
     subject: str
     persona_enabled: bool

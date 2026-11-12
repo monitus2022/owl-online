@@ -46,12 +46,13 @@ async def feedback_node(
             "abstained": False,
             "needs_input": True,
         }
+    question = state.get("standalone_question") or state["question"]
     chunks = await retrieve_evidence(
-        f"{state['question']}\n\n{student}",
+        f"{question}\n\n{student}",
         retriever,
         state.get("top_k", top_k),
         min_score,
-        strategy_question=state["question"],
+        strategy_question=question,
     )
     if not chunks:
         return {
@@ -62,7 +63,7 @@ async def feedback_node(
             "abstained": True,
         }
     prompt = evidence_prompt(
-        state["question"],
+        question,
         chunks,
         extra=f"Student answer:\n{student}",
     )

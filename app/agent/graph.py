@@ -6,12 +6,15 @@ Router: answer | practice | feedback | meta | personal | lesson.
 from collections.abc import Mapping
 from functools import partial
 
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from app.agent.memory import TOKEN_BUDGET, WINDOW_MESSAGES
 from app.agent.nodes.answer import answer_node
 from app.agent.nodes.feedback import feedback_node
 from app.agent.nodes.lesson import lesson_node
+from app.agent.nodes.memory import remember_node, resolve_node
 from app.agent.nodes.persona import (
     abstain_node,
     clarify_node,
@@ -51,8 +54,11 @@ def build_graph(
     lesson_top_k: int = LESSON_TOP_K,
     lesson_min_score: float = LESSON_MIN_SCORE,
     lesson_fallback: bool = True,
+    checkpointer: BaseCheckpointSaver | None = None,
+    memory_window: int = WINDOW_MESSAGES,
+    memory_token_budget: int = TOKEN_BUDGET,
 ) -> CompiledStateGraph:
-    """Build the stateless per-request graph; no checkpointer in D4."""
+    """Build the chat graph; an optional checkpointer enables thread memory."""
     default_subject = default_subject or lesson_subject or lore_subject or "dada"
     if personas is None and persona is not None:
         personas = {default_subject: persona}
@@ -64,6 +70,22 @@ def build_graph(
         else None
     )
     graph = StateGraph(AgentState)
+    graph.add_node(
+        "resolve",
+        partial(
+            resolve_node,
+            window=memory_window,
+            token_budget=memory_token_budget,
+        ),
+    )
+    graph.add_node(
+        "remember",
+        partial(
+            remember_node,
+            window=memory_window,
+            token_budget=memory_token_budget,
+        ),
+    )
     graph.add_node(
         "router",
         partial(
@@ -92,7 +114,7 @@ def build_graph(
             lore_subject=lore_subject,
         ),
     )
-    graph.add_edge("answer", END)
+    graph.add_edge("answer", "remember")
 
     graph.add_node(
         "meta",
@@ -112,8 +134,8 @@ def build_graph(
             default_subject=default_subject,
         ),
     )
-    graph.add_edge("meta", END)
-    graph.add_edge("personal", END)
+    graph.add_edge("meta", "remember")
+    graph.add_edge("personal", "remember")
     graph.add_node(
         "fact",
         partial(
@@ -143,10 +165,10 @@ def build_graph(
             default_subject=default_subject,
         ),
     )
-    graph.add_edge("fact", END)
-    graph.add_edge("clarify", END)
-    graph.add_edge("policy", END)
-    graph.add_edge("abstain", END)
+    graph.add_edge("fact", "remember")
+    graph.add_edge("clarify", "remember")
+    graph.add_edge("policy", "remember")
+    graph.add_edge("abstain", "remember")
 
     for name, node in (
         ("practice", practice_node),
@@ -163,9 +185,11 @@ def build_graph(
                 min_score=min_score,
             ),
         )
-        graph.add_edge(name, END)
+        graph.add_edge(name, "remember")
 
-    graph.add_edge(START, "router")
+    graph.add_edge("remember", END)
+    graph.add_edge(START, "resolve")
+    graph.add_edge("resolve", "router")
     routes = {
         "answer": "answer",
         "practice": "practice",
@@ -195,7 +219,7 @@ def build_graph(
                 fallback=lesson_fallback,
             ),
         )
-        graph.add_edge("lesson", END)
+        graph.add_edge("lesson", "remember")
         routes["lesson"] = "lesson"
     else:
         # Lesson is an explicit request only; without a selector it falls back
@@ -206,4 +230,4 @@ def build_graph(
         lambda state: state["mode"],
         routes,
     )
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)

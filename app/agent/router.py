@@ -748,7 +748,21 @@ def route(
     persona: bool = False,
     teaching_terms: Callable[[str], set[str]] | None = None,
 ) -> dict[str, object]:
-    question = state["question"]
+    question = state.get("standalone_question") or state["question"]
+    forced = state.get("forced_mode")
+    if forced:
+        payload: dict[str, object] = {"mode": forced, "routed_mode": forced}
+        if forced == "policy":
+            payload["meta_topic"] = "exam"
+        tracer = current_tracer()
+        if tracer is not None:
+            tracer.emit(
+                "router",
+                intent=forced,
+                requested=state.get("requested_mode", "auto"),
+                question_chars=len(question),
+            )
+        return payload
     subject = state.get("subject", "dada")
     requested = state.get("requested_mode", "auto")
     terms = teaching_terms(subject) if teaching_terms is not None else None
@@ -760,7 +774,12 @@ def route(
         subject=subject,
         teaching_terms=terms,
     )
-    payload: dict[str, object] = {"mode": mode}
+    # An elliptical follow-up in a lesson thread keeps the teaching contract,
+    # but only after the policy, fact, clarify and abstain gates have run and
+    # only when the client did not ask for a specific mode.
+    if requested == "auto" and mode == "answer" and state.get("preferred_mode") == "lesson":
+        mode = "lesson"
+    payload: dict[str, object] = {"mode": mode, "routed_mode": mode}
     if mode in ("meta", "policy", "fact", "clarify", "abstain"):
         decision = contract_decision(
             question,

@@ -6,9 +6,11 @@ The API receives wired contracts and never builds a provider per request.
 import logging
 from dataclasses import dataclass
 
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
 from app.agent import build_graph
+from app.agent.memory import memory_saver
 from app.agent.persona import PERSONAS
 from app.config import Settings
 from app.exam.bank import ExamBank
@@ -31,6 +33,7 @@ class Runtime:
     retriever: Retriever
     llm: Llm
     agent: CompiledStateGraph | None = None
+    stateless_agent: CompiledStateGraph | None = None
     index_hash: str = "unknown-index"
     small_llm: Llm | None = None
     lore: LoreStore | None = None
@@ -169,12 +172,8 @@ async def build_runtime(settings: Settings) -> Runtime:
             "exam bank absent at %s; exam routes stay empty",
             settings.exam_store_path,
         )
-    return Runtime(
-        retriever=setup.retriever,
-        llm=llm,
-        index_hash=setup.text_hash,
-        lore=lore,
-        agent=build_graph(
+    def graph(checkpointer: MemorySaver | None) -> CompiledStateGraph:
+        return build_graph(
             setup.retriever,
             llm,
             max_retries=settings.retry_budget,
@@ -187,7 +186,20 @@ async def build_runtime(settings: Settings) -> Runtime:
             lesson_top_k=settings.lesson_top_k,
             lesson_min_score=settings.lesson_min_score,
             lesson_fallback=settings.lesson_fallback,
-        ),
+            checkpointer=checkpointer,
+            memory_window=settings.memory_window,
+            memory_token_budget=settings.memory_token_budget,
+        )
+
+    agent = graph(memory_saver() if settings.memory_enabled else None)
+    stateless_agent = graph(None) if settings.memory_enabled else agent
+    return Runtime(
+        retriever=setup.retriever,
+        llm=llm,
+        index_hash=setup.text_hash,
+        lore=lore,
+        agent=agent,
+        stateless_agent=stateless_agent,
         small_llm=small_llm,
         packs=packs,
         pack_store=pack_store,

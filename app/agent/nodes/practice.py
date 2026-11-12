@@ -34,8 +34,9 @@ async def practice_node(
     min_score: float | None = None,
     fallback_llm: Llm | None = None,
 ) -> dict[str, object]:
+    question = state.get("standalone_question") or state["question"]
     chunks = await retrieve_evidence(
-        state["question"], retriever, state.get("top_k", top_k), min_score
+        question, retriever, state.get("top_k", top_k), min_score
     )
     if not chunks:
         return {
@@ -45,7 +46,7 @@ async def practice_node(
             "typed_citations": [],
             "abstained": True,
         }
-    prompt = evidence_prompt(state["question"], chunks)
+    prompt = evidence_prompt(question, chunks)
     text, model_used, attempts = await stream_with_fallback(
         llm,
         fallback_llm,

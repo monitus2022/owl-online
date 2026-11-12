@@ -33,6 +33,7 @@ export interface FinalPayload {
   needs_input?: boolean;
   attempts?: number;
   mode?: ChatMode;
+  thread_id?: string;
 }
 
 export type StreamEvent =
@@ -50,6 +51,7 @@ export async function* askStream(
   personaState: PersonaState,
   subject: string,
   mode: "auto" | "lesson" = "auto",
+  threadId?: string,
 ): AsyncGenerator<StreamEvent> {
   let response: Response;
   try {
@@ -57,7 +59,12 @@ export async function* askStream(
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, mode, subject }),
+      body: JSON.stringify({
+        question,
+        mode,
+        subject,
+        thread_id: threadId,
+      }),
     });
   } catch {
     throw new ChatError("Could not reach the Academy. Is the server running?");
