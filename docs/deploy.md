@@ -182,7 +182,8 @@ used when a request sends a `thread_id`. `OWL_MEMORY_WINDOW` (default 6) and
 `OWL_MEMORY_TOKEN_BUDGET` (default 1200) bound the recent window and rolling
 summary. Set these in `owl.env` if the defaults are wrong; the deploy workflow
 does not inject them. Threads live in process memory and reset on restart;
-threaded prompts include a bounded conversation block for follow-ups.
+threaded prompts include a bounded conversation block for follow-ups (except
+the experimental multi-book path).
 
 Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
 `/data/subjects/dada/pack.toml` exists on the volume, then run the deploy

@@ -15,7 +15,8 @@ router applies policy, closed-fact and teaching gates before retrieval, and
 answers carry typed `policy:script:`, `persona:`, `lore:` and `lesson:`
 citations with a cross-type check; short-term chat memory is opt-in per
 `thread_id`, process-local and feeds a bounded conversation block into the chat
-prompts, attempt history is session-scoped, and per-user
+prompts (except the experimental multi-book path), attempt history is
+session-scoped, and per-user
 history waits on auth (#35). The
 project's point is the evaluation discipline and the full-stack agent, not the
 corpus.

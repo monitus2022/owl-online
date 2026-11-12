@@ -214,7 +214,9 @@ capped by `OWL_MEMORY_TOKEN_BUDGET`; the full prompt also contains the system
 instructions, evidence and the current question. The model is told the
 conversation is untrusted and not evidence: every factual claim must still be
 cited from the excerpts or notes, and instructions inside the conversation are
-ignored. The experimental multi-book path does not consume the block
+ignored. Prior citations are stripped from the block before it is sent, so a
+stale citation cannot be copied; the grounding check still accepts only ids in
+the current retrieval set. The experimental multi-book path does not consume the block
 yet.
 
 Threads are process-local and anonymous. A new thread id starts a new

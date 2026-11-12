@@ -12,6 +12,7 @@ is deliberately out of scope for this slice.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from typing import Literal
@@ -67,6 +68,11 @@ _SCOPE = re.compile(
 )
 _SELF = re.compile(
     r"^\s*(?:yourself|yourselves|you|me|myself)\s*[?.!]*\s*$",
+    re.IGNORECASE,
+)
+_CITATION = re.compile(
+    r"\[(?:b\d+-c\d+-\d+|lore:[^\]]+|mat:[^\]]+|policy:[^\]]+|"
+    r"persona:[^\]]+|lesson:[^\]]+)\]",
     re.IGNORECASE,
 )
 _PERSON_CUE = re.compile(
@@ -221,10 +227,21 @@ def resolve_followup(
         if match:
             target = match.group(1).strip()
             hint = "lesson" if last_mode == "lesson" else None
+            last_kind = (
+                "person"
+                if last_entity and last_entity == last_person
+                else "place"
+                if last_entity and last_entity == last_place
+                else "thing"
+                if last_entity
+                else None
+            )
+            target_kind = _infer_kind(target, "thing")
             if (
                 last_mode in {"lesson", "answer"}
                 and last_entity
                 and last_entity.lower() != target.lower()
+                and last_kind == target_kind
                 and not _EXAM.search(target)
                 and not _SCOPE.search(target)
                 and not _SELF.match(target)
@@ -280,16 +297,24 @@ def render_context(
     token_budget: int = TOKEN_BUDGET,
 ) -> str:
     """Render the bounded conversation block sent with a threaded prompt."""
+    def clean(text: str) -> str:
+        cleaned, _ = sanitize_evidence(text)
+        return _CITATION.sub("", cleaned).strip()
+
     parts: list[str] = []
-    summary_text, _ = sanitize_evidence(summary)
-    if summary_text.strip():
-        parts.append(summary_text.strip())
+    summary_text = clean(summary)
+    if summary_text:
+        parts.append(
+            json.dumps({"role": "summary", "content": summary_text}, ensure_ascii=False)
+        )
     for message in messages:
-        content, _ = sanitize_evidence(message.get("content", ""))
-        if not content.strip():
+        content = clean(message.get("content", ""))
+        if not content:
             continue
-        role = "Student" if message.get("role") == "user" else "Professor"
-        parts.append(f"{role}: {content.strip()}")
+        role = "student" if message.get("role") == "user" else "professor"
+        parts.append(
+            json.dumps({"role": role, "content": content}, ensure_ascii=False)
+        )
     limit = max(1, token_budget) * _CHARS_PER_TOKEN
     while len(parts) > 1 and sum(len(part) + 1 for part in parts) > limit:
         parts.pop(0)

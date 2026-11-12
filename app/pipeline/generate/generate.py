@@ -323,6 +323,7 @@ async def ask(
             cues=list(decision.cues),
         )
     if multi_book and decision.is_multi_book and hasattr(retriever, "retrieve_book"):
+        # The experimental multi-book path does not consume thread context yet.
         from app.pipeline.generate.multibook import (
             DEFAULT_FINAL_TOP_K,
             DEFAULT_SELECTION,

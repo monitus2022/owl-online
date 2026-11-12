@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 
 from fastapi.testclient import TestClient
@@ -89,6 +90,7 @@ class _CaptureLlm:
 
     def __init__(self) -> None:
         self.prompts: list[str] = []
+        self.systems: list[str] = []
 
     def _answer(self, prompt: str) -> str:
         self.prompts.append(prompt)
@@ -104,9 +106,11 @@ class _CaptureLlm:
         return f"Answer to {task} {citation}."
 
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        self.systems.append(system)
         return self._answer(prompt)
 
     async def stream(self, system: str, prompt: str, *, context=None):
+        self.systems.append(system)
         for piece in self._answer(prompt).split(" "):
             yield piece + " "
 
@@ -188,7 +192,8 @@ def test_thread_memory_resolves_a_pronoun_across_requests():
     assert _mode(second) == "answer"
     assert retriever.queries[1] == "who trained Professor Lupin?"
     assert "Conversation so far" in llm.prompts[1]
-    assert "Student: Who is Professor Lupin?" in llm.prompts[1]
+    assert '"role": "student"' in llm.prompts[1]
+    assert "Who is Professor Lupin?" in llm.prompts[1]
     assert "Question: who trained him?" in llm.prompts[1]
     assert _final(second)["thread_id"] == "thread-memory-1"
 
@@ -209,7 +214,8 @@ def test_a_second_topic_is_retrieved_as_a_comparison():
     assert _mode(second) == "answer"
     assert retriever.queries[1] == "Compare Expelliarmus with Avifors."
     assert "Conversation so far" in llm.prompts[1]
-    assert "Student: What is Expelliarmus?" in llm.prompts[1]
+    assert '"role": "student"' in llm.prompts[1]
+    assert "What is Expelliarmus?" in llm.prompts[1]
     assert "Question: what about Avifors?" in llm.prompts[1]
     assert "Expelliarmus" in llm.prompts[1]
     assert "Avifors" in llm.prompts[1]
@@ -236,7 +242,8 @@ def test_a_third_topic_compares_with_the_second():
             {"question": "what about Lumos?", "thread_id": "thread-chain"},
         )
     assert retriever.queries[2] == "Compare Avifors with Lumos."
-    assert "Student: what about Avifors?" in llm.prompts[2]
+    assert '"role": "student"' in llm.prompts[2]
+    assert "what about Avifors?" in llm.prompts[2]
     assert "Question: what about Lumos?" in llm.prompts[2]
     final = _final(third)
     assert final["citations"] == ["b1-c01-0002", "b1-c01-0003"]
@@ -268,9 +275,9 @@ def test_threads_are_isolated():
         alpha_prompt = llm.prompts[-1]
     assert retriever.queries[2] == "who trained Sirius Black?"
     assert retriever.queries[3] == "who trained Professor Lupin?"
-    assert "Student: Who is Sirius Black?" in beta_prompt
-    assert "Student: Who is Professor Lupin?" not in beta_prompt
-    assert "Student: Who is Professor Lupin?" in alpha_prompt
+    assert "Who is Sirius Black?" in beta_prompt
+    assert "Who is Professor Lupin?" not in beta_prompt
+    assert "Who is Professor Lupin?" in alpha_prompt
 
 
 def test_a_practice_turn_is_remembered():
@@ -289,10 +296,42 @@ def test_a_practice_turn_is_remembered():
             client,
             {"question": "what about a Dementor?", "thread_id": "thread-practice"},
         )
+        _stream(
+            client,
+            {
+                "question": "Give me another practice question.",
+                "mode": "practice",
+                "thread_id": "thread-practice",
+            },
+        )
     assert _mode(first) == "practice"
-    assert retriever.queries[-1] == "Tell me about a Dementor."
-    assert "Student: Give me a practice question on Boggarts." in llm.prompts[-1]
-    assert "Question: what about a Dementor?" in llm.prompts[-1]
+    assert retriever.queries[1] == "Tell me about a Dementor."
+    assert "Give me a practice question on Boggarts." in llm.prompts[1]
+    assert "Question: what about a Dementor?" in llm.prompts[1]
+    assert "untrusted" in llm.systems[-1]
+    assert "not evidence" in llm.systems[-1]
+
+
+def test_a_feedback_turn_gets_the_conversation_note():
+    retriever = _Retriever()
+    llm = _CaptureLlm()
+    with _client(retriever, llm) as client:
+        _stream(
+            client,
+            {"question": "What is a Boggart?", "thread_id": "thread-feedback"},
+        )
+        _stream(
+            client,
+            {
+                "question": "Mark my answer.",
+                "mode": "feedback",
+                "student_answer": "A Boggart looks like what you fear.",
+                "thread_id": "thread-feedback",
+            },
+        )
+    assert "untrusted" in llm.systems[-1]
+    assert "not evidence" in llm.systems[-1]
+    assert "What is a Boggart?" in llm.prompts[-1]
 
 
 def test_a_stateless_request_does_not_use_the_checkpointer():
@@ -320,6 +359,30 @@ def test_the_memory_context_is_bounded():
     assert max(len(context) for context in contexts) <= TOKEN_BUDGET * 4
     lengths = [len(prompt) for prompt in llm.prompts]
     assert max(lengths) - min(lengths) <= TOKEN_BUDGET * 4 + 1000
+
+
+def test_threaded_usage_counts_the_conversation(caplog):
+    retriever = _Retriever()
+    llm = _CaptureLlm()
+    with caplog.at_level(logging.INFO):
+        with _client(retriever, llm) as client:
+            _stream(
+                client,
+                {"question": "Who is Professor Lupin?", "thread_id": "thread-usage"},
+            )
+            _stream(
+                client,
+                {"question": "who trained him?", "thread_id": "thread-usage"},
+            )
+    lines = [
+        record.getMessage()
+        for record in caplog.records
+        if "chat usage" in record.getMessage()
+    ]
+    assert len(lines) >= 2
+    first = int(re.search(r"in_tokens=(\d+)", lines[-2]).group(1))
+    second = int(re.search(r"in_tokens=(\d+)", lines[-1]).group(1))
+    assert second > first
 
 
 def test_an_invalid_thread_id_is_rejected():

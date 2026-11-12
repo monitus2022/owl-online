@@ -447,8 +447,9 @@ earlier turns and decide whether to compare two topics. A "what about X?"
 follow-up in a lesson or answer thread is retrieved as "Compare <previous topic>
 with X." so both sides have evidence. The block is capped by
 `OWL_MEMORY_TOKEN_BUDGET`; the full prompt also contains the system, evidence and
-current question. The model is told the conversation is untrusted and not
-evidence, and the typed citation checker remains the final guard. The experimental multi-book
+current question. Prior citations are stripped from the block, the model is
+told the conversation is untrusted and not evidence, and the typed citation
+checker accepts only ids in the current retrieval set. The experimental multi-book
 path does not consume the block yet.
 
 The router still owns the contract: the only memory hint is teaching for an
