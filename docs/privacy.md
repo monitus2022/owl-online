@@ -73,6 +73,12 @@ Prompts and the retrieved excerpts go to the configured provider:
 - OpenRouter for the open-weight models;
 - Amazon Bedrock in the deployed region for the Bedrock adapter.
 
+For a threaded request, the prompt also includes the bounded recent
+conversation block (the student's questions and the professor's answers) so the
+model can resolve a follow-up. The block is capped by
+`OWL_MEMORY_TOKEN_BUDGET`, is treated as untrusted and is not evidence; it goes
+to the same provider with the prompt.
+
 The deployment region bans OpenAI, Anthropic and Google models, and
 `app/providers/policy.py` checks every slug before use. The project does not
 train models on request data. The provider processes the request under its own

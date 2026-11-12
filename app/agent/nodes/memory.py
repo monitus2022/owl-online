@@ -6,6 +6,7 @@ from app.agent.memory import (
     TOKEN_BUDGET,
     WINDOW_MESSAGES,
     extract_entity,
+    render_context,
     resolve_followup,
     trim_history,
 )
@@ -39,6 +40,7 @@ def resolve_node(
     return {
         "messages": messages,
         "summary": summary,
+        "conversation_context": render_context(messages, summary, token_budget=token_budget),
         "standalone_question": resolution.standalone,
         "forced_mode": resolution.forced_mode,
         "preferred_mode": resolution.preferred_mode,
@@ -71,6 +73,10 @@ def remember_node(
         "pending_clarify": mode == "clarify",
     }
     entity = extract_entity(state.get("standalone_question") or question)
+    if entity is None:
+        # A comparison or pronoun rewrite may not name the new topic; the raw
+        # student turn does.
+        entity = extract_entity(question)
     if entity is not None:
         updates["last_entity"] = entity.text
         if entity.kind == "person":

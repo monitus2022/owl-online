@@ -12,6 +12,7 @@ is deliberately out of scope for this slice.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from typing import Literal
@@ -20,6 +21,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from app.knowledge.taxonomy import SUBJECT_NAMES
+from app.pipeline.generate.generate import sanitize_evidence
 
 WINDOW_MESSAGES = 6
 TOKEN_BUDGET = 1200
@@ -68,18 +70,37 @@ _SELF = re.compile(
     r"^\s*(?:yourself|yourselves|you|me|myself)\s*[?.!]*\s*$",
     re.IGNORECASE,
 )
-_PERSON_CUE = re.compile(
+_CITATION = re.compile(
+    r"\[[^\]]*(?:b\d+-c\d+-\d+|lore:|mat:|policy:|persona:|lesson:)[^\]]*\]",
+    re.IGNORECASE,
+)
+_PERSON_ROLE = re.compile(
     r"\b(professor|prof\.?|mr\.?|mrs\.?|ms\.?|miss|sir|madam|lord|lady|"
-    r"head of|harry|hermione|ron|neville|luna|ginny|cedric|tonks|moody|"
-    r"umbridge|fred|george|percy|bill|charlie|fleur|krum|cho|dean|seamus|"
-    r"lavender|parvati|padma|dumbledore|snape|hagrid|lupin|sirius|voldemort|"
-    r"draco|mcgonagall|crane|raman|bellatrix|lucius|narcissa|pettigrew)\b",
+    r"head of|headmaster|headmistress|minister for magic|minister|teacher|"
+    r"student|auror|seeker|keeper|chaser|beater|prefect|ghost|founder|"
+    r"captain|official)\b",
+    re.IGNORECASE,
+)
+_PERSON_NAME = re.compile(
+    r"\b(Harry|Hermione|Ron|Neville|Luna|Ginny|Cedric|Tonks|Moody|Umbridge|"
+    r"Fred|George|Percy|Bill|Charlie|Fleur|Krum|Cho|Dean|Seamus|Lavender|"
+    r"Parvati|Padma|Dumbledore|Snape|Hagrid|Lupin|Sirius|Voldemort|Draco|"
+    r"McGonagall|Crane|Raman|Bellatrix|Lucius|Narcissa|Pettigrew)\b"
+)
+_THING_CUE = re.compile(
+    r"\b(spell|charm|curse|jinx|hex|potion|wand|broom|uniform|book|creature|"
+    r"beast|plant|herb|ingredient|cauldron|cloak|map|stone|cup|diary|locket|"
+    r"snake|dragon|boggart|dementor|patronus|expelliarmus|avifors|lumos|"
+    r"owl|cat|rat|toad|phoenix|thestral|hippogriff|unicorn|mermaid|vampire|"
+    r"troll|dwarf|elf|house-elf|goblin|centaur|giant|werewolf|animagus)\b",
     re.IGNORECASE,
 )
 _PLACE_CUE = re.compile(
     r"\b(hogwarts|hogsmeade|diagon alley|azkaban|gryffindor|slytherin|"
     r"ravenclaw|hufflepuff|durmstrang|beauxbatons|ministry|the burrow|"
-    r"privet drive|knockturn alley|forbidden forest)\b",
+    r"privet drive|knockturn alley|forbidden forest|school|library|"
+    r"great hall|common room|classroom|castle|grounds|dormitory|tower|"
+    r"dungeon|greenhouse|quidditch pitch|hospital wing)\b",
     re.IGNORECASE,
 )
 _COMPOUND = re.compile(
@@ -96,9 +117,7 @@ def memory_saver() -> MemorySaver:
     serializer warns about unregistered types and will block them in a future
     release, so name the one type the state carries.
     """
-    return MemorySaver(
-        serde=JsonPlusSerializer(allowed_msgpack_modules=[("app.schemas", "Chunk")])
-    )
+    return MemorySaver(serde=JsonPlusSerializer(allowed_msgpack_modules=[("app.schemas", "Chunk")]))
 
 
 @dataclass(frozen=True)
@@ -119,8 +138,10 @@ class Resolution:
 
 
 def _infer_kind(text: str, default: EntityKind) -> EntityKind:
-    if _PERSON_CUE.search(text):
+    if _PERSON_ROLE.search(text) or _PERSON_NAME.search(text):
         return "person"
+    if _THING_CUE.search(text):
+        return "thing"
     if _PLACE_CUE.search(text):
         return "place"
     return default
@@ -133,6 +154,7 @@ def extract_entity(question: str) -> Entity | None:
         (_TELL, "thing"),
         (_WHERE, "place"),
         (_GO, "place"),
+        (_WHAT_ABOUT, "thing"),
     ):
         match = pattern.match(question)
         if match:
@@ -198,12 +220,7 @@ def resolve_followup(
     messages = messages or []
     person = last_person or _recent_entity(messages, summary, "person")
     place = last_place or _recent_entity(messages, summary, "place")
-    any_entity = (
-        last_entity
-        or person
-        or place
-        or _recent_entity(messages, summary, None)
-    )
+    any_entity = last_entity or person or place or _recent_entity(messages, summary, None)
     lesson_hint = "lesson" if last_mode == "lesson" else None
     if _PERSON_PRONOUN.search(text) and person:
         return Resolution(
@@ -225,12 +242,34 @@ def resolve_followup(
         match = _WHAT_ABOUT.match(text)
         if match:
             target = match.group(1).strip()
-            if last_mode in {"lesson", "answer"}:
+            hint = "lesson" if last_mode == "lesson" else None
+            last_kind = (
+                "person"
+                if last_entity and last_entity == last_person
+                else "place"
+                if last_entity and last_entity == last_place
+                else "thing"
+                if last_entity
+                else None
+            )
+            target_kind = _infer_kind(target, "thing")
+            if (
+                last_mode in {"lesson", "answer"}
+                and last_entity
+                and last_entity.lower() != target.lower()
+                and last_kind == target_kind
+                and not _EXAM.search(target)
+                and not _SCOPE.search(target)
+                and not _SELF.match(target)
+            ):
+                # Retrieve both topics; the prompt keeps the student's wording
+                # and the conversation block, so the model decides whether to
+                # compare them.
                 return Resolution(
-                    f"Tell me about {target}.",
-                    preferred_mode="lesson" if last_mode == "lesson" else None,
+                    f"Compare {last_entity} with {target}.",
+                    preferred_mode=hint,
                 )
-            return Resolution(f"Tell me about {target}.")
+            return Resolution(f"Tell me about {target}.", preferred_mode=hint)
 
     return Resolution(text)
 
@@ -267,6 +306,39 @@ def trim_history(
     return kept, summary
 
 
+def render_context(
+    messages: list[dict[str, str]],
+    summary: str,
+    *,
+    token_budget: int = TOKEN_BUDGET,
+) -> str:
+    """Render the bounded conversation block sent with a threaded prompt."""
+    def clean(text: str) -> str:
+        cleaned, _ = sanitize_evidence(text)
+        return _CITATION.sub("", cleaned).strip()
+
+    parts: list[str] = []
+    summary_text = clean(summary)
+    if summary_text:
+        parts.append(
+            json.dumps({"role": "summary", "content": summary_text}, ensure_ascii=False)
+        )
+    for message in messages:
+        content = clean(message.get("content", ""))
+        if not content:
+            continue
+        role = "student" if message.get("role") == "user" else "professor"
+        parts.append(
+            json.dumps({"role": role, "content": content}, ensure_ascii=False)
+        )
+    limit = max(1, token_budget) * _CHARS_PER_TOKEN
+    while len(parts) > 1 and sum(len(part) + 1 for part in parts) > limit:
+        parts.pop(0)
+    if parts and len(parts[0]) > limit:
+        parts[0] = parts[0][:limit]
+    return "\n".join(parts).strip()
+
+
 def context_chars(messages: list[dict[str, str]], summary: str) -> int:
     """Approximate prompt characters for the bounded memory context."""
     return len(summary) + sum(len(message.get("content", "")) for message in messages)
@@ -280,6 +352,7 @@ __all__ = [
     "context_chars",
     "extract_entity",
     "memory_saver",
+    "render_context",
     "resolve_followup",
     "trim_history",
 ]

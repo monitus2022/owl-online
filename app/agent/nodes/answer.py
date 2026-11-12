@@ -61,6 +61,8 @@ async def answer_node(
         ),
         lore=lore,
         subject=subject,
+        prompt_question=state["question"],
+        conversation_context=state.get("conversation_context"),
     )
     if result.abstained and active is not None:
         # Keep the abstention contract; only the user-facing line changes.
@@ -75,6 +77,7 @@ async def answer_node(
         "abstained": result.abstained,
         "attempts": result.attempts,
         "model_calls": result.model_calls,
+        "multi_book": result.multi_book,
         "abstain_reason": result.abstain_reason,
         "retry_reason": result.retry_reason,
     }

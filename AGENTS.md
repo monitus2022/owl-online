@@ -14,7 +14,9 @@ eval and judge calibration are recorded, and served papers are live; the
 router applies policy, closed-fact and teaching gates before retrieval, and
 answers carry typed `policy:script:`, `persona:`, `lore:` and `lesson:`
 citations with a cross-type check; short-term chat memory is opt-in per
-`thread_id` and process-local, attempt history is session-scoped, and per-user
+`thread_id`, process-local and feeds a bounded conversation block into the chat
+prompts (except the experimental multi-book path), attempt history is
+session-scoped, and per-user
 history waits on auth (#35). The
 project's point is the evaluation discipline and the full-stack agent, not the
 corpus.
@@ -60,7 +62,7 @@ Layout:
 - `app/api/` - FastAPI HTTP surface (`/v1/chat`, `/v1/chat/stream` with deprecated `/ask` aliases, `/v1/subjects`, `/v1/metrics`, and the `/v1/exams` and `/v1/attempts` serving routes)
 - `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam build is planned; `ingest/lexicon/` holds the hp-lexicon canon-index harvester (spike grammar and parsers plus the #126 discovery/fetch/harvest modules)
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
-- `app/agent/` - LangGraph chat graph, node functions, state (V2); short-term memory (`memory.py`, resolve/remember nodes) behind an opt-in `thread_id`; the policy, closed-fact and teaching gates plus the typed citation routes; lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
+- `app/agent/` - LangGraph chat graph, node functions, state (V2); short-term memory (`memory.py`, resolve/remember nodes) behind an opt-in `thread_id`, with a bounded conversation block in the chat prompts; the policy, closed-fact and teaching gates plus the typed citation routes; lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
 - `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts), Charms at 1.0.0 (50 materials, 49 concepts), Potions at 1.0.0 (34/34), Transfiguration at 1.0.0 (34/29) and Herbology at 1.0.0 (33/31); DADA feeds lesson mode through a derived in-memory material selector (#166); reference prefill and coverage maintenance remain on #128
 - `app/storage/` - SQLite bank store (#189) plus attempt persistence, session ownership and grading records (#193/#206)
 - `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the bank eval and judge calibration are in `eval/exam/` (#191); served attempts are #193; the same grader serves all five banks (#213 pattern)

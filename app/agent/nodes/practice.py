@@ -12,7 +12,7 @@ from app.agent.nodes.common import (
     stream_with_fallback,
 )
 from app.agent.state import AgentState
-from app.pipeline.generate import ABSTAIN_MESSAGE, ground_answer
+from app.pipeline.generate import ABSTAIN_MESSAGE, CONVERSATION_NOTE, ground_answer
 from app.providers.contracts import Llm, Retriever
 
 SYSTEM = (
@@ -46,11 +46,18 @@ async def practice_node(
             "typed_citations": [],
             "abstained": True,
         }
-    prompt = evidence_prompt(question, chunks)
+    prompt = evidence_prompt(
+        state["question"],
+        chunks,
+        context=state.get("conversation_context", ""),
+    )
+    system = SYSTEM
+    if state.get("conversation_context"):
+        system = f"{SYSTEM}\n\n{CONVERSATION_NOTE}"
     text, model_used, attempts = await stream_with_fallback(
         llm,
         fallback_llm,
-        SYSTEM,
+        system,
         prompt,
         get_stream_writer(),
         intent="practice",

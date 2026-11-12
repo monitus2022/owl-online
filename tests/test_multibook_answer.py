@@ -282,6 +282,7 @@ async def test_ask_routes_to_the_multi_book_path_when_enabled():
     assert not result.abstained
     assert "Coverage:" in result.answer
     assert result.citations
+    assert result.multi_book is True
 
 
 async def test_ask_keeps_single_pass_when_the_flag_is_off():

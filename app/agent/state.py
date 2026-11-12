@@ -24,6 +24,7 @@ class AgentState(TypedDict, total=False):
     standalone_question: str
     messages: list[dict[str, str]]
     summary: str
+    conversation_context: str
     last_entity: str
     last_person: str
     last_place: str
@@ -32,6 +33,7 @@ class AgentState(TypedDict, total=False):
     forced_mode: str | None
     preferred_mode: str | None
     routed_mode: str
+    multi_book: bool
     requested_mode: RequestedMode
     subject: str
     persona_enabled: bool

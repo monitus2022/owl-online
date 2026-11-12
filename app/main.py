@@ -436,6 +436,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         latency_ms: float,
         student: str = "",
         subject: str = "",
+        conversation_chars: int = 0,
     ) -> None:
         limiter: ChatLimiter = app.state.limiter
         # A scripted meta or personal reply makes no model call; it must not
@@ -461,6 +462,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 + len(student)
                 + result.lore_chars
                 + sum(len(chunk.text) for chunk in result.chunks)
+                + (0 if result.multi_book else conversation_chars)
             )
         )
         input_tokens = (
@@ -927,6 +929,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 chunks=list(final.get("chunks", [])),
                 attempts=int(final.get("attempts", 1)),
                 model_calls=int(final.get("model_calls") or 0),
+                multi_book=bool(final.get("multi_book", False)),
                 abstain_reason=final.get("abstain_reason"),  # type: ignore[arg-type]
             )
             if key is not None and not result.abstained:
@@ -942,6 +945,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 latency_ms=(time.perf_counter() - start) * 1000,
                 student=body.student_answer or "",
                 subject=subject,
+                conversation_chars=len(str(final.get("conversation_context") or "")),
             )
             if final.get("abstained"):
                 yield {"event": "reset", "data": json.dumps({})}

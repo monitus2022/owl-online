@@ -2,6 +2,7 @@
 
 from app.pipeline.generate.generate import (
     ABSTAIN_MESSAGE,
+    CONVERSATION_NOTE,
     DEFAULT_MAX_RETRIES,
     DEFAULT_MIN_SCORE,
     DEFAULT_TOP_K,
@@ -20,6 +21,7 @@ from app.pipeline.generate.verify import Verification, verify_draft
 
 __all__ = [
     "ABSTAIN_MESSAGE",
+    "CONVERSATION_NOTE",
     "DEFAULT_MAX_RETRIES",
     "DEFAULT_MIN_SCORE",
     "DEFAULT_TOP_K",

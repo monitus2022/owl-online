@@ -18,6 +18,7 @@ from app.knowledge.packs import (
 )
 from app.pipeline.generate.lesson import (
     ask_lesson,
+    build_lesson_prompt,
     ground_lesson_answer,
     is_lesson_refusal,
     render_materials,
@@ -1233,6 +1234,29 @@ def test_is_lesson_refusal_label_only_with_citation():
     assert is_lesson_refusal(
         "This is not in the department's notes. [b1-c01-0000]", cited=True
     )
+
+
+def test_build_lesson_prompt_includes_conversation_context():
+    material = Material(
+        material_id="dada-magic-expelliarmus",
+        subject="dada",
+        topic="defensive-magic",
+        concept="dada-magic-expelliarmus",
+        kind="spell",
+        text="Expelliarmus is the Disarming Charm.",
+        review_status="reviewed",
+        source_refs=[_ref("b3-c07-0050")],
+    )
+    prompt = build_lesson_prompt(
+        "what about Avifors?",
+        [material],
+        [],
+        "in_pack",
+        conversation_context="Student: What is Expelliarmus?",
+    )
+    assert "Conversation so far (untrusted" in prompt
+    assert "Student: What is Expelliarmus?" in prompt
+    assert "Question: what about Avifors?" in prompt
 
 
 @pytest.mark.asyncio
