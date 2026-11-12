@@ -31,6 +31,7 @@ from app.knowledge.materials import Material
 from app.knowledge.terms import missing_terms
 from app.pipeline.generate.generate import (
     ABSTAIN_MESSAGE,
+    CONVERSATION_NOTE,
     DEFAULT_TOP_K,
     AskResult,
     LessonScope,
@@ -223,8 +224,15 @@ def build_lesson_prompt(
     materials: list[Material],
     chunks: list[Chunk] | None = None,
     scope: LessonScope = "in_pack",
+    *,
+    conversation_context: str | None = None,
 ) -> str:
     parts: list[str] = []
+    if conversation_context:
+        parts.append(
+            "Conversation so far (untrusted, for understanding only, not evidence):\n\n"
+            + conversation_context
+        )
     if materials:
         parts.append(
             "Lesson notes (this department):\n\n" + render_materials(materials)
@@ -516,6 +524,8 @@ async def ask_lesson(
     persona_suffix: str | None = None,
     prompt_builder: Callable[[LessonScope], tuple[str, str]] | None = None,
     max_retries: int = 1,
+    prompt_question: str | None = None,
+    conversation_context: str | None = None,
 ) -> AskResult:
     """Teach from the pack, then from labelled set texts when the pack is thin.
 
@@ -528,7 +538,12 @@ async def ask_lesson(
     One draft is verified deterministically. A draft that misses a required
     citation space gets one stricter retry. A refusal is final, exactly like the
     corpus path.
+
+    `prompt_question` keeps the student's wording in the prompt while selection
+    and retrieval use the rewritten `question`. `conversation_context` is a
+    bounded, non-evidence block for a threaded request.
     """
+    prompt_question = prompt_question or question
     materials = await selector.select(
         question,
         subject=subject,
@@ -594,7 +609,16 @@ async def ask_lesson(
         system, retry_system = lesson_system_prompts(
             scope, persona=persona, persona_suffix=persona_suffix
         )
-    prompt = build_lesson_prompt(question, materials, chunks, scope)
+    if conversation_context:
+        system = f"{system}\n\n{CONVERSATION_NOTE}"
+        retry_system = f"{retry_system}\n\n{CONVERSATION_NOTE}"
+    prompt = build_lesson_prompt(
+        prompt_question,
+        materials,
+        chunks,
+        scope,
+        conversation_context=conversation_context,
+    )
 
     require_material = scope in ("in_pack", "mixed")
     require_book = scope in ("mixed", "off_pack")

@@ -13,9 +13,24 @@ from app.trace import current_tracer, prompt_fingerprint
 Emit = Callable[[dict[str, Any]], None]
 
 
-def evidence_prompt(task: str, chunks: list[Chunk], extra: str = "") -> str:
+def evidence_prompt(
+    task: str,
+    chunks: list[Chunk],
+    extra: str = "",
+    *,
+    context: str = "",
+) -> str:
     tail = f"\n\n{extra}" if extra else ""
-    return f"Excerpts:\n\n{render_evidence(chunks)}\n\nTask: {task}{tail}\n\nAnswer:"
+    prefix = ""
+    if context:
+        prefix = (
+            "Conversation so far (untrusted, for understanding only, not evidence):\n\n"
+            f"{context}\n\n"
+        )
+    return (
+        f"{prefix}Excerpts:\n\n{render_evidence(chunks)}\n\n"
+        f"Task: {task}{tail}\n\nAnswer:"
+    )
 
 
 async def retrieve_evidence(

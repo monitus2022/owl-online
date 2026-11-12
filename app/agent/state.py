@@ -24,6 +24,7 @@ class AgentState(TypedDict, total=False):
     standalone_question: str
     messages: list[dict[str, str]]
     summary: str
+    conversation_context: str
     last_entity: str
     last_person: str
     last_place: str

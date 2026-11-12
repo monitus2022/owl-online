@@ -379,7 +379,7 @@ sequenceDiagram
   G->>R: retrieve(question, top_k)
   R->>RR: rerank when configured
   R-->>G: list[Chunk]
-  G->>LLM: stream(system, prompt)
+  G->>LLM: stream(system, prompt with evidence and bounded conversation context)
   LLM-->>G: token
   G-->>API: custom {type: token}
   API-->>C: event: token
@@ -433,20 +433,28 @@ arrive as an `error` event because HTTP headers are already sent.
 `resolve` before the router and `remember` after every terminal node. `resolve`
 trims the stored messages to a recent window, folds older user turns into a
 rolling summary under a character budget derived from
-`OWL_MEMORY_TOKEN_BUDGET`, and rewrites a pronoun, "there" or "what about"
-follow-up into a standalone question. A pending clarify consumes a short
-answer; a new question escapes it and is resolved normally. `remember` appends
-the completed turn, updates the summary, and records the last entity, person and
-place plus the last mode. The resolver recovers a missing entity from the recent
-window or the summary.
+`OWL_MEMORY_TOKEN_BUDGET`, rewrites a pronoun, "there" or "what about"
+follow-up into a standalone retrieval query, and renders a bounded conversation
+block. A pending clarify consumes a short answer; a new question escapes it and
+is resolved normally. `remember` appends the completed turn, updates the
+summary, and records the last entity, person and place plus the last mode. The
+resolver recovers a missing entity from the recent window or the summary.
 
-The rewrite changes the question. Generation receives the standalone
-question, not the stored window, so a thread does not grow the prompt or the
-token spend. The router still owns the contract: the only memory hint is
-teaching for an elliptical follow-up in a lesson thread, and it applies only
-after the policy, fact, clarify and abstain gates. Persona and policy answers
-stay on their contract, and the typed citation checker is the final guard.
-Resolution is rule-based, not a model call.
+The rewrite changes the retrieval query; the prompt keeps the student's wording
+and adds the bounded conversation block. The answer, lesson, practice and
+feedback prompts include that block, so the model can relate a follow-up to
+earlier turns and decide whether to compare two topics. A "what about X?"
+follow-up in a lesson or answer thread is retrieved as "Compare <previous topic>
+with X." so both sides have evidence. The block is capped by
+`OWL_MEMORY_TOKEN_BUDGET`; the full prompt also contains the system, evidence and
+current question. The model is told the conversation is untrusted and not
+evidence, and the typed citation checker remains the final guard. The experimental multi-book
+path does not consume the block yet.
+
+The router still owns the contract: the only memory hint is teaching for an
+elliptical follow-up in a lesson thread, and it applies only after the policy,
+fact, clarify and abstain gates. Persona and policy answers stay on their
+contract. Resolution is rule-based, not a model call.
 
 `build_graph` accepts an optional `BaseCheckpointSaver`. The runtime builds
 `agent` with a `MemorySaver` and `stateless_agent` without one. `/v1/chat/stream`
@@ -843,7 +851,7 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, standalone question, messages, summary, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, standalone question, messages, summary, conversation context, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

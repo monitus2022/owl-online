@@ -63,9 +63,10 @@ async def feedback_node(
             "abstained": True,
         }
     prompt = evidence_prompt(
-        question,
+        state["question"],
         chunks,
         extra=f"Student answer:\n{student}",
+        context=state.get("conversation_context", ""),
     )
     text, model_used, attempts = await stream_with_fallback(
         llm,

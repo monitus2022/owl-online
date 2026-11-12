@@ -59,6 +59,8 @@ async def lesson_node(
         on_reset=reset,
         max_retries=max_retries,
         persona=active,
+        prompt_question=state["question"],
+        conversation_context=state.get("conversation_context"),
     )
     if result.abstained and active is not None:
         # Keep the abstention contract; only the user-facing line changes.

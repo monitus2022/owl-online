@@ -61,6 +61,8 @@ async def answer_node(
         ),
         lore=lore,
         subject=subject,
+        prompt_question=state["question"],
+        conversation_context=state.get("conversation_context"),
     )
     if result.abstained and active is not None:
         # Keep the abstention contract; only the user-facing line changes.

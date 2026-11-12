@@ -20,6 +20,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from app.knowledge.taxonomy import SUBJECT_NAMES
+from app.pipeline.generate.generate import sanitize_evidence
 
 WINDOW_MESSAGES = 6
 TOKEN_BUDGET = 1200
@@ -96,9 +97,7 @@ def memory_saver() -> MemorySaver:
     serializer warns about unregistered types and will block them in a future
     release, so name the one type the state carries.
     """
-    return MemorySaver(
-        serde=JsonPlusSerializer(allowed_msgpack_modules=[("app.schemas", "Chunk")])
-    )
+    return MemorySaver(serde=JsonPlusSerializer(allowed_msgpack_modules=[("app.schemas", "Chunk")]))
 
 
 @dataclass(frozen=True)
@@ -133,6 +132,7 @@ def extract_entity(question: str) -> Entity | None:
         (_TELL, "thing"),
         (_WHERE, "place"),
         (_GO, "place"),
+        (_WHAT_ABOUT, "thing"),
     ):
         match = pattern.match(question)
         if match:
@@ -198,12 +198,7 @@ def resolve_followup(
     messages = messages or []
     person = last_person or _recent_entity(messages, summary, "person")
     place = last_place or _recent_entity(messages, summary, "place")
-    any_entity = (
-        last_entity
-        or person
-        or place
-        or _recent_entity(messages, summary, None)
-    )
+    any_entity = last_entity or person or place or _recent_entity(messages, summary, None)
     lesson_hint = "lesson" if last_mode == "lesson" else None
     if _PERSON_PRONOUN.search(text) and person:
         return Resolution(
@@ -225,12 +220,23 @@ def resolve_followup(
         match = _WHAT_ABOUT.match(text)
         if match:
             target = match.group(1).strip()
-            if last_mode in {"lesson", "answer"}:
+            hint = "lesson" if last_mode == "lesson" else None
+            if (
+                last_mode in {"lesson", "answer"}
+                and last_entity
+                and last_entity.lower() != target.lower()
+                and not _EXAM.search(target)
+                and not _SCOPE.search(target)
+                and not _SELF.match(target)
+            ):
+                # Retrieve both topics; the prompt keeps the student's wording
+                # and the conversation block, so the model decides whether to
+                # compare them.
                 return Resolution(
-                    f"Tell me about {target}.",
-                    preferred_mode="lesson" if last_mode == "lesson" else None,
+                    f"Compare {last_entity} with {target}.",
+                    preferred_mode=hint,
                 )
-            return Resolution(f"Tell me about {target}.")
+            return Resolution(f"Tell me about {target}.", preferred_mode=hint)
 
     return Resolution(text)
 
@@ -267,6 +273,31 @@ def trim_history(
     return kept, summary
 
 
+def render_context(
+    messages: list[dict[str, str]],
+    summary: str,
+    *,
+    token_budget: int = TOKEN_BUDGET,
+) -> str:
+    """Render the bounded conversation block sent with a threaded prompt."""
+    parts: list[str] = []
+    summary_text, _ = sanitize_evidence(summary)
+    if summary_text.strip():
+        parts.append(summary_text.strip())
+    for message in messages:
+        content, _ = sanitize_evidence(message.get("content", ""))
+        if not content.strip():
+            continue
+        role = "Student" if message.get("role") == "user" else "Professor"
+        parts.append(f"{role}: {content.strip()}")
+    limit = max(1, token_budget) * _CHARS_PER_TOKEN
+    while len(parts) > 1 and sum(len(part) + 1 for part in parts) > limit:
+        parts.pop(0)
+    if parts and len(parts[0]) > limit:
+        parts[0] = parts[0][:limit]
+    return "\n".join(parts).strip()
+
+
 def context_chars(messages: list[dict[str, str]], summary: str) -> int:
     """Approximate prompt characters for the bounded memory context."""
     return len(summary) + sum(len(message.get("content", "")) for message in messages)
@@ -280,6 +311,7 @@ __all__ = [
     "context_chars",
     "extract_entity",
     "memory_saver",
+    "render_context",
     "resolve_followup",
     "trim_history",
 ]

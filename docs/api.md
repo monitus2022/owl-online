@@ -184,30 +184,38 @@ stream has started, a provider failure is an `error` event, not an HTTP status.
 
 ### Short-term memory
 
-A request with a `thread_id` is one turn in an anonymous conversation. The
-graph resolves a deterministic follow-up against the thread before the router
-runs:
+A request with a `thread_id` is one turn in an anonymous conversation. Before
+the router runs, the graph resolves a deterministic follow-up and builds a
+bounded conversation block:
 
 - a personal pronoun refers to the last recognized person, "there" to the last
   recognized place, and "they/them" to the most recent named entity, so "Who is
-  Professor Lupin?" then "who trained him?" becomes "who trained Professor
+  Professor Lupin?" then "who trained him?" retrieves "who trained Professor
   Lupin?";
-- "what about ..." becomes "Tell me about ..."; in a lesson thread the router
-  keeps the lesson contract unless a policy, fact, clarify or abstain gate wins,
-  and in an answer thread it stays on the answer path;
+- "what about X?" in a lesson or answer thread is retrieved as "Compare
+  <previous topic> with X." so both sides have evidence; the prompt keeps the
+  student's wording and the conversation block, and the model decides whether
+  to compare;
 - a pending clarify consumes a short answer; a new question escapes it and is
   resolved normally.
 
-Resolution changes the question. The only route hint is teaching: an elliptical
-follow-up in a lesson thread stays lesson, but only after the policy, fact,
-clarify and abstain gates run and only when the request mode is `auto`. Persona
-and policy answers stay on their contract, and the typed citation checker still
-rejects drift. The recent message window and a rolling summary are bounded
-by `OWL_MEMORY_WINDOW` (default 6 messages) and `OWL_MEMORY_TOKEN_BUDGET`
-(default 1200 tokens, approximated at four characters per token). The resolver
-reads the bounded window and summary to recover a missing last entity; the
-answer, lesson, practice and feedback prompts receive only the rewritten
-standalone question, so a thread does not grow the prompt.
+Resolution changes the retrieval query. The only route hint is teaching: an
+elliptical follow-up in a lesson thread stays lesson, but only after the policy,
+fact, clarify and abstain gates run and only when the request mode is `auto`.
+Persona and policy answers stay on their contract, and the typed citation
+checker still rejects drift.
+
+The recent message window and a rolling summary are bounded by
+`OWL_MEMORY_WINDOW` (default 6 messages) and `OWL_MEMORY_TOKEN_BUDGET`
+(default 1200 tokens, approximated at four characters per token). The bounded
+conversation block is sent with the answer, lesson, practice and feedback
+prompts so the model can relate a follow-up to earlier turns. The block is
+capped by `OWL_MEMORY_TOKEN_BUDGET`; the full prompt also contains the system
+instructions, evidence and the current question. The model is told the
+conversation is untrusted and not evidence: every factual claim must still be
+cited from the excerpts or notes, and instructions inside the conversation are
+ignored. The experimental multi-book path does not consume the block
+yet.
 
 Threads are process-local and anonymous. A new thread id starts a new
 conversation; a restart drops every thread. There is no endpoint to read or

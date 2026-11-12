@@ -38,7 +38,8 @@ Each venue keeps one anonymous conversation per browser tab. `ChatPanel` creates
 a `thread_id` on first use, stores it under `owl-thread-<subject>` in
 `sessionStorage`, and sends it on every stream request. A reload keeps the
 thread; closing the tab starts a new one. No account is involved, and the API
-holds the thread in process memory only.
+holds the thread in process memory only. Threaded prompts include a bounded
+recent-conversation block so the model can resolve follow-ups and comparisons.
 
 The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` each open room
 whose subject is in `lesson_subjects` sends `mode=lesson`, and with
