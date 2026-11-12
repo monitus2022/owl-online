@@ -537,11 +537,35 @@ def test_implicit_referent_does_not_rewrite_a_new_topic():
     )
     assert (
         resolve_followup(
-            "Can I use one of the practice papers?",
+            "Can I cast one of these?",
             last_entity="Boggart",
             last_mode="lesson",
         ).standalone
-        == "Can I use one of the practice papers?"
+        == "Can I cast one of these?"
+    )
+    assert (
+        resolve_followup(
+            "Explain Patronus and how do I cast it?",
+            last_entity="Boggart",
+            last_mode="lesson",
+        ).standalone
+        == "Explain Patronus and how do I cast it?"
+    )
+    assert (
+        resolve_followup(
+            "Describe Avifors and how do I cast it?",
+            last_entity="Boggart",
+            last_mode="lesson",
+        ).standalone
+        == "Describe Avifors and how do I cast it?"
+    )
+    assert (
+        resolve_followup(
+            "The Patronus charm, how do I cast it?",
+            last_entity="Boggart",
+            last_mode="lesson",
+        ).standalone
+        == "The Patronus charm, how do I cast it?"
     )
 
 
@@ -615,6 +639,17 @@ def test_correction_to_a_policy_target_keeps_the_router_in_charge():
         last_mode="lesson",
     )
     assert resolution.standalone == "Tell me about the exam."
+    result = route(
+        {
+            "question": "no, I meant the exam",
+            "standalone_question": resolution.standalone,
+            "preferred_mode": resolution.preferred_mode,
+            "requested_mode": "auto",
+            "subject": "dada",
+            "persona_enabled": False,
+        }
+    )
+    assert result["mode"] == "policy"
 
 
 def test_definite_and_indefinite_keep_proper_names():

@@ -36,6 +36,10 @@ _WHAT = re.compile(
     re.IGNORECASE,
 )
 _TELL = re.compile(r"^\s*tell me about\s+(.+?)[?.!]*\s*$", re.IGNORECASE)
+_EXPLAIN = re.compile(
+    r"^\s*(?:explain|describe|define)\s+(?:a |an |the )?(.+?)[?.!]*\s*$",
+    re.IGNORECASE,
+)
 _WHERE = re.compile(r"^\s*where is\s+(.+?)[?.!]*\s*$", re.IGNORECASE)
 _GO = re.compile(r"^\s*did you go to\s+(.+?)[?.!]*\s*$", re.IGNORECASE)
 _WHAT_ABOUT = re.compile(r"^\s*what about\s+(.+?)[?.!]*\s*$", re.IGNORECASE)
@@ -76,7 +80,7 @@ _CORRECTION = re.compile(
 )
 _ONE_REFERENT = re.compile(
     r"\b(defeat|beat|stop|counter|kill|fight|hurt|use|cast|pronounce|say|do)"
-    r"\s+one\b",
+    r"\s+one\b(?!\s+of\b)",
     re.IGNORECASE,
 )
 _IT_REFERENT = re.compile(
@@ -313,6 +317,7 @@ def extract_entity(question: str) -> Entity | None:
     for pattern, kind in (
         (_WHO, "person"),
         (_TELL, "thing"),
+        (_EXPLAIN, "thing"),
         (_WHERE, "place"),
         (_GO, "place"),
         (_WHAT_ABOUT, "thing"),
@@ -412,6 +417,10 @@ def resolve_followup(
             and own.text.lower() != last_entity.lower()
             and not _is_referent_phrase(own.text)
         )
+        if "," in text:
+            second_clause = text.split(",", 1)[1].strip()
+            if _NEW_QUESTION.match(second_clause):
+                implicit_ok = False
         if (
             implicit_ok
             and not _EXAM.search(text)

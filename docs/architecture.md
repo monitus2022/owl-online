@@ -523,7 +523,7 @@ deployment region bans them regardless of host.
 ## Tracing
 
 Each request can emit flat JSONL span records under the request id. The stream
-path emits `router`
+path emits `resolve` (rewritten flag, rule, query hash and length), `router`
 (intent), `retrieve` (chunk ids and top score), one `generate` per attempt
 (model, prompt hash and length), `verify` (ok and reason), `retry`, and `final`.
 The lesson path adds `lesson_select` (material ids, scores, uncovered term count
