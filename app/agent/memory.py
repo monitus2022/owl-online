@@ -76,8 +76,9 @@ _CITATION = re.compile(
 )
 _PERSON_ROLE = re.compile(
     r"\b(professor|prof\.?|mr\.?|mrs\.?|ms\.?|miss|sir|madam|lord|lady|"
-    r"head of|headmaster|headmistress|minister for magic|teacher|student|"
-    r"auror|seeker|keeper|chaser|beater|prefect)\b",
+    r"head of|headmaster|headmistress|minister for magic|minister|teacher|"
+    r"student|auror|seeker|keeper|chaser|beater|prefect|ghost|founder|"
+    r"captain|official)\b",
     re.IGNORECASE,
 )
 _PERSON_NAME = re.compile(
@@ -89,7 +90,9 @@ _PERSON_NAME = re.compile(
 _THING_CUE = re.compile(
     r"\b(spell|charm|curse|jinx|hex|potion|wand|broom|uniform|book|creature|"
     r"beast|plant|herb|ingredient|cauldron|cloak|map|stone|cup|diary|locket|"
-    r"snake|dragon|boggart|dementor|patronus|expelliarmus|avifors|lumos)\b",
+    r"snake|dragon|boggart|dementor|patronus|expelliarmus|avifors|lumos|"
+    r"owl|cat|rat|toad|phoenix|thestral|hippogriff|unicorn|mermaid|vampire|"
+    r"troll|dwarf|elf|house-elf|goblin|centaur|giant|werewolf|animagus)\b",
     re.IGNORECASE,
 )
 _PLACE_CUE = re.compile(

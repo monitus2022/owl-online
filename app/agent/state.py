@@ -33,6 +33,7 @@ class AgentState(TypedDict, total=False):
     forced_mode: str | None
     preferred_mode: str | None
     routed_mode: str
+    multi_book: bool
     requested_mode: RequestedMode
     subject: str
     persona_enabled: bool

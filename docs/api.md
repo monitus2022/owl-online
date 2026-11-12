@@ -195,8 +195,8 @@ bounded conversation block:
 - "what about X?" in a lesson or answer thread is retrieved as "Compare
   <previous same-kind entity> with X." so both sides have evidence; the prompt
   keeps the student's wording and the conversation block, and the model decides
-  whether to compare. Entity kind comes from a small role/name/place/thing cue
-  set; an unknown target defaults to thing and is compared only with another
+  whether to compare. Entity kind comes from a heuristic role/name/place/thing
+  cue set; an unknown target defaults to thing and is compared only with another
   thing;
 - a pending clarify consumes a short answer; a new question escapes it and is
   resolved normally.

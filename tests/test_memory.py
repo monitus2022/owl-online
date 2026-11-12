@@ -292,6 +292,13 @@ def test_kind_cues_cover_common_phrases():
         "Tell me about the auror": "person",
         "Tell me about the crane": "thing",
         "Tell me about the bill": "thing",
+        "Tell me about the Hogwarts ghost": "person",
+        "Tell me about the Hogwarts founder": "person",
+        "Tell me about the Gryffindor captain": "person",
+        "Tell me about the Ministry official": "person",
+        "Tell me about the Hogwarts house-elf": "thing",
+        "Tell me about the Hogwarts owl": "thing",
+        "Tell me about the Minister": "person",
     }
     for question, kind in cases.items():
         entity = extract_entity(question)
