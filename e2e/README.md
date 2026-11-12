@@ -20,8 +20,8 @@ npm --prefix e2e test
   `VITE_OWL_API_BASE=http://127.0.0.1:8001`.
 
 The stub uses the real router, graph, SSE contract, schemas and persona cards,
-with a tiny in-memory DADA pack and a fixed LLM. It is a contract stub, not a
-model test.
+with a tiny in-memory DADA pack, a tiny published DADA exam bank and a fixed
+LLM. It is a contract stub, not a model test.
 
 ## Coverage
 
@@ -29,7 +29,8 @@ model test.
 - a lesson question returns teaching prose and material/book citations;
 - the identity answer is scripted;
 - an off-topic question abstains in world;
-- the exam room renders the no-papers state;
+- the exam room renders the no-papers state for a venue without a bank;
+- a paper can be sat, marked and found in history;
 - the venue stays open when the subjects API is unreachable.
 
 ## Accessibility

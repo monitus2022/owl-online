@@ -7,7 +7,7 @@ import sqlite3
 
 from fastapi.testclient import TestClient
 
-from app.api.runtime import Runtime
+from app.api.runtime import Runtime, exam_judge_for
 from app.config import Settings
 from app.exam.bank import ExamBank
 from app.main import _parse_paper_id, create_app
@@ -132,20 +132,27 @@ def _setup(tmp_path) -> tuple[ExamStore, _Judge]:
     return store, _Judge()
 
 
-def _client(
-    store: ExamStore, judge: _Judge, settings: Settings | None = None
-) -> TestClient:
+def _app(store: ExamStore, judge: _Judge, settings: Settings | None = None):
+    judges = {
+        manifest.judge_model: judge
+        for manifest in store.published_manifests()
+    }
     runtime = Runtime(
         retriever=_Retriever(),
         llm=_ChatLlm(),
         exam_store=store,
-        exam_judge=judge,
+        exam_judges=judges,
     )
-    app = create_app(
+    return create_app(
         settings or Settings(exam_attempts_per_day_anonymous=3),
         runtime=runtime,
     )
-    return TestClient(app)
+
+
+def _client(
+    store: ExamStore, judge: _Judge, settings: Settings | None = None
+) -> TestClient:
+    return TestClient(_app(store, judge, settings))
 
 
 def _start(client: TestClient) -> tuple[dict, dict]:
@@ -190,6 +197,7 @@ def test_exams_lists_the_paper(tmp_path) -> None:
     assert paper["short_answer_count"] == 4
     assert paper["marks"] == 50
     assert paper["duration_minutes"] == 60
+    assert paper["timed"] is False
     assert paper["title"]
 
 
@@ -400,6 +408,135 @@ def test_grade_persists_submitted_answers(tmp_path) -> None:
         assert {answer["item_id"] for answer in saved} == {
             question["item_id"] for question in view["questions"]
         }
+
+
+def test_exams_serves_every_published_bank(tmp_path) -> None:
+    store = ExamStore(tmp_path / "exams.db")
+    store.replace_bank(_bank_6_4())
+    store.replace_bank(_charms_bank())
+    with _client(store, _Judge()) as client:
+        assert [paper["paper_id"] for paper in client.get("/v1/exams").json()] == [
+            "dada-1.0.0"
+        ]
+        charms = client.get("/v1/exams?subject=charms").json()
+        assert [paper["paper_id"] for paper in charms] == ["charms-1.0.0"]
+        assert client.get("/v1/exams?subject=potions").json() == []
+
+
+def test_attempt_list_defaults_to_the_configured_subject(tmp_path) -> None:
+    store = ExamStore(tmp_path / "exams.db")
+    store.replace_bank(_charms_bank())
+    settings = Settings(exam_subject="charms", exam_attempts_per_day_anonymous=3)
+    with _client(store, _Judge(), settings) as client:
+        _, view = _start(client)
+        client.post(
+            f"/v1/attempts/{view['attempt_id']}/grade",
+            json={"answers": _answers(view)},
+        )
+        listed = client.get("/v1/attempts").json()
+        assert [entry["attempt_id"] for entry in listed] == [view["attempt_id"]]
+
+
+def test_delete_attempts_clears_the_session(tmp_path) -> None:
+    store, judge = _setup(tmp_path)
+    with _client(store, judge) as client:
+        _, view = _start(client)
+        client.post(
+            f"/v1/attempts/{view['attempt_id']}/grade",
+            json={"answers": _answers(view)},
+        )
+        assert len(client.get("/v1/attempts?subject=dada").json()) == 1
+        response = client.delete("/v1/attempts")
+        assert response.status_code == 200
+        assert response.json() == {"deleted": 1}
+        assert client.get("/v1/attempts?subject=dada").json() == []
+        assert client.get(f"/v1/attempts/{view['attempt_id']}").status_code == 404
+
+
+def test_delete_is_scoped_to_the_current_session(tmp_path) -> None:
+    path = tmp_path / "exams.db"
+    first_store = ExamStore(path)
+    first_store.replace_bank(_bank_6_4())
+    second_store = ExamStore(path)
+    with _client(first_store, _Judge()) as first, _client(
+        second_store, _Judge()
+    ) as second:
+        _, one = _start(first)
+        first.post(
+            f"/v1/attempts/{one['attempt_id']}/grade",
+            json={"answers": _answers(one)},
+        )
+        _, two = _start(second)
+        second.post(
+            f"/v1/attempts/{two['attempt_id']}/grade",
+            json={"answers": _answers(two)},
+        )
+
+        assert first.delete("/v1/attempts").json() == {"deleted": 1}
+        assert first.get("/v1/attempts?subject=dada").json() == []
+        listed = second.get("/v1/attempts?subject=dada").json()
+        assert [entry["attempt_id"] for entry in listed] == [two["attempt_id"]]
+        assert second.get(f"/v1/attempts/{two['attempt_id']}").status_code == 200
+
+
+def test_corrupt_bank_row_returns_503_not_500(tmp_path) -> None:
+    store, judge = _setup(tmp_path)
+    with sqlite3.connect(store.path) as conn:
+        conn.execute(
+            "UPDATE bank_items SET options_json = 'not-json' "
+            "WHERE kind = 'mcq'"
+        )
+    with _client(store, judge) as client:
+        response = client.post("/v1/exams/dada-1.0.0/attempts")
+    assert response.status_code == 503
+
+
+def test_corrupt_bank_row_returns_503_on_grade(tmp_path) -> None:
+    store, judge = _setup(tmp_path)
+    with _client(store, judge) as client:
+        _, view = _start(client)
+        with sqlite3.connect(store.path) as conn:
+            conn.execute(
+                "UPDATE bank_items SET rubric_json = 'not-json' "
+                "WHERE kind = 'short_answer'"
+            )
+        response = client.post(
+            f"/v1/attempts/{view['attempt_id']}/grade",
+            json={"answers": _answers(view)},
+        )
+    assert response.status_code == 503
+    assert response.json() == {"detail": "paper unavailable"}
+
+
+def test_grading_selects_the_attempt_banks_judge() -> None:
+    bank = _charms_bank()
+    pinned = bank.manifest.judge_model
+    other_model = "other/judge"
+    pinned_judge = _Judge()
+    other_judge = _Judge()
+    runtime = Runtime(
+        retriever=_Retriever(),
+        llm=_ChatLlm(),
+        exam_judges={pinned: pinned_judge, other_model: other_judge},
+    )
+    assert exam_judge_for(runtime, bank) is pinned_judge
+
+    other = ExamBank(
+        manifest=bank.manifest.model_copy(update={"judge_model": other_model}),
+        items=bank.items,
+    )
+    assert exam_judge_for(runtime, other) is other_judge
+
+    unknown = ExamBank(
+        manifest=bank.manifest.model_copy(update={"judge_model": "unknown/judge"}),
+        items=bank.items,
+    )
+    assert exam_judge_for(runtime, unknown) is None
+
+    legacy = Runtime(
+        retriever=_Retriever(), llm=_ChatLlm(), exam_judge=pinned_judge
+    )
+    assert exam_judge_for(legacy, bank) is pinned_judge
 
 
 def test_attempt_ip_limit_returns_429(tmp_path) -> None:

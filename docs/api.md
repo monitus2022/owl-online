@@ -338,7 +338,7 @@ rehearsal copy instead of claiming a live professor.
 
 ### Exam serving
 
-The exam room reads the published bank through four routes. A paper id is
+The exam room reads the published bank through six routes. A paper id is
 `<subject>-<version>`, for example `dada-1.0.0`, `charms-1.0.0`, `potions-1.0.0`, `transfiguration-1.0.0` or `herbology-1.0.0`. Nothing is
 generated at request time: the server samples a stored bank, persists the
 attempt, and grades it later. The banks are independent, so the Charms venue
@@ -360,10 +360,15 @@ Response `200`:
     "mcq_count": 6,
     "short_answer_count": 4,
     "marks": 50,
-    "duration_minutes": 60
+    "duration_minutes": 60,
+    "timed": false
   }
 ]
 ```
+
+`duration_minutes` is advisory pacing metadata. Served papers are untimed
+practice: `timed` is `false`, the server starts no clock, an attempt never
+expires, and a late grade is scored the same as an immediate one.
 
 `POST /v1/exams/{paper_id}/attempts` samples six MCQ and four short answers,
 shuffles the order, and persists the result. Each served MCQ carries the correct
@@ -418,6 +423,11 @@ absent, lasts 24 hours, and is not refreshed on every request, so the session
 history window runs from first issue. Set `OWL_SESSION_SECRET` in production;
 without it an API restart invalidates every anonymous session.
 
+Starting an attempt is capped at three per day per anonymous session and nine
+per day per client IP, with `429` and `Retry-After` over the cap. The counters
+live in the API process and reset on restart, so the cap is an abuse control,
+not a billing record. The signed-in allowance is reserved for auth (#35).
+
 `GET /v1/attempts?subject=dada&limit=20` returns the graded attempts for the
 current session, newest first, capped at 50. `subject` defaults to
 `OWL_EXAM_SUBJECT`; `limit` is 1 to 50. The summary carries no answers, option
@@ -453,7 +463,10 @@ attempts. The operator retention path is
 
 `POST /v1/attempts/{attempt_id}/grade` submits the answers. Omitted questions
 are left blank. An MCQ answer is an `option_id` from the served four; a short
-answer is `answer_text`:
+answer is `answer_text`. The grade response is also the point where the key is
+released: it carries the correct option and model answer for every question,
+including unanswered ones. The bank is published practice material, not a
+secret question paper:
 
 ```json
 {
@@ -533,7 +546,7 @@ down.
 | `404` | `{"detail": "attempt not found"}` / `{"detail": "paper not found"}` | unknown attempt or paper |
 | `429` | `{"error": "rate limited", "reason": "...", "retry_after": n}` | minute, day or concurrency limit |
 | `503` | `{"error": "chat temporarily unavailable", "reason": "..."}` | chat daily token budget or degraded mode |
-| `503` | `{"detail": "exam bank unavailable"}` / `{"detail": "grading unavailable"}` | exam serving or grading is not configured |
+| `503` | `{"detail": "exam bank unavailable"}` / `{"detail": "grading unavailable"}` / `{"detail": "exam bank cannot serve this paper"}` / `{"detail": "paper unavailable"}` | exam serving or grading is not configured, or a stored bank row cannot be read |
 | `502` | `{"detail": "model provider unavailable"}` | normalized provider failure on `/v1/chat` |
 | `504` | `{"error": "deadline exceeded", "request_id": "..."}` | `/v1/chat` exceeded `OWL_ASK_TIMEOUT_S` |
 
@@ -548,8 +561,8 @@ bounded, because a legitimate stream can outlive the deadline.
 - The API issues a signed `owl_session` cookie: HttpOnly, `SameSite=None` when
   secure and `Lax` otherwise, 24 hours.
 - CORS allows the configured origins and the configured origin regex, with
-  credentials. It allows `GET` and `POST` and exposes `X-Request-ID` and
-  `Retry-After`.
+  credentials. It allows `GET`, `POST` and `DELETE` and exposes `X-Request-ID`
+  and `Retry-After`.
 - Default chat limits: 10 messages per minute, 100 per day, 2 concurrent, plus a
   100/day per-IP cap and a 200k daily token budget. The counters live in the one
   API process and reset on restart.

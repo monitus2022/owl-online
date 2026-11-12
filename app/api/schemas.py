@@ -155,7 +155,8 @@ class ExamPaper(BaseModel):
                     "mcq_count": 6,
                     "short_answer_count": 4,
                     "marks": 50,
-                    "duration_minutes": 120,
+                    "duration_minutes": 60,
+                    "timed": False,
                 }
             ]
         }
@@ -169,7 +170,10 @@ class ExamPaper(BaseModel):
     mcq_count: int
     short_answer_count: int
     marks: int
+    # Advisory only. The room is untimed practice: the server does not start a
+    # clock, expire an attempt or reject a late grade.
     duration_minutes: int
+    timed: bool = False
 
 
 class ExamAnswer(BaseModel):

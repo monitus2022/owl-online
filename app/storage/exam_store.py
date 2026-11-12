@@ -356,6 +356,30 @@ class ExamStore:
         return None
 
     @_locked
+    def published_subjects(self) -> list[str]:
+        """Subjects with at least one published bank row."""
+        rows = self._conn.execute(
+            "SELECT DISTINCT subject FROM banks WHERE status = 'published' "
+            "ORDER BY subject"
+        ).fetchall()
+        return [str(row["subject"]) for row in rows]
+
+    @_locked
+    def published_manifests(self) -> list[BankManifest]:
+        """The latest published bank for every subject that has one."""
+        manifests = []
+        for subject in self.published_subjects():
+            try:
+                manifest = self.published_manifest(subject)
+            except Exception:
+                # A malformed row isolates to its subject; callers decide how
+                # to report it.
+                continue
+            if manifest is not None:
+                manifests.append(manifest)
+        return manifests
+
+    @_locked
     def bank(self, subject: str, version: str | None = None) -> ExamBank | None:
         """A published bank as the serving and grading records expect it."""
         manifest = self.published_manifest(subject, version)

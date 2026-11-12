@@ -58,11 +58,50 @@ test("an off-topic question abstains in world", async ({ page }) => {
 });
 
 test("the exam room renders the no-papers state", async ({ page }) => {
-  await page.goto("/venue/defence-against-the-dark-arts");
+  // The stub publishes a DADA bank only, so Herbology exercises the empty room.
+  await page.goto("/venue/herbology");
   await page.getByRole("tab", { name: "Exam room" }).click();
   await expect(page.getByRole("region", { name: "Exam room" })).toBeVisible();
   await page.getByRole("button", { name: "Take a paper" }).click();
   await expect(page.getByText("This department has no papers yet.")).toBeVisible();
+});
+
+test("a paper can be sat, marked and found in history", async ({ page }) => {
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByRole("tab", { name: "Exam room" }).click();
+  await page.getByRole("button", { name: "Take a paper" }).click();
+
+  await expect(
+    page.getByText("untimed practice; the student sets the pace"),
+  ).toBeVisible();
+  const questions = page.locator("fieldset.question");
+  await expect(questions).toHaveCount(10);
+  for (let index = 0; index < 10; index += 1) {
+    const question = questions.nth(index);
+    const radios = question.locator('input[type="radio"]');
+    if ((await radios.count()) > 0) {
+      await radios.first().check();
+    } else {
+      await question
+        .locator("textarea")
+        .fill("The lesson turns a feared shape into a comic one.");
+    }
+  }
+
+  await page.getByRole("button", { name: "Send to the examiners" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Paper returned" }),
+  ).toBeVisible();
+  await expect(page.getByText(/\/ 50 marks/)).toBeVisible();
+  await expect(page.locator(".mark-row")).toHaveCount(10);
+  await expect(
+    page.locator(".mark-row-marks").filter({ hasText: /\d+\/8/ }).first(),
+  ).toBeVisible();
+
+  await page.getByRole("tab", { name: "Your papers" }).click();
+  await expect(page.getByRole("region", { name: "Your papers" })).toBeVisible();
+  await expect(page.locator(".history-row")).toHaveCount(1);
+  await expect(page.locator(".history-marks")).toHaveText(/\d+\/50/);
 });
 
 test("the venue stays open when the subjects API is unreachable", async ({

@@ -17,7 +17,7 @@ import json
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from app.config import settings
+from app.config import Settings, settings
 from app.exam.bank import BankItem, ExamBank
 from app.grading.bands import band_for
 from app.grading.cache import JudgeCache
@@ -120,7 +120,10 @@ def _family(slug: str) -> str:
     return _FAMILY_ALIASES.get(head, head)
 
 
-def _judge_config(bank: ExamBank) -> JudgeConfig:
+def _judge_config(
+    bank: ExamBank, *, config_settings: Settings | None = None
+) -> JudgeConfig:
+    config = config_settings or settings
     manifest = bank.manifest
     if manifest.status != "published":
         raise ValueError("exam grading requires a published bank")
@@ -138,29 +141,33 @@ def _judge_config(bank: ExamBank) -> JudgeConfig:
         model=manifest.judge_model,
         temperature=manifest.judge_temperature,
         prompt_version=manifest.judge_prompt_version,
-        provider=settings.exam_judge_provider,
-        max_tokens=settings.exam_judge_max_tokens,
+        provider=config.exam_judge_provider,
+        max_tokens=config.exam_judge_max_tokens,
     )
 
 
-def judge_llm_from_bank(bank: ExamBank) -> Llm:
+def judge_llm_from_bank(
+    bank: ExamBank, *, config_settings: Settings | None = None
+) -> Llm:
     """Build the configured judge adapter from the bank's pinned model."""
-    config = _judge_config(bank)
-    if settings.exam_judge_provider == "bedrock" and "/" in config.model:
+    config = _judge_config(bank, config_settings=config_settings)
+    config_settings = config_settings or settings
+    if config_settings.exam_judge_provider == "bedrock" and "/" in config.model:
         raise ValueError(
             "Bedrock judge models use the provider.model-id form, not an OpenRouter slug"
         )
     return make_llm(
-        settings.exam_judge_provider,
+        config_settings.exam_judge_provider,
         model=config.model,
         temperature=config.temperature,
         max_tokens=config.max_tokens,
     )
 
 
-def default_judge_cache() -> JudgeCache:
+def default_judge_cache(*, config_settings: Settings | None = None) -> JudgeCache:
     """The configured grading cache; an empty path disables it."""
-    return JudgeCache(settings.exam_judge_cache_path)
+    config_settings = config_settings or settings
+    return JudgeCache(config_settings.exam_judge_cache_path)
 
 
 def _evidence(item: BankItem) -> list[dict[str, str]]:
