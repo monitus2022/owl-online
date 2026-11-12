@@ -325,7 +325,7 @@ def extract_entity(question: str) -> Entity | None:
         match = pattern.match(question)
         if match:
             text = _COMPOUND.sub("", match.group(1)).strip()
-            if _SELF.match(text):
+            if _SELF.match(text) or _is_referent_phrase(text):
                 return None
             # "Who is ..." is a person question even when the target names a
             # house or school; the other patterns infer from the target.
@@ -334,7 +334,7 @@ def extract_entity(question: str) -> Entity | None:
     match = _WHAT.match(question)
     if match:
         text = _COMPOUND.sub("", match.group(1)).strip()
-        if _SELF.match(text):
+        if _SELF.match(text) or _is_referent_phrase(text):
             return None
         return Entity(text, _infer_kind(text, "thing"))
     return None

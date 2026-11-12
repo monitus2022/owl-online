@@ -47,6 +47,11 @@ def test_extract_entity():
     what_about = extract_entity("what about Avifors?")
     assert what_about is not None
     assert what_about.text == "Avifors"
+    assert extract_entity("Explain it in simple terms") is None
+    assert extract_entity("Tell me about it in simple terms") is None
+    explain = extract_entity("Explain Patronus and how do I cast it")
+    assert explain is not None
+    assert explain.text == "Patronus"
 
 
 def test_a_compound_question_keeps_the_first_entity():
@@ -598,6 +603,38 @@ def test_remember_node_keeps_the_resolved_entity_across_implicit_turns():
     third = resolve_followup(
         "how do I defeat it?",
         last_entity=second["last_entity"],
+        last_mode="lesson",
+    )
+    assert third.standalone == "how do I defeat the Boggart?"
+
+
+def test_explain_it_does_not_become_the_last_entity():
+    first = remember_node(
+        {
+            "question": "Tell me about Boggart.",
+            "answer": "A Boggart changes shape.",
+            "routed_mode": "lesson",
+            "standalone_question": "Tell me about Boggart.",
+            "resolved_entity": "Boggart",
+            "messages": [],
+        }
+    )
+    second = remember_node(
+        {
+            "question": "Explain it in simple terms.",
+            "answer": "It copies your fear.",
+            "routed_mode": "lesson",
+            "standalone_question": "Explain it in simple terms.",
+            "last_entity": first["last_entity"],
+            "last_mode": "lesson",
+            "messages": first["messages"],
+            "summary": first["summary"],
+        }
+    )
+    assert "last_entity" not in second
+    third = resolve_followup(
+        "how do I defeat it?",
+        last_entity=first["last_entity"],
         last_mode="lesson",
     )
     assert third.standalone == "how do I defeat the Boggart?"
