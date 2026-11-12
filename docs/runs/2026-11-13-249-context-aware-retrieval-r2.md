@@ -41,7 +41,10 @@ This is the post-review run. The resolver edge cases (self-contained new topics,
 
 - The two intended gaps are fixed. `how do I defeat one?` now retrieves
   `how do I defeat a Boggart?`, and `no, I meant a Dementor` retrieves
-  `Tell me about a Dementor.` Multi-turn query accuracy is 36/36.
+  `Tell me about a Dementor.` Multi-turn query accuracy is 36/36. The implicit
+  rewrite is lowercased, and `query_ok` is case-insensitive in this slice;
+  without casefold the metric is 35/36 (0.9722). The resolver change is the
+  substantive fix; the casefold removes a casing-only mismatch.
 - False refusal fell from 5/33 to 3/33. The remaining three are the
   cross-subject turns that abstain instead of referring; that is #253.
 - Mode accuracy rose by one turn. The remaining four misses are the three
@@ -55,6 +58,7 @@ This is the post-review run. The resolver edge cases (self-contained new topics,
   binding.
 - Context contamination remains 0: the off-topic turn still abstains and does
   not inherit the previous topic.
+- The RAG gate reports `gate: PASS` against the #248 baseline.
 
 ## Reproduce
 

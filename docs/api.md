@@ -192,9 +192,10 @@ bounded conversation block:
   recognized place, and "they/them" to the most recent named entity, so "Who is
   Professor Lupin?" then "who trained him?" retrieves "who trained Professor
   Lupin?";
-- "one", "it", "its", "that" and "the same" refer to the last recognized
-  entity, so "how do I defeat one?" becomes "how do I defeat a Boggart?" and
-  "what is its weakness?" becomes "what is the Boggart's weakness?"; "and the
+- "one", "it" and "its" refer to the last recognized entity, so "how do I
+  defeat one?" becomes "how do I defeat a Boggart?" and "what is its weakness?"
+  becomes "what is the Boggart's weakness?"; "that" and "the same" resolve in
+  the anchored forms "what is that?" and "tell me about that"; "and the
   counter?" becomes "What is the counter to the Boggart?", and a bare "why?" or
   "how?" becomes a targeted follow-up on the same entity;
 - a correction such as "no, I meant a Dementor" becomes "Tell me about a
