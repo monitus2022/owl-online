@@ -466,8 +466,9 @@ excluded from the faithfulness denominator and reported separately.
   reranker could reach 0.75 there. Closing the rest needs a stronger embedder and
   the retrieval work in V2 D3 and D6.
 - The eval uses OpenRouter for the generator and judge (hosted models required);
-  the embedder comes from `OWL_EMBEDDER_PROVIDER`. `CachedLlm` caches `generate()`
-  only; `stream` is passed through.
+  the embedder comes from `OWL_EMBEDDER_PROVIDER`. `CachedLlm` caches both
+  `generate()` and `stream()` by (name, input); a stream cache hit yields the
+  complete reply as one piece.
 - Rerank (V1, #6) is wired on by default (`amazon.rerank-v1:0`, pool 50); set
   `OWL_RERANK_PROVIDER=none` for the baseline column.
 

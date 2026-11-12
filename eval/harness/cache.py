@@ -11,7 +11,7 @@ from app.providers.contracts import Llm
 
 
 class CachedLlm:
-    """Llm wrapper caching generate() by (name, input) on disk (AGENTS.md)."""
+    """Llm wrapper caching generate() and stream() by (name, input) on disk."""
 
     def __init__(
         self,

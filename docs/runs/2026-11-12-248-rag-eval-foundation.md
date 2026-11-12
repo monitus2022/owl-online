@@ -15,7 +15,7 @@
 | Embedder | local `qwen3-embedding:0.6b` |
 | Lesson selection | top-k 3, cosine floor 0.58, lexical extras on |
 | Lesson fallback | on |
-| Lesson fixture | `eval/rag/fixtures/lesson.jsonl`, 62 items, SHA-256 `c6e1915797e9` |
+| Lesson fixture | `eval/rag/fixtures/lesson.jsonl`, 62 items, SHA-256 `1daac0c1286e` |
 | Multi-turn fixture | `eval/rag/fixtures/multiturn.jsonl`, 17 conversations / 36 turns, SHA-256 `1a86ba5c554d` |
 | Judged lesson sample | 30, round-robin across slices |
 | Cache | `eval/.cache/rag` |
@@ -98,7 +98,13 @@ are pinned at 0; a baseline with a different setting is refused unless
   side: Potions cites Veritaserum but not Felix Felicis, Charms cites Nox but
   not Lumos, Herbology cites Devil's Snare but not Mandrake, and the
   third-topic DADA turns cite one side only. The group-level check requires one
-  material from each side.
+  material from each side. The stream-cache baseline adds the implicit,
+  correction and Charms third-topic turns to the citation misses; the example
+  comparisons are unchanged.
+- The stream-cache fix moved the multi-turn baseline from 20/33 citation,
+  3/33 false refusal and 2/12 comparison (the uncached-stream run) to 17/33,
+  5/33 and 1/12. Run `20261112T135138Z` reproduced the pinned numbers exactly;
+  its record is `docs/runs/2026-11-12-248-rag-eval-repro.md`.
 - False refusal is 5/33: the implicit follow-up, the correction, and the three
   cross-subject turns. The correction turn abstains because the rewrite did not
   happen and the lesson selector did not recover the Dementor. No other turn
@@ -133,7 +139,7 @@ run_id: 20261112T135058Z
 config: rag-eval
 generator: openrouter/qwen/qwen3-30b-a3b-instruct-2507
 judge: deepseek/deepseek-v4.1-flash-1017
-lesson fixture: c6e1915797e9 (judged sample 30)
+lesson fixture: 1daac0c1286e (judged sample 30)
 multi-turn fixture: 1a86ba5c554d
 
 lesson
