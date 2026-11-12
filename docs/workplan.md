@@ -586,13 +586,17 @@ Exit criteria:
 - the lesson and multi-turn fixtures are committed, frozen with hashes and gated
   by `run_eval.py --check`;
 - the P0 fixes are measured against a committed baseline, not against the older
-  single-turn CSV;
+  single-turn CSV, with a `docs/runs/` record and a Runs-table row;
 - a false refusal and a wrong referral are diagnosable from the trace;
 - the existing retrieval, abstention, faithfulness and routing slices do not
   regress;
 - cross-subject awareness is a referral contract, not multi-pack teaching: the
   professor knows the concept index and the faculty lore, not another subject's
-  material.
+  material;
+- `docs/routing-contracts.md` carries the fourth contract and the provenance
+  residual, and `docs/architecture.md` carries the referral route;
+- #253 owns the referral contract and the structured payload; #195 L4 consumes
+  it and does not redefine it.
 
 ## Phase D: V4 identity and long-term memory
 
@@ -628,12 +632,13 @@ flowchart LR
   B1 --> B2[Phase B2: exam bank]
   B2 --> C[Phase C: chat continuity]
   C --> C1[Phase C.1: RAG hardening]
-  C1 --> D[Phase D: auth and long-term memory]
+  C --> D[Phase D: auth and long-term memory]
   B2 --> D
 ```
 
 Phase C does not require Phase D. Phase D depends on both B2 and C because it
-persists exam attempts and chat history.
+persists exam attempts and chat history. Phase C.1 is a quality gate inside
+Phase C; it does not block Phase D.
 
 ## Ticket map
 
@@ -654,7 +659,7 @@ persists exam attempts and chat history.
 | Ticket | Scope | Milestone |
 |---|---|---|
 | #252 | Multi-part retrieval, decomposition and reranker tuning | V3.1 - RAG hardening |
-| #253 | Cross-subject concept awareness and professor referral | V3.1 - RAG hardening |
+| #253 | Cross-subject concept awareness and professor referral (owns the referral contract; #195 L4 reuses it) | V3.1 - RAG hardening |
 | #43 | Thread-based continuous lesson mode | V3 - Product |
 | #44 | Progress tracking and weak topics | V3 - Product |
 | #35 | Auth, per-user history and limits | V3 - Product |
@@ -663,7 +668,7 @@ persists exam attempts and chat history.
 
 | Ticket | Scope | Milestone |
 |---|---|---|
-| #195 | Librarian: sixth, non-teaching door for history and referral | V3 - Product |
+| #195 | Librarian: sixth, non-teaching door for history and referral (L4 reuses #253's referral contract) | V3 - Product |
 | #74/#75 | EBS data volume and GitHub OIDC | V2 - Deepening |
 
 ### Icebox
