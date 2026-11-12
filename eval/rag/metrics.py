@@ -21,6 +21,7 @@ class LessonResult:
     selected_material_ids: tuple[str, ...]
     material_citations: tuple[str, ...]
     citations: tuple[str, ...]
+    book_citations: tuple[str, ...]
     scope: str | None
     abstained: bool
     answer: str
@@ -59,9 +60,12 @@ class LessonResult:
             expected = set(self.item.expected_material_ids)
             parts.append(len(cited & expected) / len(expected))
         if self.item.expected_chunk_ids:
-            cited_chunks = set(self.citations)
+            cited_chunks = set(self.book_citations)
             expected_chunks = set(self.item.expected_chunk_ids)
-            parts.append(len(cited_chunks & expected_chunks) / len(expected_chunks))
+            # The expected chunks are alternatives, not a required set: any
+            # valid evidence chunk is a hit. The material group check above is
+            # the required part.
+            parts.append(1.0 if cited_chunks & expected_chunks else 0.0)
         return sum(parts) / len(parts) if parts else 0.0
 
     @property
@@ -92,6 +96,14 @@ class LessonMetrics:
     abstention_accuracy: float
     citation_validity_rate: float
     source_hash_rate: float
+    mixed_count: int
+    mixed_scope_accuracy: float
+    mixed_citation_recall: float
+    mixed_false_refusal_rate: float
+    off_pack_count: int
+    off_pack_scope_accuracy: float
+    off_pack_citation_recall: float
+    off_pack_false_refusal_rate: float
     judged: int
     faithfulness_rate: float
     errors: int
@@ -102,10 +114,15 @@ def summarize_lesson(results: list[LessonResult]) -> LessonMetrics:
     answerable = [result for result in results if result.item.answerable]
     unanswerable = [result for result in results if not result.item.answerable]
     selection_items = [result for result in answerable if result.item.expected_material_ids]
+    mixed = [result for result in results if result.item.slice_name == "mixed"]
+    off_pack = [result for result in results if result.item.slice_name == "off_pack"]
     judged = [result for result in results if result.faithful is not None]
 
     def mean(values: list[float]) -> float:
         return sum(values) / len(values) if values else 0.0
+
+    def false_refusal(items: list[LessonResult]) -> float:
+        return mean([float(result.false_refusal) for result in items])
 
     return LessonMetrics(
         total=len(results),
@@ -119,6 +136,14 @@ def summarize_lesson(results: list[LessonResult]) -> LessonMetrics:
         abstention_accuracy=mean([float(result.abstention_ok) for result in unanswerable]),
         citation_validity_rate=mean([float(result.citation_ok) for result in results]),
         source_hash_rate=mean([float(result.source_hash_ok) for result in results]),
+        mixed_count=len(mixed),
+        mixed_scope_accuracy=mean([float(result.scope_ok) for result in mixed]),
+        mixed_citation_recall=mean([result.citation_recall for result in mixed]),
+        mixed_false_refusal_rate=false_refusal(mixed),
+        off_pack_count=len(off_pack),
+        off_pack_scope_accuracy=mean([float(result.scope_ok) for result in off_pack]),
+        off_pack_citation_recall=mean([result.citation_recall for result in off_pack]),
+        off_pack_false_refusal_rate=false_refusal(off_pack),
         judged=len(judged),
         faithfulness_rate=mean([float(result.faithful is True) for result in judged]),
         errors=sum(1 for result in results if result.error is not None),

@@ -88,12 +88,21 @@ async def _run(args: argparse.Namespace) -> int:
     write_report(path, report)
     print(render_report(report))
     if args.write_baseline:
+        if report.errors > 0 and not args.force_baseline:
+            print(
+                "refusing to pin a baseline with errors; pass --force-baseline "
+                "to replace it deliberately",
+                file=sys.stderr,
+            )
+            return 1
         payload = to_dict(report)
         if args.baseline.exists() and not args.force_baseline:
             existing = load_report(args.baseline)
             changed = [
                 key
                 for key in (
+                    "generator",
+                    "judge",
                     "lesson_fixture_sha",
                     "multiturn_fixture_sha",
                     "lesson_sample",

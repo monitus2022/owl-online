@@ -74,6 +74,13 @@ def render_report(report: RagReport) -> str:
         f"abstention accuracy={_rate(lesson.abstention_accuracy)}",
         f"  citation validity={_rate(lesson.citation_validity_rate)} "
         f"source hash={_rate(lesson.source_hash_rate)}",
+        f"  mixed n={lesson.mixed_count} scope={_rate(lesson.mixed_scope_accuracy)} "
+        f"citation={_rate(lesson.mixed_citation_recall)} "
+        f"false refusal={_rate(lesson.mixed_false_refusal_rate)}",
+        f"  off-pack n={lesson.off_pack_count} "
+        f"scope={_rate(lesson.off_pack_scope_accuracy)} "
+        f"citation={_rate(lesson.off_pack_citation_recall)} "
+        f"false refusal={_rate(lesson.off_pack_false_refusal_rate)}",
         f"  judged={lesson.judged} faithfulness={_rate(lesson.faithfulness_rate)}",
         "",
         "multi-turn",

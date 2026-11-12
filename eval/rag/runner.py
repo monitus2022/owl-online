@@ -21,7 +21,7 @@ from app.api.runtime import Runtime, build_runtime
 from app.config import Settings
 from app.knowledge.packs import PackStore
 from app.pipeline.generate import render_evidence
-from app.pipeline.generate.lesson import ask_lesson, render_materials
+from app.pipeline.generate.lesson import ask_lesson, cited_book_ids, render_materials
 from app.pipeline.index.builder import load_chunks
 from app.providers.contracts import Llm
 from app.providers.factory import make_llm
@@ -36,7 +36,9 @@ from eval.rag.metrics import (
     summarize_lesson,
     summarize_multiturn,
 )
-from eval.results import timestamp_run_id
+from eval.results import load_manifest, timestamp_run_id
+
+EVAL_TEMPERATURE = 0.0
 
 
 @dataclass(frozen=True)
@@ -67,19 +69,19 @@ async def build_stack(settings: Settings, cache_dir: Path) -> RagStack:
         raise RuntimeError(
             "lesson mode is unavailable; publish the subject packs and enable OWL_LESSON_MODE"
         )
-    generator_inner = make_llm(settings.provider, temperature=0.0)
+    generator_inner = make_llm(settings.provider, temperature=EVAL_TEMPERATURE)
     generator = CachedLlm(
         generator_inner,
         generator_inner.name,
         cache_dir,
-        variant="rag-eval-temperature=0",
+        variant=f"rag-eval-temperature={EVAL_TEMPERATURE:g}",
     )
-    judge_inner = make_llm("openrouter", model=JUDGE_MODEL, temperature=0.0)
+    judge_inner = make_llm("openrouter", model=JUDGE_MODEL, temperature=EVAL_TEMPERATURE)
     judge = CachedLlm(
         judge_inner,
         JUDGE_MODEL,
         cache_dir,
-        variant="rag-judge-temperature=0",
+        variant=f"rag-judge-temperature={EVAL_TEMPERATURE:g}",
     )
     agent = build_graph(
         runtime.retriever,
@@ -152,6 +154,7 @@ async def run_lesson(
                     selected_material_ids=(),
                     material_citations=(),
                     citations=(),
+                    book_citations=(),
                     scope=None,
                     abstained=True,
                     answer="",
@@ -187,12 +190,14 @@ async def run_lesson(
                 pack=pack,
                 chunks_by_id=stack.chunks_by_id,
             )
+            book_citations = tuple(cited_book_ids(result.answer, list(result.chunks)))
             results.append(
                 LessonResult(
                     item=item,
                     selected_material_ids=tuple(result.selected_material_ids),
                     material_citations=tuple(result.material_citations),
                     citations=tuple(result.citations),
+                    book_citations=book_citations,
                     scope=result.scope,
                     abstained=result.abstained,
                     answer=result.answer,
@@ -208,6 +213,7 @@ async def run_lesson(
                     selected_material_ids=(),
                     material_citations=(),
                     citations=(),
+                    book_citations=(),
                     scope=None,
                     abstained=True,
                     answer="",
@@ -336,12 +342,27 @@ async def run_rag_eval(
         multiturn_results = await run_multiturn(conversations, stack)
     finally:
         await stack.aclose()
+    manifest = load_manifest()
+    embedder_key = "cloud" if settings.embedder_provider == "bedrock" else "local"
+    retrieval = manifest["retrieval"]
     settings_payload = {
         "provider": settings.provider,
-        "generator_temperature": 0.0,
+        "generator": stack.generator.name,
+        "generator_temperature": EVAL_TEMPERATURE,
         "judge": JUDGE_MODEL,
-        "judge_temperature": 0.0,
+        "judge_temperature": EVAL_TEMPERATURE,
         "embedder_provider": settings.embedder_provider,
+        "embedder_model": manifest["embedder"][embedder_key]["model"],
+        "reranker_provider": settings.rerank_provider,
+        "reranker_model": settings.rerank_model,
+        "rerank_pool": settings.rerank_pool,
+        "rerank_min_score": settings.rerank_min_score,
+        "top_k": retrieval["top_k"],
+        "rrf_k": retrieval["rrf_k"],
+        "candidates": retrieval["candidates"],
+        "subquery_quota": settings.subquery_quota,
+        "retry_budget": settings.retry_budget,
+        "multi_book": settings.multi_book,
         "lesson_top_k": settings.lesson_top_k,
         "lesson_min_score": settings.lesson_min_score,
         "lesson_fallback": settings.lesson_fallback,

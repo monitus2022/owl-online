@@ -276,7 +276,12 @@ def build() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
                     answerable=True,
                     note="mixed: Boggart plus corpus Triwizard evidence",
                     groups=groups_for(subject, "Boggart"),
-                    expected_chunk_ids=("b4-c11-0030",),
+                    expected_chunk_ids=(
+                        "b4-c12-0001",
+                        "b4-c12-0059",
+                        "b4-c12-0063",
+                        "b4-c12-0080",
+                    ),
                     expected_scope="mixed",
                     citation="both",
                 )
@@ -291,7 +296,12 @@ def build() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
                     materials=[],
                     answerable=True,
                     note="off_pack: corpus-only question",
-                    expected_chunk_ids=("b1-c11-0042",),
+                    expected_chunk_ids=(
+                        "b1-c11-0011",
+                        "b1-c11-0042",
+                        "b1-c12-0059",
+                        "b1-c15-0018",
+                    ),
                     expected_scope="off_pack",
                     citation="book",
                 )

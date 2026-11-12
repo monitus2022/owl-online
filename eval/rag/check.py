@@ -20,6 +20,10 @@ DROP_METRICS = frozenset(
         "lesson_citation_validity_rate",
         "lesson_source_hash_rate",
         "lesson_faithfulness_rate",
+        "lesson_mixed_scope_accuracy",
+        "lesson_mixed_citation_recall",
+        "lesson_off_pack_scope_accuracy",
+        "lesson_off_pack_citation_recall",
         "multiturn_query_accuracy",
         "multiturn_mode_accuracy",
         "multiturn_citation_accuracy",
@@ -32,6 +36,8 @@ DROP_METRICS = frozenset(
 RISE_METRICS = frozenset(
     {
         "lesson_false_refusal_rate",
+        "lesson_mixed_false_refusal_rate",
+        "lesson_off_pack_false_refusal_rate",
         "multiturn_false_refusal_rate",
         "multiturn_context_contamination",
         "lesson_errors",
@@ -43,6 +49,8 @@ COUNT_METRICS = frozenset(
         "lesson_total",
         "lesson_answerable",
         "lesson_unanswerable",
+        "lesson_mixed_count",
+        "lesson_off_pack_count",
         "lesson_judged",
         "multiturn_conversations",
         "multiturn_turns",
@@ -112,6 +120,8 @@ def check_rag(
     fixture_mismatch = tuple(
         key
         for key in (
+            "generator",
+            "judge",
             "lesson_fixture_sha",
             "multiturn_fixture_sha",
             "lesson_sample",

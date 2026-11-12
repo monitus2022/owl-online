@@ -1,10 +1,10 @@
 # Run record: #248 lesson and multi-turn RAG baseline
 
 - Date: 2026-11-12
-- Run id: `20261112T122937Z`
+- Run id: `20261112T133009Z`
 - Ticket: #248 (lesson and multi-turn evaluation foundation)
 - Config: `rag-eval` (persona on, lesson mode on, lesson fallback on, temperature 0)
-- Artifacts: `eval/results/rag-20261112T122937Z.json` (local, gitignored), `eval/results/rag-baseline.json` (committed)
+- Artifacts: `eval/results/rag-20261112T133009Z.json` (local, gitignored), `eval/results/rag-baseline.json` (committed)
 
 ## Configuration
 
@@ -15,7 +15,7 @@
 | Embedder | local `qwen3-embedding:0.6b` |
 | Lesson selection | top-k 3, cosine floor 0.58, lexical extras on |
 | Lesson fallback | on |
-| Lesson fixture | `eval/rag/fixtures/lesson.jsonl`, 62 items, SHA-256 `703b128ad6c6` |
+| Lesson fixture | `eval/rag/fixtures/lesson.jsonl`, 62 items, SHA-256 `c6e1915797e9` |
 | Multi-turn fixture | `eval/rag/fixtures/multiturn.jsonl`, 17 conversations / 36 turns, SHA-256 `1a86ba5c554d` |
 | Judged lesson sample | 30, round-robin across slices |
 | Cache | `eval/.cache/rag` |
@@ -35,11 +35,13 @@ are pinned at 0; a baseline with a different setting is refused unless
 | Selection precision@3 | 0.6405 |
 | Selection recall@3 | 0.9660 |
 | Scope accuracy | 0.9839 |
-| Citation recall | 0.8942 |
+| Citation recall | 0.9231 |
 | False refusal rate | 0.0000 |
 | Abstention accuracy | 1.0000 |
 | Citation validity | 1.0000 |
 | Source hash validity | 1.0000 |
+| Mixed count / scope / citation / false refusal | 1 / 1.0000 / 1.0000 / 0.0000 |
+| Off-pack count / scope / citation / false refusal | 1 / 1.0000 / 1.0000 / 0.0000 |
 | Judged | 30 |
 | Faithfulness | 0.0667 |
 
@@ -51,11 +53,11 @@ are pinned at 0; a baseline with a different setting is refused unless
 | Turns | 36 |
 | Retrieval-query accuracy | 0.9444 |
 | Mode accuracy | 0.8611 |
-| Citation accuracy | 0.5455 |
+| Citation accuracy | 0.6061 |
 | False refusal rate | 0.0909 |
 | Abstention accuracy | 1.0000 |
 | Referral target accuracy | 0.0000 |
-| Comparison accuracy | 0.0833 |
+| Comparison accuracy | 0.1667 |
 | Context contamination | 0 |
 | Errors | 0 |
 
@@ -77,12 +79,12 @@ are pinned at 0; a baseline with a different setting is refused unless
   Summoning) selected the generic charm definition, Nox and Wands, then fell to
   `mixed` with only the Nox material cited.
 - The mixed case `lesson-dada-12` (Boggart against the Triwizard Tournament)
-  answered with `scope=mixed` and cited a material plus corpus chunks, but the
-  corpus chunks were not the expected Triwizard chunk and the answer is judged
-  unfaithful. The off-pack case `lesson-dada-13` answered with
-  `scope=off_pack` and is judged faithful, but cited `b1-c15-0018` rather than
-  the expected `b1-c11-0042`. Both are evidence-target findings for the next
-  retrieval and grounding tickets.
+  answered with `scope=mixed` and cites the Boggart material plus valid
+  Triwizard chunks. It passes the scope and citation checks but is judged
+  unfaithful. The off-pack case `lesson-dada-13` answers with
+  `scope=off_pack`, cites a valid three-headed-dog chunk and is judged faithful.
+  The new slices pass their scope and citation gates; the remaining problem is
+  claim support, not evidence selection.
 - Multi-turn query accuracy is 34/36. The two misses are the intended gaps:
   `how do I defeat one?` is not rewritten to include the Boggart, and
   `no, I meant a Dementor` is not rewritten to the correction. These are the
@@ -92,7 +94,7 @@ are pinned at 0; a baseline with a different setting is refused unless
   follow-up abstaining instead of staying lesson, and one is
   `Compare Summoning Charm with Levitation Charm.` routing to `clarify`
   instead of lesson.
-- Citation accuracy is 18/33. Most misses are comparisons that answer only one
+- Citation accuracy is 20/33. Most misses are comparisons that answer only one
   side: Potions cites Veritaserum but not Felix Felicis, Charms cites Nox but
   not Lumos, Herbology cites Devil's Snare but not Mandrake, and the
   third-topic DADA turns cite one side only. The group-level check requires one
@@ -101,9 +103,9 @@ are pinned at 0; a baseline with a different setting is refused unless
   abstained instead of referring. No other turn that should answer abstained.
   Abstention accuracy is 1/1: the off-topic turn abstained and did not inherit
   the previous topic.
-- Comparison accuracy is 1/12. The denominator is now only turns with two
-  expected concept groups; the earlier 12/22 figure counted first turns that
-  were single-topic. The corrected number is the real comparison result.
+- Comparison accuracy is 2/12. The denominator is only turns with two expected
+  concept groups; the earlier 12/22 figure counted first turns that were
+  single-topic. The corrected number is the real comparison result.
 - Referral target accuracy is 0/3 by construction. The cross-subject fixture is
   the acceptance case for #253; the baseline records the current
   abstention/lesson behaviour, not a regression.
@@ -125,30 +127,32 @@ uv run python scripts/run_eval.py --rag --check
 ## Raw summary
 
 ```text
-run_id: 20261112T122937Z
+run_id: 20261112T130542Z
 config: rag-eval
 generator: openrouter/qwen/qwen3-30b-a3b-instruct-2507
 judge: deepseek/deepseek-v4.1-flash-1017
-lesson fixture: 703b128ad6c6 (judged sample 30)
+lesson fixture: c6e1915797e9 (judged sample 30)
 multi-turn fixture: 1a86ba5c554d
 
 lesson
   total=62 answerable=52 unanswerable=10
   selection precision@3=0.6405 recall@3=0.9660
-  scope accuracy=0.9839 citation recall=0.8942
+  scope accuracy=0.9839 citation recall=0.9231
   false refusal=0.0000 abstention accuracy=1.0000
   citation validity=1.0000 source hash=1.0000
+  mixed n=1 scope=1.0000 citation=1.0000 false refusal=0.0000
+  off-pack n=1 scope=1.0000 citation=1.0000 false refusal=0.0000
   judged=30 faithfulness=0.0667
 
 multi-turn
   conversations=17 turns=36
   query accuracy=0.9444 mode accuracy=0.8611
-  citation accuracy=0.5455 false refusal=0.0909
+  citation accuracy=0.6061 false refusal=0.0909
   abstention accuracy=1.0000
-  referral target accuracy=0.0000 comparison accuracy=0.0833
+  referral target accuracy=0.0000 comparison accuracy=0.1667
   context contamination=0
 
 errors: 0
 pinned baseline: /Users/tc/Documents/Github/owl-online/eval/results/rag-baseline.json
-wrote /Users/tc/Documents/Github/owl-online/eval/results/rag-20261112T122937Z.json
+wrote /Users/tc/Documents/Github/owl-online/eval/results/rag-20261112T133009Z.json
 ```
