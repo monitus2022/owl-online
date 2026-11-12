@@ -70,6 +70,33 @@ _SELF = re.compile(
     r"^\s*(?:yourself|yourselves|you|me|myself)\s*[?.!]*\s*$",
     re.IGNORECASE,
 )
+_CORRECTION = re.compile(
+    r"^\s*(?:no[, ]+)?(?:i\s+meant|i\s+mean)\s+(.+?)[?.!]*\s*$",
+    re.IGNORECASE,
+)
+_ONE_REFERENT = re.compile(
+    r"\b(defeat|beat|stop|counter|kill|fight|hurt|use|cast|pronounce|say|do)"
+    r"\s+one\b",
+    re.IGNORECASE,
+)
+_IT_REFERENT = re.compile(
+    r"\b(defeat|beat|stop|counter|kill|fight|hurt|use|cast|pronounce|say|do|"
+    r"of|for|with|to)\s+it\b",
+    re.IGNORECASE,
+)
+_TELL_IT = re.compile(r"^\s*tell me about\s+it\s*[?.!]*$", re.IGNORECASE)
+_ITS_REFERENT = re.compile(r"\bits\b", re.IGNORECASE)
+_THAT_REFERENT = re.compile(
+    r"^\s*(?:what(?:'s| is)|tell me about)\s+that\s*[?.!]*$",
+    re.IGNORECASE,
+)
+_COUNTER_REFERENT = re.compile(
+    r"^\s*(?:and\s+)?(?:what about\s+)?the counter\??\s*$",
+    re.IGNORECASE,
+)
+_WHY_ALONE = re.compile(r"^\s*why\s*[?.!]*$", re.IGNORECASE)
+_HOW_ALONE = re.compile(r"^\s*how\s*[?.!]*$", re.IGNORECASE)
+_IMPLICIT_TARGETS = frozenset({"it", "its", "one", "that", "the same"})
 _CITATION = re.compile(
     r"\[[^\]]*(?:b\d+-c\d+-\d+|lore:|mat:|policy:|persona:|lesson:)[^\]]*\]",
     re.IGNORECASE,
@@ -147,6 +174,40 @@ def _infer_kind(text: str, default: EntityKind) -> EntityKind:
     return default
 
 
+def _indefinite(entity: str, kind: EntityKind) -> str:
+    """An article for an object follow-up; a person keeps their name."""
+    if kind == "person":
+        return entity
+    lowered = entity.lower()
+    if lowered.startswith(("a ", "an ", "the ")):
+        return entity
+    return f"an {entity}" if entity[:1].lower() in "aeiou" else f"a {entity}"
+
+
+def _definite(entity: str, kind: EntityKind) -> str:
+    """A definite phrase for an object follow-up; a person keeps their name."""
+    if kind == "person":
+        return entity
+    lowered = entity.lower()
+    if lowered.startswith("the "):
+        return entity
+    if lowered.startswith(("a ", "an ")):
+        return f"the {entity.split(' ', 1)[1]}"
+    return f"the {entity}"
+
+
+def _last_kind(
+    last_entity: str | None,
+    last_person: str | None,
+    last_place: str | None,
+) -> EntityKind | None:
+    if last_entity and last_entity == last_person:
+        return "person"
+    if last_entity and last_entity == last_place:
+        return "place"
+    return "thing" if last_entity else None
+
+
 def extract_entity(question: str) -> Entity | None:
     """The named entity a follow-up pronoun is likely to refer to."""
     for pattern, kind in (
@@ -222,6 +283,68 @@ def resolve_followup(
     place = last_place or _recent_entity(messages, summary, "place")
     any_entity = last_entity or person or place or _recent_entity(messages, summary, None)
     lesson_hint = "lesson" if last_mode == "lesson" else None
+    last_kind = _last_kind(last_entity, last_person, last_place)
+    if last_entity:
+        correction = _CORRECTION.match(text)
+        if correction:
+            target = correction.group(1).strip()
+            if target.lower() in _IMPLICIT_TARGETS:
+                target = last_entity
+            if (
+                target
+                and not _EXAM.search(target)
+                and not _SCOPE.search(target)
+                and not _SELF.match(target)
+            ):
+                return Resolution(f"Tell me about {target}.", preferred_mode=lesson_hint)
+        kind = last_kind or "thing"
+        if _COUNTER_REFERENT.match(text):
+            return Resolution(
+                f"What is the counter to {_definite(last_entity, kind)}?",
+                preferred_mode=lesson_hint,
+            )
+        if _THAT_REFERENT.match(text):
+            return Resolution(
+                f"What is {_definite(last_entity, kind)}?",
+                preferred_mode=lesson_hint,
+            )
+        if _WHY_ALONE.match(text):
+            return Resolution(
+                f"Why does that matter for {_definite(last_entity, kind)}?",
+                preferred_mode=lesson_hint,
+            )
+        if _HOW_ALONE.match(text):
+            return Resolution(
+                f"How does that work for {_definite(last_entity, kind)}?",
+                preferred_mode=lesson_hint,
+            )
+        if _TELL_IT.match(text):
+            return Resolution(f"Tell me about {last_entity}.", preferred_mode=lesson_hint)
+        if _ONE_REFERENT.search(text):
+            return Resolution(
+                _ONE_REFERENT.sub(
+                    lambda match: f"{match.group(1)} {_indefinite(last_entity, kind)}",
+                    text,
+                    count=1,
+                ),
+                preferred_mode=lesson_hint,
+            )
+        if _IT_REFERENT.search(text):
+            return Resolution(
+                _IT_REFERENT.sub(
+                    lambda match: f"{match.group(1)} {_definite(last_entity, kind)}",
+                    text,
+                    count=1,
+                ),
+                preferred_mode=lesson_hint,
+            )
+        if _ITS_REFERENT.search(text):
+            base = _definite(last_entity, kind)
+            possessive = base if base.endswith("'s") else f"{base}'s"
+            return Resolution(
+                _ITS_REFERENT.sub(lambda _: possessive, text, count=1),
+                preferred_mode=lesson_hint,
+            )
     if _PERSON_PRONOUN.search(text) and person:
         return Resolution(
             _PERSON_PRONOUN.sub(lambda _: person, text, count=1),
@@ -242,16 +365,9 @@ def resolve_followup(
         match = _WHAT_ABOUT.match(text)
         if match:
             target = match.group(1).strip()
+            if target.lower() in _IMPLICIT_TARGETS and last_entity:
+                target = last_entity
             hint = "lesson" if last_mode == "lesson" else None
-            last_kind = (
-                "person"
-                if last_entity and last_entity == last_person
-                else "place"
-                if last_entity and last_entity == last_place
-                else "thing"
-                if last_entity
-                else None
-            )
             target_kind = _infer_kind(target, "thing")
             if (
                 last_mode in {"lesson", "answer"}
@@ -313,6 +429,7 @@ def render_context(
     token_budget: int = TOKEN_BUDGET,
 ) -> str:
     """Render the bounded conversation block sent with a threaded prompt."""
+
     def clean(text: str) -> str:
         cleaned, _ = sanitize_evidence(text)
         return _CITATION.sub("", cleaned).strip()
@@ -320,17 +437,13 @@ def render_context(
     parts: list[str] = []
     summary_text = clean(summary)
     if summary_text:
-        parts.append(
-            json.dumps({"role": "summary", "content": summary_text}, ensure_ascii=False)
-        )
+        parts.append(json.dumps({"role": "summary", "content": summary_text}, ensure_ascii=False))
     for message in messages:
         content = clean(message.get("content", ""))
         if not content:
             continue
         role = "student" if message.get("role") == "user" else "professor"
-        parts.append(
-            json.dumps({"role": role, "content": content}, ensure_ascii=False)
-        )
+        parts.append(json.dumps({"role": role, "content": content}, ensure_ascii=False))
     limit = max(1, token_budget) * _CHARS_PER_TOKEN
     while len(parts) > 1 and sum(len(part) + 1 for part in parts) > limit:
         parts.pop(0)

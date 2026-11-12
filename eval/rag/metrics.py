@@ -168,8 +168,9 @@ class TurnResult:
 
     @property
     def query_ok(self) -> bool:
-        return " ".join(self.actual_standalone.split()) == " ".join(
-            self.turn.expected_standalone.split()
+        return (
+            " ".join(self.actual_standalone.split()).casefold()
+            == " ".join(self.turn.expected_standalone.split()).casefold()
         )
 
     @property

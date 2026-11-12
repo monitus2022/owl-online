@@ -192,6 +192,13 @@ bounded conversation block:
   recognized place, and "they/them" to the most recent named entity, so "Who is
   Professor Lupin?" then "who trained him?" retrieves "who trained Professor
   Lupin?";
+- "one", "it", "its", "that" and "the same" refer to the last recognized
+  entity, so "how do I defeat one?" becomes "how do I defeat a Boggart?" and
+  "what is its weakness?" becomes "what is the Boggart's weakness?"; "and the
+  counter?" becomes "What is the counter to the Boggart?", and a bare "why?" or
+  "how?" becomes a targeted follow-up on the same entity;
+- a correction such as "no, I meant a Dementor" becomes "Tell me about a
+  Dementor." and replaces the topic;
 - "what about X?" in a lesson or answer thread is retrieved as "Compare
   <previous same-kind entity> with X." so both sides have evidence; the prompt
   keeps the student's wording and the conversation block, and the model decides

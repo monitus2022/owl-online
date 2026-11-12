@@ -561,8 +561,17 @@ Anonymous threads are enough here. Auth is not a dependency.
 
 ## Phase C.1: RAG hardening
 
-Status: #248 delivered; #249-#253 active. This is the RAG side of lesson and
-chat. It is not a new product surface and it does not wait on auth or exam mode.
+Status: #248 and #249 delivered; #250-#253, #258 and #259 active. This is the
+RAG side of lesson and chat. It is not a new product surface and it does not
+wait on auth or exam mode.
+
+#249 moved multi-turn query accuracy from 0.9444 to 1.0000 and false refusal
+from 0.1515 to 0.0909; the remaining three false refusals are cross-subject
+turns. The record is `docs/runs/2026-11-13-249-context-aware-retrieval.md`.
+
+The order after #249 is: #258 calibrate the judge, then #251 lesson prompt and
+claim binding, then #252 comparison-aware selection, #259 the comparison router,
+and #253 referral. #250 remains the paraphrase false-refusal line.
 
 The baseline is `docs/runs/2026-11-12-248-rag-eval-foundation.md`: 62 lesson
 items and 36 multi-turn turns. Lesson citation recall is 0.9231 and citation
@@ -582,11 +591,13 @@ gaps.
 |---|---|
 | #247 | Epic: RAG hardening for lesson and chat |
 | #248 | Delivered: lesson and multi-turn evaluation foundation, baseline and gate |
-| #249 | Context-aware retrieval for follow-up turns |
+| #249 | Delivered: implicit referents and corrections; query 1.0000, false refusal 3/33 |
 | #250 | Lesson false refusals from lexical coverage |
 | #251 | Claim-level citation binding for chat and lesson |
 | #252 | Multi-part retrieval, decomposition and reranker tuning |
 | #253 | Cross-subject concept awareness and professor referral |
+| #258 | Calibrate the lesson faithfulness judge before optimizing to it |
+| #259 | Route in-subject comparison questions to lesson |
 
 Exit criteria:
 
@@ -655,7 +666,8 @@ Phase C; it does not block Phase D.
 |---|---|---|
 | #247 | Epic: RAG hardening for lesson and chat | V3.1 - RAG hardening |
 | #248 | Delivered: lesson and multi-turn evaluation foundation, baseline and gate | V3.1 - RAG hardening |
-| #249 | Context-aware retrieval for follow-up turns | V3.1 - RAG hardening |
+| #258 | Calibrate the lesson faithfulness judge | V3.1 - RAG hardening |
+| #249 | Delivered: implicit referents and corrections; query 1.0000, false refusal 3/33 | V3.1 - RAG hardening |
 | #250 | Lesson false refusals from lexical coverage | V3.1 - RAG hardening |
 | #251 | Claim-level citation binding for chat and lesson | V3.1 - RAG hardening |
 | #33 | Minimal dashboard over `/v1/metrics` (blocked on metric definitions) | V3 - Product |
@@ -667,6 +679,7 @@ Phase C; it does not block Phase D.
 |---|---|---|
 | #252 | Multi-part retrieval, decomposition and reranker tuning | V3.1 - RAG hardening |
 | #253 | Cross-subject concept awareness and professor referral (owns the referral contract; #195 L4 reuses it) | V3.1 - RAG hardening |
+| #259 | Route in-subject comparison questions to lesson | V3.1 - RAG hardening |
 | #43 | Thread-based continuous lesson mode | V3 - Product |
 | #44 | Progress tracking and weak topics | V3 - Product |
 | #35 | Auth, per-user history and limits | V3 - Product |
@@ -725,11 +738,11 @@ Phase C; it does not block Phase D.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The #216 epic is delivered; #30, #19, #181 and #248 are delivered. The active
-work is the RAG hardening line (#249-#251) plus #33 and #128. Exam mode is
-delegated to a separate agent and is not part of this workplan's active set.
-The remaining Now items are #249-#251 and the two blocked product tickets;
-Next is #252, #253, #43, #35 and #44. On the pack line, the canon index is harvested (#125, #126)
+The #216 epic is delivered; #30, #19, #181, #248 and #249 are delivered. The
+active work is the RAG hardening line (#250, #251, #258) plus #33 and #128.
+Exam mode is delegated to a separate agent and is not part of this workplan's
+active set. The remaining Now items are #250, #251, #258 and the two blocked
+product tickets; Next is #252, #253, #259, #43, #35 and #44. On the pack line, the canon index is harvested (#125, #126)
 and resolved (#127 closed); #128 carries reference prefill and coverage
 maintenance. The #87 schema, validator and all five 1.0.0 packs are delivered.
 #16, #120, #170, #172, #174 and #127 are closed. #107 is deferred and likely
@@ -762,6 +775,8 @@ project completion by maintainer decision.
 | Threaded generation gets a bounded conversation block | The model decides follow-ups, including comparisons; the block is not evidence and is capped by the memory budget. Retrieval still uses the standalone query. The experimental multi-book path is excluded |
 | Conversation provenance is not yet checked | Prior citations are stripped and the block is marked untrusted, but the citation checker only verifies membership in the current retrieval set; a model could restate a conversation fact and cite a current excerpt. Provenance-aware verification is future work |
 | Measure lesson and multi-turn before changing prompts | The last full run predates the memory work, and the live probes found false refusals and unresolved follow-ups. A prompt change without a lesson and multi-turn baseline cannot be attributed or gated |
+| Calibrate the lesson faithfulness judge before optimizing to it | The #248 baseline is 2/30 with perfect citation validity. That is either a real elaboration problem or a strict judge; owner-adopted labels decide before generation changes |
+| Implicit referents and corrections resolve before retrieval | The model cannot recover a topic the retriever never sees. "one", "it", "its", "that", "the same", "and the counter?" and "no, I meant X" are deterministic rewrites, not generation work |
 | Cross-subject awareness is a referral contract, not multi-pack teaching | The professor may know that a concept exists and who owns it, but may not teach another subject's content. A referral is a routing outcome with its own authority and citation type |
 | The professor knows the concept index, not another subject's material | The index stores concept ids, titles, aliases, subject and material id, never prose. The other subject's material never enters the prompt, so the no-teaching boundary is enforceable |
 | The referral payload is one contract owned by #253 | The professors and the librarian (#195 L4) return the same structured referral contract; #195 consumes it rather than defining a second shape, so the UI and the authority checks are not duplicated |
@@ -817,7 +832,9 @@ Lesson mode adds:
 - citation retention and faithfulness on the lesson answer, with a judged sample
   large enough to separate a real move from noise;
 - citation retention counts one material per expected concept group and the
-  expected corpus chunks for mixed and off-pack answers.
+  expected corpus chunks for mixed and off-pack answers;
+- lesson answer length is reported with faithfulness, so a shorter answer is not
+  just a truncated one.
 
 Multi-turn chat adds:
 

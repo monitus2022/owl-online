@@ -433,9 +433,9 @@ arrive as an `error` event because HTTP headers are already sent.
 `resolve` before the router and `remember` after every terminal node. `resolve`
 trims the stored messages to a recent window, folds older user turns into a
 rolling summary under a character budget derived from
-`OWL_MEMORY_TOKEN_BUDGET`, rewrites a pronoun, "there" or "what about"
-follow-up into a standalone retrieval query, and renders a bounded conversation
-block. A pending clarify consumes a short answer; a new question escapes it and
+`OWL_MEMORY_TOKEN_BUDGET`, rewrites a pronoun, implicit referent ("one", "it",
+"its", "that", "the same"), correction, "there" or "what about" follow-up into
+a standalone retrieval query, and renders a bounded conversation block. A pending clarify consumes a short answer; a new question escapes it and
 is resolved normally. `remember` appends the completed turn, updates the
 summary, and records the last entity, person and place plus the last mode. The
 resolver recovers a missing entity from the recent window or the summary.
