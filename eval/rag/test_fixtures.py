@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from collections import Counter
 from pathlib import Path
+
+import pytest
 
 from eval.rag.fixtures import load_conversations, load_lesson_items
 
@@ -104,6 +107,27 @@ def test_mixed_and_off_pack_items_expect_the_right_scope_and_citation():
     assert off_pack.citation == "book"
     assert not off_pack.expected_material_ids
     assert off_pack.expected_chunk_ids
+
+
+def test_mixed_and_off_pack_chunks_are_answer_bearing():
+    corpus = Path(__file__).resolve().parents[2] / "data" / "chunks.jsonl"
+    if not corpus.exists():
+        pytest.skip("host corpus is not available")
+    chunks = {
+        row["id"]: row["text"]
+        for row in (
+            json.loads(line)
+            for line in corpus.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        )
+    }
+    items = load_lesson_items(FIXTURES / "lesson.jsonl")
+    mixed = next(item for item in items if item.slice_name == "mixed")
+    off_pack = next(item for item in items if item.slice_name == "off_pack")
+    for chunk_id in mixed.expected_chunk_ids:
+        assert "triwizard" in chunks[chunk_id].lower(), chunk_id
+    for chunk_id in off_pack.expected_chunk_ids:
+        assert "fluffy" in chunks[chunk_id].lower(), chunk_id
 
 
 def test_multi_concept_items_have_one_group_per_concept():

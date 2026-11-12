@@ -1,10 +1,10 @@
 {
-  "run_id": "20261112T133009Z",
+  "run_id": "20261112T135058Z",
   "config": "rag-eval",
   "generator": "openrouter/qwen/qwen3-30b-a3b-instruct-2507",
   "judge": "deepseek/deepseek-v4.1-flash-1017",
   "lesson_sample": 30,
-  "lesson_fixture_sha": "c6e1915797e9",
+  "lesson_fixture_sha": "1daac0c1286e",
   "multiturn_fixture_sha": "1a86ba5c554d",
   "settings": {
     "provider": "openrouter",
@@ -14,6 +14,40 @@
     "judge_temperature": 0.0,
     "embedder_provider": "local",
     "embedder_model": "qwen3-embedding:0.6b",
+    "index_text_hash": "aca4c57462d449f5",
+    "chunking": {
+      "size": 500,
+      "overlap": 75,
+      "min_size": 200
+    },
+    "packs": [
+      {
+        "subject": "charms",
+        "version": "1.0.0",
+        "fingerprint": "12e1ee2fe077a004"
+      },
+      {
+        "subject": "dada",
+        "version": "1.0.0",
+        "fingerprint": "e7139cbcc23eaa5c"
+      },
+      {
+        "subject": "herbology",
+        "version": "1.0.0",
+        "fingerprint": "da6804d846814ec9"
+      },
+      {
+        "subject": "potions",
+        "version": "1.0.0",
+        "fingerprint": "bc75045e02412ffe"
+      },
+      {
+        "subject": "transfiguration",
+        "version": "1.0.0",
+        "fingerprint": "81c6cd2c91cb975f"
+      }
+    ],
+    "persona": true,
     "reranker_provider": "bedrock",
     "reranker_model": "amazon.rerank-v1:0",
     "rerank_pool": 50,
@@ -59,11 +93,11 @@
     "turns": 36,
     "query_accuracy": 0.9444444444444444,
     "mode_accuracy": 0.8611111111111112,
-    "citation_accuracy": 0.6060606060606061,
-    "false_refusal_rate": 0.09090909090909091,
+    "citation_accuracy": 0.5151515151515151,
+    "false_refusal_rate": 0.15151515151515152,
     "abstention_accuracy": 1.0,
     "referral_target_accuracy": 0.0,
-    "comparison_accuracy": 0.16666666666666666,
+    "comparison_accuracy": 0.08333333333333333,
     "context_contamination": 0,
     "errors": 0
   }

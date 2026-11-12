@@ -568,7 +568,7 @@ The baseline is `docs/runs/2026-11-12-248-rag-eval-foundation.md`: 62 lesson
 items and 36 multi-turn turns. Lesson citation recall is 0.9231 and citation
 validity is 1.0000, but faithfulness is 2/30. Multi-turn query accuracy is
 0.9444, mode accuracy 0.8611,
-citation accuracy 0.6061, false refusal 0.0909, comparison accuracy 0.1667, and
+citation accuracy 0.5152, false refusal 0.1515, comparison accuracy 0.0833, and
 referral target accuracy 0.0000 because the cross-subject contract is #253. The
 baseline is pinned at `eval/results/rag-baseline.json`; the gate is
 `scripts/run_rag_eval.py --check` or `run_eval.py --rag --check`.

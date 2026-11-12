@@ -353,6 +353,17 @@ async def run_rag_eval(
         "judge_temperature": EVAL_TEMPERATURE,
         "embedder_provider": settings.embedder_provider,
         "embedder_model": manifest["embedder"][embedder_key]["model"],
+        "index_text_hash": stack.runtime.index_hash,
+        "chunking": dict(manifest["chunking"]),
+        "packs": [
+            {
+                "subject": pack.subject,
+                "version": pack.version,
+                "fingerprint": pack.fingerprint,
+            }
+            for pack in stack.runtime.packs
+        ],
+        "persona": settings.persona,
         "reranker_provider": settings.rerank_provider,
         "reranker_model": settings.rerank_model,
         "rerank_pool": settings.rerank_pool,

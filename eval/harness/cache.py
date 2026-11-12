@@ -38,23 +38,34 @@ class CachedLlm:
         path.write_text(output, encoding="utf-8")
         return output
 
-    def get_cached(
-        self, system: str, prompt: str, *, context: str | None = None
-    ) -> str | None:
+    def get_cached(self, system: str, prompt: str, *, context: str | None = None) -> str | None:
         """Return a cached reply without calling the model, or None."""
         path = self._path(system, prompt, context)
         return path.read_text(encoding="utf-8") if path.exists() else None
 
     def _path(self, system: str, prompt: str, context: str | None) -> Path:
         key = hashlib.sha256(
-            json.dumps([self.name, self._variant, system, prompt, context]).encode(
-                "utf-8"
-            )
+            json.dumps([self.name, self._variant, system, prompt, context]).encode("utf-8")
         ).hexdigest()
         return self._dir / f"{key}.txt"
 
-    def stream(
+    async def stream(
         self, system: str, prompt: str, *, context: str | None = None
     ) -> AsyncIterator[str]:
-        # Not cached: the eval only calls generate(); stream is passed through.
-        return self._inner.stream(system, prompt, context=context)
+        """Stream the reply and cache the complete text by (name, input).
+
+        The memory graph streams its answer, so an uncached stream would make a
+        multi-turn eval call the model again on every run. The cache file has
+        the same key and shape as `generate`.
+        """
+        path = self._path(system, prompt, context)
+        if path.exists():
+            yield path.read_text(encoding="utf-8")
+            return
+        if self._inner is None:
+            raise RuntimeError("cache-only CachedLlm cannot stream")
+        pieces: list[str] = []
+        async for piece in self._inner.stream(system, prompt, context=context):
+            pieces.append(piece)
+            yield piece
+        path.write_text("".join(pieces), encoding="utf-8")

@@ -1,10 +1,10 @@
 # Run record: #248 lesson and multi-turn RAG baseline
 
 - Date: 2026-11-12
-- Run id: `20261112T133009Z`
+- Run id: `20261112T135058Z`
 - Ticket: #248 (lesson and multi-turn evaluation foundation)
 - Config: `rag-eval` (persona on, lesson mode on, lesson fallback on, temperature 0)
-- Artifacts: `eval/results/rag-20261112T133009Z.json` (local, gitignored), `eval/results/rag-baseline.json` (committed)
+- Artifacts: `eval/results/rag-20261112T135058Z.json` (local, gitignored), `eval/results/rag-baseline.json` (committed)
 
 ## Configuration
 
@@ -53,11 +53,11 @@ are pinned at 0; a baseline with a different setting is refused unless
 | Turns | 36 |
 | Retrieval-query accuracy | 0.9444 |
 | Mode accuracy | 0.8611 |
-| Citation accuracy | 0.6061 |
-| False refusal rate | 0.0909 |
+| Citation accuracy | 0.5152 |
+| False refusal rate | 0.1515 |
 | Abstention accuracy | 1.0000 |
 | Referral target accuracy | 0.0000 |
-| Comparison accuracy | 0.1667 |
+| Comparison accuracy | 0.0833 |
 | Context contamination | 0 |
 | Errors | 0 |
 
@@ -94,16 +94,18 @@ are pinned at 0; a baseline with a different setting is refused unless
   follow-up abstaining instead of staying lesson, and one is
   `Compare Summoning Charm with Levitation Charm.` routing to `clarify`
   instead of lesson.
-- Citation accuracy is 20/33. Most misses are comparisons that answer only one
+- Citation accuracy is 17/33. Most misses are comparisons that answer only one
   side: Potions cites Veritaserum but not Felix Felicis, Charms cites Nox but
   not Lumos, Herbology cites Devil's Snare but not Mandrake, and the
   third-topic DADA turns cite one side only. The group-level check requires one
   material from each side.
-- False refusal is 3/33, and all three are the cross-subject turns that
-  abstained instead of referring. No other turn that should answer abstained.
+- False refusal is 5/33: the implicit follow-up, the correction, and the three
+  cross-subject turns. The correction turn abstains because the rewrite did not
+  happen and the lesson selector did not recover the Dementor. No other turn
+  that should answer abstained.
   Abstention accuracy is 1/1: the off-topic turn abstained and did not inherit
   the previous topic.
-- Comparison accuracy is 2/12. The denominator is only turns with two expected
+- Comparison accuracy is 1/12. The denominator is only turns with two expected
   concept groups; the earlier 12/22 figure counted first turns that were
   single-topic. The corrected number is the real comparison result.
 - Referral target accuracy is 0/3 by construction. The cross-subject fixture is
@@ -127,7 +129,7 @@ uv run python scripts/run_eval.py --rag --check
 ## Raw summary
 
 ```text
-run_id: 20261112T130542Z
+run_id: 20261112T135058Z
 config: rag-eval
 generator: openrouter/qwen/qwen3-30b-a3b-instruct-2507
 judge: deepseek/deepseek-v4.1-flash-1017
@@ -147,12 +149,12 @@ lesson
 multi-turn
   conversations=17 turns=36
   query accuracy=0.9444 mode accuracy=0.8611
-  citation accuracy=0.6061 false refusal=0.0909
+  citation accuracy=0.5152 false refusal=0.1515
   abstention accuracy=1.0000
-  referral target accuracy=0.0000 comparison accuracy=0.1667
+  referral target accuracy=0.0000 comparison accuracy=0.0833
   context contamination=0
 
 errors: 0
 pinned baseline: /Users/tc/Documents/Github/owl-online/eval/results/rag-baseline.json
-wrote /Users/tc/Documents/Github/owl-online/eval/results/rag-20261112T133009Z.json
+wrote /Users/tc/Documents/Github/owl-online/eval/results/rag-20261112T135058Z.json
 ```

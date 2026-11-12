@@ -61,6 +61,10 @@ class _Llm:
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
         return "an answer [c1]"
 
+    async def stream(self, system: str, prompt: str, *, context=None):
+        for piece in ("an ", "answer ", "[c1]"):
+            yield piece
+
 
 class _DiagnosingRetriever:
     def __init__(self, traces: dict[str, RetrievalTrace]) -> None:
@@ -79,9 +83,7 @@ async def test_retrieval_diagnostics_split_each_stage():
         "q1": RetrievalTrace(("a",), ("x",), ("a", "x"), ("x",)),
         "q2": RetrievalTrace(("c",), ("c",), ("c",), ("c",)),
     }
-    overall, by_slice = await retrieval_diagnostics_all(
-        _DiagnosingRetriever(traces), items, k=5
-    )
+    overall, by_slice = await retrieval_diagnostics_all(_DiagnosingRetriever(traces), items, k=5)
     assert overall.n == 2
     assert overall.dense_hit_n == 2
     assert overall.sparse_hit_n == 1
@@ -125,6 +127,15 @@ async def test_cached_llm_variant_separates_cache_keys(tmp_path):
     assert zero.get_cached("system", "prompt") == "an answer [c1]"
     assert zero.get_cached("system", "other") is None
     assert zero.get_cached("system", "prompt", context="ctx") is None
+
+
+async def test_cached_llm_stream_writes_and_reuses_the_cache(tmp_path):
+    llm = CachedLlm(_Llm(), "model", tmp_path, variant="temperature=0")
+    first = [piece async for piece in llm.stream("system", "prompt")]
+    second = [piece async for piece in llm.stream("system", "prompt")]
+    assert "".join(first) == "an answer [c1]"
+    assert second == ["an answer [c1]"]
+    assert llm.get_cached("system", "prompt") == "an answer [c1]"
 
 
 async def test_retrieval_metrics_hit_recall_and_mrr():
@@ -175,9 +186,7 @@ async def test_retrieval_metrics_all_returns_overall_and_slices_in_one_pass():
 
 async def test_abstention_metrics_counts_refusals_and_forwards_top_k():
     retriever = _Retriever({})
-    metrics = await abstention_metrics(
-        retriever, _Llm(), [GoldItem("u1", "z", False, [])], top_k=3
-    )
+    metrics = await abstention_metrics(retriever, _Llm(), [GoldItem("u1", "z", False, [])], top_k=3)
     assert metrics.n == 1
     assert metrics.refused == 1
     assert metrics.rate == 1.0
@@ -198,8 +207,15 @@ async def test_abstention_forwards_the_retry_budget(monkeypatch):
     seen: dict[str, int] = {}
 
     async def fake_ask(
-        question, *, retriever, llm, top_k, max_retries, persona_suffix=None,
-        lore=None, subject="dada",
+        question,
+        *,
+        retriever,
+        llm,
+        top_k,
+        max_retries,
+        persona_suffix=None,
+        lore=None,
+        subject="dada",
     ):
         seen["max_retries"] = max_retries
         return AskResult(
@@ -221,8 +237,15 @@ async def test_judge_sample_forwards_the_retry_budget(monkeypatch):
     seen: dict[str, int] = {}
 
     async def fake_ask(
-        question, *, retriever, llm, top_k, max_retries, persona_suffix=None,
-        lore=None, subject="dada",
+        question,
+        *,
+        retriever,
+        llm,
+        top_k,
+        max_retries,
+        persona_suffix=None,
+        lore=None,
+        subject="dada",
     ):
         seen["max_retries"] = max_retries
         return AskResult("an answer [c1]", ["c1"], chunks=[_chunk("c1")])
@@ -233,9 +256,7 @@ async def test_judge_sample_forwards_the_retry_budget(monkeypatch):
 
     monkeypatch.setattr("eval.harness.judging.ask", fake_ask)
     items = [GoldItem("q1", "q", True, ["c1"], ("simple",))]
-    await judge_sample(
-        _Retriever({"q": ["c1"]}), _Llm(), _Judge(), items, sample=1, max_retries=0
-    )
+    await judge_sample(_Retriever({"q": ["c1"]}), _Llm(), _Judge(), items, sample=1, max_retries=0)
     assert seen["max_retries"] == 0
 
 
@@ -373,9 +394,7 @@ def test_summarize_generation_counts_abstentions_and_faithfulness():
 
 
 def test_sample_answerable_round_robins_slices():
-    items = [
-        GoldItem(f"s{i}", "q", True, ["c"], ("simple",)) for i in range(3)
-    ] + [
+    items = [GoldItem(f"s{i}", "q", True, ["c"], ("simple",)) for i in range(3)] + [
         GoldItem(f"n{i}", "q", True, ["c"], ("named_reference",)) for i in range(3)
     ]
     picked = sample_answerable(items, 4)
@@ -400,6 +419,7 @@ def test_load_gold_reads_records(tmp_path):
     assert items[0].primary_slice == "simple"
     assert items[0].reference_answer == "y"
 
+
 def test_novel_entity_flags_an_invented_name():
     vocabulary = {"rowena", "ravenclaw", "diadem"}
     assert novel_entities("The diadem is Herbrand Ravenclaw's.", vocabulary) == ["Herbrand"]
@@ -407,8 +427,15 @@ def test_novel_entity_flags_an_invented_name():
 
 def test_novel_entity_passes_corpus_names_and_aliases():
     vocabulary = {
-        "the", "founders", "are", "rowena", "ravenclaw", "tom", "riddle",
-        "and", "voldemort",
+        "the",
+        "founders",
+        "are",
+        "rowena",
+        "ravenclaw",
+        "tom",
+        "riddle",
+        "and",
+        "voldemort",
     }
     assert (
         novel_entities("The founders are Rowena Ravenclaw, Tom Riddle and Voldemort.", vocabulary)
@@ -424,9 +451,7 @@ def test_corpus_vocabulary_is_case_insensitive():
     chunk = Chunk(
         id="c1",
         text="Rowena Ravenclaw",
-        metadata=ChunkMetadata(
-            book_num=1, chapter_num=1, book_name="B", chapter_name="C"
-        ),
+        metadata=ChunkMetadata(book_num=1, chapter_num=1, book_name="B", chapter_name="C"),
     )
     assert corpus_vocabulary([chunk]) == {"rowena", "ravenclaw"}
 
