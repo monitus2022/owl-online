@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.schemas import Chunk
 from eval.rag.fixtures import Conversation, LessonItem, Turn
 
 
@@ -25,6 +26,7 @@ class LessonResult:
     answer: str
     citation_ok: bool
     source_hash_ok: bool
+    chunks: tuple[Chunk, ...] = ()
     faithful: bool | None = None
     error: str | None = None
 
@@ -48,12 +50,19 @@ class LessonResult:
     def citation_recall(self) -> float:
         if not self.item.answerable:
             return 0.0
+        parts: list[float] = []
         cited = set(self.material_citations)
         if self.item.expected_groups:
             hits = sum(1 for group in self.item.expected_groups if cited & set(group.material_ids))
-            return hits / len(self.item.expected_groups)
-        expected = set(self.item.expected_material_ids)
-        return len(cited & expected) / len(expected) if expected else 0.0
+            parts.append(hits / len(self.item.expected_groups))
+        elif self.item.expected_material_ids:
+            expected = set(self.item.expected_material_ids)
+            parts.append(len(cited & expected) / len(expected))
+        if self.item.expected_chunk_ids:
+            cited_chunks = set(self.citations)
+            expected_chunks = set(self.item.expected_chunk_ids)
+            parts.append(len(cited_chunks & expected_chunks) / len(expected_chunks))
+        return sum(parts) / len(parts) if parts else 0.0
 
     @property
     def scope_ok(self) -> bool:
@@ -92,6 +101,7 @@ def summarize_lesson(results: list[LessonResult]) -> LessonMetrics:
     """Aggregate one lesson run."""
     answerable = [result for result in results if result.item.answerable]
     unanswerable = [result for result in results if not result.item.answerable]
+    selection_items = [result for result in answerable if result.item.expected_material_ids]
     judged = [result for result in results if result.faithful is not None]
 
     def mean(values: list[float]) -> float:
@@ -101,8 +111,8 @@ def summarize_lesson(results: list[LessonResult]) -> LessonMetrics:
         total=len(results),
         answerable=len(answerable),
         unanswerable=len(unanswerable),
-        selection_precision_at_3=mean([result.selection_precision for result in answerable]),
-        selection_recall_at_3=mean([result.selection_recall for result in answerable]),
+        selection_precision_at_3=mean([result.selection_precision for result in selection_items]),
+        selection_recall_at_3=mean([result.selection_recall for result in selection_items]),
         scope_accuracy=mean([float(result.scope_ok) for result in results]),
         citation_recall=mean([result.citation_recall for result in answerable]),
         false_refusal_rate=mean([float(result.false_refusal) for result in answerable]),
@@ -174,6 +184,7 @@ class MultiTurnMetrics:
     query_accuracy: float
     mode_accuracy: float
     citation_accuracy: float
+    false_refusal_rate: float
     abstention_accuracy: float
     referral_target_accuracy: float
     comparison_accuracy: float
@@ -182,14 +193,17 @@ class MultiTurnMetrics:
 
 
 def summarize_multiturn(results: list[TurnResult]) -> MultiTurnMetrics:
-    """Aggregate one multi-turn run."""
-    compared = [
-        result
-        for result in results
-        if result.conversation.slice_name in {"same_subject_comparison", "third_topic"}
-    ]
+    """Aggregate one multi-turn run.
+
+    False refusal and abstention are separate denominators: a turn that should
+    answer must not abstain, and a turn that should abstain must not answer.
+    Comparison accuracy is measured only on turns with two expected concept
+    groups, not on every turn in a comparison conversation.
+    """
+    compared = [result for result in results if len(result.turn.expected_groups) >= 2]
     referral = [result for result in results if result.turn.expected_referral_subject]
-    abstention = [result for result in results if result.turn.expected_abstained is not None]
+    should_answer = [result for result in results if result.turn.expected_abstained is False]
+    should_abstain = [result for result in results if result.turn.expected_abstained is True]
     cited = [result for result in results if result.turn.expected_material_ids]
 
     def mean(values: list[float]) -> float:
@@ -201,7 +215,8 @@ def summarize_multiturn(results: list[TurnResult]) -> MultiTurnMetrics:
         query_accuracy=mean([float(result.query_ok) for result in results]),
         mode_accuracy=mean([float(result.mode_ok) for result in results]),
         citation_accuracy=mean([float(result.citation_ok) for result in cited]),
-        abstention_accuracy=mean([float(result.abstention_ok) for result in abstention]),
+        false_refusal_rate=mean([float(result.actual_abstained) for result in should_answer]),
+        abstention_accuracy=mean([float(result.actual_abstained) for result in should_abstain]),
         referral_target_accuracy=mean([float(result.referral_ok) for result in referral]),
         comparison_accuracy=mean(
             [float(result.mode_ok and result.citation_ok) for result in compared]
@@ -228,6 +243,7 @@ class RagReport:
     lesson_sample: int
     lesson_fixture_sha: str
     multiturn_fixture_sha: str
+    settings: dict[str, object]
     lesson: LessonMetrics
     multiturn: MultiTurnMetrics
 

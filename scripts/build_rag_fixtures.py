@@ -109,6 +109,9 @@ def _lesson_item(
     answerable: bool,
     note: str,
     groups: list[tuple[str, list[Material]]] | None = None,
+    expected_chunk_ids: tuple[str, ...] = (),
+    expected_scope: str | None = None,
+    citation: str | None = None,
 ) -> dict[str, object]:
     if groups is None and materials:
         groups = [("expected", materials)]
@@ -125,11 +128,12 @@ def _lesson_item(
         "question": question,
         "slice": slice_name,
         "answerable": answerable,
-        "expected_scope": "in_pack" if answerable else "abstained",
-        "citation": "material" if answerable else "none",
+        "expected_scope": expected_scope or ("in_pack" if answerable else "abstained"),
+        "citation": citation or ("material" if answerable else "none"),
         "expected_material_ids": sorted({m.material_id for m in materials}),
         "expected_source_refs": _source_refs(materials),
         "expected_groups": expected_groups,
+        "expected_chunk_ids": list(expected_chunk_ids),
         "note": note,
     }
 
@@ -258,6 +262,38 @@ def build() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
                     materials=[],
                     answerable=False,
                     note=f"invented term: {term}",
+                )
+            )
+            index += 1
+        if subject == "dada":
+            lesson.append(
+                _lesson_item(
+                    subject=subject,
+                    index=index,
+                    question="Compare Boggart with the Triwizard Tournament.",
+                    slice_name="mixed",
+                    materials=groups[subject]["Boggart"],
+                    answerable=True,
+                    note="mixed: Boggart plus corpus Triwizard evidence",
+                    groups=groups_for(subject, "Boggart"),
+                    expected_chunk_ids=("b4-c11-0030",),
+                    expected_scope="mixed",
+                    citation="both",
+                )
+            )
+            index += 1
+            lesson.append(
+                _lesson_item(
+                    subject=subject,
+                    index=index,
+                    question="What is the name of the three-headed dog?",
+                    slice_name="off_pack",
+                    materials=[],
+                    answerable=True,
+                    note="off_pack: corpus-only question",
+                    expected_chunk_ids=("b1-c11-0042",),
+                    expected_scope="off_pack",
+                    citation="book",
                 )
             )
             index += 1

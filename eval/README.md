@@ -71,7 +71,7 @@ behaviour, not factual F1 on the books.
 
 | Path | Contents |
 |---|---|
-| `eval/rag/fixtures/lesson.jsonl` | 60 lesson items: 20 in-pack, 10 paraphrase, 20 multi-concept, 10 abstain |
+| `eval/rag/fixtures/lesson.jsonl` | 62 lesson items: 20 in-pack, 10 paraphrase, 20 multi-concept, 1 mixed, 1 off-pack, 10 abstain |
 | `eval/rag/fixtures/multiturn.jsonl` | 17 conversations and 36 turns: comparison, third topic, pronoun, implicit referent, correction, off-topic, cross-subject |
 | `eval/rag/fixtures.py` | Fixture loaders and validation |
 | `eval/rag/metrics.py` | Selection, scope, citation, abstention, referral and conversation metrics |
@@ -87,11 +87,14 @@ Metrics:
 
 - lesson selection precision@3 and recall@3 against expected material ids;
 - lesson scope accuracy across in-pack, mixed, off-pack and abstain;
-- lesson citation recall and citation validity;
+- lesson citation recall and citation validity, including one citation per
+  expected concept group and the expected corpus chunks for mixed/off-pack;
 - lesson false refusal rate and unanswerable abstention accuracy;
-- lesson faithfulness on a round-robin judged sample of 30 answers;
+- lesson faithfulness on a round-robin judged sample of 30 answers, with the
+  corpus excerpts included for mixed/off-pack answers;
 - multi-turn retrieval-query accuracy, mode accuracy, citation accuracy,
-  abstention accuracy, referral target accuracy and context contamination.
+  false refusal rate, abstention accuracy, referral target accuracy and context
+  contamination.
 
 Run:
 
@@ -112,7 +115,9 @@ uv run python scripts/run_eval.py --rag --check
 
 The pinned baseline is `eval/results/rag-baseline.json`; timestamped reports
 are `eval/results/rag-<run_id>.json` and stay local. A run that changes the
-fixture hashes or the judged sample is a new baseline, not a silent update.
+fixture hashes, the judged sample or the pinned settings is a new baseline, not
+a silent update: `--write-baseline` refuses it unless `--force-baseline` is
+passed, and `--check` fails on the mismatch.
 
 ## Current baseline
 

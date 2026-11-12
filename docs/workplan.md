@@ -564,12 +564,12 @@ Anonymous threads are enough here. Auth is not a dependency.
 Status: #248 delivered; #249-#253 active. This is the RAG side of lesson and
 chat. It is not a new product surface and it does not wait on auth or exam mode.
 
-The baseline is `docs/runs/2026-11-12-248-rag-eval-foundation.md`: 60 lesson
+The baseline is `docs/runs/2026-11-12-248-rag-eval-foundation.md`: 62 lesson
 items and 36 multi-turn turns. Lesson citation validity is 1.0000, but
-faithfulness is 5/30. Multi-turn query accuracy is 0.9444, mode accuracy 0.8611,
-citation accuracy 0.5758, and referral target accuracy 0.0000 because the
-cross-subject contract is #253. The baseline is pinned at
-`eval/results/rag-baseline.json`; the gate is
+faithfulness is 2/30. Multi-turn query accuracy is 0.9444, mode accuracy 0.8611,
+citation accuracy 0.5455, false refusal 0.0909, comparison accuracy 0.0833, and
+referral target accuracy 0.0000 because the cross-subject contract is #253. The
+baseline is pinned at `eval/results/rag-baseline.json`; the gate is
 `scripts/run_rag_eval.py --check` or `run_eval.py --rag --check`.
 
 The earlier live probes found a false refusal on "How do I defeat a Boggart?",
@@ -814,14 +814,18 @@ Lesson mode adds:
 - false refusal rate on answerable paraphrases, reported with unanswerable
   abstention so a recall gain cannot hide a safety loss;
 - citation retention and faithfulness on the lesson answer, with a judged sample
-  large enough to separate a real move from noise.
+  large enough to separate a real move from noise;
+- citation retention counts one material per expected concept group and the
+  expected corpus chunks for mixed and off-pack answers.
 
 Multi-turn chat adds:
 
 - retrieval-query accuracy against the expected standalone query;
-- citation accuracy for the turn;
-- comparison correctness for same-topic and cross-subject comparisons;
-- false refusal and context contamination on off-topic turns;
+- citation accuracy for the turn, one material per expected concept group;
+- comparison correctness only on turns with two expected groups, so a
+  single-topic first turn cannot inflate the comparison number;
+- false refusal and abstention as separate denominators, plus context
+  contamination on off-topic turns;
 - third-topic chaining from the most recent topic, not the first.
 
 Cross-subject referral adds:

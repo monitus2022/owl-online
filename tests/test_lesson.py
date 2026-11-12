@@ -427,8 +427,43 @@ async def test_ask_lesson_traces_selection_and_scope(tmp_path):
     span = next(record for record in records if record["span"] == "lesson_select")
     assert span["material_ids"][0] == "dada-dark-creatures-boggarts-nature"
     assert span["scope"] == "in_pack"
-    assert span["uncovered_terms"] == []
+    assert span["uncovered_term_count"] == 0
+    assert "uncovered_terms" not in span
     assert span["conversation_chars"] == 0
+    result_span = next(
+        record for record in records if record["span"] == "lesson_result"
+    )
+    assert result_span["abstained"] is False
+    assert result_span["scope"] == "in_pack"
+    assert result_span["attempts"] == 1
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_traces_a_refusal(tmp_path):
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = StaticLlm("A boggart is a shape-shifter.")
+    trace_path = tmp_path / "trace.jsonl"
+    sink = TraceSink(trace_path)
+    token = start_trace("lesson-refusal", sink)
+    try:
+        await ask_lesson(
+            "How does a boggart work?",
+            selector=selector,
+            subject="dada",
+            llm=llm,
+            max_retries=0,
+        )
+    finally:
+        end_trace(token)
+    records = [
+        json.loads(line)
+        for line in trace_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    span = next(record for record in records if record["span"] == "lesson_result")
+    assert span["abstained"] is True
+    assert span["abstain_reason"] == "uncited"
+    assert span["attempts"] == 1
 
 
 @pytest.mark.asyncio

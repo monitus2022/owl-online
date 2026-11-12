@@ -12,7 +12,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 def test_lesson_fixture_has_the_expected_slices():
     items = load_lesson_items(FIXTURES / "lesson.jsonl")
-    assert len(items) == 60
+    assert len(items) == 62
     assert {item.subject for item in items} == {
         "dada",
         "charms",
@@ -24,9 +24,11 @@ def test_lesson_fixture_has_the_expected_slices():
         "in_pack": 20,
         "paraphrase": 10,
         "multi_concept": 20,
+        "mixed": 1,
+        "off_pack": 1,
         "abstain": 10,
     }
-    assert sum(item.answerable for item in items) == 50
+    assert sum(item.answerable for item in items) == 52
     assert sum(not item.answerable for item in items) == 10
 
 
@@ -36,13 +38,17 @@ def test_every_answerable_lesson_item_has_materials_and_refs():
         if not item.answerable:
             assert item.expected_material_ids == ()
             assert item.expected_source_refs == ()
+            assert item.expected_chunk_ids == ()
             continue
-        assert item.expected_material_ids
-        assert item.expected_source_refs
+        assert item.expected_material_ids or item.expected_chunk_ids
+        if item.expected_material_ids:
+            assert item.expected_source_refs
         for ref in item.expected_source_refs:
             assert ref["chunk_id"].startswith("b")
             assert isinstance(ref["book"], int)
             assert isinstance(ref["chapter"], int)
+        for chunk_id in item.expected_chunk_ids:
+            assert chunk_id.startswith("b")
 
 
 def test_lesson_fixture_does_not_store_material_prose():
@@ -84,6 +90,20 @@ def test_cross_subject_turns_expect_a_referral_target():
     for turn in referrals:
         assert turn.expected_referral_concept
         assert turn.expected_mode == "referral"
+
+
+def test_mixed_and_off_pack_items_expect_the_right_scope_and_citation():
+    items = load_lesson_items(FIXTURES / "lesson.jsonl")
+    mixed = next(item for item in items if item.slice_name == "mixed")
+    off_pack = next(item for item in items if item.slice_name == "off_pack")
+    assert mixed.expected_scope == "mixed"
+    assert mixed.citation == "both"
+    assert mixed.expected_material_ids
+    assert mixed.expected_chunk_ids
+    assert off_pack.expected_scope == "off_pack"
+    assert off_pack.citation == "book"
+    assert not off_pack.expected_material_ids
+    assert off_pack.expected_chunk_ids
 
 
 def test_multi_concept_items_have_one_group_per_concept():

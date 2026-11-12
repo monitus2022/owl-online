@@ -81,7 +81,8 @@ def render_report(report: RagReport) -> str:
         f"  query accuracy={_rate(multiturn.query_accuracy)} "
         f"mode accuracy={_rate(multiturn.mode_accuracy)}",
         f"  citation accuracy={_rate(multiturn.citation_accuracy)} "
-        f"abstention accuracy={_rate(multiturn.abstention_accuracy)}",
+        f"false refusal={_rate(multiturn.false_refusal_rate)}",
+        f"  abstention accuracy={_rate(multiturn.abstention_accuracy)}",
         f"  referral target accuracy={_rate(multiturn.referral_target_accuracy)} "
         f"comparison accuracy={_rate(multiturn.comparison_accuracy)}",
         f"  context contamination={multiturn.context_contamination}",

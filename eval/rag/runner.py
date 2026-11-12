@@ -20,6 +20,7 @@ from app.agent.persona import PERSONAS
 from app.api.runtime import Runtime, build_runtime
 from app.config import Settings
 from app.knowledge.packs import PackStore
+from app.pipeline.generate import render_evidence
 from app.pipeline.generate.lesson import ask_lesson, render_materials
 from app.pipeline.index.builder import load_chunks
 from app.providers.contracts import Llm
@@ -45,6 +46,7 @@ class RagStack:
     settings: Settings
     runtime: Runtime
     generator: CachedLlm
+    generator_inner: Llm
     judge: CachedLlm
     judge_inner: Llm
     agent: CompiledStateGraph
@@ -52,9 +54,10 @@ class RagStack:
 
     async def aclose(self) -> None:
         await self.runtime.aclose()
-        close = getattr(self.judge_inner, "aclose", None)
-        if close is not None:
-            await close()
+        for client in (self.generator_inner, self.judge_inner):
+            close = getattr(client, "aclose", None)
+            if close is not None:
+                await close()
 
 
 async def build_stack(settings: Settings, cache_dir: Path) -> RagStack:
@@ -64,11 +67,12 @@ async def build_stack(settings: Settings, cache_dir: Path) -> RagStack:
         raise RuntimeError(
             "lesson mode is unavailable; publish the subject packs and enable OWL_LESSON_MODE"
         )
+    generator_inner = make_llm(settings.provider, temperature=0.0)
     generator = CachedLlm(
-        runtime.llm,
-        runtime.llm.name,
+        generator_inner,
+        generator_inner.name,
         cache_dir,
-        variant="rag-eval",
+        variant="rag-eval-temperature=0",
     )
     judge_inner = make_llm("openrouter", model=JUDGE_MODEL, temperature=0.0)
     judge = CachedLlm(
@@ -98,6 +102,7 @@ async def build_stack(settings: Settings, cache_dir: Path) -> RagStack:
         settings=settings,
         runtime=runtime,
         generator=generator,
+        generator_inner=generator_inner,
         judge=judge,
         judge_inner=judge_inner,
         agent=agent,
@@ -193,6 +198,7 @@ async def run_lesson(
                     answer=result.answer,
                     citation_ok=citation_ok,
                     source_hash_ok=source_ok,
+                    chunks=tuple(result.chunks),
                 )
             )
         except Exception as error:  # noqa: BLE001 - eval records the failure
@@ -226,12 +232,17 @@ async def run_lesson(
                 for material_id in result.material_citations
                 if (material := pack.find_material(material_id)) is not None
             ]
-        if not materials:
+        if not materials and not result.chunks:
             continue
+        parts: list[str] = []
+        if materials:
+            parts.append(f"Lesson notes:\n{render_materials(materials)}")
+        if result.chunks:
+            parts.append(f"Excerpts:\n{render_evidence(result.chunks)}")
         prompt = (
-            f"Lesson notes:\n{render_materials(materials)}\n\n"
-            f"Question: {result.item.question}\n\n"
-            f"Answer: {result.answer}"
+            "\n\n".join(parts)
+            + f"\n\nQuestion: {result.item.question}\n\n"
+            + f"Answer: {result.answer}"
         )
         reply = parse_faithful(await stack.judge.generate(FAITHFUL_SYSTEM, prompt))
         if reply is not None:
@@ -325,6 +336,18 @@ async def run_rag_eval(
         multiturn_results = await run_multiturn(conversations, stack)
     finally:
         await stack.aclose()
+    settings_payload = {
+        "provider": settings.provider,
+        "generator_temperature": 0.0,
+        "judge": JUDGE_MODEL,
+        "judge_temperature": 0.0,
+        "embedder_provider": settings.embedder_provider,
+        "lesson_top_k": settings.lesson_top_k,
+        "lesson_min_score": settings.lesson_min_score,
+        "lesson_fallback": settings.lesson_fallback,
+        "memory_window": settings.memory_window,
+        "memory_token_budget": settings.memory_token_budget,
+    }
     return RagReport(
         run_id=timestamp_run_id(),
         config="rag-eval",
@@ -333,6 +356,7 @@ async def run_rag_eval(
         lesson_sample=sample,
         lesson_fixture_sha=_fixture_sha(lesson_path),
         multiturn_fixture_sha=_fixture_sha(multiturn_path),
+        settings=settings_payload,
         lesson=summarize_lesson(lesson_results),
         multiturn=summarize_multiturn(multiturn_results),
     )

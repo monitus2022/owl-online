@@ -13,7 +13,9 @@ from pathlib import Path
 
 from app.knowledge.taxonomy import SUBJECT_KEYS
 
-LESSON_SLICES = frozenset({"in_pack", "paraphrase", "multi_concept", "abstain"})
+LESSON_SLICES = frozenset(
+    {"in_pack", "paraphrase", "multi_concept", "mixed", "off_pack", "abstain"}
+)
 MULTITURN_SLICES = frozenset(
     {
         "same_subject_comparison",
@@ -72,6 +74,7 @@ class LessonItem:
     expected_material_ids: tuple[str, ...]
     expected_source_refs: tuple[dict[str, object], ...]
     expected_groups: tuple[GroupExpectation, ...] = ()
+    expected_chunk_ids: tuple[str, ...] = ()
     note: str = ""
 
 
@@ -179,10 +182,11 @@ def parse_lesson_item(record: dict[str, object], where: str) -> LessonItem:
     if citation not in CITATIONS:
         raise ValueError(f"{where}: unknown citation mode {citation!r}")
     material_ids = _string_tuple(record, "expected_material_ids", where)
-    if answerable and not material_ids:
-        raise ValueError(f"{where}: an answerable item needs expected material ids")
-    if not answerable and material_ids:
-        raise ValueError(f"{where}: an unanswerable item must not expect materials")
+    chunk_ids = _string_tuple(record, "expected_chunk_ids", where)
+    if answerable and not (material_ids or chunk_ids):
+        raise ValueError(f"{where}: an answerable item needs expected material or chunk ids")
+    if not answerable and (material_ids or chunk_ids):
+        raise ValueError(f"{where}: an unanswerable item must not expect evidence ids")
     note = _optional_str(record, "note", where) or ""
     return LessonItem(
         item_id=item_id,
@@ -195,6 +199,7 @@ def parse_lesson_item(record: dict[str, object], where: str) -> LessonItem:
         expected_material_ids=material_ids,
         expected_source_refs=_source_refs(record, where),
         expected_groups=_groups(record, where),
+        expected_chunk_ids=chunk_ids,
         note=note,
     )
 

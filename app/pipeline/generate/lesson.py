@@ -14,6 +14,7 @@ replaced by the voice.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from collections.abc import Callable
@@ -586,9 +587,25 @@ async def ask_lesson(
                 "lesson_select",
                 material_ids=selected_ids,
                 material_scores=selection_scores,
-                uncovered_terms=uncovered_list,
+                uncovered_term_count=len(uncovered_list),
+                uncovered_terms_sha=hashlib.sha256(
+                    "|".join(uncovered_list).encode("utf-8")
+                ).hexdigest()[:8],
                 scope=scope_value,
                 conversation_chars=len(conversation_context or ""),
+            )
+
+    def trace_result(result: AskResult, attempts: int) -> None:
+        if tracer is not None:
+            tracer.emit(
+                "lesson_result",
+                abstained=result.abstained,
+                abstain_reason=result.abstain_reason,
+                attempts=attempts,
+                scope=result.scope,
+                material_citations=len(result.material_citations),
+                citations=len(result.citations),
+                needs_input=result.needs_input,
             )
 
     chunks: list[Chunk] = []
@@ -605,7 +622,7 @@ async def ask_lesson(
             # The pack covers only part of the question and the corpus found
             # no evidence for the rest. Do not label a partial answer in_pack.
             trace_selection("abstained")
-            return AskResult(
+            result = AskResult(
                 ABSTAIN_MESSAGE,
                 abstained=True,
                 abstain_reason="no_evidence",
@@ -614,12 +631,14 @@ async def ask_lesson(
                 selection_scores=selection_scores,
                 uncovered_terms=uncovered_list,
             )
+            trace_result(result, 0)
+            return result
         scope = "in_pack"
     elif chunks:
         scope = "off_pack"
     else:
         trace_selection("abstained")
-        return AskResult(
+        result = AskResult(
             ABSTAIN_MESSAGE,
             abstained=True,
             abstain_reason="no_evidence",
@@ -628,6 +647,8 @@ async def ask_lesson(
             selection_scores=selection_scores,
             uncovered_terms=uncovered_list,
         )
+        trace_result(result, 0)
+        return result
 
     trace_selection(scope)
 
@@ -703,7 +724,7 @@ async def ask_lesson(
         )
 
     final_system = system if attempt == 1 else retry_system
-    return replace(
+    final_result = replace(
         result,
         attempts=attempt,
         retry_reason=retry_reason,
@@ -713,3 +734,5 @@ async def ask_lesson(
         selection_scores=selection_scores,
         uncovered_terms=uncovered_list,
     )
+    trace_result(final_result, attempt)
+    return final_result

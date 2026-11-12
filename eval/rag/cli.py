@@ -10,7 +10,13 @@ from pathlib import Path
 
 from app.config import Settings
 from eval.rag.check import CheckError, check_rag, render_check
-from eval.rag.report import latest_report, render_report, write_report
+from eval.rag.report import (
+    latest_report,
+    load_report,
+    render_report,
+    to_dict,
+    write_report,
+)
 from eval.rag.runner import run_rag_eval
 from eval.results import REPO, RESULTS_DIR
 
@@ -36,6 +42,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--sample", type=int, default=30)
     parser.add_argument("--write-baseline", action="store_true")
+    parser.add_argument(
+        "--force-baseline",
+        action="store_true",
+        help="replace a baseline even when the fixture or settings differ",
+    )
     parser.add_argument("--check", action="store_true")
     parser.add_argument(
         "--latest",
@@ -77,6 +88,27 @@ async def _run(args: argparse.Namespace) -> int:
     write_report(path, report)
     print(render_report(report))
     if args.write_baseline:
+        payload = to_dict(report)
+        if args.baseline.exists() and not args.force_baseline:
+            existing = load_report(args.baseline)
+            changed = [
+                key
+                for key in (
+                    "lesson_fixture_sha",
+                    "multiturn_fixture_sha",
+                    "lesson_sample",
+                    "settings",
+                )
+                if existing.get(key) != payload.get(key)
+            ]
+            if changed:
+                print(
+                    "refusing to replace the baseline: "
+                    + ", ".join(changed)
+                    + " changed; pass --force-baseline to replace it deliberately",
+                    file=sys.stderr,
+                )
+                return 1
         args.baseline.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, args.baseline)
         print(f"pinned baseline: {args.baseline}")
@@ -96,6 +128,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--latest is only used with --check")
     if args.sample < 1:
         parser.error("--sample must be at least 1")
+    if args.write_baseline and args.sample != 30:
+        parser.error("--write-baseline requires the pinned --sample 30")
     if args.check:
         return _check(args)
     return asyncio.run(_run(args))

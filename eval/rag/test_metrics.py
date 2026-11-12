@@ -257,13 +257,64 @@ def test_summarize_multiturn_counts_referral_and_contamination():
     assert metrics.context_contamination == 0
 
 
-def _report_dict(
-    *, faithfulness: float = 0.8, lesson_sha: str = "lesson-sha"
-) -> dict[str, object]:
+def test_multiturn_false_refusal_and_abstention_use_separate_denominators():
+    should_answer = Turn(
+        question="Tell me about Boggart.",
+        mode="lesson",
+        expected_standalone="Tell me about Boggart.",
+        expected_mode="lesson",
+        expected_abstained=False,
+    )
+    should_abstain = Turn(
+        question="What is the capital of France?",
+        mode="lesson",
+        expected_standalone="What is the capital of France?",
+        expected_mode="abstain",
+        expected_abstained=True,
+    )
+    conversation = Conversation(
+        conversation_id="c-denominators",
+        subject="dada",
+        slice_name="off_topic",
+        turns=(should_answer, should_abstain),
+    )
+    results = [
+        TurnResult(
+            conversation=conversation,
+            turn=should_answer,
+            turn_index=1,
+            actual_standalone="Tell me about Boggart.",
+            actual_mode="lesson",
+            actual_material_ids=(),
+            actual_abstained=True,
+            actual_referral_subject=None,
+            actual_referral_concept=None,
+            answer="",
+        ),
+        TurnResult(
+            conversation=conversation,
+            turn=should_abstain,
+            turn_index=2,
+            actual_standalone="What is the capital of France?",
+            actual_mode="abstain",
+            actual_material_ids=(),
+            actual_abstained=True,
+            actual_referral_subject=None,
+            actual_referral_concept=None,
+            answer="",
+        ),
+    ]
+    metrics = summarize_multiturn(results)
+    assert metrics.false_refusal_rate == 1.0
+    assert metrics.abstention_accuracy == 1.0
+
+
+def _report_dict(*, faithfulness: float = 0.8, lesson_sha: str = "lesson-sha") -> dict[str, object]:
     return {
         "lesson_fixture_sha": lesson_sha,
         "multiturn_fixture_sha": "multiturn-sha",
         "lesson_sample": 30,
+        "settings": {"generator_temperature": 0.0},
         "lesson": {
             "total": 60,
             "answerable": 50,
@@ -286,6 +337,7 @@ def _report_dict(
             "query_accuracy": 0.8,
             "mode_accuracy": 0.8,
             "citation_accuracy": 0.8,
+            "false_refusal_rate": 0.0,
             "abstention_accuracy": 1.0,
             "referral_target_accuracy": 0.0,
             "comparison_accuracy": 0.8,
@@ -314,13 +366,23 @@ def test_check_rag_fails_when_faithfulness_drops(tmp_path: Path):
     assert any(failure.delta.name == "lesson_faithfulness_rate" for failure in report.failures)
 
 
+def test_check_rag_fails_when_the_settings_change(tmp_path: Path):
+    baseline = tmp_path / "baseline.json"
+    latest = tmp_path / "latest.json"
+    baseline.write_text(json.dumps(_report_dict()), encoding="utf-8")
+    payload = _report_dict()
+    payload["settings"] = {"generator_temperature": 0.7}
+    latest.write_text(json.dumps(payload), encoding="utf-8")
+    report = check_rag(baseline, latest)
+    assert report.passed is False
+    assert report.fixture_mismatch == ("settings",)
+
+
 def test_check_rag_fails_when_the_fixture_changes(tmp_path: Path):
     baseline = tmp_path / "baseline.json"
     latest = tmp_path / "latest.json"
     baseline.write_text(json.dumps(_report_dict()), encoding="utf-8")
-    latest.write_text(
-        json.dumps(_report_dict(lesson_sha="different")), encoding="utf-8"
-    )
+    latest.write_text(json.dumps(_report_dict(lesson_sha="different")), encoding="utf-8")
     report = check_rag(baseline, latest)
     assert report.passed is False
     assert report.fixture_mismatch == ("lesson_fixture_sha",)

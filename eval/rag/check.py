@@ -24,13 +24,15 @@ DROP_METRICS = frozenset(
         "multiturn_mode_accuracy",
         "multiturn_citation_accuracy",
         "multiturn_abstention_accuracy",
-        "multiturn_referral_target_accuracy",
         "multiturn_comparison_accuracy",
     }
 )
+# Referral target accuracy is reported but not gated until #253 adds the
+# referral contract and a mode that can produce it.
 RISE_METRICS = frozenset(
     {
         "lesson_false_refusal_rate",
+        "multiturn_false_refusal_rate",
         "multiturn_context_contamination",
         "lesson_errors",
         "multiturn_errors",
@@ -113,6 +115,7 @@ def check_rag(
             "lesson_fixture_sha",
             "multiturn_fixture_sha",
             "lesson_sample",
+            "settings",
         )
         if baseline_report.get(key) != latest_report.get(key)
     )

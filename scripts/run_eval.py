@@ -63,6 +63,11 @@ def main() -> int:
         default=30,
         help="judged lesson sample for --rag (default 30)",
     )
+    parser.add_argument(
+        "--force-baseline",
+        action="store_true",
+        help="with --rag --write-baseline, replace a baseline whose config changed",
+    )
     parser.add_argument("--check", action="store_true")
     parser.add_argument(
         "--latest",
@@ -71,6 +76,8 @@ def main() -> int:
         help="gate this CSV instead of the newest timestamped run",
     )
     args = parser.parse_args()
+    if args.force_baseline and not args.rag:
+        parser.error("--force-baseline is only used with --rag")
     if args.rag:
         if args.persona or args.embedder_model:
             parser.error("--rag does not take --persona or --embedder-model")
@@ -81,6 +88,8 @@ def main() -> int:
             rag_args.append("--check")
         if args.write_baseline:
             rag_args.append("--write-baseline")
+        if args.force_baseline:
+            rag_args.append("--force-baseline")
         if args.latest is not None:
             rag_args.extend(["--latest", str(args.latest)])
         return rag_main(rag_args)
