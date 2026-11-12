@@ -1,0 +1,251 @@
+"""Metrics for the lesson and multi-turn RAG fixtures.
+
+These are deterministic where possible: selection, scope, citation and route
+checks. Faithfulness is the one judged metric, and it is reported separately so
+a judge failure cannot hide behind a retrieval number.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from eval.rag.fixtures import Conversation, LessonItem, Turn
+
+
+@dataclass(frozen=True)
+class LessonResult:
+    """One lesson answer and the checks it passed."""
+
+    item: LessonItem
+    selected_material_ids: tuple[str, ...]
+    material_citations: tuple[str, ...]
+    citations: tuple[str, ...]
+    scope: str | None
+    abstained: bool
+    answer: str
+    citation_ok: bool
+    source_hash_ok: bool
+    faithful: bool | None = None
+    error: str | None = None
+
+    @property
+    def selection_precision(self) -> float:
+        if not self.item.answerable:
+            return 0.0
+        selected = set(self.selected_material_ids[:3])
+        expected = set(self.item.expected_material_ids)
+        return len(selected & expected) / len(selected) if selected else 0.0
+
+    @property
+    def selection_recall(self) -> float:
+        if not self.item.answerable:
+            return 0.0
+        selected = set(self.selected_material_ids[:3])
+        expected = set(self.item.expected_material_ids)
+        return len(selected & expected) / len(expected) if expected else 0.0
+
+    @property
+    def citation_recall(self) -> float:
+        if not self.item.answerable:
+            return 0.0
+        cited = set(self.material_citations)
+        if self.item.expected_groups:
+            hits = sum(1 for group in self.item.expected_groups if cited & set(group.material_ids))
+            return hits / len(self.item.expected_groups)
+        expected = set(self.item.expected_material_ids)
+        return len(cited & expected) / len(expected) if expected else 0.0
+
+    @property
+    def scope_ok(self) -> bool:
+        return self.scope == self.item.expected_scope
+
+    @property
+    def false_refusal(self) -> bool:
+        return self.item.answerable and self.abstained
+
+    @property
+    def abstention_ok(self) -> bool:
+        return not self.item.answerable and self.abstained
+
+
+@dataclass(frozen=True)
+class LessonMetrics:
+    """Aggregate lesson metrics."""
+
+    total: int
+    answerable: int
+    unanswerable: int
+    selection_precision_at_3: float
+    selection_recall_at_3: float
+    scope_accuracy: float
+    citation_recall: float
+    false_refusal_rate: float
+    abstention_accuracy: float
+    citation_validity_rate: float
+    source_hash_rate: float
+    judged: int
+    faithfulness_rate: float
+    errors: int
+
+
+def summarize_lesson(results: list[LessonResult]) -> LessonMetrics:
+    """Aggregate one lesson run."""
+    answerable = [result for result in results if result.item.answerable]
+    unanswerable = [result for result in results if not result.item.answerable]
+    judged = [result for result in results if result.faithful is not None]
+
+    def mean(values: list[float]) -> float:
+        return sum(values) / len(values) if values else 0.0
+
+    return LessonMetrics(
+        total=len(results),
+        answerable=len(answerable),
+        unanswerable=len(unanswerable),
+        selection_precision_at_3=mean([result.selection_precision for result in answerable]),
+        selection_recall_at_3=mean([result.selection_recall for result in answerable]),
+        scope_accuracy=mean([float(result.scope_ok) for result in results]),
+        citation_recall=mean([result.citation_recall for result in answerable]),
+        false_refusal_rate=mean([float(result.false_refusal) for result in answerable]),
+        abstention_accuracy=mean([float(result.abstention_ok) for result in unanswerable]),
+        citation_validity_rate=mean([float(result.citation_ok) for result in results]),
+        source_hash_rate=mean([float(result.source_hash_ok) for result in results]),
+        judged=len(judged),
+        faithfulness_rate=mean([float(result.faithful is True) for result in judged]),
+        errors=sum(1 for result in results if result.error is not None),
+    )
+
+
+@dataclass(frozen=True)
+class TurnResult:
+    """One multi-turn turn and its expected/actual values."""
+
+    conversation: Conversation
+    turn: Turn
+    turn_index: int
+    actual_standalone: str
+    actual_mode: str
+    actual_material_ids: tuple[str, ...]
+    actual_abstained: bool
+    actual_referral_subject: str | None
+    actual_referral_concept: str | None
+    answer: str
+    error: str | None = None
+
+    @property
+    def query_ok(self) -> bool:
+        return " ".join(self.actual_standalone.split()) == " ".join(
+            self.turn.expected_standalone.split()
+        )
+
+    @property
+    def mode_ok(self) -> bool:
+        return self.actual_mode == self.turn.expected_mode
+
+    @property
+    def citation_ok(self) -> bool:
+        actual = set(self.actual_material_ids)
+        if self.turn.expected_groups:
+            return all(actual & set(group.material_ids) for group in self.turn.expected_groups)
+        expected = set(self.turn.expected_material_ids)
+        return expected.issubset(actual)
+
+    @property
+    def abstention_ok(self) -> bool:
+        if self.turn.expected_abstained is None:
+            return True
+        return self.actual_abstained == self.turn.expected_abstained
+
+    @property
+    def referral_ok(self) -> bool:
+        if self.turn.expected_referral_subject is None:
+            return True
+        return (
+            self.actual_referral_subject == self.turn.expected_referral_subject
+            and self.actual_referral_concept == self.turn.expected_referral_concept
+        )
+
+
+@dataclass(frozen=True)
+class MultiTurnMetrics:
+    """Aggregate multi-turn metrics."""
+
+    conversations: int
+    turns: int
+    query_accuracy: float
+    mode_accuracy: float
+    citation_accuracy: float
+    abstention_accuracy: float
+    referral_target_accuracy: float
+    comparison_accuracy: float
+    context_contamination: int
+    errors: int
+
+
+def summarize_multiturn(results: list[TurnResult]) -> MultiTurnMetrics:
+    """Aggregate one multi-turn run."""
+    compared = [
+        result
+        for result in results
+        if result.conversation.slice_name in {"same_subject_comparison", "third_topic"}
+    ]
+    referral = [result for result in results if result.turn.expected_referral_subject]
+    abstention = [result for result in results if result.turn.expected_abstained is not None]
+    cited = [result for result in results if result.turn.expected_material_ids]
+
+    def mean(values: list[float]) -> float:
+        return sum(values) / len(values) if values else 0.0
+
+    return MultiTurnMetrics(
+        conversations=len({result.conversation.conversation_id for result in results}),
+        turns=len(results),
+        query_accuracy=mean([float(result.query_ok) for result in results]),
+        mode_accuracy=mean([float(result.mode_ok) for result in results]),
+        citation_accuracy=mean([float(result.citation_ok) for result in cited]),
+        abstention_accuracy=mean([float(result.abstention_ok) for result in abstention]),
+        referral_target_accuracy=mean([float(result.referral_ok) for result in referral]),
+        comparison_accuracy=mean(
+            [float(result.mode_ok and result.citation_ok) for result in compared]
+        ),
+        context_contamination=sum(
+            1
+            for result in results
+            if result.conversation.slice_name == "off_topic"
+            and result.turn.expected_abstained is True
+            and not result.actual_abstained
+        ),
+        errors=sum(1 for result in results if result.error is not None),
+    )
+
+
+@dataclass(frozen=True)
+class RagReport:
+    """One lesson + multi-turn run."""
+
+    run_id: str
+    config: str
+    generator: str
+    judge: str
+    lesson_sample: int
+    lesson_fixture_sha: str
+    multiturn_fixture_sha: str
+    lesson: LessonMetrics
+    multiturn: MultiTurnMetrics
+
+    @property
+    def errors(self) -> int:
+        return self.lesson.errors + self.multiturn.errors
+
+    @property
+    def ok(self) -> bool:
+        return self.errors == 0
+
+
+__all__ = [
+    "LessonMetrics",
+    "LessonResult",
+    "MultiTurnMetrics",
+    "RagReport",
+    "TurnResult",
+    "summarize_lesson",
+    "summarize_multiturn",
+]

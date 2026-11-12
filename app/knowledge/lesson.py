@@ -227,6 +227,31 @@ class LessonSelector:
         scored.sort(key=lambda item: (-item[0], item[1]))
         return [material for _, _, material in scored[: max(1, top_k)]]
 
+    def material_scores(
+        self,
+        question: str,
+        subject: str,
+        materials: list[Material],
+    ) -> dict[str, float]:
+        """Cosine scores for the selected materials, when the query is cached.
+
+        `select` caches the question vector, so this is a cheap diagnostic for
+        the trace and the eval. A lexical extra has no embedding score and is
+        omitted rather than guessed.
+        """
+        vectors = self.vectors.get(subject)
+        query_vector = self.query_cache.get(question)
+        if vectors is None or query_vector is None:
+            return {}
+        by_id = dict(zip(vectors.material_ids, vectors.vectors, strict=True))
+        return {
+            material.material_id: round(
+                _cosine(query_vector, by_id[material.material_id]), 4
+            )
+            for material in materials
+            if material.material_id in by_id
+        }
+
     async def select(
         self,
         question: str,

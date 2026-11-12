@@ -4,6 +4,8 @@ All fixtures are synthetic; no corpus text. The selector is checked with a
 keyword embedder so the ranking is deterministic and offline.
 """
 
+import json
+
 import pytest
 
 from app.agent.persona import PERSONA
@@ -25,6 +27,7 @@ from app.pipeline.generate.lesson import (
     uncovered_terms,
 )
 from app.schemas import Chunk, ChunkMetadata
+from app.trace import TraceSink, end_trace, start_trace
 
 
 class KeywordEmbedder:
@@ -395,6 +398,37 @@ async def test_ask_lesson_returns_grounded_material_citations():
     assert result.material_citations == ["dada-dark-creatures-boggarts-nature"]
     assert result.citations == ["b3-c07-0050"]
     assert result.attempts == 1
+    assert result.selected_material_ids
+    assert result.selected_material_ids[0] == "dada-dark-creatures-boggarts-nature"
+    assert result.selection_scores["dada-dark-creatures-boggarts-nature"] > 0
+    assert result.uncovered_terms == []
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_traces_selection_and_scope(tmp_path):
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = StaticLlm(
+        "A boggart takes the shape of your fear [mat:dada-dark-creatures-boggarts-nature]."
+    )
+    trace_path = tmp_path / "trace.jsonl"
+    sink = TraceSink(trace_path)
+    token = start_trace("lesson-test", sink)
+    try:
+        await ask_lesson(
+            "How does a boggart work?", selector=selector, subject="dada", llm=llm
+        )
+    finally:
+        end_trace(token)
+    records = [
+        json.loads(line)
+        for line in trace_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    span = next(record for record in records if record["span"] == "lesson_select")
+    assert span["material_ids"][0] == "dada-dark-creatures-boggarts-nature"
+    assert span["scope"] == "in_pack"
+    assert span["uncovered_terms"] == []
+    assert span["conversation_chars"] == 0
 
 
 @pytest.mark.asyncio

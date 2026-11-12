@@ -38,6 +38,8 @@ data/*
 eval/results/*.csv
 !eval/results/baseline.csv
 eval/results/persona-*.json
+eval/results/rag-*.json
+!eval/results/rag-baseline.json
 eval/.cache/
 
 # Notebooks

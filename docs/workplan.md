@@ -561,20 +561,26 @@ Anonymous threads are enough here. Auth is not a dependency.
 
 ## Phase C.1: RAG hardening
 
-Status: active (#247). This is the RAG side of lesson and chat. It is not a new
-product surface and it does not wait on auth or exam mode.
+Status: #248 delivered; #249-#253 active. This is the RAG side of lesson and
+chat. It is not a new product surface and it does not wait on auth or exam mode.
 
-The last full eval run is 2026-11-08, before the memory work. The memory slice
-was gated only by `run_eval.py --check` against that older CSV. There is no
-committed lesson RAG eval and no multi-turn eval. The judged sample is 15
-answers, with 5 multi-part items. Live probes found a false refusal on "How do I
-defeat a Boggart?", a cross-subject abstain on "what about Avifors?", and an
-implicit follow-up that never reached generation.
+The baseline is `docs/runs/2026-11-12-248-rag-eval-foundation.md`: 60 lesson
+items and 36 multi-turn turns. Lesson citation validity is 1.0000, but
+faithfulness is 5/30. Multi-turn query accuracy is 0.9444, mode accuracy 0.8611,
+citation accuracy 0.5758, and referral target accuracy 0.0000 because the
+cross-subject contract is #253. The baseline is pinned at
+`eval/results/rag-baseline.json`; the gate is
+`scripts/run_rag_eval.py --check` or `run_eval.py --rag --check`.
+
+The earlier live probes found a false refusal on "How do I defeat a Boggart?",
+a cross-subject abstain on "what about Avifors?", and an implicit follow-up that
+never reached generation. The new fixture records the latter two as baseline
+gaps.
 
 | Ticket | Scope |
 |---|---|
 | #247 | Epic: RAG hardening for lesson and chat |
-| #248 | Lesson and multi-turn evaluation foundation |
+| #248 | Delivered: lesson and multi-turn evaluation foundation, baseline and gate |
 | #249 | Context-aware retrieval for follow-up turns |
 | #250 | Lesson false refusals from lexical coverage |
 | #251 | Claim-level citation binding for chat and lesson |
@@ -584,7 +590,7 @@ implicit follow-up that never reached generation.
 Exit criteria:
 
 - the lesson and multi-turn fixtures are committed, frozen with hashes and gated
-  by `run_eval.py --check`;
+  by `scripts/run_rag_eval.py --check` (also `run_eval.py --rag --check`);
 - the P0 fixes are measured against a committed baseline, not against the older
   single-turn CSV, with a `docs/runs/` record and a Runs-table row;
 - a false refusal and a wrong referral are diagnosable from the trace;
@@ -647,7 +653,7 @@ Phase C; it does not block Phase D.
 | Ticket | Scope | Milestone |
 |---|---|---|
 | #247 | Epic: RAG hardening for lesson and chat | V3.1 - RAG hardening |
-| #248 | Lesson and multi-turn evaluation foundation | V3.1 - RAG hardening |
+| #248 | Delivered: lesson and multi-turn evaluation foundation, baseline and gate | V3.1 - RAG hardening |
 | #249 | Context-aware retrieval for follow-up turns | V3.1 - RAG hardening |
 | #250 | Lesson false refusals from lexical coverage | V3.1 - RAG hardening |
 | #251 | Claim-level citation binding for chat and lesson | V3.1 - RAG hardening |
@@ -718,11 +724,11 @@ Phase C; it does not block Phase D.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The #216 epic is delivered; #30, #19 and #181 are delivered. The active work is
-the RAG hardening line (#247) plus #33 and #128. Exam mode is delegated to a
-separate agent and is not part of this workplan's active set. The remaining Now
-items are #248-#251 and the two blocked product tickets; Next is #252, #253,
-#43, #35 and #44. On the pack line, the canon index is harvested (#125, #126)
+The #216 epic is delivered; #30, #19, #181 and #248 are delivered. The active
+work is the RAG hardening line (#249-#251) plus #33 and #128. Exam mode is
+delegated to a separate agent and is not part of this workplan's active set.
+The remaining Now items are #249-#251 and the two blocked product tickets;
+Next is #252, #253, #43, #35 and #44. On the pack line, the canon index is harvested (#125, #126)
 and resolved (#127 closed); #128 carries reference prefill and coverage
 maintenance. The #87 schema, validator and all five 1.0.0 packs are delivered.
 #16, #120, #170, #172, #174 and #127 are closed. #107 is deferred and likely
