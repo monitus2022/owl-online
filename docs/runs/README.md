@@ -81,6 +81,10 @@ so on.
 | 2026-11-10 | #213 pattern | `exam-20261110-herbology-1.0.0` | `herbology-bank-exam` | n/a | n/a | n/a | [Herbology bank eval](2026-11-10-213-herbology-bank-eval.md) |
 | 2026-11-09 | #176 | `20261109T171502Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice](2026-11-09-176-persona-lesson-voice.md) |
 | 2026-11-10 | #176 | `20261109T174845Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice r2](2026-11-10-176-persona-lesson-voice-r2.md) |
+| 2026-11-12 | #248 | `20261112T135058Z` | `rag-eval` | n/a | n/a | 2/30 | [Lesson and multi-turn RAG baseline](2026-11-12-248-rag-eval-foundation.md) |
+| 2026-11-12 | #248 | `20261112T135138Z` | `rag-eval` (repro) | n/a | n/a | 2/30 | [Lesson and multi-turn RAG reproducibility](2026-11-12-248-rag-eval-repro.md) |
+| 2026-11-13 | #249 | `20261112T172756Z` | `rag-eval` | n/a | n/a | 2/30 | [Context-aware retrieval](2026-11-13-249-context-aware-retrieval.md) |
+| 2026-11-13 | #249 | `20261112T173800Z` | `rag-eval` (post-review) | n/a | n/a | 2/30 | [Context-aware retrieval r2](2026-11-13-249-context-aware-retrieval-r2.md) |
 
 Exam-bank runs use `n/a` for the chat metrics; the deterministic, independent
 and calibration tables are in the record.

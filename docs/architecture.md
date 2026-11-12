@@ -433,9 +433,9 @@ arrive as an `error` event because HTTP headers are already sent.
 `resolve` before the router and `remember` after every terminal node. `resolve`
 trims the stored messages to a recent window, folds older user turns into a
 rolling summary under a character budget derived from
-`OWL_MEMORY_TOKEN_BUDGET`, rewrites a pronoun, "there" or "what about"
-follow-up into a standalone retrieval query, and renders a bounded conversation
-block. A pending clarify consumes a short answer; a new question escapes it and
+`OWL_MEMORY_TOKEN_BUDGET`, rewrites a pronoun, implicit referent ("one", "it",
+"its", "that", "the same"), correction, "there" or "what about" follow-up into
+a standalone retrieval query, and renders a bounded conversation block. A pending clarify consumes a short answer; a new question escapes it and
 is resolved normally. `remember` appends the completed turn, updates the
 summary, and records the last entity, person and place plus the last mode. The
 resolver recovers a missing entity from the recent window or the summary.
@@ -488,6 +488,12 @@ department)" sections, and requires the matching citation space. `scope` is
 `in_pack`, `mixed`, `off_pack` or `abstained`; an off-pack answer starts with
 "This is not in the department's notes" and a mixed answer cites both spaces.
 The final payload carries `material_citations`, book `citations`, typed `typed_citations`, `citation_errors` and `scope`.
+The selector records the selected material ids, their cosine scores where the
+material came from the embedding leg, and the uncovered question terms on
+`AskResult`; the `lesson_select` trace span carries the ids, scores, uncovered
+term count and hash, scope and conversation size, and the `lesson_result` span
+carries the final abstention reason and citation counts. The raw question terms
+are not emitted in the trace.
 With the fallback off, a question with no material above the floor abstains
 with `no_evidence`; a selected material that leaves terms uncovered stays
 pack-only. With the fallback on, an uncovered term with no corpus evidence also
@@ -517,10 +523,13 @@ deployment region bans them regardless of host.
 ## Tracing
 
 Each request can emit flat JSONL span records under the request id. The stream
-path emits `router`
+path emits `resolve` (rewritten flag, rule, query hash and length), `router`
 (intent), `retrieve` (chunk ids and top score), one `generate` per attempt
 (model, prompt hash and length), `verify` (ok and reason), `retry`, and `final`.
-Cache hits emit a `cache` span instead of retrieve/generate.
+The lesson path adds `lesson_select` (material ids, scores, uncovered term count
+and hash, scope, conversation characters) and `lesson_result` (abstained,
+abstain reason, attempts, scope and citation counts). Cache hits emit a `cache`
+span instead of retrieve/generate.
 
 Traces go to the `owl.trace` logger and, when `OWL_TRACE_FILE` is set, to a
 size-capped file that is safe to ship. Prompt text is never emitted: the span
@@ -859,7 +868,7 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars, selected_material_ids, selection_scores, uncovered_terms |
 | `AgentState` | `app/agent/state.py` | TypedDict | question, standalone question, messages, summary, conversation context, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |

@@ -17,7 +17,10 @@ citations with a cross-type check; short-term chat memory is opt-in per
 `thread_id`, process-local and feeds a bounded conversation block into the chat
 prompts (except the experimental multi-book path), attempt history is
 session-scoped, and per-user
-history waits on auth (#35). The
+history waits on auth (#35). The lesson and multi-turn RAG baseline is committed
+(#248); implicit follow-ups are resolved before retrieval (#249), and
+claim-level grounding, judge calibration and cross-subject referral are the
+active gaps (#251, #258, #253). The
 project's point is the evaluation discipline and the full-stack agent, not the
 corpus.
 
@@ -33,6 +36,8 @@ Run these from the repository root.
 - Tests: `pytest`
 - Eval harness tests: `pytest eval/`
 - Eval gate: `uv run python scripts/run_eval.py --check`
+- RAG eval: `uv run python scripts/run_rag_eval.py` (or `uv run python scripts/run_eval.py --rag`)
+- RAG gate: `uv run python scripts/run_rag_eval.py --check` (or `uv run python scripts/run_eval.py --rag --check`)
 
 `ingest` (PDF parsing) is a dependency group, installed by default for dev.
 LangGraph and sse-starlette are base dependencies because the served V2 API

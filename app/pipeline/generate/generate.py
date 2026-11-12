@@ -170,6 +170,12 @@ class AskResult:
     prompt_chars: int = 0
     # Lesson scope: where the evidence came from. None on the corpus path.
     scope: LessonScope | None = None
+    # Lesson diagnostics: what the selector chose, its cosine scores where the
+    # material came from the embedding leg, and the question terms the pack did
+    # not cover. Empty on the corpus path.
+    selected_material_ids: list[str] = field(default_factory=list)
+    selection_scores: dict[str, float] = field(default_factory=dict)
+    uncovered_terms: list[str] = field(default_factory=list)
     # The feedback path asks for a student answer; there is nothing to cite yet.
     needs_input: bool = False
     # The experimental multi-book path does not consume thread context.

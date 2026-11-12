@@ -14,6 +14,7 @@ replaced by the voice.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from collections.abc import Callable
@@ -43,6 +44,7 @@ from app.pipeline.generate.generate import (
 )
 from app.providers.contracts import Llm, Retriever
 from app.schemas import Chunk
+from app.trace import current_tracer
 
 if TYPE_CHECKING:
     from app.agent.persona import Persona
@@ -543,6 +545,7 @@ async def ask_lesson(
     and retrieval use the rewritten `question`. `conversation_context` is a
     bounded, non-evidence block for a threaded request.
     """
+    tracer = current_tracer()
     prompt_question = prompt_question or question
     materials = await selector.select(
         question,
@@ -571,6 +574,40 @@ async def ask_lesson(
         if materials
         else set()
     )
+    selected_ids = [material.material_id for material in materials]
+    scores_fn = getattr(selector, "material_scores", None)
+    selection_scores = (
+        scores_fn(question, subject, materials) if callable(scores_fn) else {}
+    )
+    uncovered_list = sorted(uncovered)
+
+    def trace_selection(scope_value: str) -> None:
+        if tracer is not None:
+            tracer.emit(
+                "lesson_select",
+                material_ids=selected_ids,
+                material_scores=selection_scores,
+                uncovered_term_count=len(uncovered_list),
+                uncovered_terms_sha=hashlib.sha256(
+                    "|".join(uncovered_list).encode("utf-8")
+                ).hexdigest()[:8],
+                scope=scope_value,
+                conversation_chars=len(conversation_context or ""),
+            )
+
+    def trace_result(result: AskResult, attempts: int) -> None:
+        if tracer is not None:
+            tracer.emit(
+                "lesson_result",
+                abstained=result.abstained,
+                abstain_reason=result.abstain_reason,
+                attempts=attempts,
+                scope=result.scope,
+                material_citations=len(result.material_citations),
+                citations=len(result.citations),
+                needs_input=result.needs_input,
+            )
+
     chunks: list[Chunk] = []
     if fallback and retriever is not None and (not materials or uncovered):
         chunks = await _retrieve_corpus(
@@ -584,22 +621,36 @@ async def ask_lesson(
         if uncovered and fallback:
             # The pack covers only part of the question and the corpus found
             # no evidence for the rest. Do not label a partial answer in_pack.
-            return AskResult(
+            trace_selection("abstained")
+            result = AskResult(
                 ABSTAIN_MESSAGE,
                 abstained=True,
                 abstain_reason="no_evidence",
                 scope="abstained",
+                selected_material_ids=selected_ids,
+                selection_scores=selection_scores,
+                uncovered_terms=uncovered_list,
             )
+            trace_result(result, 0)
+            return result
         scope = "in_pack"
     elif chunks:
         scope = "off_pack"
     else:
-        return AskResult(
+        trace_selection("abstained")
+        result = AskResult(
             ABSTAIN_MESSAGE,
             abstained=True,
             abstain_reason="no_evidence",
             scope="abstained",
+            selected_material_ids=selected_ids,
+            selection_scores=selection_scores,
+            uncovered_terms=uncovered_list,
         )
+        trace_result(result, 0)
+        return result
+
+    trace_selection(scope)
 
     if prompt_builder is not None:
         # Evaluation hook: the persona-conformance runner compares the current
@@ -673,10 +724,15 @@ async def ask_lesson(
         )
 
     final_system = system if attempt == 1 else retry_system
-    return replace(
+    final_result = replace(
         result,
         attempts=attempt,
         retry_reason=retry_reason,
         model_calls=attempt,
         prompt_chars=len(final_system) + len(prompt),
+        selected_material_ids=selected_ids,
+        selection_scores=selection_scores,
+        uncovered_terms=uncovered_list,
     )
+    trace_result(final_result, attempt)
+    return final_result

@@ -63,6 +63,62 @@ docs/runs/<date>-<ticket>-<slug>.md   (committed run record)
 - Generation: a sample of answers graded by a second model (correct / partial /
   wrong, and grounded / ungrounded).
 
+## Lesson and multi-turn RAG eval
+
+`eval/rag/` is the lesson/chat RAG gate (#248). It is separate from the corpus
+gold set because it measures selection, scope, citation and conversation
+behaviour, not factual F1 on the books.
+
+| Path | Contents |
+|---|---|
+| `eval/rag/fixtures/lesson.jsonl` | 62 lesson items: 20 in-pack, 10 paraphrase, 20 multi-concept, 1 mixed, 1 off-pack, 10 abstain |
+| `eval/rag/fixtures/multiturn.jsonl` | 17 conversations and 36 turns: comparison, third topic, pronoun, implicit referent, correction, off-topic, cross-subject |
+| `eval/rag/fixtures.py` | Fixture loaders and validation |
+| `eval/rag/metrics.py` | Selection, scope, citation, abstention, referral and conversation metrics |
+| `eval/rag/runner.py` | Lesson and multi-turn runner |
+| `eval/rag/check.py` | Baseline diff and gate |
+| `scripts/build_rag_fixtures.py` | Rebuild the fixtures from the published packs |
+| `scripts/run_rag_eval.py` | CLI wrapper |
+
+The fixtures store concept titles, material ids and source-ref structure only.
+They never store material prose, source quotes or corpus text.
+
+Metrics:
+
+- lesson selection precision@3 and recall@3 against expected material ids;
+- lesson scope accuracy across in-pack, mixed, off-pack and abstain;
+- lesson citation recall and citation validity, including one citation per
+  expected concept group and the expected corpus chunks for mixed/off-pack;
+- lesson false refusal rate and unanswerable abstention accuracy;
+- lesson faithfulness on a round-robin judged sample of 30 answers, with the
+  corpus excerpts included for mixed/off-pack answers;
+- multi-turn retrieval-query accuracy, mode accuracy, citation accuracy,
+  false refusal rate, abstention accuracy, referral target accuracy and context
+  contamination.
+
+Run:
+
+```
+uv run python scripts/build_rag_fixtures.py
+uv run python scripts/run_rag_eval.py
+uv run python scripts/run_rag_eval.py --write-baseline
+uv run python scripts/run_rag_eval.py --check
+```
+
+The same gate is available through the main CLI:
+
+```
+uv run python scripts/run_eval.py --rag
+uv run python scripts/run_eval.py --rag --write-baseline
+uv run python scripts/run_eval.py --rag --check
+```
+
+The pinned baseline is `eval/results/rag-baseline.json`; timestamped reports
+are `eval/results/rag-<run_id>.json` and stay local. A run that changes the
+fixture hashes, the judged sample or the pinned settings is a new baseline, not
+a silent update: `--write-baseline` refuses it unless `--force-baseline` is
+passed, and `--check` fails on the mismatch.
+
 ## Current baseline
 
 Pinned run `20261106T214850Z`, quota 0; canonical record: `docs/runs/2026-11-07-113-ingest-rebaseline.md`:
@@ -410,8 +466,9 @@ excluded from the faithfulness denominator and reported separately.
   reranker could reach 0.75 there. Closing the rest needs a stronger embedder and
   the retrieval work in V2 D3 and D6.
 - The eval uses OpenRouter for the generator and judge (hosted models required);
-  the embedder comes from `OWL_EMBEDDER_PROVIDER`. `CachedLlm` caches `generate()`
-  only; `stream` is passed through.
+  the embedder comes from `OWL_EMBEDDER_PROVIDER`. `CachedLlm` caches both
+  `generate()` and `stream()` by (name, input); a stream cache hit yields the
+  complete reply as one piece.
 - Rerank (V1, #6) is wired on by default (`amazon.rerank-v1:0`, pool 50); set
   `OWL_RERANK_PROVIDER=none` for the baseline column.
 
