@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 from app.agent.memory import (
     TOKEN_BUDGET,
     WINDOW_MESSAGES,
@@ -11,6 +13,7 @@ from app.agent.memory import (
     trim_history,
 )
 from app.agent.state import AgentState
+from app.trace import current_tracer
 
 
 def resolve_node(
@@ -37,11 +40,21 @@ def resolve_node(
         pending_clarify=bool(state.get("pending_clarify", False)),
         subject=state.get("subject") or "dada",
     )
+    tracer = current_tracer()
+    if tracer is not None:
+        tracer.emit(
+            "resolve",
+            rewritten=resolution.standalone != state["question"],
+            rule=resolution.rule or "none",
+            query_sha=hashlib.sha256(resolution.standalone.encode("utf-8")).hexdigest()[:16],
+            query_chars=len(resolution.standalone),
+        )
     return {
         "messages": messages,
         "summary": summary,
         "conversation_context": render_context(messages, summary, token_budget=token_budget),
         "standalone_question": resolution.standalone,
+        "resolved_entity": resolution.entity or "",
         "forced_mode": resolution.forced_mode,
         "preferred_mode": resolution.preferred_mode,
     }
@@ -72,11 +85,17 @@ def remember_node(
         "last_mode": mode,
         "pending_clarify": mode == "clarify",
     }
-    entity = extract_entity(state.get("standalone_question") or question)
-    if entity is None:
-        # A comparison or pronoun rewrite may not name the new topic; the raw
-        # student turn does.
-        entity = extract_entity(question)
+    resolved = str(state.get("resolved_entity") or "").strip()
+    if resolved:
+        # A rewrite carries the topic it resolved, so a derived phrase such as
+        # "the Boggart's weakness" never becomes the next turn's entity.
+        entity = extract_entity(f"Tell me about {resolved}")
+    else:
+        entity = extract_entity(state.get("standalone_question") or question)
+        if entity is None:
+            # A comparison or pronoun rewrite may not name the new topic; the
+            # raw student turn does.
+            entity = extract_entity(question)
     if entity is not None:
         updates["last_entity"] = entity.text
         if entity.kind == "person":
