@@ -159,7 +159,9 @@ async def test_material_coverage_failure_is_gated() -> None:
     assert not checks["coverage"].ok
 
 
-def _assert_calibration_fixture(name: str, sha256: str) -> None:
+def _assert_calibration_fixture(
+    name: str, sha256: str, *, require_verbose_longer: bool = False
+) -> None:
     path = Path(__file__).resolve().parent / "fixtures" / name
     cases = load_calibration(path)
     assert len({case.item_id for case in cases}) == 8
@@ -187,6 +189,17 @@ def _assert_calibration_fixture(name: str, sha256: str) -> None:
             case.pass_name for case in cases if case.item_id == item_id
         }
         assert len(passes) == 3
+        full = next(
+            case for case in cases
+            if case.item_id == item_id and case.variant == "full"
+        )
+        verbose = next(
+            (case for case in cases
+             if case.item_id == item_id and case.variant == "verbose"),
+            None,
+        )
+        if verbose is not None and require_verbose_longer:
+            assert len(verbose.answer.split()) > len(full.answer.split())
     assert file_sha256(path) == sha256
 
 
@@ -208,4 +221,20 @@ def test_committed_potions_calibration_fixture_shape() -> None:
     _assert_calibration_fixture(
         "calibration-potions.jsonl",
         "787aeb63a237bff98050e2db6df7a58fe4ab302567426e18a02e4df75e743115",
+    )
+
+
+def test_committed_transfiguration_calibration_fixture_shape() -> None:
+    _assert_calibration_fixture(
+        "calibration-transfiguration.jsonl",
+        "cf3e7b0029f96c2ff454440aefbce73031a7dfb9f481f6258e7432f2795a12d9",
+        require_verbose_longer=True,
+    )
+
+
+def test_committed_herbology_calibration_fixture_shape() -> None:
+    _assert_calibration_fixture(
+        "calibration-herbology.jsonl",
+        "c8ee76b7c77559a61ae35252da15d2e0ff310fc4e6dbe43c6fb46ae32c024134",
+        require_verbose_longer=True,
     )
