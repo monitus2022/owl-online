@@ -154,6 +154,10 @@
   answers accepted, 0 missing required points.
 - Option lengths: correct option strictly longest in 56.0% of MCQs, mean gap
   0.68 words.
+- Calibration: run id `exam-20261113-cf3e7b00`; 24 cases over 8 short-answer
+  items; exact 0.9583, adjacent 1.0000, MAE 0.0417, 0 needs_review; record
+  `docs/runs/2026-11-13-266-transfiguration-judge-calibration.md`. The adopted
+  partial band is 4/0 for core-only answers.
 
 ## Review
 

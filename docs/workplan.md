@@ -87,8 +87,9 @@ page describes what comes next and why.
   fixes a target of 25 MCQ and 25 short-answer items. The bank schema, validator
   and SQLite import are in #189, the DADA bank 1.0.0 is published in #190, the
   Charms bank 1.0.0 is published in #213, Potions in #228, Transfiguration in
-  #230 and Herbology in #231; the hybrid grader is built in #192, the bank eval
-  and judge calibration are recorded in #191, and served attempts are in #193.
+  #230 and Herbology in #231; the hybrid grader is built in #192, the bank evals
+  and judge calibrations are recorded in #191, #261, #264, #266 and #267, and
+  served attempts are in #193.
 
 ## Product shape
 
@@ -260,9 +261,9 @@ signed session cookie plus IP. When #35 lands, move the limits to `user_id`.
 ## Phase B: Subject packs and exam bank
 
 Status: all five O.W.L. packs delivered; the five banks 1.0.0 are
-published, the hybrid grader is built, the DADA, Charms and Potions bank evals
-and judge calibrations are recorded (#191, #261, #264), and served attempts are
-built (#193).
+published, the hybrid grader is built, all five bank evals and judge calibrations
+are recorded (#191, #261, #264, #266, #267), and served attempts are built
+(#193).
 
 Phase B has two parts. B1 builds the subject knowledge packs. B2 builds the exam
 bank and hybrid grader on top of them.
@@ -450,9 +451,8 @@ B1 exit criteria:
 ### B2: Exam bank
 
 Status: all five subject banks 1.0.0 published (#190, #213, #228, #230,
-#231); hybrid grading built (#192); the DADA, Charms and Potions bank evals and
-judge calibrations are recorded (#191, #261, #264) and the other two banks have
-published validation records; served attempts built (#193).
+#231); hybrid grading built (#192); all five bank evals and judge calibrations
+are recorded (#191, #261, #264, #266, #267); served attempts built (#193).
 
 A paper is 10 questions: 6 MCQ at 3 marks and 4 short answers at 8 marks, 50
 marks total. That is long enough to feel like a paper and short enough to finish
@@ -531,8 +531,10 @@ Exit criteria (met by #190-#193):
 - an owner-reviewed calibration set (AI-proposed marks adopted by the owner)
   reports score agreement and mean absolute error
   (`docs/runs/2026-11-09-191-dada-bank-eval.md`,
-  `docs/runs/2026-11-13-261-charms-judge-calibration.md` and
-  `docs/runs/2026-11-13-264-potions-judge-calibration.md`).
+  `docs/runs/2026-11-13-261-charms-judge-calibration.md`,
+  `docs/runs/2026-11-13-264-potions-judge-calibration.md`,
+  `docs/runs/2026-11-13-266-transfiguration-judge-calibration.md` and
+  `docs/runs/2026-11-13-267-herbology-judge-calibration.md`).
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 

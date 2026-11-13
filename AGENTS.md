@@ -71,7 +71,7 @@ Layout:
 - `app/agent/` - LangGraph chat graph, node functions, state (V2); short-term memory (`memory.py`, resolve/remember nodes) behind an opt-in `thread_id`, with a bounded conversation block in the chat prompts; the policy, closed-fact and teaching gates plus the typed citation routes; lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
 - `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts), Charms at 1.0.0 (50 materials, 49 concepts), Potions at 1.0.0 (34/34), Transfiguration at 1.0.0 (34/29) and Herbology at 1.0.0 (33/31); DADA feeds lesson mode through a derived in-memory material selector (#166); reference prefill and coverage maintenance remain on #128
 - `app/storage/` - SQLite bank store (#189) plus attempt persistence, session ownership and grading records (#193/#206)
-- `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the bank eval and judge calibration are in `eval/exam/` (#191, #261, #264); served attempts are #193; the same grader serves all five banks (#213 pattern)
+- `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the bank eval and judge calibration are in `eval/exam/` (#191, #261, #264, #266, #267); served attempts are #193; the same grader serves all five banks (#213 pattern)
 - `data/subjects/` - local subject packs; all five O.W.L. packs are published; source text stays out of git
 - `app/schemas.py` - domain data (`Chunk`)
 - `app/config.py` - settings (env-based, `OWL_` prefix)
@@ -83,7 +83,7 @@ Layout:
 - `docs/exams/` - bank blueprint, artifact rules, serving contract, published bank records, manifest snapshots and the DADA grading probe (#188-#193, #213)
 - `docs/lexicon-canon-index.md` - plan of record for the hp-lexicon canon index (#125-#128); update it when a parse rule, an artifact contract or the source policy changes
 - `docs/runs/` - one committed Markdown record per eval run, plus the template and index
-- `eval/` - harness, gold set, thresholds; `eval/exam/` holds the subject bank evaluation and judge calibration (#191, #261, #264)
+- `eval/` - harness, gold set, thresholds; `eval/exam/` holds the subject bank evaluation and judge calibration (#191, #261, #264, #266, #267)
 - `web/` - React + Vite academy frontend, deployed separately on Cloudflare Pages (docs/deploy.md); it calls the versioned contract in `docs/api.md` and never imports Python code
 - `e2e/` - Playwright browser suite against the stub API and the Vite frontend; axe checks and the student loop (#179)
 - `docs/load/` - committed stream load reports; the check is manual/release-only

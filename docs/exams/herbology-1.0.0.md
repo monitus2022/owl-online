@@ -156,6 +156,10 @@
   answers accepted, 0 missing required points.
 - Option lengths: correct option strictly longest in 36.0% of MCQs, mean gap
   0.36 words.
+- Calibration: run id `exam-20261113-c8ee76b7`; 24 cases over 8 short-answer
+  items; exact 0.9583, adjacent 0.9583, MAE 0.1250, 0 needs_review; record
+  `docs/runs/2026-11-13-267-herbology-judge-calibration.md`. The adopted
+  partial band is 4/0 for core-only answers.
 
 ## Review
 
