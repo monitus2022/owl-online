@@ -40,6 +40,7 @@ eval/results/*.csv
 eval/results/persona-*.json
 eval/results/rag-*.json
 !eval/results/rag-baseline.json
+eval/results/rag-calibration-*.json
 eval/.cache/
 
 # Notebooks

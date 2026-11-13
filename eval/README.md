@@ -119,6 +119,25 @@ fixture hashes, the judged sample or the pinned settings is a new baseline, not
 a silent update: `--write-baseline` refuses it unless `--force-baseline` is
 passed, and `--check` fails on the mismatch.
 
+## Lesson faithfulness calibration
+
+`eval/rag/fixtures/faithfulness_calibration.jsonl` is the #258 calibration set.
+It holds short synthetic answers with `supported`, `partial`, `unsupported` or
+`refusal` labels, the material ids or chunk ids that are the evidence, and a
+`label_source`. The current labels are agent-proposed and require owner
+adoption before the calibration is pinned as a gate.
+
+Run:
+
+```
+uv run python scripts/run_rag_calibration.py
+```
+
+The runner uses a three-level faithfulness judge, excludes refusals from the
+faithfulness denominator, and reports exact agreement, adjacent agreement, mean
+absolute error and parse failures. It does not change the production binary
+faithfulness metric.
+
 ## Current baseline
 
 Pinned run `20261106T214850Z`, quota 0; canonical record: `docs/runs/2026-11-07-113-ingest-rebaseline.md`:

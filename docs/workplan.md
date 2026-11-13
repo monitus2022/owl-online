@@ -561,16 +561,21 @@ Anonymous threads are enough here. Auth is not a dependency.
 
 ## Phase C.1: RAG hardening
 
-Status: #248 and #249 delivered; #250-#253, #258 and #259 active. This is the
-RAG side of lesson and chat. It is not a new product surface and it does not
-wait on auth or exam mode.
+Status: #248 and #249 delivered; #258 measured with owner adoption pending;
+#250-#253 and #259 active. This is the RAG side of lesson and chat. It is not a
+new product surface and it does not wait on auth or exam mode.
 
 #249 moved multi-turn query accuracy from 0.9444 to 1.0000 and false refusal
 from 0.1515 to 0.0909; the remaining three false refusals are cross-subject
 turns. The final post-review record is
 `docs/runs/2026-11-13-249-context-aware-retrieval-r2.md`.
 
-The order after #249 is: #258 calibrate the judge, then #251 lesson prompt and
+#258's first calibration run reports exact agreement 1.0000 on 13 proposed
+items, with 1 refusal checked separately. The labels are agent-proposed and
+need owner adoption before the calibration is pinned; the record is
+`docs/runs/2026-11-13-258-faithfulness-calibration.md`.
+
+The order after #249 is: adopt the #258 labels, then #251 lesson prompt and
 claim binding, then #252 comparison-aware selection, #259 the comparison router,
 and #253 referral. #250 remains the paraphrase false-refusal line.
 
@@ -597,7 +602,7 @@ gaps.
 | #251 | Claim-level citation binding for chat and lesson |
 | #252 | Multi-part retrieval, decomposition and reranker tuning |
 | #253 | Cross-subject concept awareness and professor referral |
-| #258 | Calibrate the lesson faithfulness judge before optimizing to it |
+| #258 | Measured: judge exact agreement 1.0000 on 13 proposed items; owner adoption pending |
 | #259 | Route in-subject comparison questions to lesson |
 
 Exit criteria:
@@ -667,7 +672,7 @@ Phase C; it does not block Phase D.
 |---|---|---|
 | #247 | Epic: RAG hardening for lesson and chat | V3.1 - RAG hardening |
 | #248 | Delivered: lesson and multi-turn evaluation foundation, baseline and gate | V3.1 - RAG hardening |
-| #258 | Calibrate the lesson faithfulness judge | V3.1 - RAG hardening |
+| #258 | Measured: judge exact agreement 1.0000 on 13 proposed items; owner adoption pending | V3.1 - RAG hardening |
 | #249 | Delivered: implicit referents and corrections; query 1.0000, false refusal 3/33 | V3.1 - RAG hardening |
 | #250 | Lesson false refusals from lexical coverage | V3.1 - RAG hardening |
 | #251 | Claim-level citation binding for chat and lesson | V3.1 - RAG hardening |
