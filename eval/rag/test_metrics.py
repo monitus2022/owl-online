@@ -134,6 +134,8 @@ def test_lesson_citation_recall_uses_explicit_book_citations():
 
 def test_summarize_lesson_counts_words_at_the_limit_boundary():
     item = _lesson_item()
+    # `[b1-c11-0042]` is three alphanumeric runs under the word regex, so the
+    # at-limit answer reaches LESSON_WORD_LIMIT only if citations are counted.
     at_limit = "word " * (LESSON_WORD_LIMIT - 3) + "[b1-c11-0042]"
     over_limit = "word " * LESSON_WORD_LIMIT
     under_limit = "word " * (LESSON_WORD_LIMIT - 1)

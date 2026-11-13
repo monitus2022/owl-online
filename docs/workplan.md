@@ -763,10 +763,10 @@ first slice are delivered. The active work is the RAG hardening line (#250,
 #251 residual, #252, #253, #259) plus #33 and #128.
 Exam mode is delegated to a separate agent and is not part of this workplan's
 active set. The remaining Now items are #250 and the two blocked product
-tickets; Next is #252, #253, #259, #43, #35 and #44. On the pack line, the canon
-index is harvested (#125, #126) and resolved (#127 closed); #128 carries
-reference prefill and coverage maintenance. The #87 schema, validator and all
-five 1.0.0 packs are delivered.
+tickets; Next is #251 residual, #252, #253, #259, #43, #35 and #44. On the pack
+line, the canon index is harvested (#125, #126) and resolved (#127 closed); #128
+carries reference prefill and coverage maintenance. The #87 schema, validator
+and all five 1.0.0 packs are delivered.
 #16, #120, #170, #172, #174 and #127 are closed. #107 is deferred and likely
 superseded by the per-book path. The courtesy note to the Lexicon is deferred to
 project completion by maintainer decision.
