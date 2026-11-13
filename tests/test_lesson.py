@@ -918,6 +918,48 @@ async def test_ask_lesson_mixed_uses_both_sources():
 
 
 @pytest.mark.asyncio
+async def test_ask_lesson_restores_a_mixed_draft_that_lost_the_book_space():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    retriever = StaticRetriever(
+        [_chunk("b3-c07-0099", "A hippogriff is a proud creature.")]
+    )
+    llm = SequencedLlm(
+        [
+            "A boggart takes your fear's shape and it prefers a dark and "
+            "enclosed space where nobody can see it clearly "
+            "[mat:dada-dark-creatures-boggarts-nature].\n\n"
+            "A hippogriff is proud and refuses to be ridden by someone who "
+            "insults it, and it is a difficult creature to approach "
+            "[b3-c07-0099].\n\n"
+            "This comparison matters because both creatures show how a wizard "
+            "should handle fear and respect, and the difference is worth "
+            "remembering for the exam.",
+            "A boggart takes your fear's shape "
+            "[mat:dada-dark-creatures-boggarts-nature].",
+        ]
+    )
+    resets: list[int] = []
+
+    result = await ask_lesson(
+        "Compare a boggart with a hippogriff",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        retriever=retriever,
+        on_reset=lambda: resets.append(1),
+        max_retries=1,
+    )
+
+    assert result.abstained is False
+    assert result.scope == "mixed"
+    assert result.attempts == 2
+    assert result.retry_reason == "uncited_paragraph"
+    assert "dark and enclosed" in result.answer
+    assert "b3-c07-0099" in result.citations
+    assert resets == [1, 1]
+
+
+@pytest.mark.asyncio
 async def test_ask_lesson_mixed_retries_when_only_the_pack_is_cited():
     selector = await LessonSelector.build(_store(), KeywordEmbedder())
     retriever = StaticRetriever(

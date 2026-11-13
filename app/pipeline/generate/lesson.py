@@ -590,11 +590,13 @@ async def ask_lesson(
 
     One draft is verified deterministically. A draft that misses a required
     citation space gets one stricter retry. A draft with an uncited factual
-    paragraph gets one paragraph-specific retry. A retry that is still merely
-    uncited is served with the citations it has; a retry that refuses or loses
-    the citation space restores the earlier answerable draft. Placement alone is
-    not a reason to refuse, and a refusal is final only when no answerable draft
-    exists, exactly like the corpus path.
+    paragraph gets one paragraph-specific retry. A retry that still leaves a
+    paragraph uncited but keeps its citation space is served with the citations
+    it has; a retry that refuses or loses a required citation space restores the
+    earlier answerable draft. When a draft misses a required citation space and
+    also leaves a paragraph uncited, the paragraph retry takes precedence.
+    Placement alone is not a reason to refuse, and a refusal is final only when
+    no answerable draft exists, exactly like the corpus path.
 
     `prompt_question` keeps the student's wording in the prompt while selection
     and retrieval use the rewritten `question`. `conversation_context` is a
@@ -659,6 +661,7 @@ async def ask_lesson(
         uncited_paragraphs: int = 0,
         fallback: bool = False,
     ) -> None:
+        # `fallback` is the served-best restore, not the corpus-fallback switch.
         if tracer is not None:
             tracer.emit(
                 "lesson_result",
@@ -784,7 +787,7 @@ async def ask_lesson(
         if on_reset is not None:
             on_reset()
 
-    if (refusal or result.abstained) and best is not None:
+    if (refusal or result.abstained or not has_required) and best is not None:
         result, attempt_system, missing_paragraphs = best
         refusal = False
         # The last attempt may have lost the citation space; the restored

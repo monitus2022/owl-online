@@ -54,7 +54,7 @@ from `main`.
 - The faithfulness number is 5/30, one item above the shipped 4/30, but the
   judged sample is not comparable. The sampler draws the judged 30 from
   answered results only, so this run judged 30 of 50 answers while the shipped
-  run judged 30 of 52. A two-item difference at n=30 is inside noise.
+  run judged 30 of 52. A one-item difference at n=30 is inside noise.
 - The false refusals and the scope miss are a product regression. A student who
   asks about the Disarming Charm must not get the abstention line because the
   model cited one paragraph late.

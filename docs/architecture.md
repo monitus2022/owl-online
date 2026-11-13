@@ -407,6 +407,9 @@ SSE events:
 | `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode`, `thread_id` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
+In the lesson path, the served-best restore also emits `reset` with `retry`; the
+`final` payload is authoritative.
+
 `/v1/chat/stream` uses the compiled graph from `app/agent/`. The router is
 deterministic and applies the policy, closed-fact and teaching gates before any
 retrieval. An explicit `answer`, `practice` or `feedback` wins over the gates
@@ -484,8 +487,9 @@ concept and a comparison keeps both sides. The prompt requires a citation in
 every substantive paragraph, separated by blank lines; a paragraph under 20
 words or one that ends in a question is exempt. `paragraphs_cited` retries once
 with a paragraph-specific prompt when a factual paragraph is uncited. A retry
-that is still merely uncited is served with its citations; a retry that refuses
-or loses the citation space restores the earlier answerable draft. With the
+that still leaves a paragraph uncited but keeps its citation space is served
+with its citations; a retry that refuses or loses a required citation space
+restores the earlier answerable draft. With the
 persona on (the default), the prompt asks for under 220 words. A deterministic
 coverage check compares
 the question's content terms with the material prose and the concept
@@ -539,8 +543,8 @@ path emits `resolve` (rewritten flag, rule, query hash and length), `router`
 (model, prompt hash and length), `verify` (ok and reason), `retry`, and `final`.
 The lesson path adds `lesson_select` (material ids, scores, uncovered term count
 and hash, scope, conversation characters) and `lesson_result` (abstained,
-abstain reason, retry reason, attempts, uncited paragraphs, scope and citation
-counts). Cache hits emit a `cache`
+abstain reason, retry reason, attempts, uncited paragraphs, fallback flag, scope
+and citation counts). Cache hits emit a `cache`
 span instead of retrieve/generate.
 
 Traces go to the `owl.trace` logger and, when `OWL_TRACE_FILE` is set, to a

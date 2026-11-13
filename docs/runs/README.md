@@ -96,6 +96,7 @@ so on.
 | 2026-11-13 | #251 | `20261113T082146Z` | `rag-eval` (example id removed, rejected) | n/a | n/a | 3/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
 | 2026-11-13 | #251 | `20261113T082310Z` | `rag-eval` (shipped) | n/a | n/a | 4/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
 | 2026-11-13 | #251 | `20261113T082614Z` | `rag-eval` (baseline re-pin) | n/a | n/a | 4/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
+| 2026-11-13 | #251 | `20261113T090915Z` | `rag-eval` (post-review verification) | n/a | n/a | 4/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
 
 Exam-bank runs use `n/a` for the chat metrics; the deterministic, independent
 and calibration tables are in the record.

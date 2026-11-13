@@ -30,9 +30,10 @@ The shipped slice has five parts:
 - After selection, the rest of each matched concept's reviewed group is added
   round-robin, up to a five-material budget (the top-k size when larger).
 - `paragraphs_cited` checks the grounded answer. A draft with an uncited
-  factual paragraph gets one paragraph-specific retry. A retry that is still
-  merely uncited is served with its citations; a retry that refuses or loses the
-  citation space restores the earlier answerable draft.
+  factual paragraph gets one paragraph-specific retry. A retry that still leaves
+  a paragraph uncited but keeps its citation space is served with its citations;
+  a retry that refuses or loses a required citation space restores the earlier
+  answerable draft.
 - The eval reports mean, maximum and at-or-over-limit word counts. The counts
   include citation tokens and are added, not gated.
 
@@ -58,7 +59,7 @@ hand edit, is the source of truth.
 | Lesson off-pack citation recall | 1.0000 | 1.0000 | 1.0000 | 0.0000 |
 | Lesson mean words | n/a | n/a | 199 | n/a |
 | Lesson max words | n/a | n/a | 291 | n/a |
-| Lesson over 220 words | n/a | n/a | 11 of 52 | n/a |
+| Lesson at or over 220 words | n/a | n/a | 11 of 52 | n/a |
 | Multi-turn query accuracy | 0.9444 | 1.0000 | 1.0000 | 0.0000 |
 | Multi-turn mode accuracy | 0.8611 | 0.8889 | 0.8889 | 0.0000 |
 | Multi-turn citation accuracy | 0.5152 | 0.5455 | 0.5758 | +0.0303 |
@@ -84,6 +85,11 @@ row.
 | `20261113T082146Z` | example id removed from mixed/off-pack prompts | 3/30 | 0.9615 | 0.9839 | 0.0000 | 1.0000 |
 | `20261113T082310Z` | examples restored, gold-set correction | 4/30 | 0.9615 | 0.9839 | 0.0000 | 1.0000 |
 | `20261113T082614Z` | baseline re-pin, same code | 4/30 | 0.9615 | 0.9839 | 0.0000 | 1.0000 |
+| `20261113T090915Z` | post-review verification, same code | 4/30 | 0.9615 | 0.9839 | 0.0000 | 1.0000 |
+
+The last run verifies that extending the served-best guard to a retry that
+loses a required citation space does not change the measured metrics. It is
+metric-for-metric identical to `20261113T082310Z`.
 
 ## Reading
 
@@ -112,10 +118,10 @@ row.
 - The fallback is a deliberate tradeoff. It serves the earlier answerable draft
   even though that draft failed the paragraph check, and it cannot tell a
   placement refusal from a refusal that judges the notes unsupported. It also
-  fires when the retry loses the citation space, not only on a refusal. The
-  fallback rate and the served draft's uncited-paragraph count are traced but
-  not aggregated, so the residual is unmeasured. Measuring both is part of the
-  next slice.
+  fires when the retry loses a required citation space, not only on a refusal.
+  The fallback rate and the served draft's uncited-paragraph count are traced
+  but not aggregated, so the residual is unmeasured. Measuring both is part of
+  the next slice.
 - Removing the concrete chunk-id example from the mixed and off-pack prompts
   made faithfulness and multi-turn false refusal worse (run `082146Z`: 3/30,
   false refusal 0.1212), so the examples stay.
