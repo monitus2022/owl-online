@@ -1,4 +1,4 @@
-"""Report records for the DADA bank evaluation (#191)."""
+"""Report records for a subject bank evaluation (#191)."""
 
 from __future__ import annotations
 

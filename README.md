@@ -2,7 +2,7 @@
 
 A grounded, agentic RAG application - a revision tool that answers questions, runs conversational practice, and serves pre-generated exams with hybrid grading.
 
-> Status: grounded chat, all five O.W.L. knowledge packs published at 1.0.0, the DADA, Charms, Potions, Transfiguration and Herbology exam banks published at 1.0.0, lesson mode live behind `OWL_LESSON_MODE`, and the professor persona live behind `OWL_PERSONA`. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; questions outside the pack fall back to labelled set-text answers. Each bank holds 25 MCQ and 25 short-answer items, hybrid grading is built, the DADA bank eval and judge calibration are recorded, the other four banks have published validation records, and served papers are live; result history is session-scoped until auth (#35). The router applies the policy, closed-fact and teaching gates before retrieval; answers carry typed `policy:script:`, `persona:`, `lore:` and `lesson:` citations with a deterministic cross-type check (#216-#220). Short-term conversation memory is live behind an opt-in `thread_id` (#30), with a bounded conversation block in the chat prompt (except the experimental multi-book path); the next product surface is accounts (#35). See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
+> Status: grounded chat, all five O.W.L. knowledge packs published at 1.0.0, the DADA, Charms, Potions, Transfiguration and Herbology exam banks published at 1.0.0, lesson mode live behind `OWL_LESSON_MODE`, and the professor persona live behind `OWL_PERSONA`. The academy frontend ships from `web/` on Cloudflare Pages, and the API is at https://api.monitus.org. Lesson answers cite reviewed materials and their book source refs; questions outside the pack fall back to labelled set-text answers. Each bank holds 25 MCQ and 25 short-answer items, hybrid grading is built, the DADA and Charms judge calibrations are recorded, the other three banks have published validation records, and served papers are live; result history is session-scoped until auth (#35). The router applies the policy, closed-fact and teaching gates before retrieval; answers carry typed `policy:script:`, `persona:`, `lore:` and `lesson:` citations with a deterministic cross-type check (#216-#220). Short-term conversation memory is live behind an opt-in `thread_id` (#30), with a bounded conversation block in the chat prompt (except the experimental multi-book path); the next product surface is accounts (#35). See [`docs/workplan.md`](docs/workplan.md), [`docs/api.md`](docs/api.md), [`web/README.md`](web/README.md) and the milestones.
 
 ---
 
@@ -193,13 +193,16 @@ bank and the short-answer judge:
 - independent model checks: a second model solves each MCQ without the key,
   judges every option, and checks every short-answer golden answer;
 - judge calibration: 24 committed student-style answers over 8 short questions
-  with owner-reviewed marks; exact and adjacent agreement, mean absolute error,
-  per-criterion agreement, retry rate and length bias.
+  with AI-proposed marks that the owner adopts via the PR; exact and adjacent
+  agreement, mean absolute error, per-criterion agreement, retry rate and length
+  bias.
 
-The latest record is `docs/runs/2026-11-09-191-dada-bank-eval.md`: 25/25 MCQ
+The DADA record is `docs/runs/2026-11-09-191-dada-bank-eval.md`: 25/25 MCQ
 keys, 0 ambiguities, 25/25 golden answers, adjacent agreement 0.9167, mean
-absolute error 0.5000 and gate PASS. The bank and corpus are host data, so the
-live exam eval runs on the host; CI runs its offline tests. The chat RAG
+absolute error 0.5000 and gate PASS. The Charms calibration record is
+`docs/runs/2026-11-13-261-charms-judge-calibration.md`: 24 cases, exact 0.6250,
+adjacent 1.0000, MAE 0.3750 and gate PASS. The bank and corpus are host data, so
+the live exam eval runs on the host; CI runs its offline tests. The chat RAG
 baseline above remains the retrieval evaluation.
 
 ---
@@ -243,7 +246,7 @@ This repository is developed with AI coding agents under human review.
 
 This project is developed with AI coding agents under human review, and that usage is recorded per ticket.
 
-- AI drafted most implementation code and tests: provider adapters and probes, retrieval and reranking, generation and verification, the API and SSE surface, the agent graph and router, the persona and lore layer, the persona lesson voice and conformance eval (#176), ingest and index, the eval harness and CI gate, the deploy files, and the entire frontend (`web/`, tickets #132, #134-#137, #141, #143, #145), including a read-only reviewer agent that checked each frontend ticket against its acceptance criteria before merge. It also drafted the DADA, Charms, Potions, Transfiguration and Herbology subject-pack materials and the lesson-table audit that produced the five packs at 1.0.0, the five exam banks 1.0.0 (25 MCQ + 25 short answers each), which an independent Mistral Small verifier checked, the hybrid grading path (#192), the bank evaluation and judge calibration (#191), the served exam API and frontend swap (#193), and short-term chat memory with its deterministic follow-up resolver, bounded conversation context and thread tests (#30).
+- AI drafted most implementation code and tests: provider adapters and probes, retrieval and reranking, generation and verification, the API and SSE surface, the agent graph and router, the persona and lore layer, the persona lesson voice and conformance eval (#176), ingest and index, the eval harness and CI gate, the deploy files, and the entire frontend (`web/`, tickets #132, #134-#137, #141, #143, #145), including a read-only reviewer agent that checked each frontend ticket against its acceptance criteria before merge. It also drafted the DADA, Charms, Potions, Transfiguration and Herbology subject-pack materials and the lesson-table audit that produced the five packs at 1.0.0, the five exam banks 1.0.0 (25 MCQ + 25 short answers each), which an independent Mistral Small verifier checked, the hybrid grading path (#192), the bank evaluation and judge calibration (#191, #261), the served exam API and frontend swap (#193), and short-term chat memory with its deterministic follow-up resolver, bounded conversation context and thread tests (#30).
 - The human set the contracts, provider abstraction, eval discipline and scope boundaries; chose the defaults, degradation policies and flag states; froze the held-out sets; approved the DADA prose and lesson-table scope on 2026-11-08; and reviewed and owns every line.
 - AI assisted with documentation, issue text and run records; the human reviewed the published text.
 

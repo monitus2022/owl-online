@@ -1,4 +1,4 @@
-"""Short-answer judge calibration for the DADA bank (#191).
+"""Short-answer judge calibration for a subject exam bank (#191, #261).
 
 The calibration set is committed under eval/exam/fixtures. Each case is an
 original student-style answer with human criterion marks. The judge grades each

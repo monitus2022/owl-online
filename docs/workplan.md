@@ -449,9 +449,9 @@ B1 exit criteria:
 ### B2: Exam bank
 
 Status: all five subject banks 1.0.0 published (#190, #213, #228, #230,
-#231); hybrid grading built (#192); the DADA bank eval and judge calibration
-are recorded (#191) and the other four banks have published validation
-records; served attempts built (#193).
+#231); hybrid grading built (#192); the DADA and Charms bank evals and judge
+calibrations are recorded (#191, #261) and the other three banks have published
+validation records; served attempts built (#193).
 
 A paper is 10 questions: 6 MCQ at 3 marks and 4 short answers at 8 marks, 50
 marks total. That is long enough to feel like a paper and short enough to finish
@@ -529,7 +529,8 @@ Exit criteria (met by #190-#193):
 - totals and bands are deterministic;
 - an owner-reviewed calibration set (AI-proposed marks adopted by the owner)
   reports score agreement and mean absolute error
-  (`docs/runs/2026-11-09-191-dada-bank-eval.md`).
+  (`docs/runs/2026-11-09-191-dada-bank-eval.md` and
+  `docs/runs/2026-11-13-261-charms-judge-calibration.md`).
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 

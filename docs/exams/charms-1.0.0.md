@@ -175,6 +175,10 @@
   answers accepted, 0 missing required points.
 - Option lengths: correct option strictly longest in 48.0% of MCQs, mean gap
   0.72 words.
+- Calibration: run id `exam-20261113-5e5fb6bf`; 24 cases over 8 short-answer
+  items; exact 0.6250, adjacent 1.0000, MAE 0.3750, 0 needs_review; record
+  `docs/runs/2026-11-13-261-charms-judge-calibration.md`. Three cases are
+  over-awarded by one mark; six partial answers are one mark under.
 
 ## Review
 

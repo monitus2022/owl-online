@@ -31,7 +31,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/test_report.py` | row and rendering tests, no network |
 | `scripts/run_eval.py` | CLI params and dispatch |
 | `scripts/measure_aggregation.py` | aggregation fixture measurement |
-| `eval/exam/` | DADA bank eval: deterministic checks, independent model checks, judge calibration, calibration fixture and runner (#191) |
+| `eval/exam/` | Subject bank eval: deterministic checks, independent model checks, judge calibration, calibration fixtures and runner (#191, #261) |
 | `eval/persona/` | persona-conformance fixture, deterministic checks, pinned voice judge, calibration and runner (#176) |
 | `eval/routing/` | frozen contract/authority routing fixture and loader (#217) |
 
@@ -539,37 +539,46 @@ because the judge's reasoning tokens otherwise consume the budget. A model list
 and fixture can be passed with `--models` and `--fixture`. The script exits
 non-zero when no verdict parses, so a broken run cannot look like a result.
 
-## Exam-bank eval (#191)
+## Exam-bank eval (#191, #261)
 
-The DADA bank eval is separate from the chat eval. It needs the local bank, pack,
-corpus and model keys because the bank prose and corpus are not in git.
+The subject bank eval is separate from the chat eval. It needs the local bank,
+pack, corpus and model keys because the bank prose and corpus are not in git.
 
 ```text
 uv run python scripts/run_exam_eval.py
+uv run python scripts/run_exam_eval.py --subject charms
 ```
+
+`--subject` selects `data/exams/<subject>` and the subject calibration file
+(`calibration.jsonl` for DADA, `calibration-<subject>.jsonl` otherwise).
+`--bank` and `--calibration` override either path.
 
 It runs:
 
 - deterministic checks: validator, grounding, MCQ options, answer positions,
   short-answer length, rubric and points, exact and near duplicates (token
   Jaccard and embedding cosine), and topic, concept, material and difficulty
-  coverage;
+  coverage; the DADA-specific topic, material and difficulty targets are
+  skipped for other subjects, while the concept cap still runs;
 - independent checks: a second model solves each MCQ without the key, judges
   every option, answers each short question and compares its answer with the
   golden answer;
 - calibration: 8 short questions with 3 student-style answers each (24 cases)
-  and owner-reviewed criterion marks (AI-proposed from the rubric; the owner
-  adopts them via the PR) in `eval/exam/fixtures/calibration.jsonl`; one judge
-  pass per answer group.
+  and AI-proposed criterion marks (the owner adopts them via the PR) in
+  `eval/exam/fixtures/calibration-<subject>.jsonl` (`calibration.jsonl` for
+  DADA); one judge pass per answer group.
 
 Thresholds: grounding 100 percent, MCQ independent solver 100 percent, ambiguity
 0, duplicate maximums below 0.75 Jaccard and 0.90 cosine, calibration MAE at
 most 1.5 marks and adjacent agreement at least 0.90, and no unreviewed parse
-failure. `--no-independent` and `--no-calibration` run the deterministic checks
-only for a quick check.
+failure. `--no-independent` and `--no-calibration` each disable one section;
+pass both for a deterministic-only quick check.
 
-The record is `docs/runs/2026-11-09-191-dada-bank-eval.md`; a row is in the Runs
-table in `docs/runs/README.md`.
+The DADA and Charms records are
+`docs/runs/2026-11-09-191-dada-bank-eval.md` and
+`docs/runs/2026-11-13-261-charms-judge-calibration.md`; a row for each is in the
+Runs table in `docs/runs/README.md`. Until the other three fixtures exist, run
+them with `--no-calibration`.
 
 ## Persona conformance (#176)
 

@@ -184,3 +184,34 @@ def test_committed_calibration_fixture_shape() -> None:
         file_sha256(path)
         == "c0d00cb0d557bcbb39048cc910df41942949c2fbaadaa3470bdb75aa72eeb970"
     )
+
+
+def test_committed_charms_calibration_fixture_shape() -> None:
+    path = Path(__file__).resolve().parent / "fixtures" / "calibration-charms.jsonl"
+    cases = load_calibration(path)
+    assert len({case.item_id for case in cases}) == 8
+    assert len(cases) == 24
+    assert {case.variant for case in cases} >= {
+        "full",
+        "partial",
+        "wrong",
+        "verbose",
+        "missing_key_term",
+        "off_topic",
+        "contradictory",
+        "blank",
+    }
+    assert all(set(case.marks) == {"correctness", "completeness"} for case in cases)
+    per_item: dict[str, int] = {}
+    for case in cases:
+        per_item[case.item_id] = per_item.get(case.item_id, 0) + 1
+    assert set(per_item.values()) == {3}
+    for item_id in per_item:
+        passes = {
+            case.pass_name for case in cases if case.item_id == item_id
+        }
+        assert len(passes) == 3
+    assert (
+        file_sha256(path)
+        == "5e5fb6bf8bda74368c6dd10afd95126d735497fb11fc88bc66f6bb52977ffcce"
+    )

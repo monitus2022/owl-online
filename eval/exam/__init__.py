@@ -1,4 +1,4 @@
-"""DADA bank evaluation: deterministic checks, independent checks and calibration."""
+"""Subject bank evaluation: deterministic checks, independent checks and calibration."""
 
 from eval.exam.calibration import (
     VARIANTS,
