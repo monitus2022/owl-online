@@ -561,7 +561,7 @@ Anonymous threads are enough here. Auth is not a dependency.
 
 ## Phase C.1: RAG hardening
 
-Status: #248 and #249 delivered; #250-#253, #258 and #259 active. This is the
+Status: #248, #249 and #258 delivered; #250-#253 and #259 active. This is the
 RAG side of lesson and chat. It is not a new product surface and it does not
 wait on auth or exam mode.
 
@@ -570,9 +570,17 @@ from 0.1515 to 0.0909; the remaining three false refusals are cross-subject
 turns. The final post-review record is
 `docs/runs/2026-11-13-249-context-aware-retrieval-r2.md`.
 
-The order after #249 is: #258 calibrate the judge, then #251 lesson prompt and
-claim binding, then #252 comparison-aware selection, #259 the comparison router,
-and #253 referral. #250 remains the paraphrase false-refusal line.
+#258's final calibration run covers 18 items, 16 judged and 2 refusals, across
+in-pack, paraphrase, multi-concept, mixed and off-pack. The owner adopted the
+labels on 2026-11-13. The three-level judge reports exact agreement 1.0000, the
+production binary judge reports 1.0000, and both refusals are recognized. The
+adopted record is
+`docs/runs/2026-11-13-258-faithfulness-calibration-adopted.md`, with the
+pre-adoption and superseded passes in the other #258 records.
+
+The order after #258 is: #251 lesson prompt and claim binding, then #252
+comparison-aware selection, #259 the comparison router, and #253 referral. #250
+remains the paraphrase false-refusal line.
 
 The baseline is `docs/runs/2026-11-12-248-rag-eval-foundation.md`: 62 lesson
 items and 36 multi-turn turns. Lesson citation recall is 0.9231 and citation
@@ -597,7 +605,7 @@ gaps.
 | #251 | Claim-level citation binding for chat and lesson |
 | #252 | Multi-part retrieval, decomposition and reranker tuning |
 | #253 | Cross-subject concept awareness and professor referral |
-| #258 | Calibrate the lesson faithfulness judge before optimizing to it |
+| #258 | Delivered: owner-adopted 18-item calibration; exact and binary agreement 1.0000; gate PASS |
 | #259 | Route in-subject comparison questions to lesson |
 
 Exit criteria:
@@ -667,7 +675,7 @@ Phase C; it does not block Phase D.
 |---|---|---|
 | #247 | Epic: RAG hardening for lesson and chat | V3.1 - RAG hardening |
 | #248 | Delivered: lesson and multi-turn evaluation foundation, baseline and gate | V3.1 - RAG hardening |
-| #258 | Calibrate the lesson faithfulness judge | V3.1 - RAG hardening |
+| #258 | Delivered: owner-adopted 18-item calibration; exact and binary agreement 1.0000; gate PASS | V3.1 - RAG hardening |
 | #249 | Delivered: implicit referents and corrections; query 1.0000, false refusal 3/33 | V3.1 - RAG hardening |
 | #250 | Lesson false refusals from lexical coverage | V3.1 - RAG hardening |
 | #251 | Claim-level citation binding for chat and lesson | V3.1 - RAG hardening |
@@ -739,11 +747,11 @@ Phase C; it does not block Phase D.
 - A delivered or superseded ticket is closed with a link; nothing is deleted.
 - An active ticket needs a `Done when` and a verification step.
 
-The #216 epic is delivered; #30, #19, #181, #248 and #249 are delivered. The
-active work is the RAG hardening line (#250, #251, #258) plus #33 and #128.
+The #216 epic is delivered; #30, #19, #181, #248, #249 and #258 are delivered.
+The active work is the RAG hardening line (#250, #251) plus #33 and #128.
 Exam mode is delegated to a separate agent and is not part of this workplan's
-active set. The remaining Now items are #250, #251, #258 and the two blocked
-product tickets; Next is #252, #253, #259, #43, #35 and #44. On the pack line, the canon index is harvested (#125, #126)
+active set. The remaining Now items are #250, #251 and the two blocked product tickets;
+Next is #252, #253, #259, #43, #35 and #44. On the pack line, the canon index is harvested (#125, #126)
 and resolved (#127 closed); #128 carries reference prefill and coverage
 maintenance. The #87 schema, validator and all five 1.0.0 packs are delivered.
 #16, #120, #170, #172, #174 and #127 are closed. #107 is deferred and likely

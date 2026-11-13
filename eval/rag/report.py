@@ -28,7 +28,12 @@ def load_report(path: Path) -> dict[str, object]:
 
 def latest_report(results_dir: Path) -> Path | None:
     """The newest rag-*.json that is not the pinned baseline."""
-    paths = [path for path in results_dir.glob("rag-*.json") if path.name != "rag-baseline.json"]
+    paths = [
+        path
+        for path in results_dir.glob("rag-*.json")
+        if path.name != "rag-baseline.json"
+        and not path.name.startswith("rag-calibration-")
+    ]
     return max(paths, key=lambda path: path.name) if paths else None
 
 

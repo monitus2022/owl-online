@@ -13,6 +13,7 @@ from eval.rag.metrics import (
     summarize_lesson,
     summarize_multiturn,
 )
+from eval.rag.report import latest_report
 
 
 def _lesson_item(*, item_id: str = "l1", answerable: bool = True) -> LessonItem:
@@ -513,6 +514,14 @@ def test_check_rag_fails_when_the_settings_change(tmp_path: Path):
     report = check_rag(baseline, latest)
     assert report.passed is False
     assert report.fixture_mismatch == ("settings",)
+
+
+def test_latest_report_skips_calibration_reports(tmp_path: Path):
+    (tmp_path / "rag-20260101T000000Z.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "rag-calibration-20260102T000000Z.json").write_text("{}", encoding="utf-8")
+    latest = latest_report(tmp_path)
+    assert latest is not None
+    assert latest.name == "rag-20260101T000000Z.json"
 
 
 def test_check_rag_fails_when_the_fixture_changes(tmp_path: Path):
