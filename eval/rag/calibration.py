@@ -15,12 +15,14 @@ from pathlib import Path
 from app.knowledge.materials import Material
 from app.pipeline.generate import ABSTAIN_MESSAGE, render_evidence
 from app.pipeline.generate.generate import is_refusal
-from app.pipeline.generate.lesson import render_materials
+from app.pipeline.generate.lesson import is_lesson_refusal, render_materials
 from app.schemas import Chunk
+from eval.harness import FAITHFUL_SYSTEM, parse_faithful
 from eval.rag.runner import RagStack
 
 LABELS = ("supported", "partial", "unsupported")
 LABEL_SCORE = {"unsupported": 0, "partial": 1, "supported": 2}
+SLICES = frozenset({"in_pack", "paraphrase", "multi_concept", "mixed", "off_pack"})
 
 FAITHFUL_LABEL_SYSTEM = (
     "You check whether a lesson answer is supported by the notes and excerpts "
@@ -41,6 +43,7 @@ class CalibrationItem:
     """One synthetic answer and the evidence it should be judged against."""
 
     item_id: str
+    slice_name: str
     question: str
     answer: str
     material_ids: tuple[str, ...]
@@ -54,6 +57,7 @@ class CalibrationItem:
 class CalibrationResult:
     item: CalibrationItem
     judge_label: str | None
+    binary_faithful: bool | None = None
     parse_failed: bool = False
     refusal_ok: bool | None = None
 
@@ -74,13 +78,18 @@ class CalibrationReport:
     exact_agreement: float
     adjacent_agreement: float
     mean_absolute_error: float
+    binary_agreement: float
     parse_failures: int
     disagreements: tuple[CalibrationResult, ...]
     label_source: str
 
     @property
+    def adopted(self) -> bool:
+        return self.label_source.startswith("owner-adopted")
+
+    @property
     def ok(self) -> bool:
-        return self.parse_failures == 0 and self.exact_agreement >= 0.7
+        return self.adopted and self.parse_failures == 0 and self.exact_agreement >= 0.7
 
 
 def _string_tuple(record: dict[str, object], key: str, where: str) -> tuple[str, ...]:
@@ -119,12 +128,15 @@ def load_calibration(path: Path) -> list[CalibrationItem]:
             raise ValueError(f"{path}:{line_number}: each line must be an object")
         where = f"{path}:{line_number}"
         item_id = str(record.get("id", "")).strip()
+        slice_name = str(record.get("slice", "")).strip()
         question = str(record.get("question", "")).strip()
         answer = str(record.get("answer", "")).strip()
         label = str(record.get("label", "")).strip().lower()
         label_source = str(record.get("label_source", "")).strip()
         if not item_id or not question or not answer:
             raise ValueError(f"{where}: id, question and answer are required")
+        if slice_name not in SLICES:
+            raise ValueError(f"{where}: unknown slice {slice_name!r}")
         if label not in {*LABELS, "refusal"}:
             raise ValueError(f"{where}: unknown label {label!r}")
         if not label_source:
@@ -135,6 +147,7 @@ def load_calibration(path: Path) -> list[CalibrationItem]:
         items.append(
             CalibrationItem(
                 item_id=item_id,
+                slice_name=slice_name,
                 question=question,
                 answer=answer,
                 material_ids=_string_tuple(record, "material_ids", where),
@@ -146,6 +159,9 @@ def load_calibration(path: Path) -> list[CalibrationItem]:
         )
     if not items:
         raise ValueError(f"{path}: no calibration items")
+    missing = SLICES - {item.slice_name for item in items}
+    if missing:
+        raise ValueError(f"{path}: missing calibration slices {sorted(missing)}")
     return items
 
 
@@ -156,17 +172,26 @@ def _evidence_prompt(
 ) -> str:
     parts: list[str] = []
     materials: list[Material] = []
-    for subject in {material.split("-", 1)[0] for material in item.material_ids}:
+    missing_materials: list[str] = []
+    for material_id in item.material_ids:
+        subject = material_id.split("-", 1)[0]
         pack = pack_store.get(subject)
-        if pack is None:
-            continue
-        for material_id in item.material_ids:
-            material = pack.find_material(material_id)
-            if material is not None and material not in materials:
-                materials.append(material)
+        material = pack.find_material(material_id) if pack is not None else None
+        if material is None:
+            missing_materials.append(material_id)
+        elif material not in materials:
+            materials.append(material)
+    missing_chunks = [chunk_id for chunk_id in item.chunk_ids if chunk_id not in chunks_by_id]
+    if missing_materials or missing_chunks:
+        raise ValueError(
+            f"{item.item_id}: unresolved evidence "
+            f"materials={missing_materials} chunks={missing_chunks}"
+        )
+    if item.label != "refusal" and not materials and not item.chunk_ids:
+        raise ValueError(f"{item.item_id}: non-refusal item has no evidence")
     if materials:
         parts.append(f"Lesson notes:\n{render_materials(materials)}")
-    chunks = [chunks_by_id[cid] for cid in item.chunk_ids if cid in chunks_by_id]
+    chunks = [chunks_by_id[cid] for cid in item.chunk_ids]
     if chunks:
         parts.append(f"Excerpts:\n{render_evidence(chunks)}")
     parts.append(f"Question: {item.question}\n\nAnswer: {item.answer}")
@@ -191,6 +216,15 @@ def summarize_calibration(results: list[CalibrationResult]) -> CalibrationReport
         if judged
         else 0.0
     )
+    binary_judged = [result for result in judged if result.binary_faithful is not None]
+    binary_agreement = (
+        sum(
+            result.binary_faithful == (result.item.label == "supported") for result in binary_judged
+        )
+        / len(binary_judged)
+        if binary_judged
+        else 0.0
+    )
     return CalibrationReport(
         total=len(results),
         judged=len(judged),
@@ -198,6 +232,7 @@ def summarize_calibration(results: list[CalibrationResult]) -> CalibrationReport
         exact_agreement=exact / len(judged) if judged else 0.0,
         adjacent_agreement=adjacent / len(judged) if judged else 0.0,
         mean_absolute_error=mae,
+        binary_agreement=binary_agreement,
         parse_failures=sum(result.parse_failed for result in results),
         disagreements=tuple(result for result in judged if result.judge_label != result.item.label),
         label_source=results[0].item.label_source if results else "",
@@ -213,19 +248,24 @@ async def run_calibration(
     results: list[CalibrationResult] = []
     for item in items:
         if item.label == "refusal":
-            ok = item.answer.strip().startswith(ABSTAIN_MESSAGE) or is_refusal(
-                item.answer, cited=False
+            ok = (
+                item.answer.strip().startswith(ABSTAIN_MESSAGE)
+                or is_refusal(item.answer, cited=False)
+                or is_lesson_refusal(item.answer, cited=False)
             )
             results.append(CalibrationResult(item=item, judge_label=None, refusal_ok=ok))
             continue
         prompt = _evidence_prompt(item, pack_store, stack.chunks_by_id)
         reply = await stack.judge.generate(FAITHFUL_LABEL_SYSTEM, prompt)
         label = parse_label(reply)
+        binary_reply = await stack.judge.generate(FAITHFUL_SYSTEM, prompt)
+        binary = parse_faithful(binary_reply)
         results.append(
             CalibrationResult(
                 item=item,
                 judge_label=label,
-                parse_failed=label is None,
+                binary_faithful=binary,
+                parse_failed=label is None or binary is None,
             )
         )
     return summarize_calibration(results)
@@ -239,6 +279,8 @@ def render_calibration(report: CalibrationReport) -> str:
         f"exact agreement: {report.exact_agreement:.4f}",
         f"adjacent agreement: {report.adjacent_agreement:.4f}",
         f"mean absolute error: {report.mean_absolute_error:.4f}",
+        f"binary judge agreement: {report.binary_agreement:.4f}",
+        f"labels adopted: {report.adopted}",
         f"parse failures: {report.parse_failures}",
     ]
     if report.disagreements:
@@ -247,7 +289,10 @@ def render_calibration(report: CalibrationReport) -> str:
             lines.append(
                 f"  {result.item.item_id}: label={result.item.label} judge={result.judge_label}"
             )
-    lines.append("gate: " + ("PASS" if report.ok else "REVIEW"))
+    if not report.adopted:
+        lines.append("gate: REVIEW (labels not adopted)")
+    else:
+        lines.append("gate: " + ("PASS" if report.ok else "REVIEW"))
     return "\n".join(lines)
 
 

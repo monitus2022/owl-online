@@ -570,10 +570,11 @@ from 0.1515 to 0.0909; the remaining three false refusals are cross-subject
 turns. The final post-review record is
 `docs/runs/2026-11-13-249-context-aware-retrieval-r2.md`.
 
-#258's first calibration run reports exact agreement 1.0000 on 13 proposed
-items, with 1 refusal checked separately. The labels are agent-proposed and
-need owner adoption before the calibration is pinned; the record is
-`docs/runs/2026-11-13-258-faithfulness-calibration.md`.
+#258's final calibration run covers 18 items, 16 judged and 2 refusals, across
+in-pack, paraphrase, multi-concept, mixed and off-pack. The three-level and
+production binary judges both report exact agreement 1.0000. The labels are
+agent-proposed and need owner adoption before the calibration is pinned; the
+record is `docs/runs/2026-11-13-258-faithfulness-calibration.md`.
 
 The order after #249 is: adopt the #258 labels, then #251 lesson prompt and
 claim binding, then #252 comparison-aware selection, #259 the comparison router,
@@ -602,7 +603,7 @@ gaps.
 | #251 | Claim-level citation binding for chat and lesson |
 | #252 | Multi-part retrieval, decomposition and reranker tuning |
 | #253 | Cross-subject concept awareness and professor referral |
-| #258 | Measured: judge exact agreement 1.0000 on 13 proposed items; owner adoption pending |
+| #258 | Measured: 18 items, 16 judged, 2 refusals; exact and binary agreement 1.0000; owner adoption pending |
 | #259 | Route in-subject comparison questions to lesson |
 
 Exit criteria:
@@ -672,7 +673,7 @@ Phase C; it does not block Phase D.
 |---|---|---|
 | #247 | Epic: RAG hardening for lesson and chat | V3.1 - RAG hardening |
 | #248 | Delivered: lesson and multi-turn evaluation foundation, baseline and gate | V3.1 - RAG hardening |
-| #258 | Measured: judge exact agreement 1.0000 on 13 proposed items; owner adoption pending | V3.1 - RAG hardening |
+| #258 | Measured: 18 items, 16 judged, 2 refusals; exact and binary agreement 1.0000; owner adoption pending | V3.1 - RAG hardening |
 | #249 | Delivered: implicit referents and corrections; query 1.0000, false refusal 3/33 | V3.1 - RAG hardening |
 | #250 | Lesson false refusals from lexical coverage | V3.1 - RAG hardening |
 | #251 | Claim-level citation binding for chat and lesson | V3.1 - RAG hardening |

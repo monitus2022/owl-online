@@ -1,52 +1,57 @@
 # Run record: #258 lesson faithfulness calibration
 
 - Date: 2026-11-13
-- Run id: `20261113T033913Z`
+- Run ids: `20261113T033913Z` (14-item first pass), `20261113T035711Z` (18-item final pass)
 - Ticket: #258 (calibrate the lesson faithfulness judge)
 - Config: `rag-calibration`
-- Artifacts: `eval/results/rag-calibration-20261113T033913Z.json` (local, gitignored)
-- Fixture: `eval/rag/fixtures/faithfulness_calibration.jsonl`, SHA-256 `0cfab6e6b5a1`
+- Artifacts: `eval/results/rag-calibration-20261113T035711Z.json` (local, gitignored)
+- Fixture: `eval/rag/fixtures/faithfulness_calibration.jsonl`, SHA-256 `0f1cc196aa03`
 
 ## Configuration
 
 | Field | Value |
 |---|---|
 | Judge | `deepseek/deepseek-v4.1-flash-1017`, temperature 0.0 |
-| Prompt | three-level faithfulness rubric (`supported` / `partial` / `unsupported`) |
-| Items | 14 total: 13 judged, 1 refusal |
+| Prompts | three-level `faithfulness-label-v1` and production binary `FAITHFUL_SYSTEM` |
+| Items | 18 total: 16 judged, 2 refusals |
+| Slices | in-pack, paraphrase, multi-concept, mixed, off-pack |
 | Label source | agent-proposed; owner review required |
-| Labels | 5 supported, 3 partial, 5 unsupported, 1 refusal |
+| Labels | 8 supported, 4 partial, 4 unsupported, 2 refusal |
 
-The answers are short synthetic teaching answers. The fixture stores the
-question, answer, material ids and chunk ids; the runner loads the published
-notes and corpus at run time. No pack prose or corpus text is committed.
+The answers are short synthetic paraphrases. The fixture stores the question,
+answer, material ids and chunk ids; the runner loads the published notes and
+corpus at run time. No material or corpus text is stored in the fixture.
 
 ## Agreement
 
 | Metric | Value |
 |---|---:|
-| Exact agreement | 1.0000 |
-| Adjacent agreement | 1.0000 |
-| Mean absolute error | 0.0000 |
+| Three-level exact agreement | 1.0000 |
+| Three-level adjacent agreement | 1.0000 |
+| Three-level mean absolute error | 0.0000 |
+| Production binary judge agreement | 1.0000 |
 | Parse failures | 0 |
-| Refusal check | 1/1 |
+| Refusal checks | 2/2 |
 
 ## Reading
 
-- The judge agrees with every proposed label on this set, including the partial
-  answers. It is not simply marking every teaching-shaped answer unsupported.
-- The labels are agent-proposed, not owner-adopted. This run shows the judge is
-  usable; it does not close #258. The owner still needs to adopt or correct the
-  14 labels before the calibration is pinned as a gate.
-- The set is small and synthetic. It should be extended with 5-10 answers from
-  real model outputs before the final gate, but those answers must not commit
-  pack prose.
-- The #248 lesson faithfulness of 2/30 is therefore unlikely to be a simple
-  strictness artifact. The next step is #251: tighten the lesson prompt, pass
-  the full concept group and bind claims to citations, then measure against
-  this calibrated judge.
-- The refusal item is checked separately and is not part of the faithfulness
-  denominator.
+- The three-level judge and the production binary judge both agree with every
+  proposed label on this set, including the partial and mixed answers. The
+  judge is not simply marking every teaching-shaped answer unsupported.
+- The first pass used 14 items and only in-pack/off-pack evidence; it was
+  superseded by the 18-item set, which adds paraphrase, multi-concept and mixed
+  coverage and a second refusal form.
+- The labels are agent-proposed, not owner-adopted. The judge and the label
+  proposer are the same model family, so 1.0000 is self-agreement, not
+  independent calibration. The gate therefore reports
+  `REVIEW (labels not adopted)` and exits non-zero.
+- The set is still synthetic and small. Owner adoption is the independence
+  step; after adoption, add 5-10 real model answers before pinning the gate,
+  without committing pack prose.
+- The #248 lesson faithfulness of 2/30 is unlikely to be a simple strictness
+  artifact: the judge can separate supported, partial and unsupported answers.
+  The next step is #251: tighten the lesson prompt, pass the full concept group
+  and bind claims to citations, then measure against the adopted calibration.
 
 ## Reproduce
 
@@ -57,13 +62,16 @@ uv run python scripts/run_rag_calibration.py
 ## Raw summary
 
 ```text
-run_id: 20261113T033913Z
+run_id: 20261113T035711Z
+fixture sha: 0f1cc196aa03
 label source: agent-proposed; owner review required
-items: 14 judged: 13 refusals: 1
+items: 18 judged: 16 refusals: 2
 exact agreement: 1.0000
 adjacent agreement: 1.0000
 mean absolute error: 0.0000
+binary judge agreement: 1.0000
+labels adopted: False
 parse failures: 0
-gate: PASS
-wrote /Users/tc/Documents/Github/owl-online/eval/results/rag-calibration-20261113T033913Z.json
+gate: REVIEW (labels not adopted)
+wrote /Users/tc/Documents/Github/owl-online/eval/results/rag-calibration-20261113T035711Z.json
 ```
