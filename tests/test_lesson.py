@@ -586,6 +586,8 @@ async def test_ask_lesson_traces_selection_and_scope(tmp_path):
     assert result_span["abstained"] is False
     assert result_span["scope"] == "in_pack"
     assert result_span["attempts"] == 1
+    assert result_span["uncited_paragraphs"] == 0
+    assert result_span["fallback"] is False
 
 
 @pytest.mark.asyncio
@@ -1586,6 +1588,43 @@ async def test_ask_lesson_keeps_an_answerable_draft_when_the_retry_refuses():
     assert result.attempts == 2
     assert result.retry_reason == "uncited_paragraph"
     assert "abandoned shops" in result.answer
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_traces_the_served_best_draft(tmp_path):
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = SequencedLlm(
+        [
+            "A boggart takes the shape of whatever the watcher fears most, and "
+            "it prefers a dark and enclosed space "
+            "[mat:dada-dark-creatures-boggarts-nature].\n\n"
+            "It also haunts old houses, abandoned shops and any other forgotten "
+            "place where people once lived and feared something in the dark.",
+            "I cannot answer that from the books.",
+        ]
+    )
+    trace_path = tmp_path / "trace.jsonl"
+    sink = TraceSink(trace_path)
+    token = start_trace("lesson-best-draft", sink)
+    try:
+        await ask_lesson(
+            "How does a boggart work?",
+            selector=selector,
+            subject="dada",
+            llm=llm,
+            max_retries=1,
+        )
+    finally:
+        end_trace(token)
+    records = [
+        json.loads(line)
+        for line in trace_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    span = next(record for record in records if record["span"] == "lesson_result")
+    assert span["fallback"] is True
+    assert span["uncited_paragraphs"] == 1
+    assert span["attempts"] == 2
 
 
 @pytest.mark.asyncio

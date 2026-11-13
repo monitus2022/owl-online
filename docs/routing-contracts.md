@@ -187,6 +187,16 @@ Report a confusion matrix over contracts, not a single accuracy. A system that
 routes everything to abstain scores well on policy leak and fails the product. A
 system that routes residual to lessons does the opposite.
 
+## Provenance residual
+
+The lesson and chat paths verify that a citation names a retrieved span, not
+that the span entails the sentence it is attached to. A model can restate a fact
+from the conversation or an earlier turn and attach the current excerpt to it:
+the citation is valid, the support is not. That residual is separate from the
+routing residual and is the #251 target. Measure it on the judged sample as the
+share of sentences whose cited span does not contain the claim, and do not close
+it with a citation-validity check.
+
 ## Gate baseline
 
 The 2026-11-10 measurement on the frozen fixture (207 items, DADA subject)

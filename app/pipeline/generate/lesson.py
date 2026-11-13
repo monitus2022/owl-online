@@ -590,11 +590,11 @@ async def ask_lesson(
 
     One draft is verified deterministically. A draft that misses a required
     citation space gets one stricter retry. A draft with an uncited factual
-    paragraph gets one paragraph-specific retry; if the retry still leaves a
-    paragraph uncited or refuses, the earlier answerable draft is served with
-    the citations it has, because placement alone is not a reason to refuse. A
-    refusal is final only when no answerable draft exists, exactly like the
-    corpus path.
+    paragraph gets one paragraph-specific retry. A retry that is still merely
+    uncited is served with the citations it has; a retry that refuses or loses
+    the citation space restores the earlier answerable draft. Placement alone is
+    not a reason to refuse, and a refusal is final only when no answerable draft
+    exists, exactly like the corpus path.
 
     `prompt_question` keeps the student's wording in the prompt while selection
     and retrieval use the rewritten `question`. `conversation_context` is a
@@ -744,7 +744,7 @@ async def ask_lesson(
     retry_reason: str | None = None
     attempt_system = system
     best: tuple[AskResult, str, int] | None = None
-    fallback = False
+    served_best = False
     while True:
         attempt += 1
         draft = await one_draft(attempt_system, prompt, llm, on_token)
@@ -790,7 +790,10 @@ async def ask_lesson(
         # The last attempt may have lost the citation space; the restored
         # draft has it, so the final branch must serve rather than abstain.
         has_required = True
-        fallback = True
+        served_best = True
+        if on_reset is not None:
+            # A streaming client may already have rendered the refused draft.
+            on_reset()
 
     if refusal:
         result = AskResult(
@@ -826,5 +829,5 @@ async def ask_lesson(
         selection_scores=selection_scores,
         uncovered_terms=uncovered_list,
     )
-    trace_result(final_result, attempt, missing_paragraphs, fallback)
+    trace_result(final_result, attempt, missing_paragraphs, served_best)
     return final_result

@@ -218,8 +218,9 @@ The grounding and citation contracts are unchanged. An in-pack answer cites a
 material id, a mixed answer cites a material and a book chunk, an off-pack answer
 cites a book chunk, and a miss uses the in-world abstention line. Every
 substantive paragraph carries a citation; a draft that leaves one uncited gets
-one paragraph-specific retry, then is served with the citations it has, or the
-earlier draft if the retry refuses. The note
+one paragraph-specific retry. A retry that is still merely uncited is served
+with its citations; a retry that refuses or loses the citation space restores
+the earlier answerable draft. The note
 prose is rendered without its inline book chunk ids so the model cannot mistake
 an evidence link for the note citation; the material source refs still resolve on
 the response.

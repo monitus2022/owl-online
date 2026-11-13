@@ -72,6 +72,9 @@ uv run python scripts/run_rag_eval.py
 
 ## Raw summary
 
+The printed summary uses the label `over-220`, which was the report label at the
+time of the run; it is now `at-or-over-limit`.
+
 ```text
 run_id: 20261113T072932Z
 config: rag-eval

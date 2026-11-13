@@ -483,9 +483,9 @@ budget (the top-k size when larger), so the model sees more than one note per
 concept and a comparison keeps both sides. The prompt requires a citation in
 every substantive paragraph, separated by blank lines; a paragraph under 20
 words or one that ends in a question is exempt. `paragraphs_cited` retries once
-with a paragraph-specific prompt when a factual paragraph is uncited, then
-serves the answer, or the earlier answerable draft if the retry refuses, with
-its existing citations rather than refusing. With the
+with a paragraph-specific prompt when a factual paragraph is uncited. A retry
+that is still merely uncited is served with its citations; a retry that refuses
+or loses the citation space restores the earlier answerable draft. With the
 persona on (the default), the prompt asks for under 220 words. A deterministic
 coverage check compares
 the question's content terms with the material prose and the concept

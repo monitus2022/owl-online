@@ -119,9 +119,9 @@ fixture hashes, the judged sample or the pinned settings is a new baseline, not
 a silent update: `--write-baseline` refuses it unless `--force-baseline` is
 passed, and `--check` fails on the mismatch.
 
-Lesson answer length is reported as mean, maximum and over-limit counts. The
-counts include citation tokens, and the length metrics are added, not gated: a
-longer answer raises the report but does not fail the gate.
+Lesson answer length is reported as mean, maximum and at-or-over-limit counts.
+The counts include citation tokens, and the length metrics are added, not gated:
+a longer answer raises the report but does not fail the gate.
 
 ## Lesson faithfulness calibration
 

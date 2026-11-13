@@ -30,15 +30,18 @@ The shipped slice has five parts:
 - After selection, the rest of each matched concept's reviewed group is added
   round-robin, up to a five-material budget (the top-k size when larger).
 - `paragraphs_cited` checks the grounded answer. A draft with an uncited
-  factual paragraph gets one paragraph-specific retry; if the retry still leaves
-  a paragraph uncited or refuses, the earlier answerable draft is served.
-- The eval reports mean, maximum and over-limit word counts. The counts include
-  citation tokens and are added, not gated.
+  factual paragraph gets one paragraph-specific retry. A retry that is still
+  merely uncited is served with its citations; a retry that refuses or loses the
+  citation space restores the earlier answerable draft.
+- The eval reports mean, maximum and at-or-over-limit word counts. The counts
+  include citation tokens and are added, not gated.
 
 The fixture also gained `b2-c14-0000` as an alternative expected chunk for
 `lesson-dada-13`: that chunk states that Hagrid named the giant three-headed dog
 Fluffy. The gold set was incomplete, and the gate requires a new baseline when
-the fixture SHA changes.
+the fixture SHA changes. Running `uv run python scripts/build_rag_fixtures.py`
+reproduces the committed fixture at SHA `de4e373b1acf`; the generator, not a
+hand edit, is the source of truth.
 
 ## Before and after
 
@@ -68,6 +71,9 @@ the fixture SHA changes.
 
 Every run below is a finished eval run. Runs `080422Z` onward share this
 record; `072932Z` has its own record and `073645Z` is covered by this record.
+This is the experiment-record exception in `docs/runs/README.md`: the runs
+differ only in the lesson prompt or the gold set, and each id has a Runs-table
+row.
 
 | Run id | Change | Faithfulness | Citation | Scope | False refusal | Off-pack citation |
 |---|---|---:|---:|---:|---:|---:|
@@ -105,7 +111,8 @@ record; `072932Z` has its own record and `073645Z` is covered by this record.
   the abstention line.
 - The fallback is a deliberate tradeoff. It serves the earlier answerable draft
   even though that draft failed the paragraph check, and it cannot tell a
-  placement refusal from a refusal that judges the notes unsupported. The
+  placement refusal from a refusal that judges the notes unsupported. It also
+  fires when the retry loses the citation space, not only on a refusal. The
   fallback rate and the served draft's uncited-paragraph count are traced but
   not aggregated, so the residual is unmeasured. Measuring both is part of the
   next slice.
@@ -116,16 +123,18 @@ record; `072932Z` has its own record and `073645Z` is covered by this record.
   0.0833 to 0.1667. Both are one extra turn; treat them as directional. Query
   accuracy, mode accuracy and false refusal are #249's movement, not #251's.
 - Length is reported but not gated: mean 199 words, max 291, 11 of 52 answers at
-  220 or more. The 220-word ask lives in the persona preamble, so a deployment
-  with the persona off has no cap. The counts include citation tokens.
+  220 or more. The hard-gate run used the older `> 220` count (9), so its table
+  and this one are not directly comparable on length. The 220-word ask lives in
+  the persona preamble, so a deployment with the persona off has no cap. The
+  counts include citation tokens.
 - The paragraph-citation rate is not an eval metric. The trace carries
   `retry_reason` and `uncited_paragraphs`, but the runner does not aggregate
   attempts or retries. That is a measurement gap for the next slice.
 - The remaining faithfulness gap is generation, not retrieval: the evidence is
   present and cited more often, and the model still elaborates. The next slice
-  is sentence-level support or a more extractive lesson mode. The chat half and
-  the `docs/routing-contracts.md` provenance residual are untouched; #251 stays
-  open.
+  is sentence-level support or a more extractive lesson mode. The chat half is
+  untouched. The provenance residual is documented in
+  `docs/routing-contracts.md` and remains unmeasured; #251 stays open.
 - The persona conformance eval was not re-run. Its judge rubric and fixture
   anchors still describe the unconditional shape (one example, one caution),
   while the lesson prompt now makes both conditional. The conformance scenarios
@@ -154,6 +163,10 @@ uv run python scripts/run_eval.py --rag --check
 ```
 
 ## Raw summary
+
+The printed summary below is the run output. The length label was later renamed
+from `over-220` to `at-or-over-limit` and the threshold from `> 220` to
+`>= LESSON_WORD_LIMIT`; the numbers are unchanged.
 
 ```text
 run_id: 20261113T082310Z

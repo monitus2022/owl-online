@@ -280,12 +280,12 @@ the model sees more than one note per concept and a comparison keeps both sides.
 Every substantive paragraph must carry a material or chunk citation; paragraphs
 are separated by blank lines, and a paragraph under 20 words or one that ends in
 a question is exempt. A draft with an uncited factual paragraph gets one
-paragraph-specific retry; if the retry still leaves a factual paragraph
-uncited, or refuses, the earlier answerable draft is served with the citations
-it does have rather than refused. With
+paragraph-specific retry. A retry that is still merely uncited is served with
+the citations it has; a retry that refuses or loses the citation space restores
+the earlier answerable draft. Placement alone is not a reason to refuse. With
 the persona on (the default), the lesson prompt asks for an answer under 220
-words, and the eval reports mean, maximum and over-limit counts, which include
-citation tokens.
+words, and the eval reports mean, maximum and at-or-over-limit counts, which
+include citation tokens.
 
 `scope` says where the evidence came from:
 
