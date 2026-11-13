@@ -584,6 +584,13 @@ false-refusal line. The residual #251 work is sentence-level support or a more
 extractive lesson mode, because the evidence is present and the model still
 elaborates.
 
+The #251 first slice moves lesson faithfulness from 2/30 to 4/30 and citation
+recall from 0.9231 to 0.9615, with false refusal at 0. The run is
+`20261113T082310Z`, recorded in
+`docs/runs/2026-11-13-251-lesson-faithfulness.md`, which also lists the
+rejected variants and the iteration runs. The slice corrected one off-pack gold
+chunk and re-pinned the RAG baseline at `20261113T082614Z`; the gate passes.
+
 The baseline is `docs/runs/2026-11-12-248-rag-eval-foundation.md`: 62 lesson
 items and 36 multi-turn turns. Lesson citation recall is 0.9231 and citation
 validity is 1.0000, but faithfulness is 2/30. Multi-turn query accuracy is
@@ -790,8 +797,8 @@ project completion by maintainer decision.
 | Measure lesson and multi-turn before changing prompts | The last full run predates the memory work, and the live probes found false refusals and unresolved follow-ups. A prompt change without a lesson and multi-turn baseline cannot be attributed or gated |
 | Calibrate the lesson faithfulness judge before optimizing to it | The #248 baseline is 2/30 with perfect citation validity. That is either a real elaboration problem or a strict judge; owner-adopted labels decide before generation changes |
 | Implicit referents and corrections resolve before retrieval | The model cannot recover a topic the retriever never sees. "one", "it", "its", "that", "the same", "and the counter?" and "no, I meant X" are deterministic rewrites, not generation work |
-| Lesson answers see the full concept group | A top-3 list can hold one note for a concept that has two or three. The model should see the reviewed group before it decides to elaborate, capped at five materials |
-| Every substantive lesson paragraph cites its note | Citation validity is not claim support. A deterministic paragraph check is cheap, retryable and catches the fluent uncited paragraph before the judge does |
+| Lesson answers see the full concept group | A top-3 list can hold one note for a concept that has two or three. The model should see the reviewed group before it decides to elaborate, with a five-material group budget shared round-robin across concepts |
+| Every substantive lesson paragraph cites its note | Citation validity is not claim support. A deterministic paragraph check is cheap, retryable and flags the fluent uncited paragraph before the judge does |
 | Cross-subject awareness is a referral contract, not multi-pack teaching | The professor may know that a concept exists and who owns it, but may not teach another subject's content. A referral is a routing outcome with its own authority and citation type |
 | The professor knows the concept index, not another subject's material | The index stores concept ids, titles, aliases, subject and material id, never prose. The other subject's material never enters the prompt, so the no-teaching boundary is enforceable |
 | The referral payload is one contract owned by #253 | The professors and the librarian (#195 L4) return the same structured referral contract; #195 consumes it rather than defining a second shape, so the UI and the authority checks are not duplicated |

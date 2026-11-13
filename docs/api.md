@@ -273,16 +273,19 @@ The embedding selector's best-match cosine must clear `OWL_LESSON_MIN_SCORE`
 questions 0.598-0.791, off-topic 0.160-0.549). A curated concept-title or alias
 match can still add a material when a comparison question embeds weakly, so
 "Compare Expelliarmus with Avifors" keeps the Disarming Charm note. After
-selection, the full reviewed material group for each matched concept is added,
-capped at five materials, so the model sees every note for the concept rather
-than one note and two neighbours.
+selection, the rest of each matched concept's reviewed group is added
+round-robin, up to a five-material group budget (the top-k size when larger), so
+the model sees more than one note per concept and a comparison keeps both sides.
 
-Every substantive paragraph must carry a material or chunk citation. A draft
-with an uncited factual paragraph gets one stricter retry; if the retry still
-leaves a factual paragraph uncited, the answer is served with the citations it
-does have rather than refused. Short lines and a final check question are
-exempt. The lesson prompt asks for an answer under 220 words, and the eval
-reports mean and maximum answer length.
+Every substantive paragraph must carry a material or chunk citation; paragraphs
+are separated by blank lines, and a paragraph under 20 words or one that ends in
+a question is exempt. A draft with an uncited factual paragraph gets one
+paragraph-specific retry; if the retry still leaves a factual paragraph
+uncited, or refuses, the earlier answerable draft is served with the citations
+it does have rather than refused. With
+the persona on (the default), the lesson prompt asks for an answer under 220
+words, and the eval reports mean, maximum and over-limit counts, which include
+citation tokens.
 
 `scope` says where the evidence came from:
 

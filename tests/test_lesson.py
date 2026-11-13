@@ -19,6 +19,7 @@ from app.knowledge.packs import (
     Topic,
 )
 from app.pipeline.generate.lesson import (
+    LESSON_PARAGRAPH_RETRY,
     ask_lesson,
     build_lesson_prompt,
     ground_lesson_answer,
@@ -322,44 +323,151 @@ async def test_selector_prefers_the_matching_material():
     assert [m.material_id for m in selected] == ["dada-dark-creatures-boggarts-nature"]
 
 
-def test_selector_expands_the_full_concept_group():
-    base = _store().get("dada")
-    assert base is not None
-    extra = Material(
-        material_id="dada-dark-creatures-boggarts-extra",
-        subject="dada",
-        topic="dark-creatures",
-        concept="dada-creature-boggart",
-        kind="creature",
-        text="A second reviewed note on the same concept.",
-        review_status="reviewed",
-        source_refs=[_ref("b3-c07-0051")],
-    )
-    pack = base.model_copy(update={"materials": [*base.materials, extra]})
+def _group_pack() -> SubjectPack:
+    """Two concepts with siblings, for expansion tests."""
+    base = _pack()
+    extra = [
+        Material(
+            material_id="dada-dark-creatures-boggarts-extra",
+            subject="dada",
+            topic="dark-creatures",
+            concept="dada-creature-boggart",
+            kind="creature",
+            text="A second reviewed note on the same concept.",
+            review_status="reviewed",
+            source_refs=[_ref("b3-c07-0051")],
+        ),
+        Material(
+            material_id="dada-dark-creatures-boggarts-extra-2",
+            subject="dada",
+            topic="dark-creatures",
+            concept="dada-creature-boggart",
+            kind="creature",
+            text="A third reviewed note on the same concept.",
+            review_status="reviewed",
+            source_refs=[_ref("b3-c07-0052")],
+        ),
+        Material(
+            material_id="dada-magic-patronus-extra",
+            subject="dada",
+            topic="defensive-magic",
+            concept="dada-magic-patronus",
+            kind="spell",
+            text="A second reviewed note on the patronus.",
+            review_status="reviewed",
+            source_refs=[_ref("b3-c12-0011")],
+        ),
+        Material(
+            material_id="dada-magic-patronus-extra-2",
+            subject="dada",
+            topic="defensive-magic",
+            concept="dada-magic-patronus",
+            kind="spell",
+            text="A third reviewed note on the patronus.",
+            review_status="reviewed",
+            source_refs=[_ref("b3-c12-0012")],
+        ),
+        Material(
+            material_id="dada-dark-creatures-boggarts-draft",
+            subject="dada",
+            topic="dark-creatures",
+            concept="dada-creature-boggart",
+            kind="creature",
+            text="An unreviewed note that must never enter a lesson prompt.",
+            review_status="draft",
+            source_refs=[_ref("b3-c07-0053")],
+        ),
+    ]
+    return base.model_copy(update={"materials": [*base.materials, *extra]})
+
+
+def _group_selector() -> LessonSelector:
+    pack = _group_pack()
     store = PackStore(packs={"dada": pack}, fingerprints={"dada": "fp"})
-    selector = LessonSelector(store=store, embedder=KeywordEmbedder(), vectors={})
-    first = next(
+    return LessonSelector(store=store, embedder=KeywordEmbedder(), vectors={})
+
+
+def _material(pack: SubjectPack, material_id: str) -> Material:
+    return next(
         material
         for material in pack.materials
-        if material.material_id == "dada-dark-creatures-boggarts-nature"
+        if material.material_id == material_id
     )
-    expanded = selector.expand_groups("dada", [first], max_materials=5)
-    assert {material.material_id for material in expanded} == {
+
+
+def test_selector_expands_the_full_concept_group():
+    pack = _group_pack()
+    selector = _group_selector()
+    selected = [
+        _material(pack, "dada-dark-creatures-boggarts-nature"),
+        _material(pack, "dada-magic-patronus-theory"),
+    ]
+
+    expanded = selector.expand_groups("dada", selected, max_materials=5)
+
+    assert [material.material_id for material in expanded] == [
         "dada-dark-creatures-boggarts-nature",
+        "dada-magic-patronus-theory",
         "dada-dark-creatures-boggarts-extra",
+        "dada-magic-patronus-extra",
+        "dada-dark-creatures-boggarts-extra-2",
+    ]
+    assert "dada-dark-creatures-boggarts-draft" not in {
+        material.material_id for material in expanded
     }
 
 
+def test_selector_expansion_respects_the_cap_and_the_selection():
+    pack = _group_pack()
+    selector = _group_selector()
+    selected = [
+        _material(pack, "dada-dark-creatures-boggarts-nature"),
+        _material(pack, "dada-magic-patronus-theory"),
+    ]
+
+    assert len(selector.expand_groups("dada", selected, max_materials=6)) == 6
+    assert len(selector.expand_groups("dada", selected, max_materials=5)) == 5
+
+    five = [
+        _material(pack, "dada-dark-creatures-boggarts-nature"),
+        _material(pack, "dada-magic-patronus-theory"),
+        _material(pack, "dada-dark-creatures-boggarts-extra"),
+        _material(pack, "dada-magic-patronus-extra"),
+        _material(pack, "dada-dark-creatures-boggarts-extra-2"),
+    ]
+    assert selector.expand_groups("dada", five, max_materials=5) == five
+
+
 def test_paragraphs_cited_requires_a_citation_per_factual_paragraph():
-    ok = "A boggart changes shape [mat:boggart].\n\nIt prefers dark places [mat:boggart]."
+    ok = (
+        "A boggart takes the shape of whatever the watcher fears most, and it "
+        "prefers a dark and enclosed space [mat:boggart].\n\n"
+        "A patronus is a silver guardian that a happy memory summons, and it "
+        "can drive a dementor away [b3-c12-0010]."
+    )
     assert paragraphs_cited(ok) == (True, 0)
     missing = (
-        "A boggart changes shape [mat:boggart].\n\n"
+        "A boggart takes the shape of whatever the watcher fears most, and it "
+        "prefers a dark and enclosed space [mat:boggart].\n\n"
         "It also haunts old houses, abandoned shops and any other forgotten "
         "place where people once lived and feared something in the dark."
     )
     assert paragraphs_cited(missing) == (False, 1)
-    short = "A boggart changes shape.\n\nWhat would you do?"
+
+
+def test_paragraphs_cited_accepts_mixed_brackets_and_exempts_questions():
+    mixed = (
+        "The watcher sees the fear take shape, and the charm needs a happy "
+        "memory to work against it [b3-c07-0050, mat:boggart]."
+    )
+    assert paragraphs_cited(mixed) == (True, 0)
+    question = (
+        "It also haunts old houses, abandoned shops and any other forgotten "
+        "place where people once lived and feared something in the dark, so "
+        "what would you do?"
+    )
+    assert paragraphs_cited(question) == (True, 0)
+    short = "A boggart changes shape."
     assert paragraphs_cited(short) == (True, 0)
 
 
@@ -1394,7 +1502,8 @@ async def test_ask_lesson_rejects_a_label_only_answer():
 async def test_ask_lesson_accepts_a_cited_answer_with_an_uncited_paragraph():
     selector = await LessonSelector.build(_store(), KeywordEmbedder())
     llm = StaticLlm(
-        "A boggart changes shape [mat:dada-dark-creatures-boggarts-nature].\n\n"
+        "A boggart takes the shape of whatever the watcher fears most, and it "
+        "prefers a dark and enclosed space [mat:dada-dark-creatures-boggarts-nature].\n\n"
         "It also haunts old houses, abandoned shops and any other forgotten "
         "place where people once lived and feared something in the dark."
     )
@@ -1408,4 +1517,96 @@ async def test_ask_lesson_accepts_a_cited_answer_with_an_uncited_paragraph():
     )
 
     assert result.abstained is False
-    assert result.answer
+    assert result.attempts == 1
+    assert result.retry_reason is None
+    assert "abandoned shops" in result.answer
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_retries_an_uncited_paragraph_with_its_own_prompt():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = SequencedLlm(
+        [
+            "A boggart takes the shape of whatever the watcher fears most, and "
+            "it prefers a dark and enclosed space "
+            "[mat:dada-dark-creatures-boggarts-nature].\n\n"
+            "It also haunts old houses, abandoned shops and any other forgotten "
+            "place where people once lived and feared something in the dark.",
+            "A boggart takes the shape of whatever the watcher fears most, and "
+            "it prefers a dark and enclosed space "
+            "[mat:dada-dark-creatures-boggarts-nature].\n\n"
+            "It also haunts old houses, abandoned shops and any other forgotten "
+            "place where people once lived and feared something in the dark "
+            "[mat:dada-dark-creatures-boggarts-nature].",
+        ]
+    )
+    resets: list[int] = []
+
+    result = await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        max_retries=1,
+        on_reset=lambda: resets.append(1),
+    )
+
+    assert result.abstained is False
+    assert result.attempts == 2
+    assert result.retry_reason == "uncited_paragraph"
+    assert resets == [1]
+    assert LESSON_PARAGRAPH_RETRY in llm.systems[1]
+    assert "cited no lesson note" not in llm.systems[1]
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_keeps_an_answerable_draft_when_the_retry_refuses():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = SequencedLlm(
+        [
+            "A boggart takes the shape of whatever the watcher fears most, and "
+            "it prefers a dark and enclosed space "
+            "[mat:dada-dark-creatures-boggarts-nature].\n\n"
+            "It also haunts old houses, abandoned shops and any other forgotten "
+            "place where people once lived and feared something in the dark.",
+            "I cannot answer that from the books.",
+        ]
+    )
+
+    result = await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        max_retries=1,
+    )
+
+    assert result.abstained is False
+    assert result.scope == "in_pack"
+    assert result.attempts == 2
+    assert result.retry_reason == "uncited_paragraph"
+    assert "abandoned shops" in result.answer
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_checks_paragraphs_after_stripping_invented_ids():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = StaticLlm(
+        "A boggart takes the shape of whatever the watcher fears most, and it "
+        "prefers a dark and enclosed space [mat:dada-dark-creatures-boggarts-nature].\n\n"
+        "It also haunts old houses, abandoned shops and any other forgotten "
+        "place where people once lived and feared something in the dark "
+        "[mat:invented]."
+    )
+
+    result = await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        max_retries=0,
+    )
+
+    assert result.abstained is False
+    assert "invented" not in result.answer
+    assert result.attempts == 1

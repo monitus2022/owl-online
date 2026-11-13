@@ -477,13 +477,16 @@ bound it. A multi-tenant deployment needs a bounded or durable store.
 When the classification would otherwise be `answer` and the request mode is
 `lesson` with `OWL_LESSON_MODE` on, the graph routes to `lesson_node` instead of
 `answer`. The derived selector scores the in-memory material vectors and the
-prompt carries the selected materials. After selection, each matched concept is
-expanded to its full reviewed material group, capped at five materials, so the
-model sees every note for the concept rather than one note and two neighbours.
-The prompt requires a citation in every substantive paragraph; `paragraphs_cited`
-retries once when a factual paragraph is uncited, then serves the answer with
-its existing citations rather than refusing. Short lines and the final check
-question are exempt, and the prompt asks for under 220 words. A deterministic
+prompt carries the selected materials. After selection, the rest of each matched
+concept's reviewed group is added round-robin, up to a five-material group
+budget (the top-k size when larger), so the model sees more than one note per
+concept and a comparison keeps both sides. The prompt requires a citation in
+every substantive paragraph, separated by blank lines; a paragraph under 20
+words or one that ends in a question is exempt. `paragraphs_cited` retries once
+with a paragraph-specific prompt when a factual paragraph is uncited, then
+serves the answer, or the earlier answerable draft if the retry refuses, with
+its existing citations rather than refusing. With the
+persona on (the default), the prompt asks for under 220 words. A deterministic
 coverage check compares
 the question's content terms with the material prose and the concept
 titles/aliases. If the pack covers the question, the draft must cite `[mat:<id>]`
@@ -535,7 +538,8 @@ path emits `resolve` (rewritten flag, rule, query hash and length), `router`
 (model, prompt hash and length), `verify` (ok and reason), `retry`, and `final`.
 The lesson path adds `lesson_select` (material ids, scores, uncovered term count
 and hash, scope, conversation characters) and `lesson_result` (abstained,
-abstain reason, attempts, scope and citation counts). Cache hits emit a `cache`
+abstain reason, retry reason, attempts, uncited paragraphs, scope and citation
+counts). Cache hits emit a `cache`
 span instead of retrieve/generate.
 
 Traces go to the `owl.trace` logger and, when `OWL_TRACE_FILE` is set, to a
@@ -590,10 +594,13 @@ answer.
 
 With the persona on, the lesson system prompt is persona-first: identity,
 register and stance precede the grounding rules, a short voice reminder closes
-them, and the teaching shape is a direct answer, why it matters, an example from
-the notes, a caution and a short check. The note prose is rendered without its
-inline book chunk ids, so the only note citation the model sees is the material
-id; the material source refs still resolve on the response. The conformance
+them, and the teaching shape is a direct answer, why it matters, an example only
+when the notes support it, a caution only when the notes support it, and a short
+check, under 220 words. Every substantive paragraph carries a citation, and a
+draft with an uncited paragraph gets one paragraph-specific retry. The note prose
+is rendered without its inline book chunk ids, so the only note citation the
+model sees is the material id; the material source refs still resolve on the
+response. The conformance
 fixture in `eval/persona/` runs deterministic citation, source-hash, boundary,
 style and length checks before a pinned judge scores voice and teaching shape
 only. The 2026-11-09 record is `docs/runs/2026-11-09-176-persona-lesson-voice.md`.

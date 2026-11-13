@@ -53,6 +53,8 @@ logger = logging.getLogger(__name__)
 
 LESSON_TUTOR = "You are O.W.L. Online, a revision tutor."
 
+LESSON_WORD_LIMIT = 220
+
 LESSON_EVIDENCE_RULE = (
     "Every paragraph that makes a factual claim must cite the note or excerpt "
     "it comes from. If the notes do not support an example, a caution or a "
@@ -127,7 +129,7 @@ LESSON_TEACHING_SHAPE = (
     "one example only if the notes support it; add one caution only if the "
     "notes support it; finish with one short check the student can answer "
     "themselves. If a section is not supported by the notes, leave it out. "
-    "Keep the whole answer under 220 words."
+    f"Keep the whole answer under {LESSON_WORD_LIMIT} words."
 )
 
 # Repeated after the grounding rules: the model tends to fall back to the
@@ -141,6 +143,20 @@ LESSON_VOICE_REMINDER = (
     "every paragraph. Speak with patience and encouragement; the student "
     "should feel taught, not lectured. End with one short question to the "
     "student."
+)
+
+# A paragraph-placement retry is not a citation-space failure: the draft cited
+# the right notes, but put them in one place. Keep the shape and ask for a
+# citation per paragraph instead of collapsing the answer. The id warning
+# matters: the model copies the example id from the system prompt when the
+# retry asks for more citations.
+LESSON_PARAGRAPH_RETRY = (
+    "Your previous draft left a factual paragraph without a citation. Keep the "
+    "same facts and the same shape, and end every factual paragraph with the "
+    "id of a note or excerpt that supports it. Use only ids that appear in the "
+    "notes or excerpts, never an id from these instructions. If a paragraph "
+    "has no supporting note or excerpt, remove it. Do not collapse the answer "
+    "into one paragraph."
 )
 
 
@@ -202,16 +218,22 @@ _CITATION = re.compile(r"\[([^\]]+)\]")
 _ID_SEPARATOR = re.compile(r"[,\s;]+")
 _CHUNK_ID = re.compile(r"^b\d+-c\d+-\d+$")
 _INLINE_CHUNK = re.compile(r"\s*\[b\d+-c\d+-\d+\]")
-_PARAGRAPH_CITATION = re.compile(r"\[(?:mat:[^\]]+|b\d+-c\d+-\d+)\]")
+_PARAGRAPH_CITATION = re.compile(
+    r"\[[^\]]*(?:mat:[^\],\s;]+|b\d+-c\d+-\d+)[^\]]*\]"
+)
 
 
 def paragraphs_cited(answer: str) -> tuple[bool, int]:
     """Every substantive paragraph needs at least one citation.
 
-    Short lines and final questions are excluded: a check question is not a
-    factual paragraph, and a one-line transition does not need a note.
+    Paragraphs are separated by blank lines. A paragraph under 20 words, or one
+    that ends in a question, is exempt: a check question is not a factual
+    paragraph and a one-line transition does not need a note. A bracket counts
+    when it holds a material id or a chunk id, including a mixed bracket.
     """
-    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", answer) if part.strip()]
+    paragraphs = [
+        part.strip() for part in re.split(r"\n\s*\n", answer) if part.strip()
+    ]
     missing = 0
     for paragraph in paragraphs:
         if len(paragraph.split()) < 20 or paragraph.rstrip().endswith("?"):
@@ -567,7 +589,11 @@ async def ask_lesson(
     - abstained: neither tier has evidence.
 
     One draft is verified deterministically. A draft that misses a required
-    citation space gets one stricter retry. A refusal is final, exactly like the
+    citation space gets one stricter retry. A draft with an uncited factual
+    paragraph gets one paragraph-specific retry; if the retry still leaves a
+    paragraph uncited or refuses, the earlier answerable draft is served with
+    the citations it has, because placement alone is not a reason to refuse. A
+    refusal is final only when no answerable draft exists, exactly like the
     corpus path.
 
     `prompt_question` keeps the student's wording in the prompt while selection
@@ -627,13 +653,17 @@ async def ask_lesson(
                 conversation_chars=len(conversation_context or ""),
             )
 
-    def trace_result(result: AskResult, attempts: int) -> None:
+    def trace_result(
+        result: AskResult, attempts: int, uncited_paragraphs: int = 0
+    ) -> None:
         if tracer is not None:
             tracer.emit(
                 "lesson_result",
                 abstained=result.abstained,
                 abstain_reason=result.abstain_reason,
+                retry_reason=result.retry_reason,
                 attempts=attempts,
+                uncited_paragraphs=uncited_paragraphs,
                 scope=result.scope,
                 material_citations=len(result.material_citations),
                 citations=len(result.citations),
@@ -695,6 +725,7 @@ async def ask_lesson(
     if conversation_context:
         system = f"{system}\n\n{CONVERSATION_NOTE}"
         retry_system = f"{retry_system}\n\n{CONVERSATION_NOTE}"
+    paragraph_retry_system = f"{system}\n\n{LESSON_PARAGRAPH_RETRY}"
     prompt = build_lesson_prompt(
         prompt_question,
         materials,
@@ -707,14 +738,13 @@ async def ask_lesson(
     require_book = scope in ("mixed", "off_pack")
     attempt = 0
     retry_reason: str | None = None
+    attempt_system = system
+    best: tuple[AskResult, str] | None = None
     while True:
         attempt += 1
-        draft = await one_draft(
-            system if attempt == 1 else retry_system, prompt, llm, on_token
-        )
+        draft = await one_draft(attempt_system, prompt, llm, on_token)
         result = ground_lesson_answer(draft, materials, chunks, scope=scope)
         book_cited = bool(cited_book_ids(draft, chunks))
-        paragraphs_ok, _missing_paragraphs = paragraphs_cited(draft)
         has_required = (
             (not require_material or bool(result.material_citations))
             and (not require_book or book_cited)
@@ -723,6 +753,15 @@ async def ask_lesson(
             draft,
             cited=bool(result.material_citations or result.citations),
         )
+        paragraphs_ok, missing_paragraphs = (
+            paragraphs_cited(result.answer)
+            if not result.abstained and not refusal
+            else (True, 0)
+        )
+        if has_required and not refusal and not result.abstained:
+            # A retry must never make an answerable draft worse: keep the last
+            # draft that has its citation space in case a later retry refuses.
+            best = (result, attempt_system)
         if (has_required and paragraphs_ok) or refusal or attempt > max_retries:
             break
         retry_reason = (
@@ -732,8 +771,18 @@ async def ask_lesson(
             if not paragraphs_ok
             else "missing_scope_citation"
         )
+        attempt_system = (
+            paragraph_retry_system
+            if retry_reason == "uncited_paragraph"
+            else retry_system
+        )
         if on_reset is not None:
             on_reset()
+
+    if (refusal or result.abstained) and best is not None:
+        result, attempt_system = best
+        refusal = False
+        has_required = True
 
     if refusal:
         result = AskResult(
@@ -758,7 +807,7 @@ async def ask_lesson(
             scope=scope,
         )
 
-    final_system = system if attempt == 1 else retry_system
+    final_system = attempt_system
     final_result = replace(
         result,
         attempts=attempt,
@@ -769,5 +818,5 @@ async def ask_lesson(
         selection_scores=selection_scores,
         uncovered_terms=uncovered_list,
     )
-    trace_result(final_result, attempt)
+    trace_result(final_result, attempt, missing_paragraphs)
     return final_result

@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from app.pipeline.generate.lesson import LESSON_WORD_LIMIT
 from app.schemas import Chunk
 from eval.rag.fixtures import Conversation, LessonItem, Turn
 
@@ -126,6 +127,8 @@ def summarize_lesson(results: list[LessonResult]) -> LessonMetrics:
         for result in results
         if not result.abstained and result.answer.strip()
     ]
+    # Citation tokens and the deterministic mixed/off-pack label are counted:
+    # this is prompt weight, not prose length.
     word_counts = [
         len(re.findall(r"[A-Za-z0-9]+", result.answer)) for result in answered
     ]
@@ -158,7 +161,9 @@ def summarize_lesson(results: list[LessonResult]) -> LessonMetrics:
         off_pack_false_refusal_rate=false_refusal(off_pack),
         mean_words=mean([float(count) for count in word_counts]),
         max_words=max(word_counts) if word_counts else 0,
-        length_violations=sum(1 for count in word_counts if count > 220),
+        length_violations=sum(
+            1 for count in word_counts if count >= LESSON_WORD_LIMIT
+        ),
         judged=len(judged),
         faithfulness_rate=mean([float(result.faithful is True) for result in judged]),
         errors=sum(1 for result in results if result.error is not None),

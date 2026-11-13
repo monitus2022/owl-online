@@ -89,7 +89,13 @@ so on.
 | 2026-11-13 | #258 | `20261113T035711Z` | `rag-calibration` (18-item pre-fix pass) | n/a | n/a | n/a | [Calibration pre-fix pass](2026-11-13-258-faithfulness-calibration-prefix.md) |
 | 2026-11-13 | #258 | `20261113T040759Z` | `rag-calibration` (final) | n/a | n/a | n/a | [Lesson faithfulness calibration](2026-11-13-258-faithfulness-calibration.md) |
 | 2026-11-13 | #258 | `20261113T070629Z` | `rag-calibration` (owner-adopted) | n/a | n/a | n/a | [Lesson faithfulness calibration adopted](2026-11-13-258-faithfulness-calibration-adopted.md) |
+| 2026-11-13 | #251 | `20261113T072932Z` | `rag-eval` (hard paragraph gate, rejected) | n/a | n/a | 5/30 | [Hard paragraph gate, rejected](2026-11-13-251-hard-paragraph-gate.md) |
 | 2026-11-13 | #251 | `20261113T073645Z` | `rag-eval` | n/a | n/a | 4/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
+| 2026-11-13 | #251 | `20261113T080422Z` | `rag-eval` (round-robin expansion, grounded-answer check) | n/a | n/a | 5/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
+| 2026-11-13 | #251 | `20261113T081233Z` | `rag-eval` (best-draft fallback) | n/a | n/a | 5/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
+| 2026-11-13 | #251 | `20261113T082146Z` | `rag-eval` (example id removed, rejected) | n/a | n/a | 3/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
+| 2026-11-13 | #251 | `20261113T082310Z` | `rag-eval` (shipped) | n/a | n/a | 4/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
+| 2026-11-13 | #251 | `20261113T082614Z` | `rag-eval` (baseline re-pin) | n/a | n/a | 4/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
 
 Exam-bank runs use `n/a` for the chat metrics; the deterministic, independent
 and calibration tables are in the record.

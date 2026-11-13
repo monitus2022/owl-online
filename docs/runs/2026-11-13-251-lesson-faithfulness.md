@@ -1,11 +1,12 @@
 # Run record: #251 lesson grounding first slice
 
 - Date: 2026-11-13
-- Run id: `20261113T073645Z`
+- Run id: `20261113T082310Z` (measured), `20261113T082614Z` (baseline re-pin)
 - Ticket: #251 (claim-level citation binding for chat and lesson)
 - Config: `rag-eval` (persona on, lesson mode on, lesson fallback on, temperature 0)
-- Baseline: `20261112T135058Z` (#248), with #249 already merged
-- Artifacts: `eval/results/rag-20261113T073645Z.json` (local, gitignored)
+- Baseline: `20261112T135058Z` (#248), with #249 merged
+- Fixture: `eval/rag/fixtures/lesson.jsonl`, SHA-256 `de4e373b1acf`
+- Artifacts: `eval/results/rag-20261113T082310Z.json` (local, gitignored)
 
 ## Configuration
 
@@ -13,62 +14,115 @@
 |---|---|
 | Generator | `openrouter/qwen/qwen3-30b-a3b-instruct-2507`, temperature 0.0 |
 | Judge | `deepseek/deepseek-v4.1-flash-1017`, temperature 0.0 |
-| Lesson fixture | `eval/rag/fixtures/lesson.jsonl`, SHA-256 `1daac0c1286e` |
+| Embedder | local `qwen3-embedding:0.6b` |
+| Lesson fixture | `eval/rag/fixtures/lesson.jsonl`, SHA-256 `de4e373b1acf` |
 | Multi-turn fixture | `eval/rag/fixtures/multiturn.jsonl`, SHA-256 `1a86ba5c554d` |
 | Judged lesson sample | 30 |
+| Expansion budget | `max(lesson_top_k, 5)`, round-robin across concepts |
+| Paragraph gate | retry once, then serve the answerable draft |
+
+The shipped slice has five parts:
+
+- The in-pack, mixed and off-pack prompts state the evidence rule: every
+  paragraph that makes a factual claim cites the note or excerpt it comes from,
+  and an unsupported example, caution or check is omitted.
+- The teaching shape is conditional and asks for under 220 words.
+- After selection, the rest of each matched concept's reviewed group is added
+  round-robin, up to a five-material budget (the top-k size when larger).
+- `paragraphs_cited` checks the grounded answer. A draft with an uncited
+  factual paragraph gets one paragraph-specific retry; if the retry still leaves
+  a paragraph uncited or refuses, the earlier answerable draft is served.
+- The eval reports mean, maximum and over-limit word counts. The counts include
+  citation tokens and are added, not gated.
+
+The fixture also gained `b2-c14-0000` as an alternative expected chunk for
+`lesson-dada-13`: it states that Hagrid "christened 'Fluffy'" the giant
+three-headed dog. The gold set was incomplete, and the gate requires a new
+baseline when the fixture SHA changes.
 
 ## Before and after
 
-| Metric | #248 baseline | #251 |
-|---|---:|---:|
-| Lesson faithfulness | 2/30 (0.0667) | 4/30 (0.1333) |
-| Lesson citation recall | 0.9231 | 0.9615 |
-| Lesson scope accuracy | 0.9839 | 0.9839 |
-| Lesson false refusal | 0.0000 | 0.0000 |
-| Lesson mean words | n/a | 196 |
-| Lesson max words | n/a | 291 |
-| Lesson over 220 words | n/a | 9 |
-| Multi-turn query accuracy | 0.9444 | 1.0000 |
-| Multi-turn mode accuracy | 0.8611 | 0.8889 |
-| Multi-turn citation accuracy | 0.5152 | 0.5758 |
-| Multi-turn false refusal | 0.1515 | 0.0909 |
-| Multi-turn comparison accuracy | 0.0833 | 0.1667 |
-| Multi-turn referral accuracy | 0.0000 | 0.0000 |
-| Context contamination | 0 | 0 |
+| Metric | #248 baseline | #249 | #251 | Delta vs #249 |
+|---|---:|---:|---:|---:|
+| Lesson faithfulness | 2/30 (0.0667) | 2/30 | 4/30 (0.1333) | +2 items |
+| Lesson citation recall | 0.9231 | 0.9231 | 0.9615 | +0.0385 |
+| Lesson scope accuracy | 0.9839 | 0.9839 | 0.9839 | 0.0000 |
+| Lesson false refusal | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| Lesson selection precision@3 | 0.6405 | 0.6405 | 0.6405 | 0.0000 |
+| Lesson selection recall@3 | 0.9660 | 0.9660 | 0.9660 | 0.0000 |
+| Lesson citation validity | 1.0000 | 1.0000 | 1.0000 | 0.0000 |
+| Lesson source hash | 1.0000 | 1.0000 | 1.0000 | 0.0000 |
+| Lesson off-pack citation recall | 1.0000 | 1.0000 | 1.0000 | 0.0000 |
+| Lesson mean words | n/a | n/a | 199 | n/a |
+| Lesson max words | n/a | n/a | 291 | n/a |
+| Lesson over 220 words | n/a | n/a | 11 of 52 | n/a |
+| Multi-turn query accuracy | 0.9444 | 1.0000 | 1.0000 | 0.0000 |
+| Multi-turn mode accuracy | 0.8611 | 0.8889 | 0.8889 | 0.0000 |
+| Multi-turn citation accuracy | 0.5152 | 0.5455 | 0.5758 | +0.0303 |
+| Multi-turn false refusal | 0.1515 | 0.0909 | 0.0909 | 0.0000 |
+| Multi-turn comparison accuracy | 0.0833 | 0.0833 | 0.1667 | +0.0833 |
+| Multi-turn referral accuracy | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| Context contamination | 0 | 0 | 0 | 0 |
 
-The multi-turn improvement includes #249's implicit-referent work. Against
-#249 alone, citation accuracy moved 0.5455 to 0.5758 and comparison accuracy
-0.0833 to 0.1667.
+## Iterations
+
+Every run below is a finished eval run. Runs `080422Z` onward share this
+record; `072932Z` and `073645Z` have their own records.
+
+| Run id | Change | Faithfulness | Citation | Scope | False refusal | Off-pack citation |
+|---|---|---:|---:|---:|---:|---:|
+| `20261113T072932Z` | hard paragraph gate | 5/30 | 0.9231 | 0.9516 | 0.0385 | 1.0000 |
+| `20261113T073645Z` | retry-only paragraph gate | 4/30 | 0.9615 | 0.9839 | 0.0000 | 1.0000 |
+| `20261113T080422Z` | round-robin expansion, grounded-answer check | 5/30 | 0.9423 | 0.9677 | 0.0192 | 0.0000 |
+| `20261113T081233Z` | best-draft fallback | 5/30 | 0.9423 | 0.9839 | 0.0000 | 0.0000 |
+| `20261113T082146Z` | example id removed from mixed/off-pack prompts | 3/30 | 0.9615 | 0.9839 | 0.0000 | 1.0000 |
+| `20261113T082310Z` | examples restored, gold-set correction | 4/30 | 0.9615 | 0.9839 | 0.0000 | 1.0000 |
+| `20261113T082614Z` | baseline re-pin, same code | 4/30 | 0.9615 | 0.9839 | 0.0000 | 1.0000 |
 
 ## Reading
 
-- The lesson prompt now states an evidence rule: every factual paragraph cites
-  the note it comes from; an unsupported example, caution or check is omitted.
-  The prompt asks for under 220 words.
-- The selector now expands each matched concept to its full reviewed material
-  group, capped at five materials. That gives the model every note for the
-  concept rather than one note and two neighbours.
-- A substantive paragraph without a citation triggers one stricter retry. It
-  does not abstain on placement alone. That distinction matters: the first
-  attempt often puts citations only at the end, and a hard paragraph gate
-  produced two false refusals (`lesson-dada-02` and `lesson-dada-04`) without
-  improving faithfulness.
-- Faithfulness moved from 2/30 to 4/30. The judge and the lesson calibration
-  are owner-adopted, so this is a real movement, not a prompt-specific judge
-  change. It is still far below the product bar: the model continues to
-  elaborate beyond the notes in most answers.
-- Citation recall rose from 0.9231 to 0.9615. Scope and false refusal returned
-  to the #248 levels.
-- Multi-turn comparison accuracy doubled to 2/12 because the full concept group
-  gives the model both sides more often. It is still weak; #252 is the next
-  comparison-specific step.
-- Length is reported but not gated: mean 196 words, 9 of 52 answers over 220.
-  The prompt cap is advisory; a harder cap or a shorter teaching shape is a
-  follow-up.
-- The remaining faithfulness gap is generation, not retrieval. The evidence is
-  present and cited more often; the model still adds claims. The next slice
-  should test sentence-level support or a more extractive lesson mode, not
-  another top-k change.
+- Faithfulness moved from 2/30 to 4/30. The judge and calibration are
+  owner-adopted, so this is not a judge change. It is also two items at n=30,
+  which is inside noise. The judge evidence set grew from the top-3 materials to
+  the expanded group (up to five), so the movement conflates the prompt and
+  paragraph rule with more evidence for the judge. It is directional, not a
+  statistically distinguishable gain.
+- Citation recall rose from 0.9231 to 0.9615. Scope is unchanged at 0.9839; the
+  one miss is `lesson-charms-07`, which classifies as `mixed` because the
+  coverage check leaves a term uncovered and the corpus leg then fires. That is
+  #250/#252, not this slice.
+- False refusal is 0 and off-pack citation recall is 1.0. The hard-gate variant
+  (run `072932Z`) produced two false refusals and a scope miss from citation
+  placement alone, so the shipped gate retries and then serves.
+- The best-draft fallback matters: without it, a paragraph retry that refuses
+  replaced an answerable first draft with the abstention line (run `080422Z`,
+  `lesson-dada-13`). The retry can no longer make the answer worse.
+- Removing the concrete chunk-id example from the mixed and off-pack prompts
+  made faithfulness and multi-turn false refusal worse (run `082146Z`: 3/30,
+  false refusal 0.1212), so the examples stay.
+- Multi-turn citation accuracy moved 0.5455 to 0.5758 and comparison accuracy
+  0.0833 to 0.1667. Both are one extra turn; treat them as directional. Query
+  accuracy, mode accuracy and false refusal are #249's movement, not #251's.
+- Length is reported but not gated: mean 199 words, max 291, 11 of 52 answers at
+  220 or more. The 220-word ask lives in the persona preamble, so a deployment
+  with the persona off has no cap. The counts include citation tokens.
+- The paragraph-citation rate is not an eval metric. The trace carries
+  `retry_reason` and `uncited_paragraphs`, but the runner does not aggregate
+  attempts or retries. That is a measurement gap for the next slice.
+- The remaining faithfulness gap is generation, not retrieval: the evidence is
+  present and cited more often, and the model still elaborates. The next slice
+  is sentence-level support or a more extractive lesson mode. The chat half and
+  the `docs/routing-contracts.md` provenance residual are untouched; #251 stays
+  open.
+
+## Baseline re-pin
+
+The gold-set correction changes the lesson fixture SHA. `--check` fails on a
+fixture mismatch by design, so the baseline was re-pinned with
+`uv run python scripts/run_eval.py --rag --write-baseline --force-baseline` at
+run `20261113T082614Z`. That run is metric-for-metric identical to
+`20261113T082310Z`; only the fixture SHA and the off-pack gold set changed.
+Every other metric is unchanged.
 
 ## Reproduce
 
@@ -80,11 +134,11 @@ uv run python scripts/run_eval.py --rag --check
 ## Raw summary
 
 ```text
-run_id: 20261113T073645Z
+run_id: 20261113T082310Z
 config: rag-eval
 generator: openrouter/qwen/qwen3-30b-a3b-instruct-2507
 judge: deepseek/deepseek-v4.1-flash-1017
-lesson fixture: 1daac0c1286e (judged sample 30)
+lesson fixture: de4e373b1acf (judged sample 30)
 multi-turn fixture: 1a86ba5c554d
 
 lesson
@@ -95,7 +149,7 @@ lesson
   citation validity=1.0000 source hash=1.0000
   mixed n=1 scope=1.0000 citation=1.0000 false refusal=0.0000
   off-pack n=1 scope=1.0000 citation=1.0000 false refusal=0.0000
-  mean words=196 max=291 over-220=9
+  mean words=199 max=291 over-220=11
   judged=30 faithfulness=0.1333
 
 multi-turn
@@ -107,5 +161,5 @@ multi-turn
   context contamination=0
 
 errors: 0
-wrote /Users/tc/Documents/Github/owl-online/eval/results/rag-20261113T073645Z.json
+wrote /Users/tc/Documents/Github/owl-online/eval/results/rag-20261113T082310Z.json
 ```
