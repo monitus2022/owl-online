@@ -119,14 +119,18 @@ fixture hashes, the judged sample or the pinned settings is a new baseline, not
 a silent update: `--write-baseline` refuses it unless `--force-baseline` is
 passed, and `--check` fails on the mismatch.
 
+Lesson answer length is reported as mean, maximum and at-or-over-limit counts.
+The counts include citation tokens, and the length metrics are added, not gated:
+a longer answer raises the report but does not fail the gate.
+
 ## Lesson faithfulness calibration
 
 `eval/rag/fixtures/faithfulness_calibration.jsonl` is the #258 calibration set.
 It holds 18 short synthetic answers across in-pack, paraphrase, multi-concept,
 mixed and off-pack slices, with `supported`, `partial`, `unsupported` or
 `refusal` labels, the material ids or chunk ids that are the evidence, and a
-`label_source`. The current labels are agent-proposed and require owner
-adoption before the calibration is pinned as a gate.
+`label_source`. The labels are owner-adopted 2026-11-13, and the adopted record
+is `docs/runs/2026-11-13-258-faithfulness-calibration-adopted.md`.
 
 Run:
 
@@ -138,7 +142,7 @@ The runner calls both the three-level calibration judge and the production
 binary faithfulness judge, excludes refusals from the faithfulness denominator,
 and reports exact agreement, adjacent agreement, mean absolute error, binary
 agreement and parse failures. It does not change the production metric. The
-gate stays `REVIEW (labels not adopted)` until the owner adopts the labels.
+gate reports `PASS` when the labels are adopted and the agreement holds.
 
 ## Current baseline
 

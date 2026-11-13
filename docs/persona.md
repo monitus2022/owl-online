@@ -210,14 +210,19 @@ Rules invariant across tiers:
 Lesson answers are persona-first. The system prompt opens with Professor Crane's
 identity, register and stance, then the teaching shape, then the grounding rules,
 and closes with a short voice reminder. The shape is: a direct answer first, why
-it matters, one example from the notes, one caution, and one short check. The
-answer target is 250 words.
+it matters, one example only if the notes support it, one caution only if the
+notes support it, and one short check. Unsupported sections are left out. The
+answer target is under 220 words.
 
 The grounding and citation contracts are unchanged. An in-pack answer cites a
 material id, a mixed answer cites a material and a book chunk, an off-pack answer
-cites a book chunk, and a miss uses the in-world abstention line. The note prose
-is rendered without its inline book chunk ids so the model cannot mistake an
-evidence link for the note citation; the material source refs still resolve on
+cites a book chunk, and a miss uses the in-world abstention line. Every
+substantive paragraph carries a citation; a draft that leaves one uncited gets
+one paragraph-specific retry. A retry that still leaves a paragraph uncited but
+keeps its citation space is served with its citations; a retry that refuses or
+loses a required citation space restores the earlier answerable draft. The note
+prose is rendered without its inline book chunk ids so the model cannot mistake
+an evidence link for the note citation; the material source refs still resolve on
 the response.
 
 The conformance fixture is `eval/persona/fixtures/conformance.jsonl`. It is

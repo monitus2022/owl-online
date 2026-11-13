@@ -7,8 +7,10 @@ a judge failure cannot hide behind a retrieval number.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
+from app.pipeline.generate.lesson import LESSON_WORD_LIMIT
 from app.schemas import Chunk
 from eval.rag.fixtures import Conversation, LessonItem, Turn
 
@@ -104,6 +106,9 @@ class LessonMetrics:
     off_pack_scope_accuracy: float
     off_pack_citation_recall: float
     off_pack_false_refusal_rate: float
+    mean_words: float
+    max_words: int
+    length_violations: int
     judged: int
     faithfulness_rate: float
     errors: int
@@ -117,6 +122,16 @@ def summarize_lesson(results: list[LessonResult]) -> LessonMetrics:
     mixed = [result for result in results if result.item.slice_name == "mixed"]
     off_pack = [result for result in results if result.item.slice_name == "off_pack"]
     judged = [result for result in results if result.faithful is not None]
+    answered = [
+        result
+        for result in results
+        if not result.abstained and result.answer.strip()
+    ]
+    # Citation tokens and the deterministic mixed/off-pack label are counted:
+    # this is prompt weight, not prose length.
+    word_counts = [
+        len(re.findall(r"[A-Za-z0-9]+", result.answer)) for result in answered
+    ]
 
     def mean(values: list[float]) -> float:
         return sum(values) / len(values) if values else 0.0
@@ -144,6 +159,11 @@ def summarize_lesson(results: list[LessonResult]) -> LessonMetrics:
         off_pack_scope_accuracy=mean([float(result.scope_ok) for result in off_pack]),
         off_pack_citation_recall=mean([result.citation_recall for result in off_pack]),
         off_pack_false_refusal_rate=false_refusal(off_pack),
+        mean_words=mean([float(count) for count in word_counts]),
+        max_words=max(word_counts) if word_counts else 0,
+        length_violations=sum(
+            1 for count in word_counts if count >= LESSON_WORD_LIMIT
+        ),
         judged=len(judged),
         faithfulness_rate=mean([float(result.faithful is True) for result in judged]),
         errors=sum(1 for result in results if result.error is not None),

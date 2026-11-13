@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from app.pipeline.generate.lesson import LESSON_WORD_LIMIT
 from eval.rag.check import check_rag
 from eval.rag.fixtures import Conversation, GroupExpectation, LessonItem, Turn
 from eval.rag.metrics import (
@@ -39,6 +40,7 @@ def _lesson_result(
     scope: str | None = "in_pack",
     abstained: bool = False,
     faithful: bool | None = True,
+    answer: str = "answer",
 ) -> LessonResult:
     return LessonResult(
         item=item,
@@ -48,7 +50,7 @@ def _lesson_result(
         book_citations=cited if book_citations is None else book_citations,
         scope=scope,
         abstained=abstained,
-        answer="answer",
+        answer=answer,
         citation_ok=True,
         source_hash_ok=True,
         faithful=faithful,
@@ -128,6 +130,26 @@ def test_lesson_citation_recall_uses_explicit_book_citations():
         book_citations=("b1-c11-0042",),
     )
     assert complete.citation_recall == 1.0
+
+
+def test_summarize_lesson_counts_words_at_the_limit_boundary():
+    item = _lesson_item()
+    # `[b1-c11-0042]` is three alphanumeric runs under the word regex, so the
+    # at-limit answer reaches LESSON_WORD_LIMIT only if citations are counted.
+    at_limit = "word " * (LESSON_WORD_LIMIT - 3) + "[b1-c11-0042]"
+    over_limit = "word " * LESSON_WORD_LIMIT
+    under_limit = "word " * (LESSON_WORD_LIMIT - 1)
+
+    metrics = summarize_lesson(
+        [
+            _lesson_result(item=item, answer=at_limit),
+            _lesson_result(item=item, answer=over_limit),
+            _lesson_result(item=item, answer=under_limit),
+        ]
+    )
+
+    assert metrics.max_words == LESSON_WORD_LIMIT
+    assert metrics.length_violations == 2
 
 
 def test_summarize_lesson_reports_false_refusal_and_abstention():

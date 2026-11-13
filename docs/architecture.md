@@ -407,6 +407,9 @@ SSE events:
 | `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode`, `thread_id` | once, authoritative |
 | `error` | `{"detail": "..."}` | provider or internal failure after headers, always preceded by `reset` |
 
+In the lesson path, the served-best restore also emits `reset` with `retry`; the
+`final` payload is authoritative.
+
 `/v1/chat/stream` uses the compiled graph from `app/agent/`. The router is
 deterministic and applies the policy, closed-fact and teaching gates before any
 retrieval. An explicit `answer`, `practice` or `feedback` wins over the gates
@@ -477,7 +480,18 @@ bound it. A multi-tenant deployment needs a bounded or durable store.
 When the classification would otherwise be `answer` and the request mode is
 `lesson` with `OWL_LESSON_MODE` on, the graph routes to `lesson_node` instead of
 `answer`. The derived selector scores the in-memory material vectors and the
-prompt carries the selected materials. A deterministic coverage check compares
+prompt carries the selected materials. After selection, the rest of each matched
+concept's reviewed group is added round-robin, up to a five-material group
+budget (the top-k size when larger), so the model sees more than one note per
+concept and a comparison keeps both sides. The prompt requires a citation in
+every substantive paragraph, separated by blank lines; a paragraph under 20
+words or one that ends in a question is exempt. `paragraphs_cited` retries once
+with a paragraph-specific prompt when a factual paragraph is uncited. A retry
+that still leaves a paragraph uncited but keeps its citation space is served
+with its citations; a retry that refuses or loses a required citation space
+restores the earlier answerable draft. With the
+persona on (the default), the prompt asks for under 220 words. A deterministic
+coverage check compares
 the question's content terms with the material prose and the concept
 titles/aliases. If the pack covers the question, the draft must cite `[mat:<id>]`
 and the branch makes no retrieval call. If the pack is empty or leaves terms
@@ -492,7 +506,8 @@ The selector records the selected material ids, their cosine scores where the
 material came from the embedding leg, and the uncovered question terms on
 `AskResult`; the `lesson_select` trace span carries the ids, scores, uncovered
 term count and hash, scope and conversation size, and the `lesson_result` span
-carries the final abstention reason and citation counts. The raw question terms
+carries the abstention reason, retry reason, attempts, uncited paragraphs,
+fallback flag and citation counts. The raw question terms
 are not emitted in the trace.
 With the fallback off, a question with no material above the floor abstains
 with `no_evidence`; a selected material that leaves terms uncovered stays
@@ -528,8 +543,10 @@ path emits `resolve` (rewritten flag, rule, query hash and length), `router`
 (model, prompt hash and length), `verify` (ok and reason), `retry`, and `final`.
 The lesson path adds `lesson_select` (material ids, scores, uncovered term count
 and hash, scope, conversation characters) and `lesson_result` (abstained,
-abstain reason, attempts, scope and citation counts). Cache hits emit a `cache`
-span instead of retrieve/generate.
+abstain reason, retry reason, attempts, uncited paragraphs, fallback flag, scope
+and citation counts). Cache hits emit a `cache`
+span instead of retrieve/generate. `fallback` in the lesson span is the
+served-best restore, not the corpus or provider fallback.
 
 Traces go to the `owl.trace` logger and, when `OWL_TRACE_FILE` is set, to a
 size-capped file that is safe to ship. Prompt text is never emitted: the span
@@ -583,10 +600,13 @@ answer.
 
 With the persona on, the lesson system prompt is persona-first: identity,
 register and stance precede the grounding rules, a short voice reminder closes
-them, and the teaching shape is a direct answer, why it matters, an example from
-the notes, a caution and a short check. The note prose is rendered without its
-inline book chunk ids, so the only note citation the model sees is the material
-id; the material source refs still resolve on the response. The conformance
+them, and the teaching shape is a direct answer, why it matters, an example only
+when the notes support it, a caution only when the notes support it, and a short
+check, under 220 words. Every substantive paragraph carries a citation, and a
+draft with an uncited paragraph gets one paragraph-specific retry. The note prose
+is rendered without its inline book chunk ids, so the only note citation the
+model sees is the material id; the material source refs still resolve on the
+response. The conformance
 fixture in `eval/persona/` runs deterministic citation, source-hash, boundary,
 style and length checks before a pinned judge scores voice and teaching shape
 only. The 2026-11-09 record is `docs/runs/2026-11-09-176-persona-lesson-voice.md`.

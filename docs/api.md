@@ -178,7 +178,9 @@ The response is `text/event-stream`. Events:
 | `error` | `{"detail": "..."}` | terminal; always preceded by `reset` |
 
 `final` is the authoritative payload. A client should replace the draft on
-`reset` and render `final` when it arrives. `thread_id` echoes the request
+`reset` and render `final` when it arrives. In the lesson path, the served-best
+restore also emits `reset` with `retry`; the `final` payload is authoritative.
+`thread_id` echoes the request
 thread when memory served the turn and is an empty string otherwise. Once the
 stream has started, a provider failure is an `error` event, not an HTTP status.
 
@@ -272,7 +274,21 @@ The embedding selector's best-match cosine must clear `OWL_LESSON_MIN_SCORE`
 (default 0.58, calibrated for the local `qwen3-embedding:0.6b`: related
 questions 0.598-0.791, off-topic 0.160-0.549). A curated concept-title or alias
 match can still add a material when a comparison question embeds weakly, so
-"Compare Expelliarmus with Avifors" keeps the Disarming Charm note.
+"Compare Expelliarmus with Avifors" keeps the Disarming Charm note. After
+selection, the rest of each matched concept's reviewed group is added
+round-robin, up to a five-material group budget (the top-k size when larger), so
+the model sees more than one note per concept and a comparison keeps both sides.
+
+Every substantive paragraph must carry a material or chunk citation; paragraphs
+are separated by blank lines, and a paragraph under 20 words or one that ends in
+a question is exempt. A draft with an uncited factual paragraph gets one
+paragraph-specific retry. A retry that still leaves a paragraph uncited but
+keeps its citation space is served with the citations it has; a retry that
+refuses or loses a required citation space restores the earlier answerable
+draft. Placement alone is not a reason to refuse. With
+the persona on (the default), the lesson prompt asks for an answer under 220
+words, and the eval reports mean, maximum and at-or-over-limit counts, which
+include citation tokens.
 
 `scope` says where the evidence came from:
 

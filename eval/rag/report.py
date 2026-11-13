@@ -86,6 +86,8 @@ def render_report(report: RagReport) -> str:
         f"scope={_rate(lesson.off_pack_scope_accuracy)} "
         f"citation={_rate(lesson.off_pack_citation_recall)} "
         f"false refusal={_rate(lesson.off_pack_false_refusal_rate)}",
+        f"  mean words={lesson.mean_words:.0f} max={lesson.max_words} "
+        f"at-or-over-limit={lesson.length_violations}",
         f"  judged={lesson.judged} faithfulness={_rate(lesson.faithfulness_rate)}",
         "",
         "multi-turn",

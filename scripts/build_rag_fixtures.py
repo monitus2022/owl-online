@@ -298,6 +298,7 @@ def build() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
                     expected_chunk_ids=(
                         "b1-c11-0042",
                         "b1-c15-0018",
+                        "b2-c14-0000",
                     ),
                     expected_scope="off_pack",
                     citation="book",
