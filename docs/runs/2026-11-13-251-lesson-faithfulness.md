@@ -36,9 +36,9 @@ The shipped slice has five parts:
   citation tokens and are added, not gated.
 
 The fixture also gained `b2-c14-0000` as an alternative expected chunk for
-`lesson-dada-13`: it states that Hagrid "christened 'Fluffy'" the giant
-three-headed dog. The gold set was incomplete, and the gate requires a new
-baseline when the fixture SHA changes.
+`lesson-dada-13`: that chunk states that Hagrid named the giant three-headed dog
+Fluffy. The gold set was incomplete, and the gate requires a new baseline when
+the fixture SHA changes.
 
 ## Before and after
 
@@ -67,7 +67,7 @@ baseline when the fixture SHA changes.
 ## Iterations
 
 Every run below is a finished eval run. Runs `080422Z` onward share this
-record; `072932Z` and `073645Z` have their own records.
+record; `072932Z` has its own record and `073645Z` is covered by this record.
 
 | Run id | Change | Faithfulness | Citation | Scope | False refusal | Off-pack citation |
 |---|---|---:|---:|---:|---:|---:|
@@ -82,21 +82,33 @@ record; `072932Z` and `073645Z` have their own records.
 ## Reading
 
 - Faithfulness moved from 2/30 to 4/30. The judge and calibration are
-  owner-adopted, so this is not a judge change. It is also two items at n=30,
-  which is inside noise. The judge evidence set grew from the top-3 materials to
-  the expanded group (up to five), so the movement conflates the prompt and
+  owner-adopted, so this is not a judge change; the adopted calibration run is
+  `20261113T070629Z`, with exact and binary agreement 1.0000, adjacent agreement
+  1.0000, refusal checks 2/2 and gate PASS. It is also two items at n=30, which
+  is inside noise. The judge evidence set grew from the top-3 materials to the
+  expanded group (up to five), so the movement conflates the prompt and
   paragraph rule with more evidence for the judge. It is directional, not a
   statistically distinguishable gain.
-- Citation recall rose from 0.9231 to 0.9615. Scope is unchanged at 0.9839; the
-  one miss is `lesson-charms-07`, which classifies as `mixed` because the
-  coverage check leaves a term uncovered and the corpus leg then fires. That is
-  #250/#252, not this slice.
+- Citation recall rose from 0.9231 to 0.9615, two items at 52. One is a real
+  per-item gain; the off-pack item stays at 1.0 only because the gold set now
+  includes `b2-c14-0000`. Scope is unchanged at 0.9839; the one miss is
+  `lesson-charms-07`, which classifies as `mixed` because the coverage check
+  leaves a term uncovered and the corpus leg then fires. That is #250/#252, not
+  this slice.
 - False refusal is 0 and off-pack citation recall is 1.0. The hard-gate variant
-  (run `072932Z`) produced two false refusals and a scope miss from citation
-  placement alone, so the shipped gate retries and then serves.
+  (run `072932Z`) produced two false refusals, so the shipped gate retries and
+  then serves. Its scope accuracy of 0.9516 is those two refusals plus the
+  pre-existing `lesson-charms-07` miss, not a gate effect.
 - The best-draft fallback matters: without it, a paragraph retry that refuses
   replaced an answerable first draft with the abstention line (run `080422Z`,
-  `lesson-dada-13`). The retry can no longer make the answer worse.
+  `lesson-dada-13`). The retry can no longer replace an answerable draft with
+  the abstention line.
+- The fallback is a deliberate tradeoff. It serves the earlier answerable draft
+  even though that draft failed the paragraph check, and it cannot tell a
+  placement refusal from a refusal that judges the notes unsupported. The
+  fallback rate and the served draft's uncited-paragraph count are traced but
+  not aggregated, so the residual is unmeasured. Measuring both is part of the
+  next slice.
 - Removing the concrete chunk-id example from the mixed and off-pack prompts
   made faithfulness and multi-turn false refusal worse (run `082146Z`: 3/30,
   false refusal 0.1212), so the examples stay.
@@ -114,6 +126,14 @@ record; `072932Z` and `073645Z` have their own records.
   is sentence-level support or a more extractive lesson mode. The chat half and
   the `docs/routing-contracts.md` provenance residual are untouched; #251 stays
   open.
+- The persona conformance eval was not re-run. Its judge rubric and fixture
+  anchors still describe the unconditional shape (one example, one caution),
+  while the lesson prompt now makes both conditional. The conformance scenarios
+  draw on reviewed materials that support an example and a caution, so the
+  expected shape is still producible, but an answer that correctly omits an
+  unsupported section could be scored down. Updating the rubric and anchors and
+  re-running `scripts/run_persona_eval.py` is the next persona task; this record
+  marks the gap rather than changing a pinned judge without recalibrating it.
 
 ## Baseline re-pin
 
@@ -121,8 +141,10 @@ The gold-set correction changes the lesson fixture SHA. `--check` fails on a
 fixture mismatch by design, so the baseline was re-pinned with
 `uv run python scripts/run_eval.py --rag --write-baseline --force-baseline` at
 run `20261113T082614Z`. That run is metric-for-metric identical to
-`20261113T082310Z`; only the fixture SHA and the off-pack gold set changed.
-Every other metric is unchanged.
+`20261113T082310Z`; only the fixture SHA and the off-pack gold set changed
+between those two runs. The re-pin also moves the pinned reference from the #248
+numbers onto the #251 state, so it absorbs #249's multi-turn movement as well;
+the #248 and #249 records remain the historical comparison.
 
 ## Reproduce
 

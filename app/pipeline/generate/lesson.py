@@ -654,7 +654,10 @@ async def ask_lesson(
             )
 
     def trace_result(
-        result: AskResult, attempts: int, uncited_paragraphs: int = 0
+        result: AskResult,
+        attempts: int,
+        uncited_paragraphs: int = 0,
+        fallback: bool = False,
     ) -> None:
         if tracer is not None:
             tracer.emit(
@@ -664,6 +667,7 @@ async def ask_lesson(
                 retry_reason=result.retry_reason,
                 attempts=attempts,
                 uncited_paragraphs=uncited_paragraphs,
+                fallback=fallback,
                 scope=result.scope,
                 material_citations=len(result.material_citations),
                 citations=len(result.citations),
@@ -739,7 +743,8 @@ async def ask_lesson(
     attempt = 0
     retry_reason: str | None = None
     attempt_system = system
-    best: tuple[AskResult, str] | None = None
+    best: tuple[AskResult, str, int] | None = None
+    fallback = False
     while True:
         attempt += 1
         draft = await one_draft(attempt_system, prompt, llm, on_token)
@@ -761,7 +766,7 @@ async def ask_lesson(
         if has_required and not refusal and not result.abstained:
             # A retry must never make an answerable draft worse: keep the last
             # draft that has its citation space in case a later retry refuses.
-            best = (result, attempt_system)
+            best = (result, attempt_system, missing_paragraphs)
         if (has_required and paragraphs_ok) or refusal or attempt > max_retries:
             break
         retry_reason = (
@@ -780,9 +785,12 @@ async def ask_lesson(
             on_reset()
 
     if (refusal or result.abstained) and best is not None:
-        result, attempt_system = best
+        result, attempt_system, missing_paragraphs = best
         refusal = False
+        # The last attempt may have lost the citation space; the restored
+        # draft has it, so the final branch must serve rather than abstain.
         has_required = True
+        fallback = True
 
     if refusal:
         result = AskResult(
@@ -818,5 +826,5 @@ async def ask_lesson(
         selection_scores=selection_scores,
         uncovered_terms=uncovered_list,
     )
-    trace_result(final_result, attempt, missing_paragraphs)
+    trace_result(final_result, attempt, missing_paragraphs, fallback)
     return final_result

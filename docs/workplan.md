@@ -591,14 +591,16 @@ recall from 0.9231 to 0.9615, with false refusal at 0. The run is
 rejected variants and the iteration runs. The slice corrected one off-pack gold
 chunk and re-pinned the RAG baseline at `20261113T082614Z`; the gate passes.
 
-The baseline is `docs/runs/2026-11-12-248-rag-eval-foundation.md`: 62 lesson
-items and 36 multi-turn turns. Lesson citation recall is 0.9231 and citation
-validity is 1.0000, but faithfulness is 2/30. Multi-turn query accuracy is
-0.9444, mode accuracy 0.8611,
-citation accuracy 0.5152, false refusal 0.1515, comparison accuracy 0.0833, and
-referral target accuracy 0.0000 because the cross-subject contract is #253. The
-baseline is pinned at `eval/results/rag-baseline.json`; the gate is
-`scripts/run_rag_eval.py --check` or `run_eval.py --rag --check`.
+The historical baseline is `docs/runs/2026-11-12-248-rag-eval-foundation.md`:
+62 lesson items and 36 multi-turn turns. At #248, lesson citation recall was
+0.9231 and citation validity 1.0000, with faithfulness 2/30; multi-turn query
+accuracy was 0.9444, mode 0.8611, citation 0.5152, false refusal 0.1515,
+comparison 0.0833 and referral 0.0000 because the cross-subject contract is
+#253. The pinned baseline is now run `20261113T082614Z` in
+`eval/results/rag-baseline.json`: faithfulness 4/30, citation recall 0.9615,
+query accuracy 1.0000, mode 0.8889, citation 0.5758, false refusal 0.0909 and
+comparison 0.1667. The gate is `scripts/run_rag_eval.py --check` or
+`run_eval.py --rag --check`.
 
 The earlier live probes found a false refusal on "How do I defeat a Boggart?",
 a cross-subject abstain on "what about Avifors?", and an implicit follow-up that

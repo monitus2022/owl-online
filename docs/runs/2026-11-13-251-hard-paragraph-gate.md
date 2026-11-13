@@ -46,10 +46,11 @@ from `main`.
 ## Reading
 
 - The gate refused two answerable items, `lesson-dada-02` and
-  `lesson-dada-04`, and turned `lesson-charms-07` from `in_pack` to `mixed`.
-  Both refusals came from citation placement: the model put the note ids at the
-  end of the answer, not at the end of each paragraph. The notes were present
-  and correct.
+  `lesson-dada-04`. Scope accuracy 0.9516 is 59/62: those two refusals plus the
+  pre-existing `lesson-charms-07` miss, which is already `mixed` in the #248
+  baseline and is not a gate effect. Both refusals came from citation placement:
+  the model put the note ids at the end of the answer, not at the end of each
+  paragraph. The notes were present and correct.
 - The faithfulness number is 5/30, one item above the shipped 4/30, but the
   judged sample is not comparable. The sampler draws the judged 30 from
   answered results only, so this run judged 30 of 50 answers while the shipped

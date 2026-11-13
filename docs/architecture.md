@@ -502,7 +502,8 @@ The selector records the selected material ids, their cosine scores where the
 material came from the embedding leg, and the uncovered question terms on
 `AskResult`; the `lesson_select` trace span carries the ids, scores, uncovered
 term count and hash, scope and conversation size, and the `lesson_result` span
-carries the final abstention reason and citation counts. The raw question terms
+carries the abstention reason, retry reason, attempts, uncited paragraphs,
+fallback flag and citation counts. The raw question terms
 are not emitted in the trace.
 With the fallback off, a question with no material above the floor abstains
 with `no_evidence`; a selected material that leaves terms uncovered stays
