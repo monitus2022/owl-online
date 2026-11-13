@@ -73,9 +73,32 @@ def test_summarize_calibration_reports_exact_adjacent_and_refusal():
     assert report.adjacent_agreement == 1.0
     assert report.mean_absolute_error == 1 / 3
     assert report.binary_agreement == 1.0
+    assert report.refusals_ok == 1
     assert report.adopted is True
     assert report.parse_failures == 0
     assert [result.item.item_id for result in report.disagreements] == ["2"]
+
+
+def test_mixed_label_sources_are_not_adopted():
+    def item(item_id: str, source: str) -> CalibrationItem:
+        return CalibrationItem(
+            item_id=item_id,
+            slice_name="in_pack",
+            question="q",
+            answer="a",
+            material_ids=(),
+            chunk_ids=(),
+            label="supported",
+            label_source=source,
+        )
+
+    results = [
+        CalibrationResult(item("1", "owner-adopted 2026-11-13"), "supported"),
+        CalibrationResult(item("2", "agent-proposed; owner review required"), "supported"),
+    ]
+    report = summarize_calibration(results)
+    assert report.adopted is False
+    assert report.ok is False
 
 
 def test_evidence_prompt_rejects_unresolved_ids():

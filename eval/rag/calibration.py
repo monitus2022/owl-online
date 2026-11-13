@@ -79,17 +79,21 @@ class CalibrationReport:
     adjacent_agreement: float
     mean_absolute_error: float
     binary_agreement: float
+    refusals_ok: int
+    adopted: bool
     parse_failures: int
     disagreements: tuple[CalibrationResult, ...]
     label_source: str
 
     @property
-    def adopted(self) -> bool:
-        return self.label_source.startswith("owner-adopted")
-
-    @property
     def ok(self) -> bool:
-        return self.adopted and self.parse_failures == 0 and self.exact_agreement >= 0.7
+        return (
+            self.adopted
+            and self.refusals_ok == self.refusals
+            and self.binary_agreement >= 0.7
+            and self.parse_failures == 0
+            and self.exact_agreement >= 0.7
+        )
 
 
 def _string_tuple(record: dict[str, object], key: str, where: str) -> tuple[str, ...]:
@@ -233,6 +237,11 @@ def summarize_calibration(results: list[CalibrationResult]) -> CalibrationReport
         adjacent_agreement=adjacent / len(judged) if judged else 0.0,
         mean_absolute_error=mae,
         binary_agreement=binary_agreement,
+        refusals_ok=sum(
+            result.refusal_ok is True for result in results if result.item.label == "refusal"
+        ),
+        adopted=bool(results)
+        and all(result.item.label_source.startswith("owner-adopted") for result in results),
         parse_failures=sum(result.parse_failed for result in results),
         disagreements=tuple(result for result in judged if result.judge_label != result.item.label),
         label_source=results[0].item.label_source if results else "",
@@ -280,6 +289,7 @@ def render_calibration(report: CalibrationReport) -> str:
         f"adjacent agreement: {report.adjacent_agreement:.4f}",
         f"mean absolute error: {report.mean_absolute_error:.4f}",
         f"binary judge agreement: {report.binary_agreement:.4f}",
+        f"refusal checks: {report.refusals_ok}/{report.refusals}",
         f"labels adopted: {report.adopted}",
         f"parse failures: {report.parse_failures}",
     ]

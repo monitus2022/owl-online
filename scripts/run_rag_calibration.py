@@ -19,8 +19,9 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from app.config import Settings  # noqa: E402
-from eval.harness import JUDGE_MODEL  # noqa: E402
+from eval.harness import FAITHFUL_SYSTEM, JUDGE_MODEL  # noqa: E402
 from eval.rag.calibration import (  # noqa: E402
+    FAITHFUL_LABEL_SYSTEM,
     load_calibration,
     render_calibration,
     run_calibration,
@@ -53,6 +54,12 @@ async def _run(args: argparse.Namespace) -> int:
                 "judge": JUDGE_MODEL,
                 "judge_temperature": EVAL_TEMPERATURE,
                 "prompt_version": PROMPT_VERSION,
+                "prompt_sha": hashlib.sha256(FAITHFUL_LABEL_SYSTEM.encode("utf-8")).hexdigest()[
+                    :12
+                ],
+                "binary_prompt_sha": hashlib.sha256(FAITHFUL_SYSTEM.encode("utf-8")).hexdigest()[
+                    :12
+                ],
                 "fixture_sha": fixture_sha,
                 "settings": {
                     "provider": settings.provider,

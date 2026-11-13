@@ -571,10 +571,12 @@ turns. The final post-review record is
 `docs/runs/2026-11-13-249-context-aware-retrieval-r2.md`.
 
 #258's final calibration run covers 18 items, 16 judged and 2 refusals, across
-in-pack, paraphrase, multi-concept, mixed and off-pack. The three-level and
-production binary judges both report exact agreement 1.0000. The labels are
-agent-proposed and need owner adoption before the calibration is pinned; the
-record is `docs/runs/2026-11-13-258-faithfulness-calibration.md`.
+in-pack, paraphrase, multi-concept, mixed and off-pack. The three-level judge
+reports exact agreement 1.0000, the production binary judge reports 1.0000, and
+both refusals are recognized. The labels are agent-proposed and need owner
+adoption before the calibration is pinned; the record is
+`docs/runs/2026-11-13-258-faithfulness-calibration.md`, with the superseded
+passes in `2026-11-13-258-faithfulness-calibration-superseded.md`.
 
 The order after #249 is: adopt the #258 labels, then #251 lesson prompt and
 claim binding, then #252 comparison-aware selection, #259 the comparison router,
