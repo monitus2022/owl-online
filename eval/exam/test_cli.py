@@ -77,13 +77,15 @@ def test_cli_exits_nonzero_on_a_missing_bank(tmp_path) -> None:
     assert result.returncode != 0
 
 
-def test_cli_rejects_a_missing_calibration_fixture() -> None:
+def test_cli_rejects_a_missing_calibration_fixture(tmp_path) -> None:
     result = subprocess.run(
         [
             sys.executable,
             str(REPO / "scripts" / "run_exam_eval.py"),
             "--subject",
-            "potions",
+            "charms",
+            "--calibration",
+            str(tmp_path / "missing.jsonl"),
         ],
         cwd=REPO,
         capture_output=True,

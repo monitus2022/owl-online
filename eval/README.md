@@ -31,7 +31,7 @@ and a judged sample of generated answers. The full harness as a CI gate is V2
 | `eval/test_report.py` | row and rendering tests, no network |
 | `scripts/run_eval.py` | CLI params and dispatch |
 | `scripts/measure_aggregation.py` | aggregation fixture measurement |
-| `eval/exam/` | Subject bank eval: deterministic checks, independent model checks, judge calibration, calibration fixtures and runner (#191, #261) |
+| `eval/exam/` | Subject bank eval: deterministic checks, independent model checks, judge calibration, calibration fixtures and runner (#191, #261, #264) |
 | `eval/persona/` | persona-conformance fixture, deterministic checks, pinned voice judge, calibration and runner (#176) |
 | `eval/routing/` | frozen contract/authority routing fixture and loader (#217) |
 
@@ -560,7 +560,7 @@ because the judge's reasoning tokens otherwise consume the budget. A model list
 and fixture can be passed with `--models` and `--fixture`. The script exits
 non-zero when no verdict parses, so a broken run cannot look like a result.
 
-## Exam-bank eval (#191, #261)
+## Exam-bank eval (#191, #261, #264)
 
 The subject bank eval is separate from the chat eval. It needs the local bank,
 pack, corpus and model keys because the bank prose and corpus are not in git.
@@ -595,10 +595,11 @@ most 1.5 marks and adjacent agreement at least 0.90, and no unreviewed parse
 failure. `--no-independent` and `--no-calibration` each disable one section;
 pass both for a deterministic-only quick check.
 
-The DADA and Charms records are
-`docs/runs/2026-11-09-191-dada-bank-eval.md` and
-`docs/runs/2026-11-13-261-charms-judge-calibration.md`; a row for each is in the
-Runs table in `docs/runs/README.md`. Until the other three fixtures exist, run
+The DADA, Charms and Potions records are
+`docs/runs/2026-11-09-191-dada-bank-eval.md`,
+`docs/runs/2026-11-13-261-charms-judge-calibration.md` and
+`docs/runs/2026-11-13-264-potions-judge-calibration.md`; a row for each is in
+the Runs table in `docs/runs/README.md`. Until the other two fixtures exist, run
 them with `--no-calibration`.
 
 ## Persona conformance (#176)

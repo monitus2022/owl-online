@@ -155,8 +155,8 @@
 - One judge call; valid JSON; no retry; no needs_review; 32/32; band O.
 - Output hash: `9961fce489b5a0a037a8aed50bee3b1dfd0462e019013430c473164c7d8a033d`.
 - Record: `docs/exams/dada-1.0.0-grading-probe.md`.
-- Calibration: #191 (pending); this probe is a smoke test, not the
-  human-marked calibration set.
+- Calibration: `docs/runs/2026-11-09-191-dada-bank-eval.md`; this probe is a
+  smoke test, not the human-marked calibration set.
 
 ## Review
 

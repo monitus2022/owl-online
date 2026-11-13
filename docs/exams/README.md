@@ -101,13 +101,15 @@ The Charms, Potions, Transfiguration and Herbology banks 1.0.0 are recorded at
 record stays reproducible. The grader accepts both pins and selects the
 matching system prompt.
 
-Charms has a committed calibration set and record
+Charms and Potions have committed calibration sets and records
 (`eval/exam/fixtures/calibration-charms.jsonl`,
-`docs/runs/2026-11-13-261-charms-judge-calibration.md`). Select a subject with
+`eval/exam/fixtures/calibration-potions.jsonl`,
+`docs/runs/2026-11-13-261-charms-judge-calibration.md`,
+`docs/runs/2026-11-13-264-potions-judge-calibration.md`). Select a subject with
 `uv run python scripts/run_exam_eval.py --subject charms`; the script resolves
 the bank and calibration file and keeps the DADA coverage targets off for other
-subjects. Potions, Transfiguration and Herbology still need their own
-calibration sets; run them with `--no-calibration` until those fixtures exist.
+subjects. Transfiguration and Herbology still need their own calibration sets;
+run them with `--no-calibration` until those fixtures exist.
 
 ## Serving
 
