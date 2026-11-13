@@ -82,6 +82,13 @@ so on.
 | 2026-11-13 | #261 | `exam-20261113-5e5fb6bf` | `charms-bank-exam` | n/a | n/a | n/a | [Charms judge calibration](2026-11-13-261-charms-judge-calibration.md) |
 | 2026-11-13 | #264 | `exam-20261113-82042d78` | `potions-bank-exam` | n/a | n/a | n/a | [Potions judge calibration](2026-11-13-264-potions-judge-calibration.md) |
 | 2026-11-13 | #264 | `exam-20261113-787aeb63` | `potions-bank-exam` | n/a | n/a | n/a | [Potions judge calibration](2026-11-13-264-potions-judge-calibration.md) |
+| 2026-11-13 | #266 | `exam-20261113-86c01740` | `transfiguration-bank-exam` | n/a | n/a | n/a | [Transfiguration judge calibration](2026-11-13-266-transfiguration-judge-calibration.md) |
+| 2026-11-13 | #266 | `exam-20261113-6a67f74c` | `transfiguration-bank-exam` | n/a | n/a | n/a | [Transfiguration judge calibration](2026-11-13-266-transfiguration-judge-calibration.md) |
+| 2026-11-13 | #266 | `exam-20261113-e9c20843` | `transfiguration-bank-exam` | n/a | n/a | n/a | [Transfiguration judge calibration](2026-11-13-266-transfiguration-judge-calibration.md) |
+| 2026-11-13 | #266 | `exam-20261113-cd7353e3` | `transfiguration-bank-exam` | n/a | n/a | n/a | [Transfiguration judge calibration](2026-11-13-266-transfiguration-judge-calibration.md) |
+| 2026-11-13 | #266 | `exam-20261113-cf3e7b00` | `transfiguration-bank-exam` | n/a | n/a | n/a | [Transfiguration judge calibration](2026-11-13-266-transfiguration-judge-calibration.md) |
+| 2026-11-13 | #267 | `exam-20261113-605efece` | `herbology-bank-exam` | n/a | n/a | n/a | [Herbology judge calibration](2026-11-13-267-herbology-judge-calibration.md) |
+| 2026-11-13 | #267 | `exam-20261113-c8ee76b7` | `herbology-bank-exam` | n/a | n/a | n/a | [Herbology judge calibration](2026-11-13-267-herbology-judge-calibration.md) |
 | 2026-11-09 | #176 | `20261109T171502Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice](2026-11-09-176-persona-lesson-voice.md) |
 | 2026-11-10 | #176 | `20261109T174845Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice r2](2026-11-10-176-persona-lesson-voice-r2.md) |
 | 2026-11-12 | #248 | `20261112T135058Z` | `rag-eval` | n/a | n/a | 2/30 | [Lesson and multi-turn RAG baseline](2026-11-12-248-rag-eval-foundation.md) |
