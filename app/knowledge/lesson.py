@@ -252,6 +252,38 @@ class LessonSelector:
             if material.material_id in by_id
         }
 
+    def expand_groups(
+        self,
+        subject: str,
+        materials: list[Material],
+        *,
+        max_materials: int = 5,
+    ) -> list[Material]:
+        """Add the rest of each selected concept's materials, up to a cap.
+
+        The top-k list can hold one note for a concept that has two or three.
+        The model should see the full reviewed group before it decides to
+        elaborate, but the cap keeps the prompt bounded.
+        """
+        pack = self.store.get(subject)
+        if pack is None or not materials:
+            return materials
+        concepts: list[str] = []
+        for material in materials:
+            if material.concept not in concepts:
+                concepts.append(material.concept)
+        expanded = list(materials)
+        seen = {material.material_id for material in expanded}
+        for concept in concepts:
+            for material in pack.materials:
+                if material.concept != concept or material.material_id in seen:
+                    continue
+                expanded.append(material)
+                seen.add(material.material_id)
+                if len(expanded) >= max_materials:
+                    return expanded
+        return expanded
+
     async def select(
         self,
         question: str,

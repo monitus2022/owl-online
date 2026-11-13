@@ -272,7 +272,17 @@ The embedding selector's best-match cosine must clear `OWL_LESSON_MIN_SCORE`
 (default 0.58, calibrated for the local `qwen3-embedding:0.6b`: related
 questions 0.598-0.791, off-topic 0.160-0.549). A curated concept-title or alias
 match can still add a material when a comparison question embeds weakly, so
-"Compare Expelliarmus with Avifors" keeps the Disarming Charm note.
+"Compare Expelliarmus with Avifors" keeps the Disarming Charm note. After
+selection, the full reviewed material group for each matched concept is added,
+capped at five materials, so the model sees every note for the concept rather
+than one note and two neighbours.
+
+Every substantive paragraph must carry a material or chunk citation. A draft
+with an uncited factual paragraph gets one stricter retry; if the retry still
+leaves a factual paragraph uncited, the answer is served with the citations it
+does have rather than refused. Short lines and a final check question are
+exempt. The lesson prompt asks for an answer under 220 words, and the eval
+reports mean and maximum answer length.
 
 `scope` says where the evidence came from:
 

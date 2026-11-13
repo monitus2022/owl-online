@@ -89,6 +89,7 @@ so on.
 | 2026-11-13 | #258 | `20261113T035711Z` | `rag-calibration` (18-item pre-fix pass) | n/a | n/a | n/a | [Calibration pre-fix pass](2026-11-13-258-faithfulness-calibration-prefix.md) |
 | 2026-11-13 | #258 | `20261113T040759Z` | `rag-calibration` (final) | n/a | n/a | n/a | [Lesson faithfulness calibration](2026-11-13-258-faithfulness-calibration.md) |
 | 2026-11-13 | #258 | `20261113T070629Z` | `rag-calibration` (owner-adopted) | n/a | n/a | n/a | [Lesson faithfulness calibration adopted](2026-11-13-258-faithfulness-calibration-adopted.md) |
+| 2026-11-13 | #251 | `20261113T073645Z` | `rag-eval` | n/a | n/a | 4/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
 
 Exam-bank runs use `n/a` for the chat metrics; the deterministic, independent
 and calibration tables are in the record.

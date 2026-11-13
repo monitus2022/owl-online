@@ -477,7 +477,14 @@ bound it. A multi-tenant deployment needs a bounded or durable store.
 When the classification would otherwise be `answer` and the request mode is
 `lesson` with `OWL_LESSON_MODE` on, the graph routes to `lesson_node` instead of
 `answer`. The derived selector scores the in-memory material vectors and the
-prompt carries the selected materials. A deterministic coverage check compares
+prompt carries the selected materials. After selection, each matched concept is
+expanded to its full reviewed material group, capped at five materials, so the
+model sees every note for the concept rather than one note and two neighbours.
+The prompt requires a citation in every substantive paragraph; `paragraphs_cited`
+retries once when a factual paragraph is uncited, then serves the answer with
+its existing citations rather than refusing. Short lines and the final check
+question are exempt, and the prompt asks for under 220 words. A deterministic
+coverage check compares
 the question's content terms with the material prose and the concept
 titles/aliases. If the pack covers the question, the draft must cite `[mat:<id>]`
 and the branch makes no retrieval call. If the pack is empty or leaves terms

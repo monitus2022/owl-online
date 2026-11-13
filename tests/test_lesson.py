@@ -23,6 +23,7 @@ from app.pipeline.generate.lesson import (
     build_lesson_prompt,
     ground_lesson_answer,
     is_lesson_refusal,
+    paragraphs_cited,
     render_materials,
     uncovered_terms,
 )
@@ -321,6 +322,47 @@ async def test_selector_prefers_the_matching_material():
     assert [m.material_id for m in selected] == ["dada-dark-creatures-boggarts-nature"]
 
 
+def test_selector_expands_the_full_concept_group():
+    base = _store().get("dada")
+    assert base is not None
+    extra = Material(
+        material_id="dada-dark-creatures-boggarts-extra",
+        subject="dada",
+        topic="dark-creatures",
+        concept="dada-creature-boggart",
+        kind="creature",
+        text="A second reviewed note on the same concept.",
+        review_status="reviewed",
+        source_refs=[_ref("b3-c07-0051")],
+    )
+    pack = base.model_copy(update={"materials": [*base.materials, extra]})
+    store = PackStore(packs={"dada": pack}, fingerprints={"dada": "fp"})
+    selector = LessonSelector(store=store, embedder=KeywordEmbedder(), vectors={})
+    first = next(
+        material
+        for material in pack.materials
+        if material.material_id == "dada-dark-creatures-boggarts-nature"
+    )
+    expanded = selector.expand_groups("dada", [first], max_materials=5)
+    assert {material.material_id for material in expanded} == {
+        "dada-dark-creatures-boggarts-nature",
+        "dada-dark-creatures-boggarts-extra",
+    }
+
+
+def test_paragraphs_cited_requires_a_citation_per_factual_paragraph():
+    ok = "A boggart changes shape [mat:boggart].\n\nIt prefers dark places [mat:boggart]."
+    assert paragraphs_cited(ok) == (True, 0)
+    missing = (
+        "A boggart changes shape [mat:boggart].\n\n"
+        "It also haunts old houses, abandoned shops and any other forgotten "
+        "place where people once lived and feared something in the dark."
+    )
+    assert paragraphs_cited(missing) == (False, 1)
+    short = "A boggart changes shape.\n\nWhat would you do?"
+    assert paragraphs_cited(short) == (True, 0)
+
+
 @pytest.mark.asyncio
 async def test_selector_is_subject_scoped_and_unknown_subject_is_empty():
     selector = await LessonSelector.build(_store(), KeywordEmbedder())
@@ -613,7 +655,7 @@ async def test_ask_lesson_puts_the_persona_before_the_grounding_rules():
     assert "citation and abstention rules in this prompt" in system
     assert "rules above" not in system
     assert "open with a direct answer in the second person" in system
-    assert "under 250 words" in system
+    assert "under 220 words" in system
 
 
 def test_render_materials_hides_inline_chunk_ids():
@@ -1346,3 +1388,24 @@ async def test_ask_lesson_rejects_a_label_only_answer():
     assert result.abstained is True
     assert result.abstain_reason == "refused"
     assert result.scope == "abstained"
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_accepts_a_cited_answer_with_an_uncited_paragraph():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = StaticLlm(
+        "A boggart changes shape [mat:dada-dark-creatures-boggarts-nature].\n\n"
+        "It also haunts old houses, abandoned shops and any other forgotten "
+        "place where people once lived and feared something in the dark."
+    )
+
+    result = await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        max_retries=0,
+    )
+
+    assert result.abstained is False
+    assert result.answer
