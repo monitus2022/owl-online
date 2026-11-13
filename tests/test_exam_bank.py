@@ -537,14 +537,14 @@ def test_write_omits_unset_optional_manifest_fields(tmp_path: Path) -> None:
     assert "null" not in (directory / "manifest.toml").read_text(encoding="utf-8")
 
 
-def test_committed_manifest_snapshot_is_published_and_pinned() -> None:
+def _assert_dada_snapshot(name: str, version: str) -> None:
     repo = Path(__file__).resolve().parents[1]
     snapshot = tomllib.loads(
-        (repo / "docs" / "exams" / "dada-1.0.0.manifest.toml").read_text(encoding="utf-8")
+        (repo / "docs" / "exams" / name).read_text(encoding="utf-8")
     )
     manifest = BankManifest.model_validate(snapshot)
     assert manifest.subject == "dada"
-    assert manifest.version == "1.0.0"
+    assert manifest.version == version
     assert manifest.status == "published"
     assert manifest.reviewed_at
     assert manifest.generator_temperature == 0.0
@@ -554,6 +554,14 @@ def test_committed_manifest_snapshot_is_published_and_pinned() -> None:
     assert manifest.pack_version == "1.0.0"
     assert manifest.pack_fingerprint == "e7139cbcc23eaa5c"
     assert manifest.index_text_hash == "aca4c57462d449f5"
+
+
+def test_committed_manifest_snapshot_is_published_and_pinned() -> None:
+    _assert_dada_snapshot("dada-1.0.0.manifest.toml", "1.0.0")
+
+
+def test_committed_dada_1_1_0_manifest_snapshot_is_published_and_pinned() -> None:
+    _assert_dada_snapshot("dada-1.1.0.manifest.toml", "1.1.0")
 
 
 def test_store_refuses_published_replace(tmp_path: Path) -> None:

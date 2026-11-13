@@ -364,22 +364,22 @@ rehearsal copy instead of claiming a live professor.
 ### Exam serving
 
 The exam room reads the published bank through six routes. A paper id is
-`<subject>-<version>`, for example `dada-1.0.0`, `charms-1.0.0`, `potions-1.0.0`, `transfiguration-1.0.0` or `herbology-1.0.0`. Nothing is
+`<subject>-<version>`, for example `dada-1.1.0`, `charms-1.0.0`, `potions-1.0.0`, `transfiguration-1.0.0` or `herbology-1.0.0`. Nothing is
 generated at request time: the server samples a stored bank, persists the
 attempt, and grades it later. The banks are independent, so the Charms venue
 requests `subject=charms` explicitly; the default remains `OWL_EXAM_SUBJECT`.
 
-`GET /v1/exams?subject=dada&version=1.0.0` returns the published paper
+`GET /v1/exams?subject=dada&version=1.1.0` returns the published paper
 descriptors. `subject` defaults to `OWL_EXAM_SUBJECT` and `version` to the
-latest published bank; an unknown or unpublished bank returns an empty list.
+most recently imported published bank; an unknown or unpublished bank returns an empty list.
 Response `200`:
 
 ```json
 [
   {
-    "paper_id": "dada-1.0.0",
+    "paper_id": "dada-1.1.0",
     "subject": "dada",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "title": "Defence Against the Dark Arts",
     "question_count": 10,
     "mcq_count": 6,
@@ -404,9 +404,9 @@ rubric or evidence ids:
 ```json
 {
   "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
-  "paper_id": "dada-1.0.0",
+  "paper_id": "dada-1.1.0",
   "subject": "dada",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "created_at": "2026-11-09T12:00:00Z",
   "marks": 50,
   "questions": [
@@ -462,9 +462,9 @@ keys, golden answers, rubric or evidence:
 [
   {
     "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
-    "paper_id": "dada-1.0.0",
+    "paper_id": "dada-1.1.0",
     "subject": "dada",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "created_at": "2026-11-09T12:00:00Z",
     "graded_at": "2026-11-09T12:05:00Z",
     "total": 38,
@@ -509,7 +509,7 @@ response is `200`:
 ```json
 {
   "attempt_id": "V1StGXR8_Z5jdHi6B-myT",
-  "paper_id": "dada-1.0.0",
+  "paper_id": "dada-1.1.0",
   "total": 38,
   "max_marks": 50,
   "band": "A",

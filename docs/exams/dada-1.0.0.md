@@ -1,5 +1,7 @@
 # Bank record: dada 1.0.0
 
+Superseded by [DADA 1.1.0](dada-1.1.0.md), which levels MCQ option lengths. This record remains the 1.0.0 history.
+
 - Status: `published`
 - Built at: `2026-11-09T08:42:36Z`
 - Reviewed at: `2026-11-09T09:01:28Z`

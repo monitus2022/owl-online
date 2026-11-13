@@ -89,6 +89,7 @@ so on.
 | 2026-11-13 | #266 | `exam-20261113-cf3e7b00` | `transfiguration-bank-exam` | n/a | n/a | n/a | [Transfiguration judge calibration](2026-11-13-266-transfiguration-judge-calibration.md) |
 | 2026-11-13 | #267 | `exam-20261113-605efece` | `herbology-bank-exam` | n/a | n/a | n/a | [Herbology judge calibration](2026-11-13-267-herbology-judge-calibration.md) |
 | 2026-11-13 | #267 | `exam-20261113-c8ee76b7` | `herbology-bank-exam` | n/a | n/a | n/a | [Herbology judge calibration](2026-11-13-267-herbology-judge-calibration.md) |
+| 2026-11-13 | #271 | `exam-20261113-dada-1.1.0` | `dada-bank-exam` | n/a | n/a | n/a | [DADA 1.1.0 bank eval](2026-11-13-271-dada-1.1.0.md) |
 | 2026-11-09 | #176 | `20261109T171502Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice](2026-11-09-176-persona-lesson-voice.md) |
 | 2026-11-10 | #176 | `20261109T174845Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice r2](2026-11-10-176-persona-lesson-voice-r2.md) |
 | 2026-11-12 | #248 | `20261112T135058Z` | `rag-eval` | n/a | n/a | 2/30 | [Lesson and multi-turn RAG baseline](2026-11-12-248-rag-eval-foundation.md) |
