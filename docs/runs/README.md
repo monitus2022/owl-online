@@ -94,6 +94,7 @@ so on.
 | 2026-11-13 | #273 | `exam-20261113-273-rebaseline-2` | `dada-bank-exam` | n/a | n/a | n/a | [DADA calibration re-baseline](2026-11-13-273-dada-calibration-rebaseline.md) |
 | 2026-11-13 | #273 | `exam-20261113-273-rebaseline-3` | `dada-bank-exam` | n/a | n/a | n/a | [DADA calibration re-baseline](2026-11-13-273-dada-calibration-rebaseline.md) |
 | 2026-11-13 | #275 | `exam-20261113-dada-median3` | `dada-bank-exam` | n/a | n/a | n/a | [DADA median calibration](2026-11-13-275-dada-median-calibration.md) |
+| 2026-11-13 | #277 | `exam-20261113-277-judge-probe` | `dada-bank-exam` | n/a | n/a | n/a | [DADA judge model probe](2026-11-13-277-dada-judge-model-probe.md) |
 | 2026-11-09 | #176 | `20261109T171502Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice](2026-11-09-176-persona-lesson-voice.md) |
 | 2026-11-10 | #176 | `20261109T174845Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice r2](2026-11-10-176-persona-lesson-voice-r2.md) |
 | 2026-11-12 | #248 | `20261112T135058Z` | `rag-eval` | n/a | n/a | 2/30 | [Lesson and multi-turn RAG baseline](2026-11-12-248-rag-eval-foundation.md) |
