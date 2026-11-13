@@ -197,13 +197,17 @@ failed the single-run 0.90 gate. DADA defaults to three repeats
 (`--calibration-repeats 3`) and gates on the median. The median run passes at
 adjacent 0.9583 and MAE 0.4167; all three runs passed on that draw, while
 the #273 probe observed a failure at 0.8750. This stabilizes the gate; partial
-scoring remains the root-cause follow-up under #40. Records:
+scoring remains the root-cause follow-up under #40. A model probe found Qwen3
+32B parse-ailing (7/24 cases needed review, retries in every pass group) and
+Mistral Medium no better on exact agreement and excluded as closed-weight; the
+pin stays unchanged
+(`docs/runs/2026-11-13-277-dada-judge-model-probe.md`). Records:
 `docs/runs/2026-11-13-273-dada-calibration-rebaseline.md` and
 `docs/runs/2026-11-13-275-dada-median-calibration.md`.
 
 For DADA, the eval also gates a strict one-MCQ and one-short-answer per
 material; the 1.1.0 bank has no recorded slot swaps. The calibration gate treats
-any needs_review as a failure because a reviewed state is not modelled yet; no recorded calibration run has a needs_review.
+any needs_review as a failure because a reviewed state is not modelled yet; no recorded run on the pinned judge has a needs_review.
 
 ## Status flow
 
