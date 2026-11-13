@@ -19,8 +19,8 @@ prompts (except the experimental multi-book path), attempt history is
 session-scoped, and per-user
 history waits on auth (#35). The lesson and multi-turn RAG baseline is committed
 (#248); implicit follow-ups are resolved before retrieval (#249), and
-claim-level grounding, judge calibration and cross-subject referral are the
-active gaps (#251, #258, #253). The
+claim-level grounding and cross-subject referral are the active gaps (#251,
+#253); the lesson faithfulness judge is calibrated and owner-adopted (#258). The
 project's point is the evaluation discipline and the full-stack agent, not the
 corpus.
 
