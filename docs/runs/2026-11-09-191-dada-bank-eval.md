@@ -203,7 +203,7 @@ Metrics: max Jaccard `0.4545` (pair `['dada-mcq-014', 'dada-mcq-024']`), max cos
 ## Reproduce
 
 ```text
-uv run python scripts/run_exam_eval.py --json data/exams/dada/candidates/exam_eval.json
+uv run python scripts/run_exam_eval.py --subject dada --calibration-repeats 1 --json data/exams/dada/candidates/exam_eval.json
 ```
 
 ## Raw summary

@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import statistics
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -18,7 +19,12 @@ from app.config import settings
 from app.exam.bank import ExamBank
 from app.grading import AttemptAnswer, grade_attempt
 from app.providers.contracts import Llm
-from eval.exam.models import CalibrationCase, CalibrationDetail, CalibrationReport
+from eval.exam.models import (
+    CalibrationCase,
+    CalibrationDetail,
+    CalibrationReport,
+    CalibrationRun,
+)
 
 VARIANTS = (
     "full",
@@ -288,10 +294,92 @@ async def run_calibration(
     )
 
 
+def _median(values: Sequence[float | None]) -> float | None:
+    clean = [value for value in values if value is not None]
+    return float(statistics.median(clean)) if clean else None
+
+
+def _run_summary(report: CalibrationReport) -> CalibrationRun:
+    return CalibrationRun(
+        exact=report.exact,
+        adjacent=report.adjacent,
+        mae=report.mae,
+        per_criterion=dict(report.per_criterion),
+        calls=report.calls,
+        passes=report.passes,
+        retries=report.retries,
+        needs_review=report.needs_review,
+        verbose_delta=report.verbose_delta,
+        word_count_correlation=report.word_count_correlation,
+    )
+
+
+async def run_calibration_repeated(
+    bank: ExamBank,
+    cases: Sequence[CalibrationCase],
+    llm: Llm,
+    *,
+    repeats: int = 1,
+    set_sha256: str = "",
+) -> CalibrationReport:
+    """Run calibration N times and gate on the median.
+
+    The report keeps every run. The top-level metrics are medians, calls and
+    retries are totals, and the case table comes from the run closest to the
+    medians. Any `needs_review` in any run fails the gate.
+    """
+    if repeats < 1:
+        raise ValueError("calibration repeats must be at least 1")
+    reports = [
+        await run_calibration(bank, cases, llm, set_sha256=set_sha256)
+        for _ in range(repeats)
+    ]
+    exact = _median([report.exact for report in reports]) or 0.0
+    adjacent = _median([report.adjacent for report in reports]) or 0.0
+    mae = _median([report.mae for report in reports])
+    per_criterion = {
+        key: _median([report.per_criterion[key] for report in reports]) or 0.0
+        for key in reports[0].per_criterion
+    }
+    representative = min(
+        reports,
+        key=lambda report: (
+            abs(report.exact - exact)
+            + abs(report.adjacent - adjacent)
+            + abs((report.mae or 0.0) - (mae or 0.0))
+        ),
+    )
+    return CalibrationReport(
+        model=reports[0].model,
+        provider=reports[0].provider,
+        temperature=reports[0].temperature,
+        prompt_version=reports[0].prompt_version,
+        set_sha256=set_sha256,
+        n=reports[0].n,
+        exact=exact,
+        adjacent=adjacent,
+        mae=mae,
+        per_criterion=per_criterion,
+        calls=sum(report.calls for report in reports),
+        passes=sum(report.passes for report in reports),
+        retries=sum(report.retries for report in reports),
+        needs_review=sum(report.needs_review for report in reports),
+        verbose_delta=_median([report.verbose_delta for report in reports]),
+        word_count_correlation=_median(
+            [report.word_count_correlation for report in reports]
+        ),
+        details=representative.details,
+        repeats=repeats,
+        runs=[_run_summary(report) for report in reports],
+        representative_run=reports.index(representative) + 1,
+    )
+
+
 __all__ = [
     "CountingLlm",
     "VARIANTS",
     "file_sha256",
     "load_calibration",
     "run_calibration",
+    "run_calibration_repeated",
 ]

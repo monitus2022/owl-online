@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+ADJACENT_MIN = 0.9
+MAE_MAX = 1.5
+
 
 @dataclass
 class Check:
@@ -102,9 +105,39 @@ class CalibrationDetail:
     word_count: int = 0
 
 
+@dataclass(frozen=True)
+class CalibrationRun:
+    """One calibration pass, kept so a repeated run is auditable."""
+
+    exact: float
+    adjacent: float
+    mae: float | None
+    per_criterion: dict[str, float]
+    calls: int
+    passes: int
+    retries: int
+    needs_review: int
+    verbose_delta: float | None
+    word_count_correlation: float | None
+
+    @property
+    def ok(self) -> bool:
+        if self.needs_review:
+            return False
+        if self.mae is None or self.adjacent < ADJACENT_MIN:
+            return False
+        return self.mae <= MAE_MAX
+
+
 @dataclass
 class CalibrationReport:
-    """Agreement, error, retry and length-bias metrics for the judge."""
+    """Agreement, error, retry and length-bias metrics for the judge.
+
+    With `repeats == 1`, the metrics describe that run. With `repeats > 1`,
+    exact/adjacent/MAE/per-criterion/verbose_delta/correlation are medians,
+    calls/passes/retries/needs_review are totals, details come from one
+    representative run, and `runs` keeps every pass.
+    """
 
     model: str
     provider: str
@@ -123,14 +156,19 @@ class CalibrationReport:
     verbose_delta: float | None
     word_count_correlation: float | None
     details: list[CalibrationDetail] = field(default_factory=list)
+    repeats: int = 1
+    runs: list[CalibrationRun] = field(default_factory=list)
+    representative_run: int = 0
 
     @property
     def ok(self) -> bool:
+        # Any needs_review in any repeat is summed into the total, so one bad
+        # pass fails the gate even when the medians look clean.
         if self.needs_review:
             return False
-        if self.mae is None or self.adjacent < 0.9:
+        if self.mae is None or self.adjacent < ADJACENT_MIN:
             return False
-        return self.mae <= 1.5
+        return self.mae <= MAE_MAX
 
 
 @dataclass

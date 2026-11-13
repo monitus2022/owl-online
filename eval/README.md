@@ -576,7 +576,10 @@ uv run python scripts/run_exam_eval.py --subject charms
 
 `--subject` selects `data/exams/<subject>` and the subject calibration file
 (`calibration.jsonl` for DADA, `calibration-<subject>.jsonl` otherwise).
-`--bank` and `--calibration` override either path.
+`--bank` and `--calibration` override either path. `--calibration-repeats N`
+runs the calibration N times and gates on the median exact, adjacent and MAE;
+the report keeps every run and a stability table. DADA defaults to three
+repeats; pass `--calibration-repeats 1` for a single pass.
 
 It runs:
 
@@ -599,8 +602,12 @@ most 1.5 marks and adjacent agreement at least 0.90, and no unreviewed parse
 failure. `--no-independent` and `--no-calibration` each disable one section;
 pass both for a deterministic-only quick check.
 
-The DADA, Charms, Potions, Transfiguration and Herbology records are
+The DADA history is
 `docs/runs/2026-11-09-191-dada-bank-eval.md`,
+`docs/runs/2026-11-13-271-dada-1.1.0.md`,
+`docs/runs/2026-11-13-273-dada-calibration-rebaseline.md` and
+`docs/runs/2026-11-13-275-dada-median-calibration.md`. The Charms, Potions,
+Transfiguration and Herbology records are
 `docs/runs/2026-11-13-261-charms-judge-calibration.md`,
 `docs/runs/2026-11-13-264-potions-judge-calibration.md`,
 `docs/runs/2026-11-13-266-transfiguration-judge-calibration.md` and

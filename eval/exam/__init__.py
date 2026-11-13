@@ -6,6 +6,7 @@ from eval.exam.calibration import (
     file_sha256,
     load_calibration,
     run_calibration,
+    run_calibration_repeated,
 )
 from eval.exam.checks import (
     DADA_DIFFICULTY_TARGETS,
@@ -18,6 +19,7 @@ from eval.exam.models import (
     CalibrationCase,
     CalibrationDetail,
     CalibrationReport,
+    CalibrationRun,
     Check,
     ExamEvalReport,
     IndependentReport,
@@ -33,6 +35,7 @@ __all__ = [
     "CalibrationCase",
     "CalibrationDetail",
     "CalibrationReport",
+    "CalibrationRun",
     "Check",
     "CountingLlm",
     "ExamEvalReport",
@@ -41,6 +44,7 @@ __all__ = [
     "load_calibration",
     "render_report",
     "run_calibration",
+    "run_calibration_repeated",
     "run_deterministic_checks",
     "run_exam_eval",
     "run_independent_checks",

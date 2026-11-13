@@ -193,14 +193,17 @@ not the older local `verification.json`. The 1.1.0 record is
 
 The DADA judge is not bit-stable. The 2026-11-13 re-baseline recorded four runs
 on the frozen set with adjacent 0.8750-1.0000 and MAE 0.3750-0.5417; one run
-failed the single-run 0.90 gate. #40 owns a three-run median or a prompt/model
-revision before the DADA calibration is treated as stable. Record:
-`docs/runs/2026-11-13-273-dada-calibration-rebaseline.md`.
+failed the single-run 0.90 gate. DADA defaults to three repeats
+(`--calibration-repeats 3`) and gates on the median. The median run passes at
+adjacent 0.9583 and MAE 0.4167; all three runs passed on that draw, while
+the #273 probe observed a failure at 0.8750. This stabilizes the gate; partial
+scoring remains the root-cause follow-up under #40. Records:
+`docs/runs/2026-11-13-273-dada-calibration-rebaseline.md` and
+`docs/runs/2026-11-13-275-dada-median-calibration.md`.
 
 For DADA, the eval also gates a strict one-MCQ and one-short-answer per
 material; the 1.1.0 bank has no recorded slot swaps. The calibration gate treats
-any needs_review as a failure because a reviewed state is not modelled yet; none
-of the five calibration runs has a needs_review.
+any needs_review as a failure because a reviewed state is not modelled yet; no recorded calibration run has a needs_review.
 
 ## Status flow
 

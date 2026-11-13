@@ -61,7 +61,7 @@ Observed ranges:
 ## Reproduce
 
 ```text
-uv run python scripts/run_exam_eval.py --subject dada --no-independent \
+uv run python scripts/run_exam_eval.py --subject dada --calibration-repeats 1 --no-independent \
   --bank /Users/tc/Documents/Github/owl-online/data/exams/dada \
   --subjects /Users/tc/Documents/Github/owl-online/data/subjects \
   --chunks /Users/tc/Documents/Github/owl-online/data/chunks.jsonl \
