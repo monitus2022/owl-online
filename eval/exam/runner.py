@@ -130,7 +130,6 @@ def render_report(report: ExamEvalReport) -> str:
             if calibration.repeats > 1
             else "Calibration:"
         )
-        mae_text = _mae_text(calibration.mae)
         lines.extend(
             [
                 "",
@@ -139,8 +138,25 @@ def render_report(report: ExamEvalReport) -> str:
                 f"temperature={calibration.temperature} "
                 f"prompt={calibration.prompt_version}",
                 f"  set_sha256={calibration.set_sha256}",
-                f"  n={calibration.n} exact={calibration.exact:.4f} "
-                f"adjacent={calibration.adjacent:.4f} MAE={mae_text}",
+                f"  all cases: n={calibration.n} "
+                f"exact={calibration.exact:.4f} "
+                f"adjacent={calibration.adjacent:.4f} "
+                f"MAE={_mae_text(calibration.mae)}",
+                f"  gated:     n={calibration.gated.n} "
+                f"exact={calibration.gated.exact:.4f} "
+                f"adjacent={calibration.gated.adjacent:.4f} "
+                f"MAE={_mae_text(calibration.gated.mae)}",
+            ]
+        )
+        if calibration.mid_band.n:
+            lines.append(
+                f"  mid-band:  n={calibration.mid_band.n} "
+                f"exact={calibration.mid_band.exact:.4f} "
+                f"adjacent={calibration.mid_band.adjacent:.4f} "
+                f"MAE={_mae_text(calibration.mid_band.mae)}"
+            )
+        lines.extend(
+            [
                 f"  per_criterion={calibration.per_criterion}",
                 f"  calls={calibration.calls} passes={calibration.passes} "
                 f"retries={calibration.retries} needs_review={calibration.needs_review}",
@@ -152,16 +168,33 @@ def render_report(report: ExamEvalReport) -> str:
             lines.extend(
                 [
                     "",
-                    "Calibration stability:",
-                    "| Run | Exact | Adjacent | MAE | Calls | Retries | Needs review | Gate |",
-                    "|---|---:|---:|---:|---:|---:|---|---|",
+                    "Calibration stability (gate uses the gated slice):",
+                    "| Run | Gated exact | Gated adjacent | Gated MAE | Calls | Retries | Gate |",
+                    "|---|---:|---:|---:|---:|---|---|",
                 ]
             )
             for index, run in enumerate(calibration.runs, 1):
                 lines.append(
-                    f"| {index} | {run.exact:.4f} | {run.adjacent:.4f} | "
-                    f"{_mae_text(run.mae)} | {run.calls} | {run.retries} | "
-                    f"{run.needs_review} | {'PASS' if run.ok else 'FAIL'} |"
+                    f"| {index} | {run.gated.exact:.4f} | "
+                    f"{run.gated.adjacent:.4f} | {_mae_text(run.gated.mae)} | "
+                    f"{run.calls} | {run.retries} | "
+                    f"{'PASS' if run.ok else 'FAIL'} |"
+                )
+        if calibration.mid_band.n:
+            lines.extend(
+                [
+                    "",
+                    "Mid-band completeness (diagnostic, not gated):",
+                    "| Run | Cases | Exact | Adjacent | MAE | Needs review |",
+                    "|---|---:|---:|---:|---:|---|",
+                ]
+            )
+            for index, run in enumerate(calibration.runs, 1):
+                lines.append(
+                    f"| {index} | {run.mid_band.n} | "
+                    f"{run.mid_band.exact:.4f} | {run.mid_band.adjacent:.4f} | "
+                    f"{_mae_text(run.mid_band.mae)} | "
+                    f"{run.mid_band.needs_review} |"
                 )
         if calibration.repeats > 1 and calibration.representative_run:
             run = calibration.runs[calibration.representative_run - 1]

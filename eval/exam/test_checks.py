@@ -160,13 +160,18 @@ async def test_material_coverage_failure_is_gated() -> None:
 
 
 def _assert_calibration_fixture(
-    name: str, sha256: str, *, require_verbose_longer: bool = False
+    name: str,
+    sha256: str,
+    *,
+    case_count: int = 24,
+    require_verbose_longer: bool = False,
+    mid_band: bool = False,
 ) -> None:
     path = Path(__file__).resolve().parent / "fixtures" / name
     cases = load_calibration(path)
     assert len({case.item_id for case in cases}) == 8
-    assert len(cases) == 24
-    assert {case.variant for case in cases} >= {
+    assert len(cases) == case_count
+    expected_variants = {
         "full",
         "partial",
         "wrong",
@@ -176,19 +181,25 @@ def _assert_calibration_fixture(
         "contradictory",
         "blank",
     }
+    if mid_band:
+        expected_variants.add("partial_mid")
+    assert {case.variant for case in cases} >= expected_variants
     assert all(set(case.marks) == {"correctness", "completeness"} for case in cases)
     per_item: dict[str, int] = {}
     for case in cases:
         per_item[case.item_id] = per_item.get(case.item_id, 0) + 1
-    assert set(per_item.values()) == {3}
+    assert set(per_item.values()) <= {3, 4}
     for item_id in per_item:
         variants = [case.variant for case in cases if case.item_id == item_id]
         assert variants.count("full") == 1
         assert variants.count("partial") == 1
+        if mid_band:
+            # The fourth answer on an item is exactly its mid-band case.
+            assert (variants.count("partial_mid") == 1) == (len(variants) == 4)
         passes = {
             case.pass_name for case in cases if case.item_id == item_id
         }
-        assert len(passes) == 3
+        assert len(passes) == len(variants)
         full = next(
             case for case in cases
             if case.item_id == item_id and case.variant == "full"
@@ -227,14 +238,18 @@ def test_committed_potions_calibration_fixture_shape() -> None:
 def test_committed_transfiguration_calibration_fixture_shape() -> None:
     _assert_calibration_fixture(
         "calibration-transfiguration.jsonl",
-        "cf3e7b0029f96c2ff454440aefbce73031a7dfb9f481f6258e7432f2795a12d9",
+        "52b099f579187edb69caad5c15be70fffee79e46051300114c9e7392fb22f3bf",
+        case_count=26,
         require_verbose_longer=True,
+        mid_band=True,
     )
 
 
 def test_committed_herbology_calibration_fixture_shape() -> None:
     _assert_calibration_fixture(
         "calibration-herbology.jsonl",
-        "c8ee76b7c77559a61ae35252da15d2e0ff310fc4e6dbe43c6fb46ae32c024134",
+        "9a3c14ec92efc442e28f2627d493633eae6f0cb2d037c3f0326a8ad1b09fe7db",
+        case_count=28,
         require_verbose_longer=True,
+        mid_band=True,
     )

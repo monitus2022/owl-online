@@ -157,7 +157,10 @@
 - Calibration: run id `exam-20261113-cf3e7b00`; 24 cases over 8 short-answer
   items; exact 0.9583, adjacent 1.0000, MAE 0.0417, 0 needs_review; record
   `docs/runs/2026-11-13-266-transfiguration-judge-calibration.md`. The adopted
-  partial band is 4/0 for core-only answers.
+  partial band is 4/0 for core-only answers. The #279 mid-band rerun adds a 4/2
+  diagnostic case on two items and keeps the gate on the 24 established cases
+  (gated exact 0.9167, adjacent 1.0000, MAE 0.0833; mid-band 0.5000/0.5000):
+  `docs/runs/2026-11-14-279-transfiguration-midband-calibration.md`.
 
 ## Review
 

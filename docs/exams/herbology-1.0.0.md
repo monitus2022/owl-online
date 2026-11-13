@@ -159,7 +159,10 @@
 - Calibration: run id `exam-20261113-c8ee76b7`; 24 cases over 8 short-answer
   items; exact 0.9583, adjacent 0.9583, MAE 0.1250, 0 needs_review; record
   `docs/runs/2026-11-13-267-herbology-judge-calibration.md`. The adopted
-  partial band is 4/0 for core-only answers.
+  partial band is 4/0 for core-only answers. The #279 mid-band rerun adds a 4/2
+  diagnostic case on four items and keeps the gate on the 24 established cases
+  (gated exact 0.9583, adjacent 0.9583, MAE 0.0833; mid-band 0.5000/0.5000):
+  `docs/runs/2026-11-14-279-herbology-midband-calibration.md`.
 
 ## Review
 

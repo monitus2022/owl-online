@@ -205,9 +205,38 @@ pin stays unchanged
 `docs/runs/2026-11-13-273-dada-calibration-rebaseline.md` and
 `docs/runs/2026-11-13-275-dada-median-calibration.md`.
 
+The partial band is per subject because the rubrics differ. DADA and Charms use
+3/2, Potions uses 4/2-3, and Transfiguration and Herbology used only 4/0 (correct
+core, completeness omitted entirely). #279 adds a `partial_mid` case to the last
+two wherever the completeness rubric names two separable elements that the
+item's required points operationalise, scoring the one-element answer 4/2; single-clause rubrics keep 4/0. The mid-band is a
+diagnostic slice, not part of the gate: the gate keeps the 24 established cases
+and the mid-band is reported separately. On the gated slice Transfiguration is
+exact 0.9167, adjacent 1.0000, MAE 0.0833 (26 cases overall) and Herbology is
+exact 0.9583, adjacent 0.9583, MAE 0.0833 (28 cases overall), both from a median
+of three passes. The mid-band agreement is 0.5000 exact and 0.5000 adjacent on
+both subjects: the judge awards the half mark (2/4) on only about half the
+cases, which is the reason the slice does not gate yet. Records:
+`docs/runs/2026-11-14-279-transfiguration-midband-calibration.md` and
+`docs/runs/2026-11-14-279-herbology-midband-calibration.md`.
+
+| Subject | Partial band | Partial total (of 8) | Mid-band source |
+|---|---|---:|---|
+| DADA | 3/2 | 5 | `partial` |
+| Charms | 3/2 | 5 | `partial` |
+| Potions | 4/2-3 | 6-7 | `partial` |
+| Transfiguration | 4/0 and 4/2 | 4 and 6 | `partial` and `partial_mid` |
+| Herbology | 4/0 and 4/2 | 4 and 6 | `partial` and `partial_mid` |
+
+The 4/2 cases bring the two outliers into the same partial total as Potions and
+within one mark of Charms, so the bands are comparable even though the rubric
+granularity still differs.
+
 For DADA, the eval also gates a strict one-MCQ and one-short-answer per
 material; the 1.1.0 bank has no recorded slot swaps. The calibration gate treats
-any needs_review as a failure because a reviewed state is not modelled yet; no recorded run on the pinned judge has a needs_review.
+a gated needs_review as a failure because a reviewed state is not modelled yet;
+a mid-band needs_review is reported but does not gate. No recorded run on the
+pinned judge has a needs_review.
 
 ## Status flow
 

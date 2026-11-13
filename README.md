@@ -216,7 +216,14 @@ adjacent 0.9583, MAE 0.3750 and gate PASS. The Transfiguration record is
 `docs/runs/2026-11-13-266-transfiguration-judge-calibration.md`: 24 cases, exact
 0.9583, adjacent 1.0000, MAE 0.0417 and gate PASS. The Herbology record is
 `docs/runs/2026-11-13-267-herbology-judge-calibration.md`: 24 cases, exact
-0.9583, adjacent 0.9583, MAE 0.1250 and gate PASS. The bank and corpus are host
+0.9583, adjacent 0.9583, MAE 0.1250 and gate PASS. The mid-band reconciliation
+adds a 4/2 partial to the two-element completeness rubrics as a diagnostic slice
+outside the gate: Transfiguration is
+`docs/runs/2026-11-14-279-transfiguration-midband-calibration.md` (26 cases,
+gated exact 0.9167, adjacent 1.0000, MAE 0.0833; mid-band 0.5000/0.5000) and
+Herbology is `docs/runs/2026-11-14-279-herbology-midband-calibration.md` (28
+cases, gated exact 0.9583, adjacent 0.9583, MAE 0.0833; mid-band
+0.5000/0.5000), both from a median of three passes. The bank and corpus are host
 data, so the live exam eval runs on the host; CI runs its offline tests. The chat
 RAG baseline above remains the retrieval evaluation.
 
