@@ -201,7 +201,11 @@ The DADA record is `docs/runs/2026-11-09-191-dada-bank-eval.md`: 25/25 MCQ
 keys, 0 ambiguities, 25/25 golden answers, adjacent agreement 0.9167, mean
 absolute error 0.5000 and gate PASS. The DADA 1.1.0 option-length revision is
 `docs/runs/2026-11-13-271-dada-1.1.0.md`: 36.0% longest-option bias, -0.36-word
-mean gap, adjacent 0.9167, MAE 0.3750 and gate PASS. The Charms calibration
+mean gap, adjacent 0.9167, MAE 0.3750 and gate PASS. The DADA judge re-baseline
+is `docs/runs/2026-11-13-273-dada-calibration-rebaseline.md`: four runs measured
+exact 0.5833-0.7083, adjacent 0.8750-1.0000 and MAE 0.3750-0.5417; one run failed
+the 0.90 adjacent gate. #40 owns a repeated-run protocol or a prompt/model
+revision before the DADA calibration is treated as stable. The Charms calibration
 record is
 `docs/runs/2026-11-13-261-charms-judge-calibration.md`: 24 cases, exact 0.6250,
 adjacent 1.0000, MAE 0.3750 and gate PASS. The Potions record is
