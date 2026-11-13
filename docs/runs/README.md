@@ -85,8 +85,8 @@ so on.
 | 2026-11-12 | #248 | `20261112T135138Z` | `rag-eval` (repro) | n/a | n/a | 2/30 | [Lesson and multi-turn RAG reproducibility](2026-11-12-248-rag-eval-repro.md) |
 | 2026-11-13 | #249 | `20261112T172756Z` | `rag-eval` | n/a | n/a | 2/30 | [Context-aware retrieval](2026-11-13-249-context-aware-retrieval.md) |
 | 2026-11-13 | #249 | `20261112T173800Z` | `rag-eval` (post-review) | n/a | n/a | 2/30 | [Context-aware retrieval r2](2026-11-13-249-context-aware-retrieval-r2.md) |
-| 2026-11-13 | #258 | `20261113T033913Z` | `rag-calibration` (14-item first pass) | n/a | n/a | n/a | [Superseded calibration passes](2026-11-13-258-faithfulness-calibration-superseded.md) |
-| 2026-11-13 | #258 | `20261113T035711Z` | `rag-calibration` (18-item pre-fix pass) | n/a | n/a | n/a | [Superseded calibration passes](2026-11-13-258-faithfulness-calibration-superseded.md) |
+| 2026-11-13 | #258 | `20261113T033913Z` | `rag-calibration` (14-item first pass) | n/a | n/a | n/a | [Calibration first pass](2026-11-13-258-faithfulness-calibration-first-pass.md) |
+| 2026-11-13 | #258 | `20261113T035711Z` | `rag-calibration` (18-item pre-fix pass) | n/a | n/a | n/a | [Calibration pre-fix pass](2026-11-13-258-faithfulness-calibration-prefix.md) |
 | 2026-11-13 | #258 | `20261113T040759Z` | `rag-calibration` (final) | n/a | n/a | n/a | [Lesson faithfulness calibration](2026-11-13-258-faithfulness-calibration.md) |
 
 Exam-bank runs use `n/a` for the chat metrics; the deterministic, independent

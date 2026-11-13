@@ -51,7 +51,8 @@ corpus at run time. No extended material or corpus passages are stored.
   The next step is #251: tighten the lesson prompt, pass the full concept group
   and bind claims to citations, then measure against the adopted calibration.
 - The earlier 14-item and pre-fix 18-item passes are recorded separately as
-  superseded; see `2026-11-13-258-faithfulness-calibration-superseded.md`.
+  superseded; see `2026-11-13-258-faithfulness-calibration-first-pass.md` and
+  `2026-11-13-258-faithfulness-calibration-prefix.md`.
 
 ## Reproduce
 
