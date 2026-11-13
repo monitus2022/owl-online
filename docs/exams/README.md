@@ -101,6 +101,14 @@ The Charms, Potions, Transfiguration and Herbology banks 1.0.0 are recorded at
 record stays reproducible. The grader accepts both pins and selects the
 matching system prompt.
 
+Charms has a committed calibration set and record
+(`eval/exam/fixtures/calibration-charms.jsonl`,
+`docs/runs/2026-11-13-261-charms-judge-calibration.md`). Select a subject with
+`uv run python scripts/run_exam_eval.py --subject charms`; the script resolves
+the bank and calibration file and keeps the DADA coverage targets off for other
+subjects. Potions, Transfiguration and Herbology still need their own
+calibration sets; run them with `--no-calibration` until those fixtures exist.
+
 ## Serving
 
 The serving routes read the published bank from `data/exams/exams.db`, never the
@@ -177,10 +185,10 @@ percent with a 1.28-word mean gap, so it passes at the cap and is scheduled for
 option-length levelling in the next bank revision. The independent solver
 selects the stored key on every MCQ and finds no second defensible option.
 
-The eval also gates a strict one-MCQ and one-short-answer per material; the
-1.0.0 bank has no recorded slot swaps. The calibration gate treats any
-needs_review as a failure because a reviewed state is not modelled yet; the
-1.0.0 run has no needs_review.
+For DADA, the eval also gates a strict one-MCQ and one-short-answer per
+material; the 1.0.0 bank has no recorded slot swaps. The calibration gate treats
+any needs_review as a failure because a reviewed state is not modelled yet; the
+DADA and Charms runs have no needs_review.
 
 ## Status flow
 

@@ -79,6 +79,7 @@ so on.
 | 2026-11-10 | #213 pattern | `exam-20261110-potions-1.0.0` | `potions-bank-exam` | n/a | n/a | n/a | [Potions bank eval](2026-11-10-213-potions-bank-eval.md) |
 | 2026-11-10 | #213 pattern | `exam-20261110-transfiguration-1.0.0` | `transfiguration-bank-exam` | n/a | n/a | n/a | [Transfiguration bank eval](2026-11-10-213-transfiguration-bank-eval.md) |
 | 2026-11-10 | #213 pattern | `exam-20261110-herbology-1.0.0` | `herbology-bank-exam` | n/a | n/a | n/a | [Herbology bank eval](2026-11-10-213-herbology-bank-eval.md) |
+| 2026-11-13 | #261 | `exam-20261113-5e5fb6bf` | `charms-bank-exam` | n/a | n/a | n/a | [Charms judge calibration](2026-11-13-261-charms-judge-calibration.md) |
 | 2026-11-09 | #176 | `20261109T171502Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice](2026-11-09-176-persona-lesson-voice.md) |
 | 2026-11-10 | #176 | `20261109T174845Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice r2](2026-11-10-176-persona-lesson-voice-r2.md) |
 | 2026-11-12 | #248 | `20261112T135058Z` | `rag-eval` | n/a | n/a | 2/30 | [Lesson and multi-turn RAG baseline](2026-11-12-248-rag-eval-foundation.md) |

@@ -1,4 +1,4 @@
-"""Run the DADA bank evaluation (#191): deterministic, independent, calibration."""
+"""Run a subject bank evaluation (#191): deterministic, independent, calibration."""
 
 from __future__ import annotations
 
