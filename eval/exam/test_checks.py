@@ -159,35 +159,8 @@ async def test_material_coverage_failure_is_gated() -> None:
     assert not checks["coverage"].ok
 
 
-def test_committed_calibration_fixture_shape() -> None:
-    path = Path(__file__).resolve().parent / "fixtures" / "calibration.jsonl"
-    cases = load_calibration(path)
-    assert len({case.item_id for case in cases}) == 8
-    assert len(cases) == 24
-    assert len({case.pass_name for case in cases}) == 3
-    assert {case.variant for case in cases} >= {
-        "full",
-        "partial",
-        "wrong",
-        "verbose",
-        "missing_key_term",
-        "off_topic",
-        "contradictory",
-        "blank",
-    }
-    assert all(set(case.marks) == {"correctness", "completeness"} for case in cases)
-    per_item: dict[str, int] = {}
-    for case in cases:
-        per_item[case.item_id] = per_item.get(case.item_id, 0) + 1
-    assert set(per_item.values()) == {3}
-    assert (
-        file_sha256(path)
-        == "c0d00cb0d557bcbb39048cc910df41942949c2fbaadaa3470bdb75aa72eeb970"
-    )
-
-
-def test_committed_charms_calibration_fixture_shape() -> None:
-    path = Path(__file__).resolve().parent / "fixtures" / "calibration-charms.jsonl"
+def _assert_calibration_fixture(name: str, sha256: str) -> None:
+    path = Path(__file__).resolve().parent / "fixtures" / name
     cases = load_calibration(path)
     assert len({case.item_id for case in cases}) == 8
     assert len(cases) == 24
@@ -207,11 +180,32 @@ def test_committed_charms_calibration_fixture_shape() -> None:
         per_item[case.item_id] = per_item.get(case.item_id, 0) + 1
     assert set(per_item.values()) == {3}
     for item_id in per_item:
+        variants = [case.variant for case in cases if case.item_id == item_id]
+        assert variants.count("full") == 1
+        assert variants.count("partial") == 1
         passes = {
             case.pass_name for case in cases if case.item_id == item_id
         }
         assert len(passes) == 3
-    assert (
-        file_sha256(path)
-        == "5e5fb6bf8bda74368c6dd10afd95126d735497fb11fc88bc66f6bb52977ffcce"
+    assert file_sha256(path) == sha256
+
+
+def test_committed_calibration_fixture_shape() -> None:
+    _assert_calibration_fixture(
+        "calibration.jsonl",
+        "c0d00cb0d557bcbb39048cc910df41942949c2fbaadaa3470bdb75aa72eeb970",
+    )
+
+
+def test_committed_charms_calibration_fixture_shape() -> None:
+    _assert_calibration_fixture(
+        "calibration-charms.jsonl",
+        "5e5fb6bf8bda74368c6dd10afd95126d735497fb11fc88bc66f6bb52977ffcce",
+    )
+
+
+def test_committed_potions_calibration_fixture_shape() -> None:
+    _assert_calibration_fixture(
+        "calibration-potions.jsonl",
+        "787aeb63a237bff98050e2db6df7a58fe4ab302567426e18a02e4df75e743115",
     )

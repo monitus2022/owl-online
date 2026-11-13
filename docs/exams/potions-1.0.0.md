@@ -159,6 +159,11 @@
   answers accepted, 0 missing required points.
 - Option lengths: correct option strictly longest in 56.0% of MCQs, mean gap
   0.76 words.
+- Calibration: run id `exam-20261113-787aeb63`; 24 cases over 8 short-answer
+  items; exact 0.6667, adjacent 0.9583, MAE 0.3750, 0 needs_review; record
+  `docs/runs/2026-11-13-264-potions-judge-calibration.md`. Seven partial
+  answers are one mark high, one is exact, and the contradictory case is two
+  high; #40 owns reconciling the partial band.
 
 ## Review
 

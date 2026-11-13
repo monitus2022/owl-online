@@ -821,11 +821,12 @@ and adopted by the owner) measures exact and adjacent agreement, mean absolute
 error and per-criterion agreement. That set is the evidence that the judge is
 usable, not a claim that it is infallible.
 
-The subject bank eval and calibration are in `eval/exam/` (#191, #261):
+The subject bank eval and calibration are in `eval/exam/` (#191, #261, #264):
 deterministic bank checks, independent model checks and a 24-case calibration
-set over 8 short answers for each subject with a committed set. DADA and Charms
-have records at `docs/runs/2026-11-09-191-dada-bank-eval.md` and
-`docs/runs/2026-11-13-261-charms-judge-calibration.md`.
+set over 8 short answers for each subject with a committed set. DADA, Charms and
+Potions have records at `docs/runs/2026-11-09-191-dada-bank-eval.md`,
+`docs/runs/2026-11-13-261-charms-judge-calibration.md` and
+`docs/runs/2026-11-13-264-potions-judge-calibration.md`.
 
 If a future feature wants to save a chat-generated question to the bank, it must
 go through validation and versioning, not write directly.
