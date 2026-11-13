@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from eval.exam.calibration import load_calibration, run_calibration
+from eval.exam.calibration import (
+    load_calibration,
+    run_calibration,
+    run_calibration_repeated,
+)
 from eval.exam.fixtures import build_bank
 
 
@@ -104,6 +108,84 @@ async def test_calibration_metrics(tmp_path) -> None:
     assert report.passes == 3
     assert report.retries == 0
     assert report.needs_review == 0
+
+
+async def test_repeated_calibration_gates_on_the_median(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "A full answer.", 4, 4),
+            _case("partial", "partial", "A partial answer.", 3, 2),
+            _case("wrong", "wrong", "A wrong answer.", 0, 0),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 3, 2),
+        _judge_json("dada-short-001", 0, 0),
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 4, 3),
+        _judge_json("dada-short-001", 0, 0),
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 2, 2),
+        _judge_json("dada-short-001", 0, 0),
+    )
+    report = await run_calibration_repeated(
+        bank, cases, llm, repeats=3, set_sha256="test"
+    )
+    assert report.repeats == 3
+    assert len(report.runs) == 3
+    assert report.representative_run == 3
+    assert report.calls == 9
+    assert report.passes == 9
+    assert report.exact == pytest.approx(2 / 3)
+    assert report.adjacent == pytest.approx(1.0)
+    assert report.mae == pytest.approx(1 / 3)
+    assert report.ok
+    assert [
+        (run.exact, run.adjacent, run.mae) for run in report.runs
+    ] == [
+        (pytest.approx(1.0), pytest.approx(1.0), pytest.approx(0.0)),
+        (pytest.approx(2 / 3), pytest.approx(2 / 3), pytest.approx(2 / 3)),
+        (pytest.approx(2 / 3), pytest.approx(1.0), pytest.approx(1 / 3)),
+    ]
+
+    with pytest.raises(ValueError):
+        await run_calibration_repeated(bank, cases, llm, repeats=0)
+
+
+async def test_repeated_calibration_fails_if_any_run_needs_review(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "A full answer.", 4, 4),
+            _case("partial", "partial", "A partial answer.", 3, 2),
+            _case("wrong", "wrong", "A wrong answer.", 0, 0),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 3, 2),
+        _judge_json("dada-short-001", 0, 0),
+        "not json",
+        "still not json",
+        _judge_json("dada-short-001", 3, 2),
+        _judge_json("dada-short-001", 0, 0),
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 3, 2),
+        _judge_json("dada-short-001", 0, 0),
+    )
+    report = await run_calibration_repeated(
+        bank, cases, llm, repeats=3, set_sha256="test"
+    )
+    assert report.repeats == 3
+    assert report.needs_review == 1
+    assert any(not run.ok for run in report.runs)
+    assert not report.ok
 
 
 async def test_calibration_counts_a_retry(tmp_path) -> None:

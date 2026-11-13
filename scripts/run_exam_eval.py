@@ -56,6 +56,14 @@ def coverage_targets_for(subject: str, skip: bool) -> bool:
     return subject == "dada" and not skip
 
 
+def calibration_repeats_for(subject: str, requested: int | None) -> int:
+    """DADA defaults to three passes; other subjects default to one."""
+    repeats = requested if requested is not None else (3 if subject == "dada" else 1)
+    if repeats < 1:
+        raise ValueError("calibration repeats must be at least 1")
+    return repeats
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--subject", choices=SUBJECTS, default=None)
@@ -68,6 +76,15 @@ def main() -> int:
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--no-independent", action="store_true")
     parser.add_argument("--no-calibration", action="store_true")
+    parser.add_argument(
+        "--calibration-repeats",
+        type=int,
+        default=None,
+        help=(
+            "run calibration this many times and gate on the median "
+            "(default 3 for DADA, 1 otherwise)"
+        ),
+    )
     parser.add_argument(
         "--skip-coverage-targets",
         action="store_true",
@@ -107,6 +124,10 @@ def main() -> int:
             f"calibration set not found: {calibration_path} "
             "(pass --no-calibration to skip)"
         )
+    try:
+        repeats = calibration_repeats_for(subject, args.calibration_repeats)
+    except ValueError as error:
+        parser.error(str(error))
     report = asyncio.run(
         run_exam_eval(
             bank_path=bank_path,
@@ -118,6 +139,7 @@ def main() -> int:
             concurrency=args.concurrency,
             independent=not args.no_independent,
             calibration=not args.no_calibration,
+            calibration_repeats=repeats,
             coverage_targets=coverage_targets_for(
                 subject, args.skip_coverage_targets
             ),

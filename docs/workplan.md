@@ -536,8 +536,11 @@ Exit criteria (met by #190-#193):
   `docs/runs/2026-11-13-264-potions-judge-calibration.md`,
   `docs/runs/2026-11-13-266-transfiguration-judge-calibration.md` and
   `docs/runs/2026-11-13-267-herbology-judge-calibration.md`). The DADA re-baseline
-  found single-run variance (adjacent 0.8750-1.0000, MAE 0.3750-0.5417); #40 owns
-  a repeated-run protocol or a prompt/model revision.
+  found single-run variance (adjacent 0.8750-1.0000, MAE 0.3750-0.5417). DADA now
+  uses `--calibration-repeats 3` and gates on the median; the 2026-11-13 median
+  record passes at adjacent 0.9583 and MAE 0.4167; all three runs passed on
+  that draw, while #273 observed a failing run.
+  Partial scoring remains the root-cause follow-up under #40.
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 

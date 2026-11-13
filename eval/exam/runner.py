@@ -9,10 +9,18 @@ from app.grading import judge_llm_from_bank
 from app.knowledge.packs import load_subject_pack
 from app.pipeline.index.builder import load_chunks, text_hash
 from app.providers.factory import make_embedder
-from eval.exam.calibration import file_sha256, load_calibration, run_calibration
+from eval.exam.calibration import (
+    file_sha256,
+    load_calibration,
+    run_calibration_repeated,
+)
 from eval.exam.checks import run_deterministic_checks
 from eval.exam.independent import run_independent_checks
 from eval.exam.models import ExamEvalReport
+
+
+def _mae_text(value: float | None) -> str:
+    return f"{value:.4f}" if value is not None else "None"
 
 
 async def run_exam_eval(
@@ -26,6 +34,7 @@ async def run_exam_eval(
     concurrency: int = 4,
     independent: bool = True,
     calibration: bool = True,
+    calibration_repeats: int = 1,
     coverage_targets: bool = True,
 ) -> ExamEvalReport:
     """Load the published bank and run the selected checks."""
@@ -56,10 +65,11 @@ async def run_exam_eval(
                 )
             if calibration:
                 cases = load_calibration(calibration_path)
-                calibration_report = await run_calibration(
+                calibration_report = await run_calibration_repeated(
                     bank,
                     cases,
                     llm,
+                    repeats=calibration_repeats,
                     set_sha256=file_sha256(calibration_path),
                 )
         finally:
@@ -115,23 +125,58 @@ def render_report(report: ExamEvalReport) -> str:
         )
     if report.calibration is not None:
         calibration = report.calibration
+        label = (
+            f"Calibration (median of {calibration.repeats} runs):"
+            if calibration.repeats > 1
+            else "Calibration:"
+        )
+        mae_text = _mae_text(calibration.mae)
         lines.extend(
             [
                 "",
-                "Calibration:",
+                label,
                 f"  model={calibration.model} provider={calibration.provider} "
                 f"temperature={calibration.temperature} "
                 f"prompt={calibration.prompt_version}",
                 f"  set_sha256={calibration.set_sha256}",
                 f"  n={calibration.n} exact={calibration.exact:.4f} "
-                f"adjacent={calibration.adjacent:.4f} MAE={calibration.mae}",
+                f"adjacent={calibration.adjacent:.4f} MAE={mae_text}",
                 f"  per_criterion={calibration.per_criterion}",
                 f"  calls={calibration.calls} passes={calibration.passes} "
                 f"retries={calibration.retries} needs_review={calibration.needs_review}",
                 f"  verbose_delta={calibration.verbose_delta} "
                 f"word_count_correlation={calibration.word_count_correlation}",
+            ]
+        )
+        if calibration.repeats > 1:
+            lines.extend(
+                [
+                    "",
+                    "Calibration stability:",
+                    "| Run | Exact | Adjacent | MAE | Calls | Retries | Needs review | Gate |",
+                    "|---|---:|---:|---:|---:|---:|---|---|",
+                ]
+            )
+            for index, run in enumerate(calibration.runs, 1):
+                lines.append(
+                    f"| {index} | {run.exact:.4f} | {run.adjacent:.4f} | "
+                    f"{_mae_text(run.mae)} | {run.calls} | {run.retries} | "
+                    f"{run.needs_review} | {'PASS' if run.ok else 'FAIL'} |"
+                )
+        if calibration.repeats > 1 and calibration.representative_run:
+            run = calibration.runs[calibration.representative_run - 1]
+            cases_label = (
+                "Calibration cases (representative run "
+                f"{calibration.representative_run} of {calibration.repeats}: "
+                f"exact={run.exact:.4f} adjacent={run.adjacent:.4f} "
+                f"MAE={_mae_text(run.mae)}):"
+            )
+        else:
+            cases_label = "Calibration cases:"
+        lines.extend(
+            [
                 "",
-                "Calibration cases:",
+                cases_label,
                 "| Item | Variant | Human | Judge | Delta | Words | Needs review |",
                 "|---|---|---:|---:|---:|---:|---|",
             ]
