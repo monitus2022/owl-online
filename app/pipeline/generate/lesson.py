@@ -54,6 +54,7 @@ logger = logging.getLogger(__name__)
 LESSON_TUTOR = "You are O.W.L. Online, a revision tutor."
 
 LESSON_WORD_LIMIT = 220
+PARAGRAPH_MIN_WORDS = 20
 
 LESSON_EVIDENCE_RULE = (
     "Every paragraph that makes a factual claim must cite the note or excerpt "
@@ -236,7 +237,10 @@ def paragraphs_cited(answer: str) -> tuple[bool, int]:
     ]
     missing = 0
     for paragraph in paragraphs:
-        if len(paragraph.split()) < 20 or paragraph.rstrip().endswith("?"):
+        if (
+            len(paragraph.split()) < PARAGRAPH_MIN_WORDS
+            or paragraph.rstrip().endswith("?")
+        ):
             continue
         if not _PARAGRAPH_CITATION.search(paragraph):
             missing += 1

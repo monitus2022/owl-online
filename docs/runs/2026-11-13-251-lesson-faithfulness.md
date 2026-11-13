@@ -101,12 +101,13 @@ metric-for-metric identical to `20261113T082310Z`.
   expanded group (up to five), so the movement conflates the prompt and
   paragraph rule with more evidence for the judge. It is directional, not a
   statistically distinguishable gain.
-- Citation recall rose from 0.9231 to 0.9615, two items at 52. One is a real
-  per-item gain; the off-pack item stays at 1.0 only because the gold set now
-  includes `b2-c14-0000`. Scope is unchanged at 0.9839; the one miss is
-  `lesson-charms-07`, which classifies as `mixed` because the coverage check
-  leaves a term uncovered and the corpus leg then fires. That is #250/#252, not
-  this slice.
+- Citation recall rose from 0.9231 to 0.9615, two items at 52. Both are real
+  per-item gains; the off-pack item is 1.0 in both columns only because the gold
+  set now includes `b2-c14-0000` (without the correction this run's off-pack
+  item would score 0.0 and citation recall 0.9423, the level of `080422Z`).
+  Scope is unchanged at 0.9839; the one miss is `lesson-charms-07`, which
+  classifies as `mixed` because the coverage check leaves a term uncovered and
+  the corpus leg then fires. That is #250/#252, not this slice.
 - False refusal is 0 and off-pack citation recall is 1.0. The hard-gate variant
   (run `072932Z`) produced two false refusals, so the shipped gate retries and
   then serves. Its scope accuracy of 0.9516 is those two refusals plus the

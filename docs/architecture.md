@@ -545,7 +545,8 @@ The lesson path adds `lesson_select` (material ids, scores, uncovered term count
 and hash, scope, conversation characters) and `lesson_result` (abstained,
 abstain reason, retry reason, attempts, uncited paragraphs, fallback flag, scope
 and citation counts). Cache hits emit a `cache`
-span instead of retrieve/generate.
+span instead of retrieve/generate. `fallback` in the lesson span is the
+served-best restore, not the corpus or provider fallback.
 
 Traces go to the `owl.trace` logger and, when `OWL_TRACE_FILE` is set, to a
 size-capped file that is safe to ship. Prompt text is never emitted: the span

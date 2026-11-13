@@ -561,9 +561,9 @@ Anonymous threads are enough here. Auth is not a dependency.
 
 ## Phase C.1: RAG hardening
 
-Status: #248, #249 and #258 delivered; #251 first slice delivered; #250, #252,
-#253 and #259 active. This is the RAG side of lesson and chat. It is not a new
-product surface and it does not wait on auth or exam mode.
+Status: #248, #249 and #258 delivered; #251 first slice delivered, residual open;
+#250, #252, #253 and #259 active. This is the RAG side of lesson and chat. It is
+not a new product surface and it does not wait on auth or exam mode.
 
 #249 moved multi-turn query accuracy from 0.9444 to 1.0000 and false refusal
 from 0.1515 to 0.0909; the remaining three false refusals are cross-subject
@@ -580,9 +580,9 @@ pre-adoption and superseded passes in the other #258 records.
 
 The order after the #251 first slice is: #252 comparison-aware selection, #259
 the comparison router, and #253 referral. #250 remains the paraphrase
-false-refusal line. The residual #251 work is sentence-level support or a more
-extractive lesson mode, because the evidence is present and the model still
-elaborates.
+false-refusal line. The residual #251 work is the chat half (claim binding on
+the corpus path) plus sentence-level support or a more extractive lesson mode,
+because the evidence is present and the model still elaborates.
 
 The #251 first slice moves lesson faithfulness from 2/30 to 4/30 and citation
 recall from 0.9231 to 0.9615, with false refusal at 0. The run is
@@ -613,7 +613,7 @@ gaps.
 | #248 | Delivered: lesson and multi-turn evaluation foundation, baseline and gate |
 | #249 | Delivered: implicit referents and corrections; query 1.0000, false refusal 3/33 |
 | #250 | Lesson false refusals from lexical coverage |
-| #251 | First slice: evidence rule, full concept groups, paragraph retry; faithfulness 4/30; residual generation gap |
+| #251 | First slice: evidence rule, full concept groups, paragraph retry; faithfulness 4/30; residual chat half and sentence-level support |
 | #252 | Multi-part retrieval, decomposition and reranker tuning |
 | #253 | Cross-subject concept awareness and professor referral |
 | #258 | Delivered: owner-adopted 18-item calibration; exact and binary agreement 1.0000; gate PASS |
@@ -689,7 +689,7 @@ Phase C; it does not block Phase D.
 | #258 | Delivered: owner-adopted 18-item calibration; exact and binary agreement 1.0000; gate PASS | V3.1 - RAG hardening |
 | #249 | Delivered: implicit referents and corrections; query 1.0000, false refusal 3/33 | V3.1 - RAG hardening |
 | #250 | Lesson false refusals from lexical coverage | V3.1 - RAG hardening |
-| #251 | First slice: evidence rule, full concept groups, paragraph retry; faithfulness 4/30; residual generation gap | V3.1 - RAG hardening |
+| #251 | First slice: evidence rule, full concept groups, paragraph retry; faithfulness 4/30; residual chat half and sentence-level support | V3.1 - RAG hardening |
 | #33 | Minimal dashboard over `/v1/metrics` (blocked on metric definitions) | V3 - Product |
 | #128 | Pack wiring: reference prefill and coverage maintenance (needs private data) | V3 - Product |
 
@@ -760,7 +760,7 @@ Phase C; it does not block Phase D.
 
 The #216 epic is delivered; #30, #19, #181, #248, #249, #258 and the #251
 first slice are delivered. The active work is the RAG hardening line (#250,
-#252, #253, #259) plus #33 and #128.
+#251 residual, #252, #253, #259) plus #33 and #128.
 Exam mode is delegated to a separate agent and is not part of this workplan's
 active set. The remaining Now items are #250 and the two blocked product
 tickets; Next is #252, #253, #259, #43, #35 and #44. On the pack line, the canon

@@ -1567,6 +1567,42 @@ async def test_ask_lesson_accepts_a_cited_answer_with_an_uncited_paragraph():
 
 
 @pytest.mark.asyncio
+async def test_ask_lesson_serves_a_retry_that_still_leaves_a_paragraph_uncited():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    llm = SequencedLlm(
+        [
+            "A boggart takes the shape of whatever the watcher fears most, and "
+            "it prefers a dark and enclosed space "
+            "[mat:dada-dark-creatures-boggarts-nature].\n\n"
+            "This is the first draft and it adds an old house claim that has no "
+            "citation attached to it at all.",
+            "A boggart takes the shape of whatever the watcher fears most, and "
+            "it prefers a dark and enclosed space "
+            "[mat:dada-dark-creatures-boggarts-nature].\n\n"
+            "This is the second draft and it adds an old house claim that has no "
+            "citation attached to it at all.",
+        ]
+    )
+    resets: list[int] = []
+
+    result = await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        max_retries=1,
+        on_reset=lambda: resets.append(1),
+    )
+
+    assert result.abstained is False
+    assert result.attempts == 2
+    assert result.retry_reason == "uncited_paragraph"
+    assert resets == [1]
+    assert "second draft" in result.answer
+    assert "first draft" not in result.answer
+
+
+@pytest.mark.asyncio
 async def test_ask_lesson_retries_an_uncited_paragraph_with_its_own_prompt():
     selector = await LessonSelector.build(_store(), KeywordEmbedder())
     llm = SequencedLlm(
