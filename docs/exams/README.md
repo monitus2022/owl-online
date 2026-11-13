@@ -124,9 +124,10 @@ JSONL:
 | `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one judge call, then the deterministic band |
 | `DELETE /v1/attempts` | delete the current session's attempts; returns the deleted count |
 
-The paper id is `<subject>-<version>`, so the served papers are `dada-1.0.0`,
+The paper id is `<subject>-<version>`, so the served papers are `dada-1.1.0`,
 `charms-1.0.0`, `potions-1.0.0`, `transfiguration-1.0.0` and `herbology-1.0.0`. Each venue requests its own subject; the API default stays
-`OWL_EXAM_SUBJECT`. A sampled MCQ serves the correct option and three random
+`OWL_EXAM_SUBJECT`. DADA 1.0.0 remains in the store for attempts that already
+reference it. A sampled MCQ serves the correct option and three random
 distractors in a shuffled order; the correct option id stays on the persisted
 attempt and is never in the pre-submission view. The attempt view contains no
 golden answer, rubric or evidence either.
@@ -155,10 +156,11 @@ signed-in, with a separate nine-per-day per-IP cap; over a cap is `429` with
 currently admits everyone as anonymous. The exam limiter is separate from the
 chat limiter. The exam judge is built from each bank's pinned judge model at
 startup, so a bank that pins a different model is graded by its own adapter
-rather than the `OWL_EXAM_SUBJECT` one. Adapters are built for the latest
-published version of each subject, which is the version serving selects. A
-missing judge configuration for a bank leaves its papers serving and returns
-`503` for its grades. A provider failure during grading is `502`.
+rather than the `OWL_EXAM_SUBJECT` one. Adapters are built for the most
+recently imported published version of each subject, which is the version
+serving selects. A missing judge configuration for a bank leaves its papers
+serving and returns `503` for its grades. A provider failure during grading is
+`502`.
 
 Serving settings: `OWL_EXAM_STORE_PATH` (default `data/exams/exams.db`),
 `OWL_EXAM_JUDGE_CACHE_PATH` (default `data/exam_judge_cache.jsonl`),
@@ -171,23 +173,26 @@ must be absolute and on the writable `/data` volume.
 
 Snapshot, validate and upload the store with
 `uv run python scripts/upload_exam_store.py --presign`. It refuses fewer than
-five servable subjects, counted as the latest published version per subject, a
+five servable subjects, counted as the most recently imported published version per subject, a
 bank whose stored item count does not match its manifest, an integrity failure,
 or a snapshot carrying local attempts unless `--allow-attempts` is set. The host
 install is a separate step: download the short-lived URL to
 `/data/exams/exams.db`, verify the printed sha256, then recreate the container
 so it reads the store.
 
-## Bank 1.0.0 quality notes
+## Bank quality notes
 
 The bank eval gates the share of MCQs whose correct option is strictly the
-longest at 90 percent and reports the mean length gap. DADA 1.0.0 is at 80
-percent with a 1.28-word mean gap, so it passes at the cap and is scheduled for
-option-length levelling in the next bank revision. The independent solver
-selects the stored key on every MCQ and finds no second defensible option.
+longest at 90 percent and reports the mean length gap. DADA 1.0.0 was at 80
+percent with a 1.28-word mean gap; DADA 1.1.0 levels that to 36 percent with a
+-0.36-word mean gap, and the independent solver still selects the stored key on
+every MCQ and reports 0 ambiguities in the 1.1.0 eval. The "no second defensible
+option" check is model-judged and comes from `candidates/exam_eval-1.1.0.json`,
+not the older local `verification.json`. The 1.1.0 record is
+`docs/runs/2026-11-13-271-dada-1.1.0.md`.
 
 For DADA, the eval also gates a strict one-MCQ and one-short-answer per
-material; the 1.0.0 bank has no recorded slot swaps. The calibration gate treats
+material; the 1.1.0 bank has no recorded slot swaps. The calibration gate treats
 any needs_review as a failure because a reviewed state is not modelled yet; none
 of the five calibration runs has a needs_review.
 
@@ -208,7 +213,7 @@ paper or attempt may already point at its item ids.
 ## Validation
 
 ```text
-uv run python scripts/validate_exam_bank.py --subject dada --record docs/exams/dada-1.0.0.md
+uv run python scripts/validate_exam_bank.py --subject dada --record docs/exams/dada-1.1.0.md
 uv run python scripts/import_exam_bank.py --subject dada
 ```
 
