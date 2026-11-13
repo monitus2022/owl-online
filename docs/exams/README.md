@@ -191,6 +191,12 @@ option" check is model-judged and comes from `candidates/exam_eval-1.1.0.json`,
 not the older local `verification.json`. The 1.1.0 record is
 `docs/runs/2026-11-13-271-dada-1.1.0.md`.
 
+The DADA judge is not bit-stable. The 2026-11-13 re-baseline recorded four runs
+on the frozen set with adjacent 0.8750-1.0000 and MAE 0.3750-0.5417; one run
+failed the single-run 0.90 gate. #40 owns a three-run median or a prompt/model
+revision before the DADA calibration is treated as stable. Record:
+`docs/runs/2026-11-13-273-dada-calibration-rebaseline.md`.
+
 For DADA, the eval also gates a strict one-MCQ and one-short-answer per
 material; the 1.1.0 bank has no recorded slot swaps. The calibration gate treats
 any needs_review as a failure because a reviewed state is not modelled yet; none
