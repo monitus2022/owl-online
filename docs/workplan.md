@@ -544,9 +544,14 @@ Exit criteria (met by #190-#193):
   Transfiguration and Herbology 4/0 plus a 4/2 `partial_mid` case on two-element
   completeness rubrics (#279). The mid-band is a diagnostic slice outside the
   gate; the gated calibration passes at the median (Transfiguration adjacent
-  1.0000, MAE 0.0833; Herbology adjacent 0.9583, MAE 0.0833) while the mid-band
-  scores 0.5000 exact and 0.5000 adjacent on both. Partial scoring remains the
-  root-cause follow-up under #40.
+  1.0000, MAE 0.0833; Herbology adjacent 0.9583, MAE 0.0833) while the #279
+  mid-band median is 0.5000 exact and 0.5000 adjacent on both. The #281 baseline
+  drew 0.7500 for Herbology, so the mid-band baseline itself is session-unstable.
+  Two prompt candidates did not produce a safe improvement: the first moved
+  Transfiguration's two cases up but moved Herbology's four one case lower, and the
+  second collapsed Transfiguration's gated calibration, so the prompt stays
+  pinned and the slice stays diagnostic (#281).
+  Partial scoring remains the root-cause follow-up under #40.
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 

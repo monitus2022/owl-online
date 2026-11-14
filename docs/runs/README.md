@@ -99,6 +99,7 @@ so on.
 | 2026-11-14 | #279 | `exam-20261114-279-herbology-4-2-gated` | `herbology-bank-exam` | n/a | n/a | n/a | [Herbology mid-band calibration](2026-11-14-279-herbology-midband-calibration.md) |
 | 2026-11-14 | #279 | `exam-20261114-279-transfiguration-midband-diagnostic` | `transfiguration-bank-exam` | n/a | n/a | n/a | [Transfiguration mid-band calibration](2026-11-14-279-transfiguration-midband-calibration.md) |
 | 2026-11-14 | #279 | `exam-20261114-279-herbology-midband-diagnostic` | `herbology-bank-exam` | n/a | n/a | n/a | [Herbology mid-band calibration](2026-11-14-279-herbology-midband-calibration.md) |
+| 2026-11-14 | #281 | `exam-20261114-281-midband-prompt-probe` | `transfiguration-bank-exam`, `herbology-bank-exam` | n/a | n/a | n/a | [Mid-band prompt probe](2026-11-14-281-midband-prompt-probe.md) (in-memory, probe only) |
 | 2026-11-09 | #176 | `20261109T171502Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice](2026-11-09-176-persona-lesson-voice.md) |
 | 2026-11-10 | #176 | `20261109T174845Z` | `persona-conformance` | n/a | n/a | n/a | [Persona lesson voice r2](2026-11-10-176-persona-lesson-voice-r2.md) |
 | 2026-11-12 | #248 | `20261112T135058Z` | `rag-eval` | n/a | n/a | 2/30 | [Lesson and multi-turn RAG baseline](2026-11-12-248-rag-eval-foundation.md) |
