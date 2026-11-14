@@ -1,6 +1,6 @@
 # Lexicon canon index
 
-Last updated: 2026-11-07.
+Last updated: 2026-11-17.
 
 Plan for a pipeline that builds an item/concept-to-book index from The Harry
 Potter Lexicon (https://www.hp-lexicon.org/). The product is a local mapping
@@ -204,7 +204,7 @@ Parsing notes, settled by the spike (see Spike findings above):
 |---|---|
 | #87 subject packs | seeds the Concept list per subject from entry type and magic type (for example Charms: every Summoning-type spell with books citations); pre-fills references entries with title, url, publisher, accessed; pre-fills candidate source_refs (chunk ids and hashes) so an author writes grounded text against known evidence instead of hunting chapters by hand |
 | Lesson mode (#43) | per-topic evidence ranges: which chapters teach a concept; every pack-backed lesson section still cites material ids and source refs, and a labelled off-pack section cites set-text chunk ids; the index only guides authoring |
-| Exam bank (#39) | question targeting: pick concepts whose primary coverage lands in the books/tiers the paper scopes to; coverage report gates publishing a thin subject |
+| Exam bank authoring (#39, closed) | question targeting: pick concepts whose primary coverage lands in the books/tiers the paper scopes to; coverage report gates publishing a thin subject |
 | Retrieval (later, optional) | chapter-level concept lists as a side table for scoped retrieval or filter hints; measured retrieval-only first under the #96/#105 discipline before anything is wired; the flag stays off until it passes |
 | Eval | gold-set authors can cite chapters with the same code grammar (OP29, GF6) and the resolver checks that the quoted passage exists in those chapters |
 
@@ -487,9 +487,9 @@ page, sidecar-backed), `harvest_failures.jsonl`, `invalid_chapters.jsonl`,
 | #128 pack wiring (depends on #87 schema landing) | pack build reads canon_index for concept seeding and reference/source-ref prefill; DADA and Charms authored and published; attribution recorded | a reviewed material in each pilot cites both a Lexicon reference and a books-bucket source_ref that hash-validates |
 
 #125 (PR #130), #126 (PR #148) and #127 (PR #159) are merged and closed.
-#128 is open under the V3 - Product milestone. The DADA and Charms packs are
-published at 1.0.0 and the seeding queues are landed; the remaining work is the
-other subject content passes and the coverage report.
+#128 is open under the V3 - Product milestone. All five packs are published at
+1.0.0 and the seeding queues are landed; the remaining work is the coverage
+report and coverage maintenance.
 
 ## Risks
 
