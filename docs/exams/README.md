@@ -214,9 +214,11 @@ diagnostic slice, not part of the gate: the gate keeps the 24 established cases
 and the mid-band is reported separately. On the gated slice Transfiguration is
 exact 0.9167, adjacent 1.0000, MAE 0.0833 (26 cases overall) and Herbology is
 exact 0.9583, adjacent 0.9583, MAE 0.0833 (28 cases overall), both from a median
-of three passes. The mid-band agreement is 0.5000 exact and 0.5000 adjacent on
-both subjects: the judge awards the half mark (2/4) on only about half the
-cases, which is the reason the slice does not gate yet. Records:
+of three passes. The #279 median mid-band agreement is 0.5000 exact and 0.5000
+adjacent on both subjects, but the same-prompt #281 baseline drew 0.7500 for
+Herbology, so even the mid-band baseline is session-unstable: the judge awards
+the half mark (2/4) on only part of the one-element answers, and which part
+varies. That instability is why the slice does not gate yet. Records:
 `docs/runs/2026-11-14-279-transfiguration-midband-calibration.md` and
 `docs/runs/2026-11-14-279-herbology-midband-calibration.md`.
 
@@ -230,7 +232,15 @@ cases, which is the reason the slice does not gate yet. Records:
 
 The 4/2 cases bring the two outliers into the same partial total as Potions and
 within one mark of Charms, so the bands are comparable even though the rubric
-granularity still differs.
+granularity still differs. The gated values above are #279's median; the
+baseline medians across #279 and #281 have been 0.9167-0.9583, and per pass they
+reach 0.8750, so read them with the stability table. A 2026-11-14 prompt probe
+tested two partial-completeness instructions. The first moved Transfiguration's
+two mid-band cases up but moved Herbology's four down (0.7500 to 0.5000). The
+second collapsed Transfiguration's gated calibration (exact 0.5833, adjacent
+0.6667, gate FAIL) and did not improve Herbology. Neither is safe, so the pinned
+prompt and the diagnostic split stay
+(`docs/runs/2026-11-14-281-midband-prompt-probe.md`).
 
 For DADA, the eval also gates a strict one-MCQ and one-short-answer per
 material; the 1.1.0 bank has no recorded slot swaps. The calibration gate treats
