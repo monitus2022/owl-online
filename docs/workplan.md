@@ -1,6 +1,6 @@
 # Workplan
 
-Last updated: 2026-11-10.
+Last updated: 2026-11-14.
 
 This page is the plan of record for the V2-V4 work. Update it when a phase,
 boundary or ticket changes. The architecture page describes what is built; this
@@ -432,7 +432,7 @@ Tickets:
 | #127 | Lexicon resolver: buckets, forward/reverse join, chunk candidates, coverage report |
 | #128 | Wire the canon index into pack concept seeding and source-ref prefill |
 | #87 | Subject taxonomy, material records, source refs, pack build and validation |
-| #38 | Exam data model, question types, rubric, evidence snapshots, attempts |
+| #38 | Exam data model, question types, rubric, evidence snapshots, attempts (closed; superseded by the bank-plus-attempt design delivered in #189/#193) |
 
 The item/concept-to-book index that seeds and grounds the packs is built from
 The Harry Potter Lexicon. The harvest, parse and resolve pipeline is planned in
@@ -495,23 +495,23 @@ Adapted for this product:
 - 10 questions per subject paper, not a full two-week timetable;
 - 50 questions pre-generated per subject (25 MCQ and 25 short answer), randomly
   selected for each attempt;
-- fixed marks and duration;
+- fixed marks and an advisory duration (papers are untimed);
 - a practical section written as a simulation: incantation, wand movement,
   intended effect and counter-measure, not actual spellcasting;
 - one subject at a time, selected by the user.
 
-Every format record stores `canon_basis`, `fidelity` (`canon` or `adapted`) and
-`inference_notes`. The UI must not claim an adapted paper is the exact paper from
-the books.
+The blueprint fields `canon_basis`, `fidelity` (`canon` or `adapted`) and
+`inference_notes` live in this section; there is no stored format record. The UI
+must not claim an adapted paper is the exact paper from the books.
 
 Tickets:
 
-| Ticket | Scope |
-|---|---|
-| #39 | Offline question generator and validator |
-| #41 | Hybrid grader: deterministic objective scoring plus LLM rubric judge |
-| #42 | Static exam endpoints and attempt submission (built in #193; per-user attempt history follows #35) |
-| #40 | Exam and grading evaluation |
+| Ticket | Scope | Status |
+|---|---|---|
+| #39 | Offline question generator and validator | Closed: item-batch authoring and validation shipped; the model-driven paper generator is superseded by that design |
+| #41 | Hybrid grader: deterministic objective scoring plus LLM rubric judge | Closed: shipped; the set-texts message is not planned, because the judge scores against the stored rubric and does not classify an answer's source |
+| #42 | Static exam endpoints and attempt submission | Closed: shipped; per-user history follows #35 |
+| #40 | Exam and grading evaluation | Closed: gate green; the 4/2 mid-band stays diagnostic, and #281 tracks the judge work with a larger held-out set |
 
 The DADA bank line is #187 (sub-issues #188-#193): 25 MCQ and 25 short-answer
 items, 50 in total. The blueprint is `docs/exams/dada-bank-blueprint.md`. The
@@ -545,8 +545,9 @@ Exit criteria (met by #190-#193):
   completeness rubrics (#279). The mid-band is a diagnostic slice outside the
   gate; the gated calibration passes at the median (Transfiguration adjacent
   1.0000, MAE 0.0833; Herbology adjacent 0.9583, MAE 0.0833) while the mid-band
-  scores 0.5000 exact and 0.5000 adjacent on both. Partial scoring remains the
-  root-cause follow-up under #40.
+  scores 0.5000 exact and 0.5000 adjacent on both. The 4/2 mid-band stays
+  diagnostic; #281 tracks the judge work, and a larger held-out set is the
+  condition for revisiting.
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 
@@ -709,6 +710,7 @@ Phase C; it does not block Phase D.
 | #251 | First slice: evidence rule, full concept groups, paragraph retry; faithfulness 4/30; residual chat half and sentence-level support | V3.1 - RAG hardening |
 | #33 | Minimal dashboard over `/v1/metrics` (blocked on metric definitions) | V3 - Product |
 | #128 | Pack wiring: reference prefill and coverage maintenance (needs private data) | V3 - Product |
+| #182 | Route professor name and background questions to meta | V3 - Product |
 
 ### Next - complete the loop
 
@@ -765,7 +767,8 @@ Phase C; it does not block Phase D.
 | Versioned chat aliases and OpenAPI | #181 |
 | Short-term chat continuity | #30 |
 | Latency and cost metrics | #19 |
-| Open trackers (work delivered, ticket open) | #178, #187, #38-#42, #182 |
+| Exam bank vertical slice | #178, #187 |
+| Exam pipeline | #38, #39, #40, #41, #42 |
 
 ## Backlog policy
 
@@ -779,7 +782,7 @@ The #216 epic is delivered; #30, #19, #181, #248, #249, #258 and the #251
 first slice are delivered. The active work is the RAG hardening line (#250,
 #251 residual, #252, #253, #259) plus #33 and #128.
 Exam mode is delegated to a separate agent and is not part of this workplan's
-active set. The remaining Now items are #250 and the two blocked product
+active set. The remaining Now items are #250, #182 and the two blocked product
 tickets; Next is #251 residual, #252, #253, #259, #43, #35 and #44. On the pack
 line, the canon index is harvested (#125, #126) and resolved (#127 closed); #128
 carries reference prefill and coverage maintenance. The #87 schema, validator
@@ -830,8 +833,8 @@ project completion by maintainer decision.
 | Router ships pre-retrieval first | The cue set is measured on the fixture; the coverage check belongs with the per-book path, which caps at seven map calls with a bounded fan-out |
 | Per-book retrieval is measured before wiring | At equal k=7 the prototype raises coverage 0.58 to 0.79 and keeps near-misses single-hop; chat stays one-pass until extraction and synthesis land |
 | The professor is an original character, not a canon one | Limits IP exposure and avoids invented quotations; the persona is tone plus reviewed meta facts, and never adds facts to a grounded answer |
-| Academy papers are mcq plus short answer | Frontend review (2026-11-07, #132): the student-facing paper drops long answers; rubric judging stays available if a future paper needs it. Revisit in #41 |
-| Short answers grade in one batch call against the stored key | Four short answers fit one context window; the batch response keeps per-question structured records so retry and regrade semantics survive. Revisit in #41 |
+| Academy papers are mcq plus short answer | Frontend review (2026-11-07, #132): the student-facing paper drops long answers; rubric judging stays available if a future paper needs it. Revisit if a stored-paper model is added. |
+| Short answers grade in one batch call against the stored key | Four short answers fit one context window; the batch response keeps per-question structured records so retry and regrade semantics survive. Revisit if a stored-paper model is added. |
 | Result records are session-scoped until auth | The server owns the attempt and grade; the signed session cookie is the ownership boundary, and the frontend reads `GET /v1/attempts`. Cross-device history waits on #35 |
 | Venue art is inline SVG geometry, never raster and never academic content | The raster pipeline was blocked twice by the image provider's terms of service (#134); SVG themes with the accent tokens, costs kilobytes, stays crisp and accessible, and keeps closed departments decorative rather than invented. Raster heroes return only as owner-supplied assets |
 

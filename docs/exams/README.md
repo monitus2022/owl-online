@@ -1,7 +1,30 @@
 # Exam bank artifacts
 
 The exam bank is the offline pool a paper is sampled from. The paper and attempt
-records are served from the same SQLite store (#193), not from #38.
+records are served from the same SQLite store (#193); #38's separate
+paper/question model was superseded by the bank-plus-attempt design.
+
+## Scope and status
+
+The exam pipeline is delivered and live. The tickets that scoped it (#38-#42)
+are closed trackers for delivered work, not open features.
+
+- There is no stored per-paper `ExamFormat` or `Exam` record and no request-time
+  generation. A paper is sampled from the published bank at attempt start.
+- The served paper is 6 MCQ (3 marks each) and 4 short answers (8 marks each), 50
+  marks at the defaults, with a 60-minute advisory duration; the counts and
+  duration come from `OWL_EXAM_MCQ_COUNT`, `OWL_EXAM_SHORT_COUNT` and
+  `OWL_EXAM_DURATION_MINUTES`. The paper is untimed.
+- `long_answer` is not a bank kind (`BANK_KINDS` is `mcq` and `short_answer`), so
+  it cannot be authored or served.
+- The judge loses criteria for an answer that leans on non-canon material; it
+  does not emit a separate "not supported by the set texts" message. Canon tier
+  is enforced at the item (`BankItem.canon_tier` must be primary) and at the pack
+  (a material carrying source refs must be primary), so non-primary evidence
+  cannot become an item.
+- Per-user attempt history follows auth (#35); attempts are session-scoped today.
+- Historical run records that defer a decision to #40 are superseded by #279 and
+  #281; #40 is closed as completed.
 
 ## Layout
 
@@ -197,7 +220,9 @@ failed the single-run 0.90 gate. DADA defaults to three repeats
 (`--calibration-repeats 3`) and gates on the median. The median run passes at
 adjacent 0.9583 and MAE 0.4167; all three runs passed on that draw, while
 the #273 probe observed a failure at 0.8750. This stabilizes the gate; partial
-scoring remains the root-cause follow-up under #40. A model probe found Qwen3
+scoring remains a known slice, and the 4/2 mid-band stays diagnostic; #281
+tracks the judge work, and a larger held-out set is the condition for revisiting.
+A model probe found Qwen3
 32B parse-ailing (7/24 cases needed review, retries in every pass group) and
 Mistral Medium no better on exact agreement and excluded as closed-weight; the
 pin stays unchanged

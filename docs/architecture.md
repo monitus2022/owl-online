@@ -37,7 +37,7 @@ the previous book's last chapter (#113). The trim uses the copyright page as the
 boundary, requires a contents page at a book boundary, and scans a short window
 back, so chapter detection and chunk size are unchanged.
 
-Exam-bank and canon-index stages (canon-index rows are built; the rest is planned):
+Exam-bank and canon-index stages (all built):
 
 | Stage | Module | Responsibility |
 |---|---|---|
@@ -45,7 +45,7 @@ Exam-bank and canon-index stages (canon-index rows are built; the rest is planne
 | Canon index resolve (built, #127) | `app/knowledge/lexicon.py` | agreement join (forward citations vs chapter tabs vs sidebar), chunk-candidate resolution with phrase priority and spans, deterministic review sample and integrity verification |
 | Subject packs | `app/knowledge/` | subject taxonomy, material records, source refs, pack build and validation |
 | Exam bank | `app/exam/` | bank records, pack and corpus validation, duplicate and publication gates |
-| Exam build | `app/pipeline/exam/` | offline plan, retrieve, generate, validate, persist |
+| Exam authoring | `scripts/author_*` + `config/banks/` | item-batch build, pack and corpus validation, review and publication (no model-driven paper generator) |
 | Exam store | `app/storage/` | SQLite banks, items, attempts and grades imported or persisted by `app/storage/exam_store.py` (#189/#193) |
 | Grading | `app/grading/` | built (#192): deterministic MCQ scoring, one-call short-answer LLM judge, deterministic totals and bands |
 
@@ -949,16 +949,18 @@ Built bank types (#189):
 | `AttemptView` / `QuestionView` | `app/exam/attempts.py` | the pre-submission client payload; no key, golden answer, rubric or evidence |
 | `ExamStore` | `app/storage/exam_store.py` | SQLite banks, items, session-owned attempts, grades and submitted answers |
 
-Planned storage types, once the remaining #38 surface lands:
+Scoped in #38 but not built. The shipped design is a bank plus a sampled
+attempt, and #38 closed on that form. Attempts exist in substance as
+`AttemptRecord` plus the `attempts`/`attempt_questions` tables; the paper model
+below would only return with a stored-paper design:
 
 | Type | Module | Purpose |
 |---|---|---|
-| `ExamFormat` | `app/storage/models.py` | subject blueprint, canon basis, fidelity, marks, duration and question mix |
-| `Exam` | `app/storage/models.py` | paper identity, scope, version, publication status |
-| `Question` | `app/storage/models.py` | prompt, type, max marks, stored rubric, evidence snapshot |
-| `Attempt` | `app/storage/models.py` | one student submission, total score, band, judge config |
-| `Response` | `app/storage/models.py` | one answer, awarded marks, feedback, matched criteria |
-| `JudgeRun` | `app/storage/models.py` | judge model, prompt version, rubric version, raw or hashed output |
+| `ExamFormat` | not built | subject blueprint, canon basis, fidelity, marks, duration and question mix |
+| `Exam` | not built | paper identity, scope, version, publication status |
+| `Question` | not built | prompt, type, max marks, stored rubric, evidence snapshot |
+| `Response` | not built | one answer, awarded marks, feedback, matched criteria |
+| `JudgeRun` | not built | judge model, prompt version, rubric version, raw or hashed output |
 
 ## Keeping this current
 

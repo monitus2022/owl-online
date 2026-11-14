@@ -163,7 +163,7 @@
   items; exact 0.6667, adjacent 0.9583, MAE 0.3750, 0 needs_review; record
   `docs/runs/2026-11-13-264-potions-judge-calibration.md`. Seven partial
   answers are one mark high, one is exact, and the contradictory case is two
-  high; #40 owns reconciling the partial band.
+  high. The band reconciliation landed in #279; the 4/2 mid-band stays diagnostic (#281).
 
 ## Review
 

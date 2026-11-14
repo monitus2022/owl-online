@@ -206,8 +206,9 @@ is `docs/runs/2026-11-13-273-dada-calibration-rebaseline.md`: four runs measured
 exact 0.5833-0.7083, adjacent 0.8750-1.0000 and MAE 0.3750-0.5417; one run failed
 the 0.90 adjacent gate. DADA now uses `--calibration-repeats 3` and gates on the
 median; `docs/runs/2026-11-13-275-dada-median-calibration.md` passes at adjacent
-0.9583 and MAE 0.4167; all three runs passed on that draw, while #273 observed a failing run. Partial scoring remains
-the root-cause follow-up under #40. The Charms calibration
+0.9583 and MAE 0.4167; all three runs passed on that draw, while #273 observed a
+failing run. The 4/2 mid-band stays diagnostic; #281 tracks the judge work, and a
+larger held-out set is the condition for revisiting. The Charms calibration
 record is
 `docs/runs/2026-11-13-261-charms-judge-calibration.md`: 24 cases, exact 0.6250,
 adjacent 1.0000, MAE 0.3750 and gate PASS. The Potions record is
