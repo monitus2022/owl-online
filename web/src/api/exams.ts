@@ -101,6 +101,7 @@ export interface ExamClient {
   startAttempt(paperId: string): Promise<AttemptView>;
   getAttempt(attemptId: string): Promise<AttemptView>;
   grade(attempt: AttemptView, answers: AnswerMap): Promise<GradeResult>;
+  abandon(attemptId: string): Promise<void>;
 }
 
 export class ExamApiError extends Error {
@@ -332,6 +333,13 @@ export class HttpExamClient implements ExamClient {
       },
     );
     return toGrade(grade);
+  }
+
+  async abandon(attemptId: string): Promise<void> {
+    await request<{ deleted: number }>(
+      `/v1/attempts/${encodeURIComponent(attemptId)}`,
+      { method: "DELETE" },
+    );
   }
 }
 

@@ -231,8 +231,8 @@ Two interfaces keep the boundary between the UI and the services:
 
 | Interface | Lives in | Today | Swap when |
 |---|---|---|---|
-| `ExamClient` | `web/src/api/exams.ts` | `HttpExamClient` lists papers, starts an attempt and submits it for server grading; the API can return the same persisted attempt by id, and the browser never sees the MCQ key before the grade response | accounts move records across devices with #35 |
-| `ResultsStore` | `web/src/api/results.ts` | `HttpResultsStore` reads `GET /v1/attempts` for the signed session; records are provisional | #35 moves history to a user id |
+| `ExamClient` | `web/src/api/exams.ts` | `HttpExamClient` lists papers, starts an attempt, submits it for server grading and discards an ungraded attempt; the API can return the same persisted attempt by id, and the browser never sees the MCQ key before the grade response | accounts move records across devices with #35 |
+| `ResultsStore` | `web/src/api/results.ts` | `HttpResultsStore` reads `GET /v1/attempts` for the signed session and clears the session's attempts; records are provisional | #35 moves history to a user id |
 
 The static subject list decides which departments are open. The venue fetches
 `GET /v1/subjects` for the published pack and the live `persona`,
@@ -715,7 +715,7 @@ film or secondary material.
 | Pack build | batch job over the corpus | validated materials with source refs and pack version |
 | Exam build | batch job over the packs | validated questions, rubrics, evidence snapshots |
 | Exam store | SQLite in `/data` | banks, items, persisted attempts and grades |
-| Exam serving | `GET /v1/exams`, `POST /v1/exams/{paper_id}/attempts`, `GET /v1/attempts`, `GET /v1/attempts/{attempt_id}` and `DELETE /v1/attempts` | sampled stored paper, persisted attempt view, session history and the session-scoped delete, no model call |
+| Exam serving | `GET /v1/exams`, `POST /v1/exams/{paper_id}/attempts`, `GET /v1/attempts`, `GET /v1/attempts/{attempt_id}`, `DELETE /v1/attempts` and `DELETE /v1/attempts/{attempt_id}` | sampled stored paper, persisted attempt view, session history, the session-scoped delete and the single-attempt delete, no model call |
 | Attempt grading | `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one pinned judge call, then a deterministic band |
 
 The bank is authored as `data/exams/<subject>/bank.jsonl` plus `manifest.toml`,
@@ -745,6 +745,9 @@ sequenceDiagram
   C->>A: GET /v1/attempts?subject=dada
   A->>S: graded attempts for this session
   A-->>C: summaries, no key or evidence
+  C->>A: DELETE /v1/attempts/{id}
+  A->>S: delete one attempt this session owns
+  A-->>C: deleted or 404
   C->>A: DELETE /v1/attempts
   A->>S: delete this session's attempts
   A-->>C: deleted count

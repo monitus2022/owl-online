@@ -479,6 +479,72 @@ def test_delete_is_scoped_to_the_current_session(tmp_path) -> None:
         assert second.get(f"/v1/attempts/{two['attempt_id']}").status_code == 200
 
 
+def test_delete_one_attempt_clears_only_that_attempt(tmp_path) -> None:
+    store, judge = _setup(tmp_path)
+    with _client(store, judge) as client:
+        _, first = _start(client)
+        client.post(
+            f"/v1/attempts/{first['attempt_id']}/grade",
+            json={"answers": _answers(first)},
+        )
+        _, second = _start(client)
+        client.post(
+            f"/v1/attempts/{second['attempt_id']}/grade",
+            json={"answers": _answers(second)},
+        )
+
+        response = client.delete(f"/v1/attempts/{first['attempt_id']}")
+        assert response.status_code == 200
+        assert response.json() == {"deleted": 1}
+        assert client.get(f"/v1/attempts/{first['attempt_id']}").status_code == 404
+        listed = client.get("/v1/attempts?subject=dada").json()
+        assert [entry["attempt_id"] for entry in listed] == [second["attempt_id"]]
+        assert client.get(f"/v1/attempts/{second['attempt_id']}").status_code == 200
+
+
+def test_delete_one_ungraded_attempt_cascades(tmp_path) -> None:
+    store, judge = _setup(tmp_path)
+    with _client(store, judge) as client:
+        _, view = _start(client)
+        assert client.get(f"/v1/attempts/{view['attempt_id']}").status_code == 200
+        assert client.delete(f"/v1/attempts/{view['attempt_id']}").json() == {
+            "deleted": 1
+        }
+        assert client.get(f"/v1/attempts/{view['attempt_id']}").status_code == 404
+        assert client.get("/v1/attempts?subject=dada").json() == []
+        with sqlite3.connect(store.path) as conn:
+            cascaded = conn.execute(
+                "SELECT COUNT(*) FROM attempt_questions WHERE attempt_id = ?",
+                (view["attempt_id"],),
+            ).fetchone()[0]
+        assert cascaded == 0
+
+
+def test_delete_one_attempt_is_scoped_to_the_session(tmp_path) -> None:
+    path = tmp_path / "exams.db"
+    first_store = ExamStore(path)
+    first_store.replace_bank(_bank_6_4())
+    second_store = ExamStore(path)
+    with _client(first_store, _Judge()) as first, _client(
+        second_store, _Judge()
+    ) as second:
+        _, one = _start(first)
+        _, two = _start(second)
+
+        assert first.delete(f"/v1/attempts/{two['attempt_id']}").status_code == 404
+        assert second.get(f"/v1/attempts/{two['attempt_id']}").status_code == 200
+        assert first.delete(f"/v1/attempts/{one['attempt_id']}").json() == {
+            "deleted": 1
+        }
+        assert first.get(f"/v1/attempts/{one['attempt_id']}").status_code == 404
+
+
+def test_delete_unknown_attempt_is_404(tmp_path) -> None:
+    store, judge = _setup(tmp_path)
+    with _client(store, judge) as client:
+        assert client.delete("/v1/attempts/not-a-real-attempt").status_code == 404
+
+
 def test_corrupt_bank_row_returns_503_not_500(tmp_path) -> None:
     store, judge = _setup(tmp_path)
     with sqlite3.connect(store.path) as conn:

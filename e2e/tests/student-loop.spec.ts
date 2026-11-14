@@ -104,6 +104,94 @@ test("a paper can be sat, marked and found in history", async ({ page }) => {
   await expect(page.locator(".history-marks")).toHaveText(/\d+\/50/);
 });
 
+test("abandoning a paper discards the attempt", async ({ page }) => {
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByRole("tab", { name: "Exam room" }).click();
+  const started = page.waitForResponse(
+    (response) =>
+      response.url().includes("/attempts") &&
+      response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Take a paper" }).click();
+  const attempt = await (await started).json();
+  await expect(page.locator("fieldset.question")).toHaveCount(10);
+  const deleted = page.waitForResponse(
+    (response) =>
+      response.request().method() === "DELETE" &&
+      response.url().includes("/v1/attempts/"),
+  );
+  await page.getByRole("button", { name: "Abandon paper" }).click();
+  expect((await deleted).status()).toBe(200);
+  await expect(page.getByRole("button", { name: "Take a paper" })).toBeVisible();
+  const response = await page.request.get(
+    `http://127.0.0.1:8001/v1/attempts/${attempt.attempt_id}`,
+  );
+  expect(response.status()).toBe(404);
+});
+
+test("a blank paper asks before it is sent", async ({ page }) => {
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByRole("tab", { name: "Exam room" }).click();
+  await page.getByRole("button", { name: "Take a paper" }).click();
+  await expect(page.locator("fieldset.question")).toHaveCount(10);
+  await expect(page.getByText("0 of 10 answered")).toBeVisible();
+  await page.getByRole("button", { name: "Send to the examiners" }).click();
+  await expect(
+    page.getByText("10 questions left blank. Send the paper anyway?"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Keep working" }).click();
+  await expect(
+    page.getByRole("button", { name: "Send to the examiners" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Send to the examiners" }).click();
+  await expect(
+    page.getByText("10 questions left blank. Send the paper anyway?"),
+  ).toBeVisible();
+  await page
+    .locator("fieldset.question")
+    .first()
+    .locator('input[type="radio"]')
+    .first()
+    .check();
+  await expect(page.getByText("1 of 10 answered")).toBeVisible();
+  await expect(
+    page.getByText("10 questions left blank. Send the paper anyway?"),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Send to the examiners" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Send to the examiners" }).click();
+  await expect(
+    page.getByText("9 questions left blank. Send the paper anyway?"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Send anyway" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Paper returned" }),
+  ).toBeVisible();
+});
+
+test("clearing the papers empties the history", async ({ page }) => {
+  const started = await page.request.post(
+    "http://127.0.0.1:8001/v1/exams/dada-1.0.0/attempts",
+  );
+  const attempt = await started.json();
+  await page.request.post(
+    `http://127.0.0.1:8001/v1/attempts/${attempt.attempt_id}/grade`,
+    { data: { answers: [] } },
+  );
+
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByRole("tab", { name: "Your papers" }).click();
+  await expect(page.locator(".history-row")).toHaveCount(1);
+  await page.getByRole("button", { name: "Clear all papers" }).click();
+  await expect(
+    page.getByText(/Delete every paper in this browser session/),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Delete them" }).click();
+  await expect(page.getByText(/The drawer is empty/)).toBeVisible();
+});
+
 test("the venue stays open when the subjects API is unreachable", async ({
   page,
 }) => {

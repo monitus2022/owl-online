@@ -93,9 +93,12 @@ export function PrivacyPage() {
           </li>
           <li>
             Delete: <code>DELETE /v1/attempts</code> deletes the current
-            session's attempts. It does not clear the in-memory answer cache or
-            the operator-managed judge cache. Clearing cookies starts a new
-            session; the old attempts remain until the operator prunes them.
+            session's attempts. In the app, "Your papers" has a "Clear all
+            papers" action that calls it, and abandoning a paper in the exam
+            room deletes that single ungraded attempt. Neither clears the
+            in-memory answer cache or the operator-managed judge cache.
+            Clearing cookies starts a new session; the old attempts remain
+            until the operator prunes them.
           </li>
           <li>
             Accounts, cross-device history and a per-user delete/export path

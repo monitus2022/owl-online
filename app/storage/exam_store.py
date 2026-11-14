@@ -524,6 +524,22 @@ class ExamStore:
         return cursor.rowcount
 
     @_locked
+    def delete_attempt(self, attempt_id: str, session_id: str) -> int:
+        """Delete one attempt owned by one session; questions cascade.
+
+        Returns 0 when the attempt does not exist or belongs to another
+        session, so the caller can answer 404 without confirming existence.
+        """
+        if not attempt_id or not session_id:
+            return 0
+        with self._conn:
+            cursor = self._conn.execute(
+                "DELETE FROM attempts WHERE attempt_id = ? AND session_id = ?",
+                (attempt_id, session_id),
+            )
+        return cursor.rowcount
+
+    @_locked
     def count_attempts_before(self, before: str) -> int:
         row = self._conn.execute(
             "SELECT COUNT(*) FROM attempts WHERE created_at < ?", (before,)
