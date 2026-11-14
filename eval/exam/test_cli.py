@@ -16,6 +16,7 @@ from eval.exam.models import (
     CalibrationRun,
     Check,
     ExamEvalReport,
+    SliceMetrics,
 )
 from eval.exam.runner import render_report
 from scripts.run_exam_eval import (
@@ -85,11 +86,15 @@ def test_render_report_shows_the_median_and_representative_run() -> None:
             exact=0.5, adjacent=1.0, mae=0.25, per_criterion={},
             calls=3, passes=3, retries=0, needs_review=0,
             verbose_delta=0.0, word_count_correlation=0.0,
+            gated=SliceMetrics(n=3, exact=0.5, adjacent=1.0, mae=0.25),
+            mid_band=SliceMetrics(n=0, exact=0.0, adjacent=0.0, mae=None),
         ),
         CalibrationRun(
             exact=0.5, adjacent=0.875, mae=0.5, per_criterion={},
             calls=3, passes=3, retries=0, needs_review=0,
             verbose_delta=0.0, word_count_correlation=0.0,
+            gated=SliceMetrics(n=3, exact=0.5, adjacent=0.875, mae=0.5),
+            mid_band=SliceMetrics(n=0, exact=0.0, adjacent=0.0, mae=None),
         ),
     ]
     calibration = CalibrationReport(
@@ -97,8 +102,10 @@ def test_render_report_shows_the_median_and_representative_run() -> None:
         prompt_version="v", set_sha256="sha", n=3, exact=0.5,
         adjacent=1.0, mae=0.25, per_criterion={}, calls=6, passes=6,
         retries=0, needs_review=0, verbose_delta=0.0,
-        word_count_correlation=0.0, repeats=2, runs=runs,
-        representative_run=1,
+        word_count_correlation=0.0,
+        gated=SliceMetrics(n=3, exact=0.5, adjacent=1.0, mae=0.25),
+        mid_band=SliceMetrics(n=0, exact=0.0, adjacent=0.0, mae=None),
+        repeats=2, runs=runs, representative_run=1,
     )
     report = ExamEvalReport(
         bank_version="1.1.0",
@@ -108,9 +115,9 @@ def test_render_report_shows_the_median_and_representative_run() -> None:
     )
     text = render_report(report)
     assert "Calibration (median of 2 runs):" in text
-    assert "Calibration stability:" in text
+    assert "Calibration stability (gate uses the gated slice):" in text
     assert "representative run 1 of 2" in text
-    assert "| 2 | 0.5000 | 0.8750 | 0.5000 | 3 | 0 | 0 | FAIL |" in text
+    assert "| 2 | 0.5000 | 0.8750 | 0.5000 | 3 | 0 | FAIL |" in text
 
 
 def test_render_report_handles_a_missing_mae() -> None:
@@ -118,14 +125,18 @@ def test_render_report_handles_a_missing_mae() -> None:
         exact=0.0, adjacent=0.0, mae=None, per_criterion={},
         calls=1, passes=1, retries=0, needs_review=0,
         verbose_delta=None, word_count_correlation=None,
+        gated=SliceMetrics(n=1, exact=0.0, adjacent=0.0, mae=None),
+        mid_band=SliceMetrics(n=0, exact=0.0, adjacent=0.0, mae=None),
     )
     calibration = CalibrationReport(
         model="judge", provider="openrouter", temperature=0.0,
         prompt_version="v", set_sha256="sha", n=1, exact=0.0,
         adjacent=0.0, mae=None, per_criterion={}, calls=2, passes=2,
         retries=0, needs_review=0, verbose_delta=None,
-        word_count_correlation=None, repeats=2, runs=[run, run],
-        representative_run=1,
+        word_count_correlation=None,
+        gated=SliceMetrics(n=1, exact=0.0, adjacent=0.0, mae=None),
+        mid_band=SliceMetrics(n=0, exact=0.0, adjacent=0.0, mae=None),
+        repeats=2, runs=[run, run], representative_run=1,
     )
     report = ExamEvalReport(
         bank_version="1.0.0",
@@ -137,6 +148,36 @@ def test_render_report_handles_a_missing_mae() -> None:
     assert "MAE=None" in text
     assert "| 1 | 0.0000 | 0.0000 | None |" in text
     assert "representative run 1 of 2" in text
+
+
+def test_render_report_reports_the_mid_band_without_gating_it() -> None:
+    run = CalibrationRun(
+        exact=0.9, adjacent=0.9, mae=0.1, per_criterion={},
+        calls=4, passes=4, retries=0, needs_review=0,
+        verbose_delta=0.0, word_count_correlation=0.0,
+        gated=SliceMetrics(n=3, exact=1.0, adjacent=1.0, mae=0.0),
+        mid_band=SliceMetrics(n=1, exact=0.0, adjacent=0.0, mae=2.0),
+    )
+    calibration = CalibrationReport(
+        model="judge", provider="openrouter", temperature=0.0,
+        prompt_version="v", set_sha256="sha", n=4, exact=0.9,
+        adjacent=0.9, mae=0.1, per_criterion={}, calls=4, passes=4,
+        retries=0, needs_review=0, verbose_delta=0.0,
+        word_count_correlation=0.0,
+        gated=SliceMetrics(n=3, exact=1.0, adjacent=1.0, mae=0.0),
+        mid_band=SliceMetrics(n=1, exact=0.0, adjacent=0.0, mae=2.0),
+        repeats=1, runs=[run], representative_run=1,
+    )
+    report = ExamEvalReport(
+        bank_version="1.0.0",
+        subject="dada",
+        deterministic=BankCheckReport(checks=[Check("sample", True, "ok")]),
+        calibration=calibration,
+    )
+    text = render_report(report)
+    assert "Mid-band completeness (diagnostic, not gated):" in text
+    assert "gate: PASS" in text
+    assert "| 1 | 1 | 0.0000 | 0.0000 | 2.0000 | 0 |" in text
 
 
 def test_cli_exits_nonzero_on_a_missing_bank(tmp_path) -> None:

@@ -591,16 +591,21 @@ It runs:
 - independent checks: a second model solves each MCQ without the key, judges
   every option, answers each short question and compares its answer with the
   golden answer;
-- calibration: 8 short questions with 3 student-style answers each (24 cases)
-  and AI-proposed criterion marks (the owner adopts them via the PR) in
+- calibration: 8 short questions with 3-4 student-style answers each (24-28
+  cases) and AI-proposed criterion marks (the owner adopts them via the PR) in
   `eval/exam/fixtures/calibration-<subject>.jsonl` (`calibration.jsonl` for
-  DADA); one judge pass per answer group.
+  DADA); one judge pass per answer group. Transfiguration and Herbology add a
+  `partial_mid` case on the items whose completeness rubric names two separable
+  elements, with one element supplied and the other omitted (4/2); single-clause
+  rubrics keep the 4/0 core-only band. DADA, Charms and Potions already carry a
+  3/2 or 4/2-3 mid-band. The gate uses every case except `partial_mid`; the
+  mid-band is a diagnostic slice reported in its own table.
 
 Thresholds: grounding 100 percent, MCQ independent solver 100 percent, ambiguity
-0, duplicate maximums below 0.75 Jaccard and 0.90 cosine, calibration MAE at
-most 1.5 marks and adjacent agreement at least 0.90, and no unreviewed parse
-failure. `--no-independent` and `--no-calibration` each disable one section;
-pass both for a deterministic-only quick check.
+0, duplicate maximums below 0.75 Jaccard and 0.90 cosine, gated calibration MAE
+at most 1.5 marks and adjacent agreement at least 0.90, and no unreviewed gated
+parse failure. `--no-independent` and `--no-calibration` each disable one
+section; pass both for a deterministic-only quick check.
 
 The DADA history is
 `docs/runs/2026-11-09-191-dada-bank-eval.md`,
@@ -611,7 +616,10 @@ Transfiguration and Herbology records are
 `docs/runs/2026-11-13-261-charms-judge-calibration.md`,
 `docs/runs/2026-11-13-264-potions-judge-calibration.md`,
 `docs/runs/2026-11-13-266-transfiguration-judge-calibration.md` and
-`docs/runs/2026-11-13-267-herbology-judge-calibration.md`; a row for each is in
+`docs/runs/2026-11-13-267-herbology-judge-calibration.md`. The mid-band
+reconciliation is
+`docs/runs/2026-11-14-279-transfiguration-midband-calibration.md` and
+`docs/runs/2026-11-14-279-herbology-midband-calibration.md`; a row for each is in
 the Runs table in `docs/runs/README.md`.
 
 ## Persona conformance (#176)

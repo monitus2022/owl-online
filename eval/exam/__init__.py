@@ -1,6 +1,7 @@
 """Subject bank evaluation: deterministic checks, independent checks and calibration."""
 
 from eval.exam.calibration import (
+    MID_BAND_VARIANT,
     VARIANTS,
     CountingLlm,
     file_sha256,
@@ -23,6 +24,7 @@ from eval.exam.models import (
     Check,
     ExamEvalReport,
     IndependentReport,
+    SliceMetrics,
 )
 from eval.exam.runner import render_report, run_exam_eval
 
@@ -30,6 +32,7 @@ __all__ = [
     "DADA_DIFFICULTY_TARGETS",
     "DADA_TOPIC_TARGETS",
     "INDEPENDENT_PROMPT_VERSION",
+    "MID_BAND_VARIANT",
     "VARIANTS",
     "BankCheckReport",
     "CalibrationCase",
@@ -40,6 +43,7 @@ __all__ = [
     "CountingLlm",
     "ExamEvalReport",
     "IndependentReport",
+    "SliceMetrics",
     "file_sha256",
     "load_calibration",
     "render_report",

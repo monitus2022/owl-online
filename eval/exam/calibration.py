@@ -24,11 +24,13 @@ from eval.exam.models import (
     CalibrationDetail,
     CalibrationReport,
     CalibrationRun,
+    SliceMetrics,
 )
 
 VARIANTS = (
     "full",
     "partial",
+    "partial_mid",
     "wrong",
     "verbose",
     "missing_key_term",
@@ -36,6 +38,8 @@ VARIANTS = (
     "contradictory",
     "blank",
 )
+
+MID_BAND_VARIANT = "partial_mid"
 
 
 class CountingLlm:
@@ -172,6 +176,35 @@ def _pearson(pairs: Sequence[tuple[float, float]]) -> float | None:
     return cov / math.sqrt(var_x * var_y)
 
 
+def _slice_metrics(details: Sequence[CalibrationDetail]) -> SliceMetrics:
+    """Agreement over a slice; an empty slice has zero cases and no MAE."""
+    n = len(details)
+    if not n:
+        return SliceMetrics(n=0, exact=0.0, adjacent=0.0, mae=None)
+    exact = sum(1 for detail in details if detail.judge == detail.human) / n
+    adjacent = (
+        sum(
+            1
+            for detail in details
+            if detail.judge is not None and abs(detail.judge - detail.human) <= 1
+        )
+        / n
+    )
+    resolved = [detail for detail in details if detail.judge is not None]
+    mae = (
+        sum(abs(detail.judge - detail.human) for detail in resolved) / len(resolved)
+        if resolved
+        else None
+    )
+    return SliceMetrics(
+        n=n,
+        exact=exact,
+        adjacent=adjacent,
+        mae=mae,
+        needs_review=sum(1 for detail in details if detail.needs_review),
+    )
+
+
 async def run_calibration(
     bank: ExamBank,
     cases: Sequence[CalibrationCase],
@@ -290,6 +323,12 @@ async def run_calibration(
         needs_review=sum(1 for detail in details if detail.needs_review),
         verbose_delta=verbose_delta,
         word_count_correlation=correlation,
+        gated=_slice_metrics(
+            [detail for detail in details if detail.variant != MID_BAND_VARIANT]
+        ),
+        mid_band=_slice_metrics(
+            [detail for detail in details if detail.variant == MID_BAND_VARIANT]
+        ),
         details=details,
     )
 
@@ -311,6 +350,19 @@ def _run_summary(report: CalibrationReport) -> CalibrationRun:
         needs_review=report.needs_review,
         verbose_delta=report.verbose_delta,
         word_count_correlation=report.word_count_correlation,
+        gated=report.gated,
+        mid_band=report.mid_band,
+    )
+
+
+def _sum_slice(slices: Sequence[SliceMetrics]) -> SliceMetrics:
+    """Median agreement across runs, summed review flags, shared case count."""
+    return SliceMetrics(
+        n=slices[0].n,
+        exact=_median([item.exact for item in slices]) or 0.0,
+        adjacent=_median([item.adjacent for item in slices]) or 0.0,
+        mae=_median([item.mae for item in slices]),
+        needs_review=sum(item.needs_review for item in slices),
     )
 
 
@@ -326,7 +378,8 @@ async def run_calibration_repeated(
 
     The report keeps every run. The top-level metrics are medians, calls and
     retries are totals, and the case table comes from the run closest to the
-    medians. Any `needs_review` in any run fails the gate.
+    medians. Agreement gates on the gated slice; a `needs_review` anywhere,
+    including the `partial_mid` slice, still fails the gate.
     """
     if repeats < 1:
         raise ValueError("calibration repeats must be at least 1")
@@ -368,6 +421,8 @@ async def run_calibration_repeated(
         word_count_correlation=_median(
             [report.word_count_correlation for report in reports]
         ),
+        gated=_sum_slice([report.gated for report in reports]),
+        mid_band=_sum_slice([report.mid_band for report in reports]),
         details=representative.details,
         repeats=repeats,
         runs=[_run_summary(report) for report in reports],
@@ -377,6 +432,7 @@ async def run_calibration_repeated(
 
 __all__ = [
     "CountingLlm",
+    "MID_BAND_VARIANT",
     "VARIANTS",
     "file_sha256",
     "load_calibration",

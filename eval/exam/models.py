@@ -106,8 +106,36 @@ class CalibrationDetail:
 
 
 @dataclass(frozen=True)
+class SliceMetrics:
+    """Agreement metrics for one calibration slice."""
+
+    n: int
+    exact: float
+    adjacent: float
+    mae: float | None
+    needs_review: int = 0
+
+    @property
+    def ok(self) -> bool:
+        """Gate result for a present slice.
+
+        An empty slice is not a pass; callers must check `n` before reading
+        `ok` for a diagnostic slice that may be absent.
+        """
+        if self.n == 0 or self.needs_review:
+            return False
+        if self.mae is None or self.adjacent < ADJACENT_MIN:
+            return False
+        return self.mae <= MAE_MAX
+
+
+@dataclass(frozen=True)
 class CalibrationRun:
-    """One calibration pass, kept so a repeated run is auditable."""
+    """One calibration pass, kept so a repeated run is auditable.
+
+    `exact`, `adjacent`, `mae` and `needs_review` cover every case. `gated` is
+    the slice the gate uses; `mid_band` is the diagnostic completeness slice.
+    """
 
     exact: float
     adjacent: float
@@ -119,14 +147,13 @@ class CalibrationRun:
     needs_review: int
     verbose_delta: float | None
     word_count_correlation: float | None
+    gated: SliceMetrics
+    mid_band: SliceMetrics
 
     @property
     def ok(self) -> bool:
-        if self.needs_review:
-            return False
-        if self.mae is None or self.adjacent < ADJACENT_MIN:
-            return False
-        return self.mae <= MAE_MAX
+        """Agreement gate. `mid_band` is diagnostic and never gates here."""
+        return self.gated.ok and self.needs_review == 0
 
 
 @dataclass
@@ -137,6 +164,11 @@ class CalibrationReport:
     exact/adjacent/MAE/per-criterion/verbose_delta/correlation are medians,
     calls/passes/retries/needs_review are totals, details come from one
     representative run, and `runs` keeps every pass.
+
+    The gate uses `gated`, which excludes the `partial_mid` diagnostic slice for
+    agreement; a parse failure anywhere, including that slice, still fails.
+    `mid_band` reports the diagnostic slice separately so a known-weak band does
+    not block every change before the judge can score it.
     """
 
     model: str
@@ -155,6 +187,8 @@ class CalibrationReport:
     needs_review: int
     verbose_delta: float | None
     word_count_correlation: float | None
+    gated: SliceMetrics
+    mid_band: SliceMetrics
     details: list[CalibrationDetail] = field(default_factory=list)
     repeats: int = 1
     runs: list[CalibrationRun] = field(default_factory=list)
@@ -162,13 +196,10 @@ class CalibrationReport:
 
     @property
     def ok(self) -> bool:
-        # Any needs_review in any repeat is summed into the total, so one bad
-        # pass fails the gate even when the medians look clean.
-        if self.needs_review:
-            return False
-        if self.mae is None or self.adjacent < ADJACENT_MIN:
-            return False
-        return self.mae <= MAE_MAX
+        # The gated slice sums needs_review across repeats, and the report also
+        # fails on any parse failure in any run, including the diagnostic slice,
+        # so a reviewed state can never show as a gate pass.
+        return self.gated.ok and self.needs_review == 0
 
 
 @dataclass

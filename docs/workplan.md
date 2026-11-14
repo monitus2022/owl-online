@@ -540,7 +540,13 @@ Exit criteria (met by #190-#193):
   uses `--calibration-repeats 3` and gates on the median; the 2026-11-13 median
   record passes at adjacent 0.9583 and MAE 0.4167; all three runs passed on
   that draw, while #273 observed a failing run.
-  Partial scoring remains the root-cause follow-up under #40.
+  The partial bands are rubric-driven: DADA and Charms 3/2, Potions 4/2-3, and
+  Transfiguration and Herbology 4/0 plus a 4/2 `partial_mid` case on two-element
+  completeness rubrics (#279). The mid-band is a diagnostic slice outside the
+  gate; the gated calibration passes at the median (Transfiguration adjacent
+  1.0000, MAE 0.0833; Herbology adjacent 0.9583, MAE 0.0833) while the mid-band
+  scores 0.5000 exact and 0.5000 adjacent on both. Partial scoring remains the
+  root-cause follow-up under #40.
 
 Do not add a request-time `/generate-exam` endpoint. Generation is a batch job.
 

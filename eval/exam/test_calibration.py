@@ -319,3 +319,101 @@ async def test_calibration_marks_must_match_the_rubric(tmp_path) -> None:
     cases = load_calibration(path, min_items=1)
     with pytest.raises(ValueError, match="marks must name exactly"):
         await run_calibration(bank, cases, _ScriptedLlm())
+
+
+def test_mid_band_sets_carry_a_defensible_mid_band_case() -> None:
+    fixtures = Path(__file__).parent / "fixtures"
+    for subject in ("transfiguration", "herbology"):
+        cases = load_calibration(fixtures / f"calibration-{subject}.jsonl")
+        mid = [case for case in cases if case.variant == "partial_mid"]
+        assert mid, f"{subject} has no mid-band case"
+        assert all(
+            case.marks == {"correctness": 4, "completeness": 2} for case in mid
+        )
+        # A mid-band case must sit on an item that already has a full answer,
+        # so it tests completeness rather than a missing item.
+        items_with_full = {case.item_id for case in cases if case.variant == "full"}
+        assert {case.item_id for case in mid} <= items_with_full
+
+
+async def test_mid_band_failure_does_not_fail_the_gate(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "A full answer.", 4, 4),
+            _case("partial", "partial", "A partial answer.", 4, 0),
+            _case("partial_mid", "partial_mid", "A mid-band answer.", 4, 2),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 4, 0),
+        _judge_json("dada-short-001", 4, 0),
+    )
+    report = await run_calibration(bank, cases, llm)
+    assert report.ok
+    assert report.gated.n == 2
+    assert report.gated.adjacent == 1.0
+    assert report.mid_band.n == 1
+    assert report.mid_band.adjacent == 0.0
+    assert not report.mid_band.ok
+
+
+async def test_mid_band_parse_failure_still_fails_the_gate(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "A full answer.", 4, 4),
+            _case("partial", "partial", "A partial answer.", 4, 0),
+            _case("partial_mid", "partial_mid", "A mid-band answer.", 4, 2),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 4, 0),
+        "not json",
+        "still not json",
+    )
+    report = await run_calibration(bank, cases, llm)
+    assert report.gated.ok
+    assert report.mid_band.needs_review == 1
+    assert not report.ok
+
+
+async def test_repeated_calibration_aggregates_the_mid_band_slice(tmp_path) -> None:
+    bank, _, _, _ = build_bank()
+    path = _write(
+        tmp_path / "calibration.jsonl",
+        [
+            _case("full", "full", "A full answer.", 4, 4),
+            _case("partial", "partial", "A partial answer.", 4, 0),
+            _case("partial_mid", "partial_mid", "A mid-band answer.", 4, 2),
+        ],
+    )
+    cases = load_calibration(path, min_items=1)
+    llm = _ScriptedLlm(
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 4, 0),
+        _judge_json("dada-short-001", 4, 0),
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 4, 0),
+        _judge_json("dada-short-001", 4, 0),
+        _judge_json("dada-short-001", 4, 4),
+        _judge_json("dada-short-001", 4, 0),
+        _judge_json("dada-short-001", 4, 0),
+    )
+    report = await run_calibration_repeated(
+        bank, cases, llm, repeats=3, set_sha256="test"
+    )
+    assert report.ok
+    assert report.gated.n == 2
+    assert report.gated.adjacent == 1.0
+    assert report.mid_band.n == 1
+    assert report.mid_band.exact == 0.0
+    assert report.mid_band.adjacent == 0.0
+    assert report.mid_band.mae == pytest.approx(2.0)
+    assert all(run.mid_band.n == 1 for run in report.runs)
