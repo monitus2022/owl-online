@@ -206,7 +206,7 @@ export function VenuePage() {
         aria-labelledby="tab-exam"
         hidden={tab !== "exam"}
       >
-        <ExamPanel subject={room} />
+        <ExamPanel subject={room} active={tab === "exam"} />
       </div>
       <div
         id="panel-papers"

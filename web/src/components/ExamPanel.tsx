@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   AnswerMap,
   AttemptView,
@@ -36,7 +36,13 @@ function messageFor(error: unknown): string {
   return "The exam room could not reach the examiners. Try again.";
 }
 
-export function ExamPanel({ subject }: { subject: Subject }) {
+export function ExamPanel({
+  subject,
+  active,
+}: {
+  subject: Subject;
+  active: boolean;
+}) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [paper, setPaper] = useState<ExamPaper | null>(null);
   const [attempt, setAttempt] = useState<AttemptView | null>(null);
@@ -45,8 +51,11 @@ export function ExamPanel({ subject }: { subject: Subject }) {
   const [best, setBest] = useState<StoredAttempt | null>(null);
   const [bestFailed, setBestFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const submitRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    if (!active) return;
     let live = true;
     setBestFailed(false);
     resultsStore
@@ -63,7 +72,7 @@ export function ExamPanel({ subject }: { subject: Subject }) {
     return () => {
       live = false;
     };
-  }, [subject.apiSubject, phase]);
+  }, [subject.apiSubject, phase, active]);
 
   async function startPaper() {
     setError(null);
@@ -79,14 +88,50 @@ export function ExamPanel({ subject }: { subject: Subject }) {
       setAttempt(started);
       setAnswers({});
       setResult(null);
+      setConfirmSubmit(false);
       setPhase("answering");
     } catch (error) {
       setError(messageFor(error));
     }
   }
 
+  const answered = attempt
+    ? attempt.questions.filter(
+        (question) => (answers[question.id] ?? "").trim() !== "",
+      ).length
+    : 0;
+  const blankCount = attempt ? attempt.questions.length - answered : 0;
+
+  function handleSubmit() {
+    if (!attempt) return;
+    if (blankCount > 0 && !confirmSubmit) {
+      setConfirmSubmit(true);
+      return;
+    }
+    void submitPaper();
+  }
+
+  async function abandonPaper() {
+    const current = attempt;
+    setAttempt(null);
+    setAnswers({});
+    setResult(null);
+    setConfirmSubmit(false);
+    setError(null);
+    setPhase("idle");
+    if (!current) return;
+    try {
+      await examClient.abandon(current.attemptId);
+    } catch {
+      setError(
+        "The paper could not be discarded. Clear all papers in Your papers deletes it.",
+      );
+    }
+  }
+
   async function submitPaper() {
     if (!attempt) return;
+    setConfirmSubmit(false);
     setPhase("grading");
     setError(null);
     try {
@@ -249,7 +294,7 @@ export function ExamPanel({ subject }: { subject: Subject }) {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          void submitPaper();
+          handleSubmit();
         }}
       >
         <h3 className="paper-title">{paper.title}</h3>
@@ -274,12 +319,13 @@ export function ExamPanel({ subject }: { subject: Subject }) {
                       name={question.id}
                       value={option.id}
                       checked={answers[question.id] === option.id}
-                      onChange={() =>
+                      onChange={() => {
+                        setConfirmSubmit(false);
                         setAnswers((current) => ({
                           ...current,
                           [question.id]: option.id,
-                        }))
-                      }
+                        }));
+                      }}
                     />
                     <span>{option.text}</span>
                   </label>
@@ -290,25 +336,47 @@ export function ExamPanel({ subject }: { subject: Subject }) {
                 rows={2}
                 maxLength={2000}
                 value={answers[question.id] ?? ""}
-                onChange={(event) =>
+                onChange={(event) => {
+                  setConfirmSubmit(false);
                   setAnswers((current) => ({
                     ...current,
                     [question.id]: event.target.value,
-                  }))
-                }
+                  }));
+                }}
                 aria-label={`Answer to question ${index + 1}`}
               />
             )}
           </fieldset>
         ))}
+        <p className="exam-progress" aria-live="polite">
+          {answered} of {attempt.questions.length} answered
+        </p>
+        {confirmSubmit && (
+          <p className="exam-confirm" role="alert">
+            {blankCount} question{blankCount === 1 ? "" : "s"} left blank. Send
+            the paper anyway?
+          </p>
+        )}
         <div className="exam-actions">
-          <button className="btn-primary" type="submit">
-            Send to the examiners
+          <button className="btn-primary" type="submit" ref={submitRef}>
+            {confirmSubmit ? "Send anyway" : "Send to the examiners"}
           </button>
+          {confirmSubmit && (
+            <button
+              className="btn-quiet"
+              type="button"
+              onClick={() => {
+                setConfirmSubmit(false);
+                submitRef.current?.focus();
+              }}
+            >
+              Keep working
+            </button>
+          )}
           <button
             className="btn-quiet"
             type="button"
-            onClick={() => setPhase("idle")}
+            onClick={() => void abandonPaper()}
           >
             Abandon paper
           </button>

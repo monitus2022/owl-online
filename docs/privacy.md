@@ -47,8 +47,10 @@ does not store the raw answer, but its feedback may quote it.
 | Trace | Process log rotation; the optional file caps at 20 MB with one rotation |
 | Exam attempt | Until the session deletes it or the operator prunes it; the documented manual window is 90 days |
 
-The anonymous delete path is `DELETE /v1/attempts`, which deletes every attempt
-owned by the current session. It does not clear the in-memory answer cache, the
+The anonymous delete paths are `DELETE /v1/attempts`, which deletes every
+attempt owned by the current session, and `DELETE /v1/attempts/{attempt_id}`,
+which deletes one attempt, including an ungraded paper. Neither clears the
+in-memory answer cache, the
 process-local chat threads or the operator-managed judge cache; all three are
 process/operator scoped. A thread remains in process memory until the API
 restarts; a client that stops using its id simply stops adding turns. There is
@@ -115,7 +117,10 @@ state-changing account routes land in #35.
 
 - Export: `GET /v1/attempts` returns the graded attempts for the current
   session, newest first.
-- Delete: `DELETE /v1/attempts` deletes the current session's attempts.
+- Delete: `DELETE /v1/attempts` deletes the current session's attempts, and
+  `DELETE /v1/attempts/{attempt_id}` deletes one. The app exposes the
+  session-wide delete as "Clear all papers" and the single ungraded delete as
+  "Abandon paper"; graded rows are not deleted individually in the UI.
 - Access and correction: session-scoped; there is no account to inspect or
   correct until #35.
 - A per-user delete/export path, cross-device history and account deletion are
