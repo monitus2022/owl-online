@@ -169,14 +169,15 @@ export function AboutPage() {
       <section aria-labelledby="about-sources">
         <h2 id="about-sources">Sources and the no-invention promise</h2>
         <p>
-          Book facts come only from the seven novels, quoted as short
-          passages with citation marks in the [b4-c25-0075] style: book,
-          chapter, chunk. Setting facts about Ashcombe cite the
-          academy&rsquo;s own lore pack. Secondary references - like The
-          Harry Potter Lexicon, credited in the footer - are discovery and
-          cross-checking aids, never the source of a fact, a question or a
-          mark. The source text is copyrighted and is not distributed
-          here; only original code, questions and metrics are published.
+          Book facts come only from the seven novels. Each answer lists its
+          sources by material, book and chapter, and the exact material, chunk
+          and typed citation ids stay available under Source details. Setting
+          facts about Ashcombe cite the academy&rsquo;s own lore pack. Secondary
+          references - like The Harry Potter Lexicon, credited in the footer -
+          are discovery and cross-checking aids, never the source of a fact, a
+          question or a mark. The source text is copyrighted and is not
+          distributed here; only original code, questions and metrics are
+          published.
         </p>
         <p>
           If this page or any screen ever contradicts itself, trust the

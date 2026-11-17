@@ -27,8 +27,23 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   ).toBeVisible();
   await page.getByLabel("Your question").fill("What is a Boggart?");
   await page.getByRole("button", { name: "Ask" }).click();
-  await expect(page.getByText("A Boggart is a shape-shifter")).toBeVisible();
-  await expect(page.getByText("Lesson notes")).toBeVisible();
+  const answer = page
+    .locator(".chat-text")
+    .filter({ hasText: "A Boggart is a shape-shifter" });
+  await expect(answer).toBeVisible();
+  await expect(answer).toHaveText(
+    "A Boggart is a shape-shifter that takes the shape of what the watcher fears most.",
+  );
+  await expect(answer).not.toContainText("[mat:");
+  await expect(answer).not.toContainText("[b1-c01-0000]");
+  await expect(page.getByText("Sources", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Test · Material", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Book 1, Chapter 1", { exact: true }),
+  ).toBeVisible();
+  await page.getByText("Source details").click();
   await expect(
     page.getByText("dada-test-material", { exact: true }),
   ).toBeVisible();
@@ -220,7 +235,13 @@ test("the education paraphrase answers from the persona fact", async ({
   await page.getByLabel("Your question").fill("did you study in hogwarts?");
   await page.getByRole("button", { name: "Ask" }).click();
   await expect(page.getByText("I studied at Hogwarts")).toBeVisible();
-  await expect(page.getByText("persona:professor.education")).toBeVisible();
+  await expect(
+    page.getByText("Professor's note", { exact: true }),
+  ).toBeVisible();
+  await page.getByText("Source details").click();
+  await expect(
+    page.getByText("persona:professor.education", { exact: true }),
+  ).toBeVisible();
 });
 
 test("a meta question about the exam is refused", async ({ page }) => {
