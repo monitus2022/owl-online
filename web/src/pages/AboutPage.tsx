@@ -116,6 +116,19 @@ export function AboutPage() {
               </td>
             </tr>
             <tr>
+              <td>Lesson answers</td>
+              <td className="truth-real">Real, composed</td>
+              <td>
+                The professor composes teaching prose from the
+                department&rsquo;s reviewed notes and cites them. The
+                citations are source ids, not a sentence-level support
+                check. On the 2026-11-13 evaluation, 4 of 30 judged lesson
+                answers were fully supported by their notes, with citation
+                recall 0.9615 and no false refusals; comparison prompts are
+                the weakest shape.
+              </td>
+            </tr>
+            <tr>
               <td>Practice and feedback</td>
               <td className="truth-real">Real, formative</td>
               <td>

@@ -187,9 +187,12 @@ does not inject them. Threads live in process memory and reset on restart;
 threaded prompts include a bounded conversation block for follow-ups (except
 the experimental multi-book path).
 
-Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure
-`/data/subjects/dada/pack.toml` exists on the volume, then run the deploy
-workflow. `docker restart` does not re-read env; the workflow recreates the
+Set `OWL_LESSON_MODE=true` and `OWL_PERSONA=true`, make sure the packs you want
+to serve exist under `/data/subjects/` (`charms`, `dada`, `herbology`,
+`potions`, `transfiguration`), then run the deploy workflow. After the rollout,
+`GET /v1/subjects` lists a pack per loaded subject and `lesson_subjects` names
+the subjects whose lesson mode is live; a subject whose startup embedding fails
+is skipped and keeps the corpus path. `docker restart` does not re-read env; the workflow recreates the
 container with the variables.
 
 The workflow always injects these eight keys (the repository variable or its
@@ -213,8 +216,9 @@ curl -s https://api.monitus.org/v1/subjects
 curl -s "https://api.monitus.org/v1/exams?subject=dada"
 ```
 
-Expect the DADA summary with `lesson:true` and `persona:true` when the pack is
-present, and a paper descriptor for every subject whose bank was imported. A
+Expect a summary per uploaded pack, `lesson:true` when the default subject's
+selector is live (check `lesson_subjects` for the rest), plus a paper
+descriptor for every subject whose bank was imported. A
 `503 exam bank unavailable` from `/v1/attempts` means the store is missing or
 not readable at `OWL_EXAM_STORE_PATH`.
 

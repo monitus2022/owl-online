@@ -13,12 +13,13 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
 | Agent | `app/agent/` | LangGraph state, short-term memory resolver, contract-aware router, answer / practice / feedback / meta / personal / lesson / fact / clarify / policy / abstain nodes |
-| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper and the curated concept-title/alias matcher; the DADA, Charms, Potions, Transfiguration and Herbology packs are published; reference prefill and coverage maintenance remain on #128 |
+| Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper, the curated concept-title/alias matcher and the typed citation authority checker (#218); the DADA, Charms, Potions, Transfiguration and Herbology packs are published; reference prefill and coverage maintenance remain on #128 |
 | Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); DADA 1.1.0 (#190, #271) and the Charms (#213), Potions (#228), Transfiguration (#230) and Herbology (#231) banks 1.0.0 are published |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
 | Providers | `app/providers/` | model adapters behind contracts (openai, boto3); the vector store SDK lives in the index builder |
 | Config | `app/config.py` | environment settings (`OWL_` prefix) |
 | Logging | `app/logging.py` | one formatter, level from settings, a per-request id |
+| Trace | `app/trace.py` | request-scoped tracer, flat JSONL spans and prompt fingerprints |
 | Domain | `app/schemas.py` | `Chunk` and its metadata |
 
 Pipeline stages, in order:
@@ -28,7 +29,7 @@ Pipeline stages, in order:
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
-| Generate | `app/pipeline/generate/` | `ask`, `ask_lesson` (pack-first scope with a labelled corpus fallback), `student_note`, `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
+| Generate | `app/pipeline/generate/` | `ask`, `ask_multi_book` (flag-gated), `ask_lesson` (pack-first scope with a labelled corpus fallback), `student_note`, `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
 | Agent | `app/agent/` | `build_graph`, `route`, `resolve_node`, `remember_node`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node`, `lesson_node`, `fact_node`, `clarify_node`, `policy_node`, `abstain_node` |
 
 `parse_chapters` drops the front matter before book 1 and trims the previous
@@ -135,7 +136,7 @@ classDiagram
 
   class factory {
     <<module>>
-    make_llm(provider, model, temperature)
+    make_llm(provider, model, temperature, max_tokens)
     make_embedder(provider)
     make_reranker(provider)
     make_retriever(provider)
@@ -201,25 +202,32 @@ flowchart TD
   api --> knowledge
   agent --> providers
   agent --> schemas
+  knowledge --> providers
   knowledge --> schemas
   pipeline --> providers
   pipeline --> schemas[app/schemas.py]
   providers --> schemas
   storage --> exam
   grading --> exam
-  providers --> sdk[[openai, boto3, httpx, chromadb]]
+  providers --> sdks[[openai, boto3, httpx]]
+  pipeline --> chromadb[[chromadb]]
 ```
+
+Every layer also imports `app/trace.py` for span emission; those edges are
+omitted so the diagram stays readable. `knowledge --> providers` is the lesson
+selector's `Embedder` contract; it is a type import, not a vendor SDK.
 
 ## API surface
 
 The served contract is documented in `docs/api.md`: the current `/` JSON
 descriptor, `/health`, `/v1/chat`, `/v1/chat/stream`, `/v1/subjects`,
-`/v1/materials/{subject}/{material_id}`, `/v1/metrics` and exam serving
-routes, the SSE event schema, the error shapes, and the remaining planned `/v1`
-surface for persona only. The split is by purpose, not by subject: a subject is request data,
-chat intents stay internal, and the exam bank and grading are separate
-resources. The versioned aliases still gate per-subject chat; the frontend
-already ships as its own static build.
+`/v1/materials/{subject}/{material_id}`, `/v1/metrics` and the exam serving
+routes, the SSE event schema, the error shapes, and the deprecated `/ask` and
+`/ask/stream` aliases, which return `Deprecation` and `Link` headers; the
+remaining planned `/v1` surface is persona only. The split is by purpose, not by
+subject: a subject is request data, chat intents stay internal, and the exam
+bank and grading are separate resources. Per-subject chat is the `subject`
+field, not a separate route; the frontend already ships as its own static build.
 
 ## Frontend surface
 
@@ -253,7 +261,10 @@ Two interfaces keep the boundary between the UI and the services:
 The static subject list decides which departments are open. The venue fetches
 `GET /v1/subjects` for the published pack and the live `persona`,
 `persona_subjects`, `lesson` and `lesson_subjects` flags, so each room checks
-its own subject. The DADA room sends `mode=lesson` only when the API says its
+its own subject. A lesson answer labels its evidence: `in_pack` answers say they
+are composed from the department notes and that the citations are source ids,
+not a sentence-level check; `mixed` and `off_pack` answers label the set-text
+tier. The DADA room sends `mode=lesson` only when the API says its
 pack is loaded; Charms does the same when its pack and lesson mode are live.
 Each room takes the live voice copy when its subject is in `persona_subjects`,
 and the single `persona_subject` is the default fallback for an older API. A
@@ -327,7 +338,8 @@ worker: a provider call already running in a thread is not cancellable, so a
 timed-out request can keep its thread busy until the client's own timeout.
 
 `verify_draft` is deterministic: an empty draft or one that cites no retrieved
-chunk and no lore entry fails. A grounded draft passes; a deliberate refusal is final and is never
+chunk and no lore entry fails. A grounded draft passes. The refusal check
+(`is_refusal`) runs beside it: a deliberate refusal is final and is never
 retried, so abstention keeps its meaning. A paraphrase refusal is final when it
 cites nothing, trails into a further refusal, or has nothing but the refusal
 clause; a cited partial answer that moves on to a new or contrastive clause is
@@ -470,9 +482,9 @@ and is compared only with another thing. The block is capped by
 `OWL_MEMORY_TOKEN_BUDGET`; the full prompt also contains the system, evidence and
 current question. Prior citations are stripped from the block, grouped forms
 included, and the model is told the conversation is untrusted and not evidence.
-The typed citation checker accepts only ids in the current retrieval set; it
-checks membership, not provenance, so a model could still restate a conversation
-fact and cite a current excerpt. Provenance-aware checking is future work. The experimental multi-book
+The grounding step accepts only ids in the current retrieval set and the typed
+checker validates the authority space; both check membership, not provenance, so
+a model could still restate a conversation fact and cite a current excerpt. Provenance-aware checking is future work. The experimental multi-book
 path does not consume the block yet.
 
 The router still owns the contract: the only memory hint is teaching for an
@@ -496,7 +508,10 @@ bound it. A multi-tenant deployment needs a bounded or durable store.
 When the classification would otherwise be `answer` and the request mode is
 `lesson` with `OWL_LESSON_MODE` on, the graph routes to `lesson_node` instead of
 `answer`. The derived selector scores the in-memory material vectors and the
-prompt carries the selected materials. After selection, the rest of each matched
+prompt carries the selected materials. The selector is built at startup by
+embedding every material; a subject whose embedding fails is skipped, so its
+venue falls back to the corpus path while the other subjects keep lesson mode.
+After selection, the rest of each matched
 concept's reviewed group is added round-robin, up to a five-material group
 budget (the top-k size when larger), so the model sees more than one note per
 concept and a comparison keeps both sides. The prompt requires a citation in
@@ -555,8 +570,10 @@ deployment region bans them regardless of host.
 
 Each request can emit flat JSONL span records under the request id. The stream
 path emits `resolve` (rewritten flag, rule, query hash and length), `router`
-(intent), `retrieve` (chunk ids and top score), one `generate` per attempt
-(model, prompt hash and length), `verify` (ok and reason), `retry`, and `final`.
+(intent, requested mode and question length), `retrieval_strategy` (strategy,
+reason and cues), `retrieve` (chunk ids and top score), one `generate` per
+attempt (model, prompt hash and length), `verify` (ok and reason), `retry`, and
+`final`.
 The lesson path adds `lesson_select` (material ids, scores, uncovered term count
 and hash, scope, conversation characters) and `lesson_result` (abstained,
 abstain reason, retry reason, attempts, uncited paragraphs, fallback flag, scope
@@ -579,7 +596,10 @@ excerpts.
 ## Chat intents vs exam bank
 
 The chat graph is the online surface. Its three core intents are intentionally
-lightweight. Four persona-adjacent intents are added when `OWL_PERSONA` is on:
+lightweight. Six scripted intents sit beside them: meta, personal, fact,
+clarify, policy and abstain. The persona card supplies the reviewed text for
+meta and personal; policy, clarify, fact and abstain also work with the card
+off.
 
 | Intent | Trigger | Output | Persisted | Authoritative |
 |---|---|---|---|---|
@@ -647,8 +667,9 @@ he does not claim private knowledge of the people named in the book chunks.
 The registry loads five cards: the DADA seed plus Potions, Transfiguration,
 Charms and Herbology, merged over a shared policy spine. The API and graph select
 the request subject's card from the registry, so a Charms request uses Professor
-Raman and a DADA request uses Professor Crane. The router cues are still
-DADA-only until #219 broadens them; an unknown subject is a `422`. The flag
+Raman and a DADA request uses Professor Crane. The contract gates resolve the
+request subject's card (#219/#222); the legacy `meta_topic` cue table stays
+DADA-only and is consulted only for DADA. An unknown subject is a `422`. The flag
 stays site-wide, and `GET /v1/subjects` reports `persona_subjects` and
 `lesson_subjects`. The card and the doc change together;
 `tests/test_personas.py` asserts every card has every meta topic and the shared
@@ -883,8 +904,9 @@ Counters live in the one API process, so a restart resets the windows; auth
 later moves them to a user id.
 
 Corpus-only answers pass through an in-process exact cache keyed by prompt
-version, index text hash, retrieval settings, embedder and reranker config,
-model, normalised question, the request subject, the persona flag, a hash of
+version, index text hash, retrieval settings, retry budget, multi-book flag,
+embedder and reranker config, model, normalised question, the request subject,
+the persona flag, a hash of
 that subject's persona suffix, the lore pack version, the lore selection
 version, and when lesson mode is on the pack fingerprints, lesson top-k, floor,
 fallback setting and subject. Practice,
@@ -915,8 +937,8 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars, selected_material_ids, selection_scores, uncovered_terms |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, standalone question, messages, summary, conversation context, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, subject, persona flag, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars, selected_material_ids, selection_scores, uncovered_terms, multi_book |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, standalone question, resolved entity, messages, summary, conversation context, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, multi-book flag, subject, persona flag, top-k, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
@@ -924,9 +946,9 @@ generate) for the per-call detail.
 | `LoreEntry` / `LoreStore` | `app/knowledge/lore.py` | dataclass | authored setting fact with a canonicity tier; loaded pack with keyword selection |
 | `AttemptAnswer` / `AttemptGrade` / `QuestionGrade` / `CriterionGrade` | `app/grading/models.py` | pydantic | answer shape, per-question criteria and marks, per-attempt total and band |
 | `JudgeConfig` | `app/grading/models.py` | dataclass | pinned judge model, temperature, prompt version, provider and max tokens |
-| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled memory and stateless agent graphs, index hash, published pack summaries, pack store, derived lesson selector, exam store, per-bank judge adapters keyed by pinned judge model, optional single-judge injection, judge cache |
+| `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled memory and stateless agent graphs, index hash, lore store, published pack summaries, pack store, derived lesson selector, exam store, per-bank judge adapters keyed by pinned judge model, optional single-judge injection, judge cache |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
-| `StreamRequest` | `app/api/schemas.py` | pydantic | question, chat-intent override, optional answer to review, optional thread id |
+| `StreamRequest` | `app/api/schemas.py` | pydantic | inherited question and subject, chat-intent override, optional answer to review, optional thread id |
 
 Subject-knowledge types (schema landed on #87; all five O.W.L. packs are
 published; reference prefill and coverage maintenance remain on #128):

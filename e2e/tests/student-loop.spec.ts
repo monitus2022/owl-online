@@ -31,6 +31,9 @@ test("a lesson question returns prose and citations", async ({ page }) => {
     .locator(".chat-text")
     .filter({ hasText: "A Boggart is a shape-shifter" });
   await expect(answer).toBeVisible();
+  await expect(
+    page.getByText("Composed from the department notes"),
+  ).toBeVisible();
   await expect(answer).toHaveText(
     "A Boggart is a shape-shifter that takes the shape of what the watcher fears most.",
   );

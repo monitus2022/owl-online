@@ -327,6 +327,67 @@ async def test_selector_prefers_the_matching_material():
     assert [m.material_id for m in selected] == ["dada-dark-creatures-boggarts-nature"]
 
 
+def _two_subject_store() -> PackStore:
+    charms = SubjectPack(
+        manifest=PackManifest(
+            subject="charms",
+            version="1.0.0",
+            status="published",
+            index_text_hash="fedcba9876543211",
+        ),
+        topics=[Topic(topic_id="charms-basics", subject="charms", title="Charms")],
+        concepts=[
+            Concept(
+                concept_id="charms-levitation",
+                subject="charms",
+                kind="spell",
+                title="Levitation Charm",
+                aliases=("levitation",),
+            )
+        ],
+        materials=[
+            Material(
+                material_id="charms-levitation-note",
+                subject="charms",
+                topic="charms-basics",
+                concept="charms-levitation",
+                kind="spell",
+                text="FLAKY the levitation charm lifts an object.",
+                review_status="reviewed",
+                source_refs=[_ref("b1-c10-0020")],
+            )
+        ],
+    )
+    return PackStore(
+        packs={"dada": _pack(), "charms": charms},
+        fingerprints={"dada": "fp", "charms": "fp2"},
+    )
+
+
+class FlakyEmbedder:
+    """Raises for the marked pack; embeds everything else."""
+
+    name = "fake/flaky"
+
+    async def embed(self, texts):
+        if any("FLAKY" in text for text in texts):
+            raise RuntimeError("provider rejected the batch")
+        return [[1.0, 0.0] for _ in texts]
+
+
+@pytest.mark.asyncio
+async def test_selector_skips_a_subject_whose_embedding_fails():
+    selector = await LessonSelector.build(_two_subject_store(), FlakyEmbedder())
+
+    assert selector.subjects() == ("dada",)
+    assert (
+        await selector.select(
+            "What does a boggart look like?", subject="charms", top_k=1
+        )
+        == []
+    )
+
+
 def _group_pack() -> SubjectPack:
     """Two concepts with siblings, for expansion tests."""
     base = _pack()

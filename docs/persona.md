@@ -266,8 +266,9 @@ so every department can cite the same pathway. Each card carries its own identit
 subject definition, teaching stance and professor background. The registry is
 loaded at startup and exposed as `PERSONAS`; `PERSONA` remains the DADA alias.
 The API and graph select the request subject's card, so a Charms request uses
-Professor Raman and a DADA request uses Professor Crane. The router cues are
-still DADA-only until #219 broadens them. Tier 2 composition stays
+Professor Raman and a DADA request uses Professor Crane. The contract gates
+resolve the request subject's card (#219/#222); the legacy `meta_topic` cue
+table stays DADA-only and is consulted only for DADA. Tier 2 composition stays
 bounded by the lore pack entries for that professor's subject; persona facts
 about the school and founders live in the shared lore entries, not in five
 prompt files that can drift apart.
@@ -284,3 +285,4 @@ prompt files that can drift apart.
 | 2026-11-09 | Subject-definition reply added; "what is DADA" and "what is Defence Against the Dark Arts" route to the reviewed definition, while book-context forms stay on the answer path |
 | 2026-11-09 | Lesson voice: persona-first prompt, teaching shape, 250-word target, inline chunk ids hidden from the note prompt, and the #176 conformance fixture; pass rate 0.00 to 0.40 with citation retention 0.79 |
 | 2026-11-10 | Multi-subject registry: shared policy spine plus Potions, Transfiguration, Charms and Herbology cards; DADA remains the seed card |
+| 2026-11-13 | Lesson grounding: evidence groups, a paragraph citation rule and one paragraph retry; the measured support rate is 4 of 30 judged answers, so the UI labels `in_pack` answers as composed from the notes with source ids, not a sentence-level check (#251) |
