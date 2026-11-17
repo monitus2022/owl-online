@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BAND_LABELS } from "../api/exams";
 import { resultsStore } from "../api/results";
 import type { StoredAttempt } from "../api/results";
@@ -13,6 +13,11 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
   const [attempts, setAttempts] = useState<StoredAttempt[] | null>(null);
   const [best, setBest] = useState<StoredAttempt | null>(null);
   const [failed, setFailed] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
+  const [cleared, setCleared] = useState(0);
+  const clearRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!active) return;
@@ -45,6 +50,24 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
     attempt.id === best.id &&
     attempt.gradedAt === best.gradedAt;
 
+  async function clearAll() {
+    setClearing(true);
+    setClearError(null);
+    try {
+      const deleted = await resultsStore.clear();
+      setAttempts([]);
+      setBest(null);
+      setCleared(deleted);
+      setConfirmClear(false);
+    } catch {
+      setClearError(
+        "The papers could not be deleted. They are still stored for this session.",
+      );
+    } finally {
+      setClearing(false);
+    }
+  }
+
   return (
     <section className="history" aria-label="Your papers">
       <h2>Your papers</h2>
@@ -65,8 +88,9 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
         )}
         {!failed && attempts !== null && attempts.length === 0 && (
           <p className="history-empty">
-            The drawer is empty: no papers have been marked for this
-            department in this browser session yet. Sit one in the exam room.
+            {cleared > 0
+              ? `Deleted ${cleared} paper${cleared === 1 ? "" : "s"}. The drawer is empty.`
+              : "The drawer is empty: no papers have been marked for this department in this browser session yet. Sit one in the exam room."}
           </p>
         )}
       </div>
@@ -92,6 +116,56 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
             ))}
           </ol>
         </>
+      )}
+      {!failed && attempts !== null && (
+        <div className="history-actions">
+          <button
+            className="btn-quiet"
+            type="button"
+            ref={clearRef}
+            onClick={() => {
+              setClearError(null);
+              setConfirmClear(true);
+            }}
+          >
+            Clear all papers
+          </button>
+        </div>
+      )}
+      {confirmClear && (
+        <div className="history-confirm">
+          <p role="alert">
+            Delete every paper in this browser session, including any ungraded
+            paper? This cannot be undone.
+          </p>
+          {clearError && (
+            <p className="history-error" role="alert">
+              {clearError}
+            </p>
+          )}
+          <div className="history-actions">
+            <button
+              className="btn-primary"
+              type="button"
+              onClick={() => void clearAll()}
+              disabled={clearing}
+            >
+              {clearing ? "Deleting…" : "Delete them"}
+            </button>
+            <button
+              className="btn-quiet"
+              type="button"
+              onClick={() => {
+                setConfirmClear(false);
+                setClearError(null);
+                clearRef.current?.focus();
+              }}
+              disabled={clearing}
+            >
+              Keep them
+            </button>
+          </div>
+        </div>
       )}
     </section>
   );

@@ -21,6 +21,7 @@ export interface ResultsStore {
   save(attempt: StoredAttempt): Promise<void>;
   history(subject: string): Promise<StoredAttempt[]>;
   best(subject: string): Promise<StoredAttempt | null>;
+  clear(): Promise<number>;
 }
 
 interface ApiAttemptSummary {
@@ -90,6 +91,25 @@ class HttpResultsStore implements ResultsStore {
     return attempts.reduce((latest, attempt) =>
       attempt.gradedAt > latest.gradedAt ? attempt : latest,
     );
+  }
+
+  async clear(): Promise<number> {
+    let response: Response;
+    try {
+      response = await fetch(`${apiBase()}/v1/attempts`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+    } catch {
+      throw new Error("The paper records could not be reached.");
+    }
+    if (!response.ok) {
+      throw new Error(
+        `The paper records could not be cleared (${response.status}).`,
+      );
+    }
+    const body = (await response.json()) as { deleted: number };
+    return body.deleted;
   }
 }
 

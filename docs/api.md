@@ -26,6 +26,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 | `POST` | `/v1/exams/{paper_id}/attempts` | sample and persist a paper attempt |
 | `GET` | `/v1/attempts` | graded attempts for the current session, newest first |
 | `DELETE` | `/v1/attempts` | delete the current session's attempts |
+| `DELETE` | `/v1/attempts/{attempt_id}` | delete one attempt owned by the current session |
 | `GET` | `/v1/attempts/{attempt_id}` | the persisted pre-submission attempt |
 | `POST` | `/v1/attempts/{attempt_id}/grade` | deterministic MCQ scoring plus the pinned rubric judge |
 
@@ -485,6 +486,12 @@ cascade. Clearing the cookie starts a new session but does not delete old
 attempts. The operator retention path is
 `uv run python scripts/prune_attempts.py --days 90`; the full policy is
 `docs/privacy.md`.
+
+`DELETE /v1/attempts/{attempt_id}` deletes one attempt owned by the current
+session and returns `{"deleted": 1}`. It also removes an ungraded attempt, which
+is how the exam room discards a paper before submission. Another session gets
+`404`, so the route never confirms that an attempt exists. Deleting an attempt
+does not return the start to today's allowance; the limit counts starts.
 
 `POST /v1/attempts/{attempt_id}/grade` submits the answers. Omitted questions
 are left blank. An MCQ answer is an `option_id` from the served four; a short

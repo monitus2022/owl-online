@@ -123,6 +123,7 @@ JSONL:
 | `GET /v1/attempts/{attempt_id}` | the same persisted view on a reload |
 | `POST /v1/attempts/{attempt_id}/grade` | deterministic MCQ plus one judge call, then the deterministic band |
 | `DELETE /v1/attempts` | delete the current session's attempts; returns the deleted count |
+| `DELETE /v1/attempts/{attempt_id}` | delete one attempt, including an ungraded paper; 404 for another session |
 
 The paper id is `<subject>-<version>`, so the served papers are `dada-1.1.0`,
 `charms-1.0.0`, `potions-1.0.0`, `transfiguration-1.0.0` and `herbology-1.0.0`. Each venue requests its own subject; the API default stays

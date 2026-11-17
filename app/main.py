@@ -1140,6 +1140,21 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             raise HTTPException(status_code=503, detail="exam bank unavailable")
         return {"deleted": store.delete_attempts(request.state.session_id)}
 
+    @app.delete(
+        "/v1/attempts/{attempt_id}",
+        tags=["attempts"],
+        summary="Delete one attempt",
+    )
+    def delete_attempt(attempt_id: str, request: Request) -> dict[str, int]:
+        """Delete one attempt owned by the current session."""
+        store = request.app.state.runtime.exam_store
+        if store is None:
+            raise HTTPException(status_code=503, detail="exam bank unavailable")
+        deleted = store.delete_attempt(attempt_id, request.state.session_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="attempt not found")
+        return {"deleted": deleted}
+
     @app.get(
         "/v1/attempts/{attempt_id}",
         response_model=AttemptView,
