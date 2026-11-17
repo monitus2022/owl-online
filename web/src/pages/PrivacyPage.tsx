@@ -24,6 +24,12 @@ export function PrivacyPage() {
             clears on restart and has no per-session key.
           </li>
           <li>
+            Your name is kept in this browser's local storage and sent with
+            each chat request so the professors can address you. The API does
+            not keep a student record; "Change the name" in the footer removes
+            the value from this browser.
+          </li>
+          <li>
             Usage logs record the session id, intent, model, cache flag, token
             counts, cost and latency. They do not record the prompt or answer
             text.
@@ -67,9 +73,10 @@ export function PrivacyPage() {
         <p>
           Prompts and the retrieved excerpts go to the configured provider:
           OpenRouter for open-weight models, or Amazon Bedrock in the deployed
-          region. The project does not train models on your data. The provider
-          processes the request under its own terms, so check that policy if
-          you need a formal guarantee.
+          region. When you have entered a name, the prompt also carries it so
+          the professor can address you. The project does not train models on
+          your data. The provider processes the request under its own terms, so
+          check that policy if you need a formal guarantee.
         </p>
       </section>
 
@@ -99,6 +106,11 @@ export function PrivacyPage() {
             in-memory answer cache or the operator-managed judge cache.
             Clearing cookies starts a new session; the old attempts remain
             until the operator prunes them.
+          </li>
+          <li>
+            Change your name: the footer's "Change the name" control removes it
+            from this browser and returns to the welcome. Clearing site data
+            does the same.
           </li>
           <li>
             Accounts, cross-device history and a per-user delete/export path

@@ -4,6 +4,7 @@ import { askStream, ChatError } from "../api/chat";
 import type { ChatMode, LessonScope } from "../api/chat";
 import { startersFor } from "../data/subjects";
 import type { PersonaState, Subject } from "../data/subjects";
+import { useStudentName } from "../data/student";
 import { Silhouette } from "./Silhouette";
 
 // Chat. Every affordance addresses the professor; the greeting, abstention
@@ -115,6 +116,7 @@ export function ChatPanel({
   ready: boolean;
 }) {
   const vacant = subject.professor === "Professor not yet appointed";
+  const studentName = useStudentName();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
@@ -161,6 +163,7 @@ export function ChatPanel({
         subject.apiSubject,
         lesson ? "lesson" : "auto",
         threadId,
+        studentName,
       )) {
         if (streamEvent.name === "mode") {
           const data = streamEvent.data as { mode: ChatMode };

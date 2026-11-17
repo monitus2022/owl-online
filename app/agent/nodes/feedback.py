@@ -13,6 +13,7 @@ from app.agent.nodes.common import (
 )
 from app.agent.state import AgentState
 from app.pipeline.generate import ABSTAIN_MESSAGE, CONVERSATION_NOTE, ground_answer
+from app.pipeline.generate.addressing import student_note
 from app.providers.contracts import Llm, Retriever
 
 MISSING_ANSWER = "I need the answer you want feedback on."
@@ -69,8 +70,11 @@ async def feedback_node(
         context=state.get("conversation_context", ""),
     )
     system = SYSTEM
+    note = student_note(state.get("student_name"))
+    if note:
+        system = f"{system}\n\n{note}"
     if state.get("conversation_context"):
-        system = f"{SYSTEM}\n\n{CONVERSATION_NOTE}"
+        system = f"{system}\n\n{CONVERSATION_NOTE}"
     text, model_used, attempts = await stream_with_fallback(
         llm,
         fallback_llm,

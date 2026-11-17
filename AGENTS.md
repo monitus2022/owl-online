@@ -17,7 +17,9 @@ citations with a cross-type check; short-term chat memory is opt-in per
 `thread_id`, process-local and feeds a bounded conversation block into the chat
 prompts (except the experimental multi-book path), attempt history is
 session-scoped, and per-user
-history waits on auth (#35). The lesson and multi-turn RAG baseline is committed
+history waits on auth (#35). A static first-run welcome gates the site behind a
+browser-local student name (#288), which the chat prompts use as an address.
+The lesson and multi-turn RAG baseline is committed
 (#248); implicit follow-ups are resolved before retrieval (#249), and
 lesson grounding and cross-subject referral are the active gaps (#251,
 #253); the #251 first slice moved lesson faithfulness to 4/30, and the judge is

@@ -59,6 +59,7 @@ async def lesson_node(
         on_reset=reset,
         max_retries=max_retries,
         persona=active,
+        student_name=state.get("student_name"),
         prompt_question=state["question"],
         conversation_context=state.get("conversation_context"),
     )

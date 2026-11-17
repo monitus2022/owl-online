@@ -14,6 +14,7 @@ from dataclasses import dataclass, field, replace
 from typing import Literal
 
 from app.knowledge.lore import LoreEntry, LoreStore
+from app.pipeline.generate.addressing import student_note
 from app.pipeline.generate.verify import verify_draft
 from app.pipeline.retrieve.retriever import DEFAULT_RRF_K, QUERY_CANDIDATES
 from app.pipeline.retrieve.strategy import classify_retrieval_strategy
@@ -289,6 +290,7 @@ async def ask(
     multi_book_selection: str | None = None,
     multi_book_selection_floor: float | None = None,
     persona_suffix: str | None = None,
+    student_name: str | None = None,
     lore: LoreStore | None = None,
     subject: str = "dada",
     prompt_question: str | None = None,
@@ -318,6 +320,8 @@ async def ask(
     `prompt_question` keeps the student's wording in the prompt while retrieval
     uses the rewritten `question`. `conversation_context` is a bounded,
     non-evidence block for a threaded request; the model is told not to cite it.
+    `student_name` adds the address note, and is omitted entirely when absent so
+    the unnamed prompt is unchanged.
     """
     prompt_question = prompt_question or question
     tracer = current_tracer()
@@ -444,6 +448,10 @@ async def ask(
     if persona_suffix:
         system = f"{system}\n\n{persona_suffix}"
         retry_system = f"{retry_system}\n\n{persona_suffix}"
+    note = student_note(student_name)
+    if note:
+        system = f"{system}\n\n{note}"
+        retry_system = f"{retry_system}\n\n{note}"
     if conversation_context:
         system = f"{system}\n\n{CONVERSATION_NOTE}"
         retry_system = f"{retry_system}\n\n{CONVERSATION_NOTE}"

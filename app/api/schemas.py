@@ -24,6 +24,9 @@ class AskRequest(BaseModel):
     # The department the question is asked in. Empty means the exam/persona
     # default subject. The server uses it to scope the live persona card.
     subject: str = Field(default="", max_length=64)
+    # The display name collected at the welcome. It is data, not instructions:
+    # the validator admits letters and a small set of name punctuation only.
+    student_name: str | None = Field(default=None, max_length=40)
 
     @field_validator("question")
     @classmethod
@@ -32,6 +35,27 @@ class AskRequest(BaseModel):
         if not stripped:
             raise ValueError("question must not be blank")
         return stripped
+
+    @field_validator("student_name")
+    @classmethod
+    def _clean_student_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if any(ord(char) < 32 or ord(char) == 127 for char in value):
+            raise ValueError("student_name must not contain control characters")
+        collapsed = " ".join(value.split())
+        if not collapsed:
+            return None
+        if len(collapsed) > 40:
+            raise ValueError("student_name must be 40 characters or fewer")
+        if not collapsed[0].isalpha():
+            raise ValueError("student_name must start with a letter")
+        if not all(char.isalpha() or char in " .'-" for char in collapsed):
+            raise ValueError(
+                "student_name may contain letters, spaces, apostrophes, "
+                "hyphens and full stops"
+            )
+        return collapsed
 
 
 class StreamRequest(AskRequest):

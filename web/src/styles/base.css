@@ -181,6 +181,80 @@ main {
   margin-bottom: 2.5rem;
 }
 
+/* The first-run welcome --------------------------------------------------- */
+
+.welcome {
+  max-width: 40rem;
+  text-align: center;
+}
+
+.welcome-copy {
+  text-align: left;
+}
+
+.welcome-copy p {
+  color: var(--ink-dim);
+  max-width: 40rem;
+}
+
+.welcome-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 2rem auto 0;
+  max-width: 24rem;
+  padding: 1.4rem 1.5rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  text-align: left;
+}
+
+.welcome-form label {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+}
+
+.welcome-hint {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.welcome-form input {
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+  background: var(--bg-sunken);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.welcome-form input:focus-visible {
+  border-color: var(--gold);
+}
+
+.welcome-form input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.welcome-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.welcome-form .btn-primary {
+  align-self: center;
+  margin-top: 0.5rem;
+}
+
+.welcome-note {
+  margin-top: 1.6rem;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
 .site-footer {
   margin: 3rem auto 0;
   padding: 1.1rem 1rem 2.5rem;
@@ -199,6 +273,24 @@ main {
 
 .footer-nav {
   margin-top: 1rem;
+}
+
+.footer-name {
+  margin-top: 1rem;
+}
+
+.footer-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.footer-link:hover {
+  color: var(--ink);
 }
 
 /* The about page ---------------------------------------------------------- */
