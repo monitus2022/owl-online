@@ -7,6 +7,14 @@ const pages = [
   ["venue", "/venue/defence-against-the-dark-arts"],
 ] as const;
 
+// Seed the student name (#288) so these checks reach the pages behind the
+// welcome gate. welcome.spec.ts runs axe on the welcome itself.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("owl.student.name", "Test Student");
+  });
+});
+
 for (const [name, path] of pages) {
   test(`axe: ${name} has no critical violations`, async ({ page }) => {
     await page.goto(path);

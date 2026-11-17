@@ -58,11 +58,15 @@ class StaticLlm:
 
     def __init__(self, draft: str) -> None:
         self.draft = draft
+        self.systems: list[str] = []
 
     async def generate(self, system, prompt, context=None):
+        self.systems.append(system)
         return self.draft
 
     def stream(self, system, prompt, context=None):
+        self.systems.append(system)
+
         async def gen():
             yield self.draft
 
@@ -552,6 +556,33 @@ async def test_ask_lesson_returns_grounded_material_citations():
     assert result.selected_material_ids[0] == "dada-dark-creatures-boggarts-nature"
     assert result.selection_scores["dada-dark-creatures-boggarts-nature"] > 0
     assert result.uncovered_terms == []
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_addresses_a_named_student_and_leaves_the_unnamed_prompt():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    draft = (
+        "A boggart takes the shape of your fear "
+        "[mat:dada-dark-creatures-boggarts-nature]."
+    )
+
+    named = StaticLlm(draft)
+    await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=named,
+        student_name="Ada Lovelace",
+    )
+    assert named.systems
+    assert "called Ada Lovelace" in named.systems[0]
+
+    unnamed = StaticLlm(draft)
+    await ask_lesson(
+        "How does a boggart work?", selector=selector, subject="dada", llm=unnamed
+    )
+    assert unnamed.systems
+    assert "called" not in unnamed.systems[0]
 
 
 @pytest.mark.asyncio

@@ -338,14 +338,28 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         return request.app.state.runtime.llm
 
     def cache_scope(
-        runtime: Runtime, model: str, persona_enabled: bool, subject: str
+        runtime: Runtime,
+        model: str,
+        persona_enabled: bool,
+        subject: str,
+        student_name: str | None = None,
     ) -> str:
-        """Everything besides the question that can change a cached answer."""
+        """Everything besides the question that can change a cached answer.
+
+        The student name is part of the scope because the address note is part
+        of the prompt: two students must never share an answer addressed to one
+        of them.
+        """
         card = PERSONAS.get(subject)
         persona_scope = (
             hashlib.sha256(card.answer_suffix().encode("utf-8")).hexdigest()[:8]
             if persona_enabled and card is not None
             else "off"
+        )
+        name_scope = (
+            hashlib.sha256(student_name.encode("utf-8")).hexdigest()[:8]
+            if student_name
+            else "anonymous"
         )
         lesson_scope = (
             f"{runtime.pack_store.scope()}|{app_settings.lesson_top_k}|"
@@ -368,6 +382,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 str(app_settings.retry_budget),
                 str(app_settings.multi_book),
                 persona_scope,
+                name_scope,
                 lesson_scope,
                 runtime.lore.version() if runtime.lore is not None else "none",
                 LORE_SELECTION_VERSION,
@@ -597,7 +612,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         persona = PERSONAS.get(subject) if persona_enabled else None
         key = cache_key(
             body.question,
-            cache_scope(runtime, model, persona_enabled, subject),
+            cache_scope(
+                runtime, model, persona_enabled, subject, body.student_name
+            ),
             model,
         )
         cached = app.state.cache.get(key)
@@ -649,6 +666,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                         persona_suffix=(
                             persona.answer_suffix() if persona is not None else None
                         ),
+                        student_name=body.student_name,
                         lore=runtime.lore,
                         subject=subject,
                         on_stage=mark,
@@ -778,7 +796,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         key = (
             cache_key(
                 body.question,
-                cache_scope(runtime, model, persona_enabled, subject),
+                cache_scope(
+                    runtime, model, persona_enabled, subject, body.student_name
+                ),
                 model,
             )
             if intent == "answer" and not use_memory
@@ -794,6 +814,7 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             "question": body.question,
             "requested_mode": body.mode,
             "student_answer": body.student_answer,
+            "student_name": body.student_name,
             "subject": subject,
             "persona_enabled": persona_enabled,
             "top_k": DEFAULT_TOP_K,

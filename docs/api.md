@@ -85,7 +85,7 @@ The deprecated `/ask` alias behaves identically and returns the `Deprecation: tr
 Request:
 
 ```json
-{"question": "Who teaches Defense Against the Dark Arts in book 4?", "subject": "dada"}
+{"question": "Who teaches Defense Against the Dark Arts in book 4?", "subject": "dada", "student_name": "Ada Lovelace"}
 ```
 
 `question` is trimmed, must be 1 to 1000 characters, and must not be blank.
@@ -93,6 +93,16 @@ Request:
 registered card for that subject is active, so a Charms request uses Professor
 Raman and a DADA request uses Professor Crane. An off-taxonomy key is a `422`;
 a valid department without a card answers persona-off.
+
+`student_name` is optional and comes from the welcome gate (#288). It is not a
+student record: it is trimmed and whitespace-collapsed, must start with a
+letter, may contain letters, spaces, apostrophes, hyphens and full stops, and is
+limited to 40 characters; anything else is a `422`. When present, the server
+appends a short address note to the model system prompt so the professor can
+use the name. The note is omitted when the field is absent, so an unnamed
+request produces the same prompt as before. The name is part of the answer-cache
+scope, so two students never receive a cached answer addressed to the other; it
+is not written to usage logs, traces or an exam record.
 
 Response `200`:
 
@@ -140,6 +150,7 @@ Request:
   "question": "Who teaches Defense Against the Dark Arts in book 4?",
   "subject": "dada",
   "mode": "auto",
+  "student_name": "Ada Lovelace",
   "student_answer": null,
   "thread_id": null
 }
@@ -167,6 +178,12 @@ rejected with `400` only when the classified intent is `lesson` and
 It is a preference for the answer path, not an absolute route: practice,
 feedback, meta and personal keep their normal handling, so a venue that defaults
 to lesson still greets and tests correctly.
+
+`student_name` follows the `/v1/chat` rules and is threaded through the graph.
+It reaches the answer, practice, feedback and lesson prompts; the scripted meta
+and personal replies stay canned and do not use it. The name also scopes the
+exact answer cache, and a missing name leaves every prompt byte-identical to
+the unnamed path.
 
 The response is `text/event-stream`. Events:
 

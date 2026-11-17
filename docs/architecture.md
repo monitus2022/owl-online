@@ -28,7 +28,7 @@ Pipeline stages, in order:
 | Ingest | `app/pipeline/ingest/` | `ingest_corpus`, `make_chunks`, `parse_chapters` |
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
-| Generate | `app/pipeline/generate/` | `ask`, `ask_lesson` (pack-first scope with a labelled corpus fallback), `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
+| Generate | `app/pipeline/generate/` | `ask`, `ask_lesson` (pack-first scope with a labelled corpus fallback), `student_note`, `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
 | Agent | `app/agent/` | `build_graph`, `route`, `resolve_node`, `remember_node`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node`, `lesson_node`, `fact_node`, `clarify_node`, `policy_node`, `abstain_node` |
 
 `parse_chapters` drops the front matter before book 1 and trims the previous
@@ -227,6 +227,14 @@ Cloudflare Pages, separate from the API container (docs/deploy.md). Only the
 venue chat calls `POST /v1/chat/stream`; the gate and the cloister are static over
 the session-scoped result store. The build imports no Python, renders no model
 output as HTML, and runs no request-time generation.
+
+A first visit meets a mandatory static welcome from the Keeper of the Records
+(#288). The name it collects is kept in `localStorage` under
+`owl.student.name`, never in a server record, and every chat request carries it
+as `student_name`; `/about` and `/privacy` stay readable before a name is given,
+and the footer can clear the name and reopen the welcome. This is the
+onboarding slice of the librarian door (#195), not the librarian chat itself.
+
 Two interfaces keep the boundary between the UI and the services:
 
 | Interface | Lives in | Today | Swap when |
@@ -262,11 +270,11 @@ sequenceDiagram
   participant L as LoreStore
   participant LLM as OpenRouterLlm
 
-  C->>API: POST /v1/chat {question, subject}
+  C->>API: POST /v1/chat {question, subject, student_name?}
   API->>API: resolve the subject card; cache.get (hit -> return)
   API->>API: session cookie, limiter.admit (429 / 503)
   API->>R: get_retriever / get_llm
-  API->>A: ask(question, retriever, llm, persona_suffix, lore, subject)
+  API->>A: ask(question, retriever, llm, persona_suffix, student_name, lore, subject)
   A->>RET: retrieve(question, top_k)
   RET->>RET: classify single-hop vs multi-book from coverage cues
   RET->>RET: parse book/chapter reference
@@ -366,12 +374,12 @@ sequenceDiagram
   participant RR as Reranker
   participant LLM as Llm adapter
 
-  C->>API: POST /v1/chat/stream {question, subject, mode, student_answer, thread_id?}
+  C->>API: POST /v1/chat/stream {question, subject, mode, student_name?, student_answer, thread_id?}
   API->>API: resolve the subject card; lesson gate for that subject
   API->>API: select the memory graph when thread_id and OWL_MEMORY_ENABLED; else stateless
-  API->>API: cache.get when the intent is answer and the request is stateless
+  API->>API: cache.get when the intent is answer and the request is stateless (name in scope)
   API->>API: limiter.admit (429 / 503)
-  API->>G: astream(state, config thread_id when threaded)
+  API->>G: astream(state, config thread_id when threaded, student_name when present)
   G->>G: resolve -> rewrite a follow-up, bound window and summary
   G->>G: router -> policy | fact | clarify | abstain | answer | practice | feedback | meta | personal | lesson
   G-->>API: mode update
@@ -379,7 +387,7 @@ sequenceDiagram
   G->>R: retrieve(question, top_k)
   R->>RR: rerank when configured
   R-->>G: list[Chunk]
-  G->>LLM: stream(system, prompt with evidence and bounded conversation context)
+  G->>LLM: stream(system, prompt with evidence, bounded conversation context and the address note when named)
   LLM-->>G: token
   G-->>API: custom {type: token}
   API-->>C: event: token

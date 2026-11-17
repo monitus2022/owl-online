@@ -30,6 +30,7 @@ from app.knowledge.lesson import (
 )
 from app.knowledge.materials import Material
 from app.knowledge.terms import missing_terms
+from app.pipeline.generate.addressing import student_note
 from app.pipeline.generate.generate import (
     ABSTAIN_MESSAGE,
     CONVERSATION_NOTE,
@@ -579,6 +580,7 @@ async def ask_lesson(
     on_reset: Callable[[], None] | None = None,
     persona: Persona | None = None,
     persona_suffix: str | None = None,
+    student_name: str | None = None,
     prompt_builder: Callable[[LessonScope], tuple[str, str]] | None = None,
     max_retries: int = 1,
     prompt_question: str | None = None,
@@ -733,6 +735,10 @@ async def ask_lesson(
         system, retry_system = lesson_system_prompts(
             scope, persona=persona, persona_suffix=persona_suffix
         )
+    note = student_note(student_name)
+    if note:
+        system = f"{system}\n\n{note}"
+        retry_system = f"{retry_system}\n\n{note}"
     if conversation_context:
         system = f"{system}\n\n{CONVERSATION_NOTE}"
         retry_system = f"{retry_system}\n\n{CONVERSATION_NOTE}"

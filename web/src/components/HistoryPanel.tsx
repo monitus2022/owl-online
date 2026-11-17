@@ -61,7 +61,7 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
       setConfirmClear(false);
     } catch {
       setClearError(
-        "The papers could not be deleted. They are still stored for this session.",
+        "The papers could not be deleted. They are still stored for this visit.",
       );
     } finally {
       setClearing(false);
@@ -72,15 +72,14 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
     <section className="history" aria-label="Your papers">
       <h2>Your papers</h2>
       <div className="notice notice-mock">
-        Practice marks, kept for this browser session. School accounts
-        (#35) will move this history to the Academy.
+        Marks are kept for this visit to the Academy and shown for this
+        department. A school account will one day keep them across terms.
       </div>
       <div aria-live="polite">
         {failed && (
           <p className="history-empty">
-            The paper records for this browser session could not be read.
-            Nothing is lost by trying again; if it keeps failing, the drawer
-            stays shut.
+            The paper records could not be read. Nothing is lost by trying
+            again; if it keeps failing, the drawer stays shut.
           </p>
         )}
         {!failed && attempts === null && (
@@ -90,7 +89,7 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
           <p className="history-empty">
             {cleared > 0
               ? `Deleted ${cleared} paper${cleared === 1 ? "" : "s"}. The drawer is empty.`
-              : "The drawer is empty: no papers have been marked for this department in this browser session yet. Sit one in the exam room."}
+              : "The drawer is empty: no papers have been marked for this department yet. Sit one in the exam room."}
           </p>
         )}
       </div>
@@ -135,8 +134,8 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
       {confirmClear && (
         <div className="history-confirm">
           <p role="alert">
-            Delete every paper in this browser session, including any ungraded
-            paper? This cannot be undone.
+            Delete every paper from this visit, including any ungraded paper?
+            This cannot be undone.
           </p>
           {clearError && (
             <p className="history-error" role="alert">

@@ -3,8 +3,21 @@
 // policy (docs/workplan.md): the wizarding world belongs to its creator and
 // publishers, this project distributes no source text, and secondary
 // references such as the Lexicon are attributed links, never copied prose.
-import { Link } from "react-router-dom";
+//
+// The footer also carries the change-name control once the student is named:
+// clearing the name returns to the welcome, where a new name can be entered.
+import { Link, useNavigate } from "react-router-dom";
+import { clearStudentName, useStudentName } from "../data/student";
+
 export function SiteFooter() {
+  const studentName = useStudentName();
+  const navigate = useNavigate();
+
+  function changeName() {
+    clearStudentName();
+    navigate("/");
+  }
+
   return (
     <footer className="site-footer">
       <p>
@@ -28,6 +41,14 @@ export function SiteFooter() {
         attribution; it is not the source of this project&rsquo;s canon or of
         any exam content.
       </p>
+      {studentName && (
+        <p className="footer-name">
+          The professors know you as {studentName}.{" "}
+          <button type="button" className="footer-link" onClick={changeName}>
+            Change the name
+          </button>
+        </p>
+      )}
       <p className="footer-nav">
         <Link to="/about">About the Academy</Link>
         <span aria-hidden="true"> / </span>

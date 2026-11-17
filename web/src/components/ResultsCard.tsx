@@ -2,7 +2,8 @@ import { BAND_LABELS } from "../api/exams";
 import type { StoredAttempt } from "../api/results";
 
 // Best-so-far card, read from the session-scoped store. The wording stays
-// honest about the browser session and the absence of accounts (#35).
+// honest about the visit and the absence of accounts (#35) without breaking
+// the room metaphor.
 export function ResultsCard({
   best,
   failed = false,
@@ -20,7 +21,8 @@ export function ResultsCard({
   if (!best) {
     return (
       <p className="results-card results-empty">
-        No papers marked for this department in this browser session yet.
+        No paper has been marked for this department yet. Sit one in the exam
+        room.
       </p>
     );
   }
@@ -34,7 +36,7 @@ export function ResultsCard({
   const date = new Date(best.gradedAt);
   return (
     <p className="results-card">
-      Best so far in this browser session:{" "}
+      Best so far this visit:{" "}
       <strong>
         {BAND_LABELS[best.band]} ({best.total}/{best.max})
       </strong>{" "}

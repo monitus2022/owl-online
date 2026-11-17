@@ -59,6 +59,7 @@ async def answer_node(
         persona_suffix=(
             active.answer_suffix() if active is not None else None
         ),
+        student_name=state.get("student_name"),
         lore=lore,
         subject=subject,
         prompt_question=state["question"],

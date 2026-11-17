@@ -2,6 +2,14 @@ import { expect, test } from "@playwright/test";
 
 const DADA = "Defence Against the Dark Arts";
 
+// The welcome (#288) gates every route behind a name. Seed one so these tests
+// start behind the gate; welcome.spec.ts covers the gate itself.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("owl.student.name", "Test Student");
+  });
+});
+
 test("gate -> cloister -> DADA venue", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Enter the grounds" }).click();
@@ -186,7 +194,7 @@ test("clearing the papers empties the history", async ({ page }) => {
   await expect(page.locator(".history-row")).toHaveCount(1);
   await page.getByRole("button", { name: "Clear all papers" }).click();
   await expect(
-    page.getByText(/Delete every paper in this browser session/),
+    page.getByText(/Delete every paper from this visit/),
   ).toBeVisible();
   await page.getByRole("button", { name: "Delete them" }).click();
   await expect(page.getByText(/The drawer is empty/)).toBeVisible();

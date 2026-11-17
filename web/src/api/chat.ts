@@ -52,6 +52,7 @@ export async function* askStream(
   subject: string,
   mode: "auto" | "lesson" = "auto",
   threadId?: string,
+  studentName?: string | null,
 ): AsyncGenerator<StreamEvent> {
   let response: Response;
   try {
@@ -64,6 +65,9 @@ export async function* askStream(
         mode,
         subject,
         thread_id: threadId,
+        // Only present once the welcome has a name; anonymous API callers
+        // send the same body as before.
+        ...(studentName ? { student_name: studentName } : {}),
       }),
     });
   } catch {

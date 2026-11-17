@@ -38,6 +38,7 @@ class AgentState(TypedDict, total=False):
     requested_mode: RequestedMode
     subject: str
     persona_enabled: bool
+    student_name: str | None
     student_answer: str | None
     top_k: int
     mode: Mode

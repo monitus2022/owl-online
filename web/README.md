@@ -10,11 +10,12 @@ Cloudflare Pages. The API stays separate; the API host serves only the API and
 | Path | What it is |
 |---|---|
 | `src/data/subjects.ts` | The five departments: URL slug, API subject key, professor, accent, crest, status, and the curated starter prompts. The static status is the product open/soon decision; the pack version and lesson/persona flags come from `GET /v1/subjects`. |
+| `src/data/student.ts` | The student's display name: `owl.student.name` in `localStorage`, validation matching the API field, and the `useSyncExternalStore` hook that the welcome, chat and footer share. |
 | `src/api/subjects.ts` | Live client for `GET /v1/subjects`; the venue merges the response into the static presentation metadata. |
-| `src/api/chat.ts` | Live client for `POST /v1/chat/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for a venue whose subject is in `lesson_subjects` when the API reports it, sends the venue's anonymous `thread_id`, and renders typed citation chips with a legacy fallback. |
+| `src/api/chat.ts` | Live client for `POST /v1/chat/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for a venue whose subject is in `lesson_subjects` when the API reports it, sends the venue's anonymous `thread_id` and the student's name, and renders typed citation chips with a legacy fallback. |
 | `src/api/exams.ts` | Live client for the served exam bank: paper descriptors, attempt creation, grading and discarding an ungraded attempt; the API can return the same persisted attempt by id. The browser never sees the MCQ key before the grade response. |
 | `src/api/results.ts` | `ResultsStore` interface; `HttpResultsStore` reads the session-scoped `GET /v1/attempts` history and clears the session's attempts. The server is the source of truth; records are provisional until #35. |
-| `src/pages/` | Front gate, about page, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |
+| `src/pages/` | The Keeper's welcome, front gate, about page, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |
 | `src/components/` | Door, chat panel, professor silhouette, crest, colonnade backdrop, exam panel, band seal, results card, band strip, history panel, noticeboard, site footer. |
 | `src/styles/base.css` | The theme: dark warm base, gold chrome, `--accent` per subject. |
 
@@ -41,6 +42,15 @@ thread; closing the tab starts a new one. No account is involved, and the API
 holds the thread in process memory only. Threaded prompts include a bounded
 recent-conversation block so the model can resolve follow-ups and comparisons
 (except the experimental multi-book path).
+
+The first visit is gated by the Keeper's welcome (#288). The name is required,
+validated in `src/data/student.ts` (letters, spaces, apostrophes, hyphens and
+full stops, 40 characters at most), and kept in `localStorage` under
+`owl.student.name`; `/about` and `/privacy` remain reachable before naming. The
+name is sent as `student_name` on every chat request so the professor can
+address the student, and the API includes it in the answer-cache scope. The
+footer's "Change the name" control clears the value and returns to the welcome.
+The API never stores the name.
 
 The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` each open room
 whose subject is in `lesson_subjects` sends `mode=lesson`, and with

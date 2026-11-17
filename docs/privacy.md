@@ -10,8 +10,9 @@ and not a data processing agreement.
 | Data | Where | Contents | Prompt or answer text |
 |---|---|---|---|
 | Chat transcript | Browser tab only | The messages in the open tab | Yes, in the browser; not persisted as a chat record |
-| Chat thread | Process memory (LangGraph checkpointer) | Recent messages, rolling summary, last entity/person/place, last mode and pending clarify for an opt-in anonymous `thread_id` | Yes, question and answer text in process memory; no account, no disk write, cleared on restart |
-| Answer cache | Process memory | Corpus-only answers, keyed by question, model and index scope; default 256 entries and 1 hour TTL (configurable), cleared on restart | The cached answer text is in memory; it is not a chat record and is not session-keyed |
+| Student name | Browser localStorage | `owl.student.name`, the name entered at the welcome, until the student changes the name or clears site data | No; sent with each chat request and included in the prompt when present |
+| Chat thread | Process memory (LangGraph checkpointer) | Recent messages, rolling summary, last entity/person/place, last mode, pending clarify and the student name for an opt-in anonymous `thread_id` | Yes, question and answer text in process memory; no account, no disk write, cleared on restart |
+| Answer cache | Process memory | Corpus-only answers, keyed by question, model, index, persona, lesson and student-name scope; default 256 entries and 1 hour TTL (configurable), cleared on restart | The cached answer text is in memory; it is not a chat record and is not session-keyed |
 | Usage log | Process log | Session id, intent, model, cache flag, token counts, cost, latency | No |
 | Trace | Process log and optional capped file | Request id, span names, timings, counts, retrieved chunk and lore ids, prompt hash and length | No |
 | Exam attempt | SQLite `attempts` and `attempt_questions` | Paper, questions served, answers, grade, session id, timestamps | The attempt stores the served question prompts and the student's answers; it does not store chat prompts |
@@ -34,11 +35,18 @@ question can mean different things after different turns; with
 cache is an operator-managed file keyed by bank, item and answer hash; it
 does not store the raw answer, but its feedback may quote it.
 
+The student name is kept by the browser, not by the API. The welcome gate
+writes it to `localStorage` under `owl.student.name`; the frontend sends it as
+`student_name` on each chat request, and the answer cache includes a hash of it
+so a cached reply addressed to one student is never served to another. The
+footer's change-name control removes the value and reopens the welcome.
+
 ## Retention
 
 | Data | Retention |
 |---|---|
 | Chat transcript | Until the tab closes or the page reloads; the API keeps no chat record |
+| Student name | Until the student changes the name or clears site data; the process-local answer cache keeps a hash of it in the cache key until the entry expires |
 | Chat thread | Process memory only; until the API restarts. A new thread id starts a separate thread |
 | Answer cache | Up to 1 hour (TTL) or 256 entries, whichever comes first; cleared on restart |
 | Judge cache | Operator-managed; delete `data/exam_judge_cache.jsonl` and restart the API to clear the in-process copy |
@@ -79,7 +87,10 @@ For a threaded request, the prompt also includes the bounded recent
 conversation block (the student's questions and the professor's answers) so the
 model can resolve a follow-up. The block is capped by
 `OWL_MEMORY_TOKEN_BUDGET`, is treated as untrusted and is not evidence; it goes
-to the same provider with the prompt.
+to the same provider with the prompt. When the student has entered a name, the
+system prompt also carries an address note with that name; it is a display
+name, not an instruction, and the API validator admits only letters and a few
+name punctuation marks.
 
 The deployment region bans OpenAI, Anthropic and Google models, and
 `app/providers/policy.py` checks every slug before use. The project does not
