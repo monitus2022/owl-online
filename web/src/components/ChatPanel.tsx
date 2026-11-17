@@ -4,6 +4,11 @@ import { askStream, ChatError } from "../api/chat";
 import type { ChatMode, LessonScope } from "../api/chat";
 import { startersFor } from "../data/subjects";
 import type { PersonaState, Subject } from "../data/subjects";
+import {
+  rawSourceGroups,
+  sourceChips,
+  stripCitationMarkers,
+} from "../data/sources";
 import { useStudentName } from "../data/student";
 import { Silhouette } from "./Silhouette";
 
@@ -249,6 +254,20 @@ export function ChatPanel({
           const modeIsLesson =
             message.mode === "lesson" ||
             (message.mode === "abstain" && message.scope === "abstained");
+          const sourceInput = {
+            materials: message.materials,
+            citations: message.citations,
+            typedCitations: message.typedCitations,
+          };
+          const sources = sourceChips(sourceInput);
+          const rawSources = rawSourceGroups(sourceInput);
+          // The model still emits its inline citation brackets; the verified
+          // ids live in the payload and the Sources row, so the prose drops
+          // the machine markers. Student text is never rewritten.
+          const displayText =
+            message.role === "professor"
+              ? stripCitationMarkers(bodyText)
+              : bodyText;
           const body = (
             <>
               {message.role === "professor" && message.mode && (
@@ -263,41 +282,34 @@ export function ChatPanel({
                   </p>
                 )}
               <p className={message.failed ? "chat-text chat-failed" : "chat-text"}>
-                {bodyText || (message.role === "professor" ? "…" : "")}
+                {displayText || (message.role === "professor" ? "…" : "")}
               </p>
-              {message.materials && message.materials.length > 0 && (
+              {sources.length > 0 && (
                 <div className="citation-group">
-                  <span className="citation-label">Lesson notes</span>
+                  <span className="citation-label">Sources</span>
                   <ul className="citation-chips">
-                    {message.materials.map((material) => (
-                      <li key={material}>{material}</li>
+                    {sources.map((source) => (
+                      <li key={source.key}>{source.label}</li>
                     ))}
                   </ul>
                 </div>
               )}
-              {message.typedCitations && message.typedCitations.length > 0 ? (
-                <div className="citation-group">
-                  <span className="citation-label">Citations</span>
-                  <ul className="citation-chips">
-                    {message.typedCitations.map((citation) => (
-                      <li key={citation}>{citation}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                message.citations &&
-                message.citations.length > 0 && (
-                  <div className="citation-group">
-                    {message.materials && message.materials.length > 0 && (
-                      <span className="citation-label">Set texts</span>
-                    )}
-                    <ul className="citation-chips">
-                      {message.citations.map((citation) => (
-                        <li key={citation}>{citation}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )
+              {rawSources.length > 0 && (
+                <details className="citation-details">
+                  <summary>Source details</summary>
+                  {rawSources.map((group) => (
+                    <div className="citation-group" key={group.label}>
+                      <span className="citation-label">{group.label}</span>
+                      <ul className="citation-chips">
+                        {group.ids.map((id) => (
+                          <li key={id}>
+                            <code>{id}</code>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </details>
               )}
               {message.abstained && (
                 <p className="abstain-note">

@@ -767,8 +767,33 @@ main {
   border-radius: 999px;
   padding: 0.1rem 0.6rem;
   font-size: 0.8rem;
-  font-family: ui-monospace, monospace;
+  font-family: var(--sans);
   color: var(--ink-dim);
+}
+
+.citation-details {
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+
+.citation-details summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--ink-dim);
+}
+
+.citation-details summary:hover {
+  color: var(--ink);
+}
+
+.citation-details .citation-chips li {
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+}
+
+.citation-details code {
+  font: inherit;
 }
 
 .citation-group {

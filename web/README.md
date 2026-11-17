@@ -11,6 +11,7 @@ Cloudflare Pages. The API stays separate; the API host serves only the API and
 |---|---|
 | `src/data/subjects.ts` | The five departments: URL slug, API subject key, professor, accent, crest, status, and the curated starter prompts. The static status is the product open/soon decision; the pack version and lesson/persona flags come from `GET /v1/subjects`. |
 | `src/data/student.ts` | The student's display name: `owl.student.name` in `localStorage`, validation matching the API field, and the `useSyncExternalStore` hook that the welcome, chat and footer share. |
+| `src/data/sources.ts` | Citation presentation: strips inline citation brackets from the answer prose, builds the readable `Sources` row (material breadcrumb, `Book N, Chapter M`, lore, persona note, policy), and groups the exact ids for the `Source details` disclosure. |
 | `src/api/subjects.ts` | Live client for `GET /v1/subjects`; the venue merges the response into the static presentation metadata. |
 | `src/api/chat.ts` | Live client for `POST /v1/chat/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for a venue whose subject is in `lesson_subjects` when the API reports it, sends the venue's anonymous `thread_id` and the student's name, and renders typed citation chips with a legacy fallback. |
 | `src/api/exams.ts` | Live client for the served exam bank: paper descriptors, attempt creation, grading and discarding an ungraded attempt; the API can return the same persisted attempt by id. The browser never sees the MCQ key before the grade response. |
@@ -51,6 +52,14 @@ name is sent as `student_name` on every chat request so the professor can
 address the student, and the API includes it in the answer-cache scope. The
 footer's "Change the name" control clears the value and returns to the welcome.
 The API never stores the name.
+
+Chat answers keep the grounding visible without showing machine ids in the
+prose. Inline citation brackets are stripped at render time, the `Sources` row
+uses the material breadcrumb (for example `Dark Creatures · Boggarts ·
+Counter`) and one chip per cited chapter (`Book 3, Chapter 7`), and the exact
+material ids, book chunk ids and typed citations stay under a collapsed
+`Source details` disclosure. The API payload, verification and typed-citation
+contract are unchanged; this is presentation only (#290).
 
 The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` each open room
 whose subject is in `lesson_subjects` sends `mode=lesson`, and with
