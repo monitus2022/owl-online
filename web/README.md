@@ -55,7 +55,7 @@ The API never stores the name.
 
 Chat answers keep the grounding visible without showing machine ids in the
 prose. Inline citation brackets are stripped at render time, the `Sources` row
-uses the material breadcrumb (for example `Dark Creatures · Boggarts ·
+uses the material breadcrumb (for example `Dark creatures · Boggarts ·
 Counter`) and one chip per cited chapter (`Book 3, Chapter 7`), and the exact
 material ids, book chunk ids and typed citations stay under a collapsed
 `Source details` disclosure. The API payload, verification and typed-citation
