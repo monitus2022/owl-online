@@ -206,8 +206,10 @@ is `docs/runs/2026-11-13-273-dada-calibration-rebaseline.md`: four runs measured
 exact 0.5833-0.7083, adjacent 0.8750-1.0000 and MAE 0.3750-0.5417; one run failed
 the 0.90 adjacent gate. DADA now uses `--calibration-repeats 3` and gates on the
 median; `docs/runs/2026-11-13-275-dada-median-calibration.md` passes at adjacent
-0.9583 and MAE 0.4167; all three runs passed on that draw, while #273 observed a failing run. Partial scoring remains
-the root-cause follow-up under #40. The Charms calibration
+0.9583 and MAE 0.4167; all three runs passed on that draw, while #273 observed a
+failing run. The Transfiguration and Herbology 4/2 mid-band stays diagnostic;
+#281 tracks the judge work, and a larger held-out set is the condition for
+revisiting. The Charms calibration
 record is
 `docs/runs/2026-11-13-261-charms-judge-calibration.md`: 24 cases, exact 0.6250,
 adjacent 1.0000, MAE 0.3750 and gate PASS. The Potions record is
@@ -243,7 +245,7 @@ Execution is phased:
 | V1 - Shippable | grounded RAG end-to-end: ingest, hybrid retrieval + rerank, cited generation with abstention, API, mini-eval, deployed | shipped (https://api.monitus.org) |
 | V2 - Deepening | guardrails, chat intents (LangGraph), Bedrock Llm adapter, cost controls, local eval gate, retrieval foundation, multi-book answer path, professor persona | chat foundation, retrieval foundation, held-out set, CI gate, persona, the stateless lesson slice and the lesson voice delivered (#176); #105 flag-off and time-boxed |
 | V2.5 - Subject packs | taxonomy, material packs, source refs, validation, lesson mode | all five O.W.L. packs 1.0.0 published |
-| V3 - Exam bank and continuity | exam bank, hybrid grading, memory, threads, lesson continuity, progress | exam bank 1.0.0 published; grading, calibration and serving built (#191-#193); continuity after |
+| V3 - Exam bank and continuity | exam bank, hybrid grading, memory, threads, lesson continuity, progress | five exam banks published (DADA 1.1.0, the other four 1.0.0); grading, calibration and serving built (#191-#193); continuity after |
 | V4 - Identity (optional) | Google auth, per-user chat and exam history, progress tracking, long-term memory | last, if needed |
 
 ---
