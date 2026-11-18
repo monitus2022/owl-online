@@ -38,11 +38,22 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   await expect(answer).not.toContainText("[b1-c01-0000]");
   await expect(page.getByText("Sources", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Test · Material", { exact: true }),
+    page.getByRole("button", { name: "Test · Material" }),
   ).toBeVisible();
   await expect(
     page.getByText("Book 1, Chapter 1", { exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Test · Material" }).click();
+  const note = page.getByRole("region", { name: "Reviewed note" });
+  await expect(note).toBeVisible();
+  await expect(note.getByText("Boggart", { exact: true })).toBeVisible();
+  await expect(
+    note.getByText(
+      "A Boggart takes the shape of what the watcher fears most.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(note.getByText(/Book 1, Chapter 1/)).toBeVisible();
   await page.getByText("Source details").click();
   await expect(
     page.getByText("dada-test-material", { exact: true }),

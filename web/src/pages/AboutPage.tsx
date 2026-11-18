@@ -171,8 +171,10 @@ export function AboutPage() {
         <p>
           Book facts come only from the seven novels. Each answer lists its
           sources by material, book and chapter, and the exact material, chunk
-          and typed citation ids stay available under Source details. Setting
-          facts about Ashcombe cite the academy&rsquo;s own lore pack. Secondary
+          and typed citation ids stay available under Source details. Click a
+          reviewed material source to read the note; a book source stays a book
+          and chapter locator, never a page of the novel. Setting facts about
+          Ashcombe cite the academy&rsquo;s own lore pack. Secondary
           references - like The Harry Potter Lexicon, credited in the footer -
           are discovery and cross-checking aids, never the source of a fact, a
           question or a mark. The source text is copyrighted and is not

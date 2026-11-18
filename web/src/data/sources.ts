@@ -70,6 +70,8 @@ export interface SourceInput {
 export interface SourceChip {
   key: string;
   label: string;
+  // Present only for a reviewed material id; the UI makes these clickable.
+  materialId?: string;
 }
 
 // The readable row: material breadcrumb, one chip per cited chapter, lore
@@ -82,11 +84,13 @@ export function sourceChips({
   typedCitations = [],
 }: SourceInput): SourceChip[] {
   const chips = new Map<string, SourceChip>();
-  const add = (key: string, label: string) => {
-    if (!chips.has(key)) chips.set(key, { key, label });
+  const add = (key: string, label: string, materialId?: string) => {
+    if (!chips.has(key)) chips.set(key, { key, label, materialId });
   };
 
-  for (const id of materials) add(`mat:${id}`, humanizeMaterialId(id));
+  for (const id of materials) {
+    add(`mat:${id}`, humanizeMaterialId(id), id);
+  }
 
   for (const citation of citations) {
     if (citation.startsWith("lore:")) {

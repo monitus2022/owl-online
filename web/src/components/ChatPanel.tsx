@@ -4,13 +4,10 @@ import { askStream, ChatError } from "../api/chat";
 import type { ChatMode, LessonScope } from "../api/chat";
 import { startersFor } from "../data/subjects";
 import type { PersonaState, Subject } from "../data/subjects";
-import {
-  rawSourceGroups,
-  sourceChips,
-  stripCitationMarkers,
-} from "../data/sources";
+import { stripCitationMarkers } from "../data/sources";
 import { useStudentName } from "../data/student";
 import { Silhouette } from "./Silhouette";
+import { SourcePanel } from "./SourcePanel";
 
 // Chat. Every affordance addresses the professor; the greeting, abstention
 // note and status copy follow the department's personaState. Each venue keeps
@@ -254,13 +251,6 @@ export function ChatPanel({
           const modeIsLesson =
             message.mode === "lesson" ||
             (message.mode === "abstain" && message.scope === "abstained");
-          const sourceInput = {
-            materials: message.materials,
-            citations: message.citations,
-            typedCitations: message.typedCitations,
-          };
-          const sources = sourceChips(sourceInput);
-          const rawSources = rawSourceGroups(sourceInput);
           // The model still emits its inline citation brackets; the verified
           // ids live in the payload and the Sources row, so the prose drops
           // the machine markers. Student text is never rewritten.
@@ -284,32 +274,13 @@ export function ChatPanel({
               <p className={message.failed ? "chat-text chat-failed" : "chat-text"}>
                 {displayText || (message.role === "professor" ? "…" : "")}
               </p>
-              {sources.length > 0 && (
-                <div className="citation-group">
-                  <span className="citation-label">Sources</span>
-                  <ul className="citation-chips">
-                    {sources.map((source) => (
-                      <li key={source.key}>{source.label}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {rawSources.length > 0 && (
-                <details className="citation-details">
-                  <summary>Source details</summary>
-                  {rawSources.map((group) => (
-                    <div className="citation-group" key={group.label}>
-                      <span className="citation-label">{group.label}</span>
-                      <ul className="citation-chips">
-                        {group.ids.map((id) => (
-                          <li key={id}>
-                            <code>{id}</code>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </details>
+              {message.role === "professor" && (
+                <SourcePanel
+                  subject={subject.apiSubject}
+                  materials={message.materials}
+                  citations={message.citations}
+                  typedCitations={message.typedCitations}
+                />
               )}
               {message.abstained && (
                 <p className="abstain-note">

@@ -13,11 +13,12 @@ Cloudflare Pages. The API stays separate; the API host serves only the API and
 | `src/data/student.ts` | The student's display name: `owl.student.name` in `localStorage`, validation matching the API field, and the `useSyncExternalStore` hook that the welcome, chat and footer share. |
 | `src/data/sources.ts` | Citation presentation: strips inline citation brackets from the answer prose, builds the readable `Sources` row (material breadcrumb, `Book N, Chapter M`, lore, persona note, policy), and groups the exact ids for the `Source details` disclosure. |
 | `src/api/subjects.ts` | Live client for `GET /v1/subjects`; the venue merges the response into the static presentation metadata. |
-| `src/api/chat.ts` | Live client for `POST /v1/chat/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for a venue whose subject is in `lesson_subjects` when the API reports it, sends the venue's anonymous `thread_id` and the student's name, and renders typed citation chips with a legacy fallback. |
+| `src/api/chat.ts` | Live client for `POST /v1/chat/stream` (SSE: mode/token/reset/final/error); sends `mode=lesson` for a venue whose subject is in `lesson_subjects` when the API reports it, and sends the venue's anonymous `thread_id` and the student's name. Citation rendering lives in `src/components/SourcePanel.tsx` and `src/data/sources.ts`. |
+| `src/api/materials.ts` | Live client for `GET /v1/materials/{subject}/{material_id}`; returns the reviewed pack note and book locators behind a lesson source, never the corpus text. |
 | `src/api/exams.ts` | Live client for the served exam bank: paper descriptors, attempt creation, grading and discarding an ungraded attempt; the API can return the same persisted attempt by id. The browser never sees the MCQ key before the grade response. |
 | `src/api/results.ts` | `ResultsStore` interface; `HttpResultsStore` reads the session-scoped `GET /v1/attempts` history and clears the session's attempts. The server is the source of truth; records are provisional until #35. |
 | `src/pages/` | The Keeper's welcome, front gate, about page, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |
-| `src/components/` | Door, chat panel, professor silhouette, crest, colonnade backdrop, exam panel, band seal, results card, band strip, history panel, noticeboard, site footer. |
+| `src/components/` | Door, chat panel, source panel, professor silhouette, crest, colonnade backdrop, exam panel, band seal, results card, band strip, history panel, noticeboard, site footer. |
 | `src/styles/base.css` | The theme: dark warm base, gold chrome, `--accent` per subject. |
 
 ## Run locally
@@ -58,8 +59,11 @@ prose. Inline citation brackets are stripped at render time, the `Sources` row
 uses the material breadcrumb (for example `Dark creatures · Boggarts ·
 Counter`) and one chip per cited chapter (`Book 3, Chapter 7`), and the exact
 material ids, book chunk ids and typed citations stay under a collapsed
-`Source details` disclosure. The API payload, verification and typed-citation
-contract are unchanged; this is presentation only (#290).
+`Source details` disclosure. A material chip is a button that fetches the
+reviewed pack note from `GET /v1/materials/{subject}/{material_id}` and shows
+its authored text and book locators; a book chip stays a locator and never
+opens novel text. The API payload, verification and typed-citation contract are
+unchanged (#290, #294).
 
 The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` each open room
 whose subject is in `lesson_subjects` sends `mode=lesson`, and with

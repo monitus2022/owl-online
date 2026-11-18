@@ -11,6 +11,7 @@ and not a data processing agreement.
 |---|---|---|---|
 | Chat transcript | Browser tab only | The messages in the open tab | Yes, in the browser; not persisted as a chat record |
 | Student name | Browser localStorage | `owl.student.name`, the name entered at the welcome, until the student changes the name or clears site data | No; sent with each chat request and included in the prompt when present |
+| Reviewed material note | Published subject pack, served by `GET /v1/materials` | Authored pack prose, topic and concept titles, pack version and book locators | No; the route omits the corpus quote and chunk text |
 | Chat thread | Process memory (LangGraph checkpointer) | Recent messages, rolling summary, last entity/person/place, last mode, pending clarify and the student name for an opt-in anonymous `thread_id` | Yes, question and answer text in process memory; no account, no disk write, cleared on restart |
 | Answer cache | Process memory | Corpus-only answers, keyed by question, model, index, persona, lesson and student-name scope; default 256 entries and 1 hour TTL (configurable), cleared on restart | The cached answer text is in memory; it is not a chat record and is not session-keyed |
 | Usage log | Process log | Session id, intent, model, cache flag, token counts, cost, latency | No |

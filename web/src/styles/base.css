@@ -796,6 +796,68 @@ main {
   font: inherit;
 }
 
+.source-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.source-button:hover {
+  color: var(--ink);
+}
+
+.source-button span {
+  font-size: 0.7rem;
+}
+
+.material-note {
+  margin-top: 0.55rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.material-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+}
+
+.material-meta {
+  margin: 0.15rem 0 0.6rem;
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+}
+
+.material-text {
+  margin: 0;
+  color: var(--ink);
+  white-space: pre-line;
+}
+
+.material-refs {
+  margin: 0.7rem 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+
+.material-status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.material-error {
+  color: var(--danger);
+}
+
 .citation-group {
   margin-top: 0.7rem;
 }

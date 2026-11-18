@@ -42,6 +42,8 @@ from app.api.schemas import (
     ExamGradeResponse,
     ExamPaper,
     GradeAttemptRequest,
+    MaterialDetail,
+    MaterialSourceRef,
     StreamRequest,
     SubjectsResponse,
 )
@@ -550,6 +552,65 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             persona_subjects=(
                 sorted(PERSONAS) if app_settings.persona else []
             ),
+        )
+
+    @app.get(
+        "/v1/materials/{subject}/{material_id}",
+        response_model=MaterialDetail,
+        tags=["subjects"],
+        summary="One reviewed material note and its book sources",
+    )
+    def material_detail(
+        subject: str, material_id: str, request: Request, response: Response
+    ) -> MaterialDetail:
+        """The authored note behind a lesson source, never the corpus text.
+
+        Only a material from a published, fully reviewed pack is served. The
+        source refs expose the book, chapter and chunk id but not the stored
+        corpus quote or hashes, so the route cannot become a source-text
+        reader.
+        """
+        if subject not in SUBJECT_KEYS:
+            raise HTTPException(status_code=422, detail="unknown subject")
+        runtime = request.app.state.runtime
+        store = runtime.pack_store
+        material = (
+            store.material(subject, material_id) if store is not None else None
+        )
+        pack = store.get(subject) if store is not None else None
+        if (
+            material is None
+            or pack is None
+            or pack.manifest.status != "published"
+            or material.review_status != "reviewed"
+        ):
+            raise HTTPException(status_code=404, detail="unknown material")
+        topic = next(
+            (item for item in pack.topics if item.topic_id == material.topic),
+            None,
+        )
+        concept = next(
+            (item for item in pack.concepts if item.concept_id == material.concept),
+            None,
+        )
+        response.headers["Cache-Control"] = "public, max-age=300"
+        return MaterialDetail(
+            material_id=material.material_id,
+            subject=material.subject,
+            topic=material.topic,
+            topic_title=topic.title if topic is not None else material.topic,
+            concept=material.concept,
+            concept_title=concept.title if concept is not None else material.concept,
+            text=material.text,
+            pack_version=pack.manifest.version,
+            source_refs=[
+                MaterialSourceRef(
+                    chunk_id=ref.chunk_id,
+                    book=ref.book,
+                    chapter=ref.chapter,
+                )
+                for ref in material.source_refs
+            ],
         )
 
     @app.get(
