@@ -34,11 +34,20 @@ function titleCase(id: string): string {
 export function humanizeMaterialId(id: string): string {
   const parts = id.split("-").filter(Boolean);
   if (parts.length > 1 && SUBJECT_PREFIXES.has(parts[0])) parts.shift();
-  return (
-    parts
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" · ") || id
-  );
+  if (parts.length === 0) return id;
+  // The pack ids are subject-topic-concept-facet. Without the pack metadata,
+  // join the words before the last two so a hyphenated topic such as
+  // "dark-creatures" reads as one phrase.
+  const groups =
+    parts.length > 2
+      ? [parts.slice(0, -2), parts.slice(-2, -1), parts.slice(-1)]
+      : parts.map((part) => [part]);
+  return groups
+    .map((group) => {
+      const phrase = group.join(" ");
+      return phrase.charAt(0).toUpperCase() + phrase.slice(1);
+    })
+    .join(" · ");
 }
 
 function chapterLabel(id: string): { key: string; label: string } | null {
