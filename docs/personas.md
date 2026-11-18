@@ -4,7 +4,8 @@ This is the human-readable copy of the four non-DADA cards in
 `config/personas/`. The DADA card and its variant table are in
 `docs/persona.md`. The shared spine is `config/personas/spine.toml`; the
 four cards carry identity, scope, subject definition, professor background
-and boundaries.
+and boundaries. New or revised cards go through the brief-driven pipeline in
+`docs/persona-authoring.md`.
 
 ## Potions: Professor Vale
 
