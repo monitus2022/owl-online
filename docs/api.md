@@ -3,10 +3,10 @@
 The served surface is FastAPI. Chat is versioned at `POST /v1/chat` and
 `POST /v1/chat/stream`; `POST /ask` and `POST /ask/stream` remain deprecated
 aliases for one release. `GET /v1/subjects` and the exam serving routes are
-versioned. The academy frontend calls the versioned chat stream and the served
-exam bank, relying on the CORS origin regex and the session cookie. The chat
-request carries an optional subject so the request uses that department's
-persona card.
+versioned. The academy frontend calls the versioned chat stream, the material
+notes behind lesson sources, and the served exam bank, relying on the CORS
+origin regex and the session cookie. The chat request carries an optional
+subject so the request uses that department's persona card.
 
 Base URL: the deployment origin, for example `https://api.monitus.org`.
 
@@ -17,6 +17,7 @@ Base URL: the deployment origin, for example `https://api.monitus.org`.
 | `GET` | `/health` | liveness; returns `{"status": "ok"}` |
 | `GET` | `/` | JSON service descriptor; the API host does not serve a chat page |
 | `GET` | `/v1/subjects` | published subject packs plus the `lesson`, `lesson_subjects`, `lesson_fallback`, `persona` and `persona_subjects` flags |
+| `GET` | `/v1/materials/{subject}/{material_id}` | one reviewed material note and its book locators; never the corpus text |
 | `GET` | `/v1/metrics` | process-local p50/p95 latency, cost and refusal counters |
 | `POST` | `/v1/chat` | one-shot grounded answer |
 | `POST` | `/v1/chat/stream` | chat over server-sent events |
@@ -378,6 +379,38 @@ is live. `persona_subject` names the default subject (`OWL_PERSONA_SUBJECT`) whe
 `persona` is true. `persona_subjects` lists every registered card; a room for a
 subject in that list uses its own professor, and a room outside it shows the
 rehearsal copy instead of claiming a live professor.
+
+### `GET /v1/materials/{subject}/{material_id}`
+
+Returns the reviewed material note behind a lesson source: the authored pack
+text, the topic and concept titles, the pack version, and the book locators.
+This is the only public route that serves reviewed material text. The response
+deliberately omits the stored corpus quote, the per-chunk text hash and the
+index hash, so the route cannot be used as a novel-text reader.
+
+Only a material from a published, fully reviewed pack is served. An unknown
+subject key is a `422`; a registered subject with no published pack, an unknown
+material, a draft pack, or an unreviewed material is a `404`. The route does not
+require lesson mode: the note is public project prose from a published pack.
+It carries no session state: the session middleware does not issue an
+`owl_session` cookie for `/v1/materials/...`, and the route is cacheable for
+five minutes (`Cache-Control: public, max-age=300`).
+
+Response `200`:
+
+```json
+{
+  "material_id": "dada-dark-creatures-boggarts-counter",
+  "subject": "dada",
+  "topic": "dark-creatures",
+  "topic_title": "Dark creatures",
+  "concept": "boggarts",
+  "concept_title": "Boggarts",
+  "text": "The counter-charm is Riddikulus.",
+  "pack_version": "1.0.0",
+  "source_refs": [{"chunk_id": "b3-c07-0041", "book": 3, "chapter": 7}]
+}
+```
 
 ### Exam serving
 

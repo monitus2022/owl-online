@@ -50,6 +50,10 @@ export function humanizeMaterialId(id: string): string {
     .join(" · ");
 }
 
+export function bookLabel(book: number | string, chapter: number | string): string {
+  return `Book ${Number(book)}, Chapter ${Number(chapter)}`;
+}
+
 function chapterLabel(id: string): { key: string; label: string } | null {
   const match = CHUNK_ID.exec(id);
   if (!match) return null;
@@ -57,7 +61,7 @@ function chapterLabel(id: string): { key: string; label: string } | null {
   const chapter = String(Number(match[2]));
   return {
     key: `chapter:${book}:${chapter}`,
-    label: `Book ${book}, Chapter ${chapter}`,
+    label: bookLabel(book, chapter),
   };
 }
 
@@ -70,6 +74,8 @@ export interface SourceInput {
 export interface SourceChip {
   key: string;
   label: string;
+  // Present only for a reviewed material id; the UI makes these clickable.
+  materialId?: string;
 }
 
 // The readable row: material breadcrumb, one chip per cited chapter, lore
@@ -82,11 +88,13 @@ export function sourceChips({
   typedCitations = [],
 }: SourceInput): SourceChip[] {
   const chips = new Map<string, SourceChip>();
-  const add = (key: string, label: string) => {
-    if (!chips.has(key)) chips.set(key, { key, label });
+  const add = (key: string, label: string, materialId?: string) => {
+    if (!chips.has(key)) chips.set(key, { key, label, materialId });
   };
 
-  for (const id of materials) add(`mat:${id}`, humanizeMaterialId(id));
+  for (const id of materials) {
+    add(`mat:${id}`, humanizeMaterialId(id), id);
+  }
 
   for (const citation of citations) {
     if (citation.startsWith("lore:")) {

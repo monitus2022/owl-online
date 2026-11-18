@@ -38,11 +38,23 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   await expect(answer).not.toContainText("[b1-c01-0000]");
   await expect(page.getByText("Sources", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Test · Material", { exact: true }),
+    page.getByRole("button", { name: "Test · Material" }),
   ).toBeVisible();
   await expect(
     page.getByText("Book 1, Chapter 1", { exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Test · Material" }).click();
+  const note = page.getByRole("region", { name: /^Reviewed note/ });
+  await expect(note).toBeVisible();
+  await expect(note.getByText("Boggart", { exact: true })).toBeVisible();
+  await expect(
+    note.getByText(
+      "A Boggart takes the shape of what the watcher fears most.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(note.getByText(/Book 1, Chapter 1/)).toBeVisible();
+  await expect(note.getByText("b1-c01-0000", { exact: true })).toBeVisible();
   await page.getByText("Source details").click();
   await expect(
     page.getByText("dada-test-material", { exact: true }),
@@ -50,6 +62,39 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   await expect(
     page.getByText("lesson:b1-c01-0000#b1-c01-0000", { exact: true }),
   ).toBeVisible();
+});
+
+test("a failed reviewed note says so and offers a retry", async ({ page }) => {
+  await page.route("**/v1/materials/**", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: "{}",
+    }),
+  );
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await page.getByRole("button", { name: "Test · Material" }).click();
+  await expect(page.getByRole("alert")).toHaveText(
+    "The reviewed note could not be opened.",
+  );
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+});
+
+test("the reviewed note fits a narrow screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await page.getByRole("button", { name: "Test · Material" }).click();
+  await expect(
+    page.getByRole("region", { name: /^Reviewed note/ }),
+  ).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 test("a pronoun follow-up resolves across turns", async ({ page }) => {

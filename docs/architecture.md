@@ -213,7 +213,8 @@ flowchart TD
 ## API surface
 
 The served contract is documented in `docs/api.md`: the current `/` JSON
-descriptor, `/health`, `/v1/chat`, `/v1/chat/stream`, `/v1/subjects`, `/v1/metrics` and exam serving
+descriptor, `/health`, `/v1/chat`, `/v1/chat/stream`, `/v1/subjects`,
+`/v1/materials/{subject}/{material_id}`, `/v1/metrics` and exam serving
 routes, the SSE event schema, the error shapes, and the remaining planned `/v1`
 surface for persona only. The split is by purpose, not by subject: a subject is request data,
 chat intents stay internal, and the exam bank and grading are separate
@@ -223,10 +224,11 @@ already ships as its own static build.
 ## Frontend surface
 
 `web/` is a React + Vite single-page app, built to static assets and served on
-Cloudflare Pages, separate from the API container (docs/deploy.md). Only the
-venue chat calls `POST /v1/chat/stream`; the gate and the cloister are static over
-the session-scoped result store. The build imports no Python, renders no model
-output as HTML, and runs no request-time generation.
+Cloudflare Pages, separate from the API container (docs/deploy.md). The venue
+chat calls `POST /v1/chat/stream`; clicking a reviewed material source lazily
+calls `GET /v1/materials/{subject}/{material_id}`. The gate and the cloister are
+static over the session-scoped result store. The build imports no Python,
+renders no model output as HTML, and runs no request-time generation.
 
 A first visit meets a mandatory static welcome from the Keeper of the Records
 (#288). The name it collects is kept in `localStorage` under
@@ -234,6 +236,12 @@ A first visit meets a mandatory static welcome from the Keeper of the Records
 as `student_name`; `/about` and `/privacy` stay readable before a name is given,
 and the footer can clear the name and reopen the welcome. This is the
 onboarding slice of the librarian door (#195), not the librarian chat itself.
+
+Chat answers keep the evidence legible: inline citation brackets are stripped,
+the `Sources` row shows the material breadcrumb and one chip per cited chapter,
+and the exact ids sit under `Source details`. A material chip opens the reviewed
+pack note from the material route; book chips never open novel text (#290,
+#294).
 
 Two interfaces keep the boundary between the UI and the services:
 

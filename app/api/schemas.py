@@ -164,6 +164,53 @@ class SubjectsResponse(BaseModel):
     persona_subjects: list[str] = Field(default_factory=list)
 
 
+class MaterialSourceRef(BaseModel):
+    """A book locator behind a reviewed material; the corpus quote stays home."""
+
+    chunk_id: str
+    book: int
+    chapter: int
+
+
+class MaterialDetail(BaseModel):
+    """One reviewed material note, safe to render outside the chat prompt.
+
+    The text is the project's authored pack prose. The source refs expose the
+    book, chapter and chunk id; they deliberately omit the corpus quote and
+    hashes, so this route never distributes novel text.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "material_id": "dada-dark-creatures-boggarts-counter",
+                    "subject": "dada",
+                    "topic": "dark-creatures",
+                    "topic_title": "Dark creatures",
+                    "concept": "boggarts",
+                    "concept_title": "Boggarts",
+                    "text": "The counter-charm is Riddikulus.",
+                    "pack_version": "1.0.0",
+                    "source_refs": [
+                        {"chunk_id": "b3-c07-0041", "book": 3, "chapter": 7}
+                    ],
+                }
+            ]
+        }
+    )
+
+    material_id: str
+    subject: str
+    topic: str
+    topic_title: str
+    concept: str
+    concept_title: str
+    text: str
+    pack_version: str
+    source_refs: list[MaterialSourceRef] = Field(default_factory=list)
+
+
 class ExamPaper(BaseModel):
     """One served paper descriptor; the questions are sampled per attempt."""
 

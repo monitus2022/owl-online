@@ -30,6 +30,12 @@ export function PrivacyPage() {
             the value from this browser.
           </li>
           <li>
+            Reviewed notes are public project prose from the published subject
+            packs. Clicking a material source fetches the note by its id; the
+            route returns the authored note and book locators, never the novel
+            text, and it does not record who asked.
+          </li>
+          <li>
             Usage logs record the session id, intent, model, cache flag, token
             counts, cost and latency. They do not record the prompt or answer
             text.

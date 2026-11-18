@@ -41,6 +41,10 @@ test("axe: the chat after a lesson answer has no critical violations", async ({
   await page.getByLabel("Your question").fill("What is a Boggart?");
   await page.getByRole("button", { name: "Ask" }).click();
   await expect(page.getByText("A Boggart is a shape-shifter")).toBeVisible();
+  await page.getByRole("button", { name: "Test · Material" }).click();
+  await expect(
+    page.getByRole("region", { name: /^Reviewed note/ }),
+  ).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   const critical = results.violations.filter((v) => v.impact === "critical");
   expect(critical, JSON.stringify(critical, null, 2)).toEqual([]);
