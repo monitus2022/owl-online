@@ -109,10 +109,10 @@ export function AboutPage() {
               <td>Chat answers</td>
               <td className="truth-real">Real</td>
               <td>
-                Retrieved from the seven novels and cited by chunk id; a
-                citation that does not resolve is stripped, and when
-                nothing supports an answer, the plain voice says it cannot
-                answer from the books.
+                Retrieved from the seven novels and cited by book and chapter,
+                with the chunk ids under Source details; a citation that does
+                not resolve is stripped, and when nothing supports an answer,
+                the plain voice says it cannot answer from the books.
               </td>
             </tr>
             <tr>
@@ -182,9 +182,10 @@ export function AboutPage() {
       <section aria-labelledby="about-sources">
         <h2 id="about-sources">Sources and the no-invention promise</h2>
         <p>
-          Book facts come only from the seven novels. Each answer lists its
-          sources by material, book and chapter, and the exact material, chunk
-          and typed citation ids stay available under Source details. Click a
+          Book facts come only from the seven novels. Lesson answers add the
+          reviewed material, and answers drawn from the books list their book
+          and chapter sources; the exact material, chunk and typed citation ids
+          stay available under Source details. Click a
           reviewed material source to read the note; a book source stays a book
           and chapter locator, never a page of the novel. Setting facts about
           Ashcombe cite the academy&rsquo;s own lore pack. Secondary

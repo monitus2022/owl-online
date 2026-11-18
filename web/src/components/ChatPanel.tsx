@@ -265,9 +265,9 @@ export function ChatPanel({
               )}
               {modeIsLesson && message.scope === "in_pack" && (
                 <p className="scope-note">
-                  Composed from the department notes. The sources below are
-                  where the notes come from; they are not a sentence-level
-                  check.
+                  Composed from the department notes. The sources below list the
+                  reviewed notes and the book passages they come from; they are
+                  not a sentence-level check.
                 </p>
               )}
               {modeIsLesson &&

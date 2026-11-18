@@ -246,8 +246,8 @@ and the footer can clear the name and reopen the welcome. This is the
 onboarding slice of the librarian door (#195), not the librarian chat itself.
 
 Chat answers keep the evidence legible: inline citation brackets are stripped,
-the `Sources` row shows the material breadcrumb and one chip per cited chapter,
-and the exact ids sit under `Source details`. A material chip opens the reviewed
+and the `Sources` row shows material or chapter chips, with the exact ids under
+`Source details`. A material chip opens the reviewed
 pack note from the material route; book chips never open novel text (#290,
 #294).
 
@@ -261,10 +261,10 @@ Two interfaces keep the boundary between the UI and the services:
 The static subject list decides which departments are open. The venue fetches
 `GET /v1/subjects` for the published pack and the live `persona`,
 `persona_subjects`, `lesson` and `lesson_subjects` flags, so each room checks
-its own subject. A lesson answer also labels its evidence: `in_pack` answers
-say they are composed from the department notes and that the listed sources
-locate the notes rather than checking each sentence; `mixed` and `off_pack`
-answers label the set-text tier. The DADA room sends `mode=lesson` only when the API says its
+its own subject. A lesson answer also labels its evidence: `in_pack` and
+`mixed` answers say the answer is composed and that the listed sources locate
+the notes rather than checking each sentence; `off_pack` answers label the
+set-text tier. The DADA room sends `mode=lesson` only when the API says its
 pack is loaded; Charms does the same when its pack and lesson mode are live.
 Each room takes the live voice copy when its subject is in `persona_subjects`,
 and the single `persona_subject` is the default fallback for an older API. A
@@ -906,7 +906,7 @@ later moves them to a user id.
 Corpus-only answers pass through an in-process exact cache keyed by prompt
 version, index text hash, retrieval settings, retry budget, multi-book flag,
 embedder and reranker config, model, normalised question, the request subject,
-the persona flag, a hash of
+the optional student name, the persona flag, a hash of
 that subject's persona suffix, the lore pack version, the lore selection
 version, and when lesson mode is on the pack fingerprints, lesson top-k, floor,
 fallback setting and subject. Practice,
@@ -938,7 +938,7 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars, selected_material_ids, selection_scores, uncovered_terms, multi_book |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, standalone question, resolved entity, messages, summary, conversation context, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, multi-book flag, subject, persona flag, top-k, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, student name, standalone question, resolved entity, messages, summary, conversation context, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, multi-book flag, subject, persona flag, top-k, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |
@@ -948,7 +948,7 @@ generate) for the per-call detail.
 | `JudgeConfig` | `app/grading/models.py` | dataclass | pinned judge model, temperature, prompt version, provider and max tokens |
 | `Runtime` | `app/api/runtime.py` | dataclass | retriever, llm, small_llm, compiled memory and stateless agent graphs, index hash, lore store, published pack summaries, pack store, derived lesson selector, exam store, per-bank judge adapters keyed by pinned judge model, optional single-judge injection, judge cache |
 | `AskRequest` / `AskResponse` | `app/api/schemas.py` | pydantic | HTTP contract |
-| `StreamRequest` | `app/api/schemas.py` | pydantic | inherited question and subject, chat-intent override, optional answer to review, optional thread id |
+| `StreamRequest` | `app/api/schemas.py` | pydantic | inherited question, subject and optional student name, chat-intent override, optional answer to review, optional thread id |
 
 Subject-knowledge types (schema landed on #87; all five O.W.L. packs are
 published; reference prefill and coverage maintenance remain on #128):
