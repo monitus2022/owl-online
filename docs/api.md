@@ -173,7 +173,8 @@ history. When the persona is on, the server may also route to `meta`,
 `clarify`; `policy` and `abstain` are server routes too. Those are not accepted
 as request modes. `lesson` is explicit only, never inferred. A request is
 rejected with `400` only when the classified intent is `lesson` and
-`OWL_LESSON_MODE` is off or the request subject has no published pack loaded; a
+`OWL_LESSON_MODE` is off or the request subject's selector is unavailable
+(no published pack, or its startup embedding failed); a
 `mode=lesson` request that the gates route to `policy`, `fact`, `clarify` or
 `abstain` is served.
 It is a preference for the answer path, not an absolute route: practice,
@@ -330,6 +331,15 @@ and "Set-text excerpts (outside this department)". A mixed answer must cite at
 least one material and at least one book chunk; a pack-only or corpus-only
 answer must cite its own space.
 
+The answer is composed teaching prose, not an extract. `material_citations` and
+`citations` name the sources the draft rests on; they are not a per-sentence
+attestation. The 2026-11-13 lesson evaluation measured 4 of 30 judged answers
+fully supported by their notes, with citation recall 0.9615 and no false
+refusals; comparison prompts are the weakest shape (#251). The web client labels
+`in_pack` and `mixed` answers accordingly and lists the sources by material,
+book and chapter; a client that renders lesson answers should carry the same
+distinction.
+
 ### `GET /v1/subjects`
 
 Returns the published subject packs the server can serve. A draft, broken or
@@ -369,8 +379,11 @@ Response `200`:
 `lesson` is true only when lesson mode is enabled, a selector loaded, and the
 default API subject (`OWL_PERSONA_SUBJECT`) is among the selector's subjects.
 `lesson_subject` names that subject when `lesson` is true, so the frontend can
-scope the mode to the right venue. `lesson_subjects` lists every subject with a
-loaded pack, so a venue can ask whether its own lesson mode is live.
+scope the mode to the right venue. `lesson_subjects` lists every subject whose
+lesson selector built at startup, so a venue can ask whether its own lesson mode
+is live. A subject whose pack is loaded but whose startup embedding failed is
+absent; the venue sends no `mode=lesson` and stays on the corpus path, while a
+forced request is rejected with `400` (see Errors).
 `lesson_fallback` mirrors
 `OWL_LESSON_FALLBACK`, so the room copy can say whether outside-the-notes
 questions are answered from the set texts or refused. `persona` mirrors
@@ -624,7 +637,7 @@ down.
 | Status | Shape | When |
 |---|---|---|
 | `422` | FastAPI validation detail, or `{"detail": "unknown subject"}` | malformed request or unknown subject |
-| `400` | `{"detail": "lesson mode is not enabled"}` | `mode=lesson` while `OWL_LESSON_MODE` is off or no pack loaded |
+| `400` | `{"detail": "lesson mode is not enabled"}` | `mode=lesson` while `OWL_LESSON_MODE` is off or the request subject's selector is unavailable (no published pack, or its startup embedding failed) |
 | `404` | `{"detail": "attempt not found"}` / `{"detail": "paper not found"}` | unknown attempt or paper |
 | `429` | `{"error": "rate limited", "reason": "...", "retry_after": n}` | minute, day or concurrency limit |
 | `503` | `{"error": "chat temporarily unavailable", "reason": "..."}` | chat daily token budget or degraded mode |

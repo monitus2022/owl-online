@@ -143,6 +143,17 @@ async def run_lesson(
     sample: int,
 ) -> list[LessonResult]:
     """Answer every lesson item, check citations, then judge a balanced sample."""
+    lesson = stack.runtime.lesson
+    if lesson is None:
+        raise RuntimeError(
+            "lesson mode is unavailable; refusing to measure the corpus fallback"
+        )
+    missing = sorted({item.subject for item in items} - set(lesson.subjects()))
+    if missing:
+        raise RuntimeError(
+            f"lesson selector skipped {missing}; refusing to measure the corpus "
+            "fallback as lesson output"
+        )
     pack_store: PackStore = stack.runtime.pack_store
     results: list[LessonResult] = []
     for item in items:

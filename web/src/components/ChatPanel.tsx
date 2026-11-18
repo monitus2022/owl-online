@@ -263,11 +263,18 @@ export function ChatPanel({
               {message.role === "professor" && message.mode && (
                 <span className="mode-badge">{modeLabel(message.mode, subject.personaState)}</span>
               )}
+              {modeIsLesson && message.scope === "in_pack" && (
+                <p className="scope-note">
+                  Composed from the department notes. The sources below list the
+                  reviewed notes and the book passages they come from; they are
+                  not a sentence-level check.
+                </p>
+              )}
               {modeIsLesson &&
                 (message.scope === "mixed" || message.scope === "off_pack") && (
                   <p className="scope-note">
                     {message.scope === "mixed"
-                      ? "Department notes and set texts"
+                      ? "Composed from the department notes and the set texts. The sources below are not a sentence-level check."
                       : "Set texts"}
                   </p>
                 )}

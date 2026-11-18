@@ -54,6 +54,12 @@ async def _run(args: argparse.Namespace) -> int:
         if runtime.lesson is None or runtime.pack_store is None:
             print("lesson selector is not available; is the DADA pack published?")
             return 2
+        if settings.lore_subject not in runtime.lesson.subjects():
+            print(
+                f"lesson selector skipped {settings.lore_subject}; refusing to "
+                "run the conformance eval against the corpus fallback"
+            )
+            return 2
         pack = runtime.pack_store.get(settings.lore_subject)
         if pack is None:
             print(f"no published pack for {settings.lore_subject}")

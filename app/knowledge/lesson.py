@@ -98,22 +98,35 @@ class LessonSelector:
     async def build(
         cls, store: PackStore, embedder: Embedder
     ) -> LessonSelector:
-        """Embed every material once; subject-scoped at query time."""
+        """Embed every material once; subject-scoped at query time.
+
+        One subject's embedding failure skips that subject, so a bad pack
+        degrades its venue to the corpus path instead of disabling lesson
+        mode for every subject.
+        """
         vectors: dict[str, SubjectVectors] = {}
         for subject in store.subjects():
             pack = store.get(subject)
             if pack is None or not pack.materials:
                 continue
             documents = [_embedding_text(pack, m) for m in pack.materials]
-            embedded = await embedder.embed(documents)
-            if len(embedded) != len(documents):
-                raise ValueError(
-                    f"embedder returned {len(embedded)} vectors for "
-                    f"{len(documents)} materials in {subject}"
+            try:
+                embedded = await embedder.embed(documents)
+                if len(embedded) != len(documents):
+                    raise ValueError(
+                        f"embedder returned {len(embedded)} vectors for "
+                        f"{len(documents)} materials in {subject}"
+                    )
+                dims = len(embedded[0])
+                if dims == 0 or any(len(vector) != dims for vector in embedded):
+                    raise ValueError(
+                        f"inconsistent material vector dims in {subject}"
+                    )
+            except Exception as error:
+                logger.warning(
+                    "lesson selector: skipped %s: %s", subject, type(error).__name__
                 )
-            dims = len(embedded[0])
-            if dims == 0 or any(len(vector) != dims for vector in embedded):
-                raise ValueError(f"inconsistent material vector dims in {subject}")
+                continue
             vectors[subject] = SubjectVectors(
                 subject=subject,
                 material_ids=tuple(m.material_id for m in pack.materials),

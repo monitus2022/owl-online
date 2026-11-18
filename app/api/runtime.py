@@ -140,12 +140,19 @@ async def build_runtime(settings: Settings) -> Runtime:
                 # Lesson mode is additive. A failed startup embedding must not
                 # take the corpus chat path down with it; the API gate then
                 # answers 400 for lesson requests.
-                logger.warning("lesson mode disabled: selector build failed: %s", error)
-            else:
-                logger.info(
-                    "lesson mode enabled: %s",
-                    list(lesson.subjects()) or "no subject vectors",
+                logger.warning(
+                    "lesson mode disabled: selector build failed: %s",
+                    type(error).__name__,
                 )
+            else:
+                subjects = list(lesson.subjects())
+                if subjects:
+                    logger.info("lesson mode enabled: %s", subjects)
+                else:
+                    logger.warning(
+                        "lesson mode enabled with no subject vectors; every "
+                        "venue stays on the corpus path"
+                    )
     else:
         logger.info(
             "subject packs absent at %s; the subject index stays empty",
