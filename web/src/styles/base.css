@@ -840,6 +840,11 @@ main {
   margin: 0;
   color: var(--ink);
   white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.material-retry {
+  margin-top: 0.6rem;
 }
 
 .material-refs {

@@ -384,16 +384,17 @@ rehearsal copy instead of claiming a live professor.
 
 Returns the reviewed material note behind a lesson source: the authored pack
 text, the topic and concept titles, the pack version, and the book locators.
-This is the only public route that serves pack prose. The response deliberately
-omits the stored corpus quote, the per-chunk text hash and the index hash, so
-the route cannot be used as a novel-text reader.
+This is the only public route that serves reviewed material text. The response
+deliberately omits the stored corpus quote, the per-chunk text hash and the
+index hash, so the route cannot be used as a novel-text reader.
 
 Only a material from a published, fully reviewed pack is served. An unknown
 subject key is a `422`; a registered subject with no published pack, an unknown
 material, a draft pack, or an unreviewed material is a `404`. The route does not
 require lesson mode: the note is public project prose from a published pack.
-It carries no session state and is cacheable for five minutes
-(`Cache-Control: public, max-age=300`).
+It carries no session state: the session middleware does not issue an
+`owl_session` cookie for `/v1/materials/...`, and the route is cacheable for
+five minutes (`Cache-Control: public, max-age=300`).
 
 Response `200`:
 

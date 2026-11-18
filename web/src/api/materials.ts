@@ -22,7 +22,12 @@ export interface MaterialDetail {
   source_refs: MaterialSourceRef[];
 }
 
-export class MaterialError extends Error {}
+export class MaterialError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MaterialError";
+  }
+}
 
 export async function getMaterial(
   subject: string,
@@ -40,5 +45,9 @@ export async function getMaterial(
   if (!response.ok) {
     throw new MaterialError("The reviewed note could not be opened.");
   }
-  return (await response.json()) as MaterialDetail;
+  const payload = (await response.json()) as MaterialDetail;
+  return {
+    ...payload,
+    source_refs: Array.isArray(payload.source_refs) ? payload.source_refs : [],
+  };
 }

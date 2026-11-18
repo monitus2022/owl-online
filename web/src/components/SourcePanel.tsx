@@ -1,7 +1,8 @@
 import { useId, useRef, useState } from "react";
 import { getMaterial } from "../api/materials";
-import type { MaterialDetail, MaterialSourceRef } from "../api/materials";
-import { rawSourceGroups, sourceChips } from "../data/sources";
+import type { MaterialDetail } from "../api/materials";
+import { SUBJECTS } from "../data/subjects";
+import { bookLabel, rawSourceGroups, sourceChips } from "../data/sources";
 
 // The sources row and the reviewed-note panel behind a material source.
 //
@@ -10,16 +11,13 @@ import { rawSourceGroups, sourceChips } from "../data/sources";
 // returns the corpus quote or chunk text. The exact ids remain under the
 // collapsed "Source details" disclosure.
 
-function bookLocators(refs: MaterialSourceRef[]): string[] {
-  const seen = new Set<string>();
-  const locators: string[] = [];
-  for (const ref of refs) {
-    const key = `${ref.book}:${ref.chapter}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    locators.push(`Book ${ref.book}, Chapter ${ref.chapter}`);
-  }
-  return locators;
+// A material id is subject-prefixed. Derive the subject so a cross-subject
+// referral can open its own note instead of the venue's pack.
+function materialSubject(materialId: string, fallback: string): string {
+  return (
+    SUBJECTS.find((subject) => materialId.startsWith(`${subject.apiSubject}-`))
+      ?.apiSubject ?? fallback
+  );
 }
 
 export function SourcePanel({
@@ -44,17 +42,14 @@ export function SourcePanel({
   const request = useRef(0);
   const panelId = useId();
 
+  const openSource = sources.find((source) => source.materialId === open);
+  const panelLabel = openSource
+    ? `Reviewed note: ${openSource.label}`
+    : "Reviewed note";
+
   if (sources.length === 0 && rawGroups.length === 0) return null;
 
-  async function toggle(materialId: string) {
-    if (open === materialId) {
-      request.current += 1;
-      setOpen(null);
-      setLoading(false);
-      setFailed(false);
-      return;
-    }
-    setOpen(materialId);
+  async function load(materialId: string) {
     setFailed(false);
     const cached = cache.current.get(materialId);
     if (cached) {
@@ -67,7 +62,10 @@ export function SourcePanel({
     const sequence = request.current + 1;
     request.current = sequence;
     try {
-      const loaded = await getMaterial(subject, materialId);
+      const loaded = await getMaterial(
+        materialSubject(materialId, subject),
+        materialId,
+      );
       if (sequence !== request.current) return;
       cache.current.set(materialId, loaded);
       setDetail(loaded);
@@ -77,6 +75,20 @@ export function SourcePanel({
     } finally {
       if (sequence === request.current) setLoading(false);
     }
+  }
+
+  function toggle(materialId: string) {
+    // Any previous request is stale now, including one whose material is
+    // already cached when the student switches chips mid-fetch.
+    request.current += 1;
+    if (open === materialId) {
+      setOpen(null);
+      setLoading(false);
+      setFailed(false);
+      return;
+    }
+    setOpen(materialId);
+    void load(materialId);
   }
 
   return (
@@ -97,7 +109,7 @@ export function SourcePanel({
                   className="source-button"
                   aria-expanded={expanded}
                   aria-controls={expanded ? panelId : undefined}
-                  onClick={() => void toggle(materialId)}
+                  onClick={() => toggle(materialId)}
                 >
                   {source.label}
                   <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>
@@ -108,16 +120,29 @@ export function SourcePanel({
         </ul>
       </div>
       {open && (
-        <section className="material-note" id={panelId} aria-label="Reviewed note">
+        <section
+          className="material-note"
+          id={panelId}
+          aria-label={panelLabel}
+        >
           {loading && (
             <p className="material-status" role="status">
               Fetching the reviewed note…
             </p>
           )}
           {failed && (
-            <p className="material-status material-error" role="alert">
-              The reviewed note could not be opened.
-            </p>
+            <>
+              <p className="material-status material-error" role="alert">
+                The reviewed note could not be opened.
+              </p>
+              <button
+                type="button"
+                className="btn-quiet material-retry"
+                onClick={() => void load(open)}
+              >
+                Try again
+              </button>
+            </>
           )}
           {detail && detail.material_id === open && !loading && !failed && (
             <>
@@ -128,9 +153,19 @@ export function SourcePanel({
               <p className="material-text">{detail.text}</p>
               {detail.source_refs.length > 0 && (
                 <p className="material-refs">
-                  Sources: {bookLocators(detail.source_refs).join(" · ")}
+                  Sources:{" "}
+                  {detail.source_refs.map((ref, index) => (
+                    <span key={ref.chunk_id}>
+                      {index > 0 && " · "}
+                      {bookLabel(ref.book, ref.chapter)}{" "}
+                      <code>{ref.chunk_id}</code>
+                    </span>
+                  ))}
                 </p>
               )}
+              <p className="visually-hidden" role="status">
+                Reviewed note loaded.
+              </p>
             </>
           )}
         </section>

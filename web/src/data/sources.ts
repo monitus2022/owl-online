@@ -50,6 +50,10 @@ export function humanizeMaterialId(id: string): string {
     .join(" · ");
 }
 
+export function bookLabel(book: number | string, chapter: number | string): string {
+  return `Book ${Number(book)}, Chapter ${Number(chapter)}`;
+}
+
 function chapterLabel(id: string): { key: string; label: string } | null {
   const match = CHUNK_ID.exec(id);
   if (!match) return null;
@@ -57,7 +61,7 @@ function chapterLabel(id: string): { key: string; label: string } | null {
   const chapter = String(Number(match[2]));
   return {
     key: `chapter:${book}:${chapter}`,
-    label: `Book ${book}, Chapter ${chapter}`,
+    label: bookLabel(book, chapter),
   };
 }
 

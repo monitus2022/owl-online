@@ -107,6 +107,7 @@ def test_material_route_returns_reviewed_text_and_safe_refs():
 
     assert response.status_code == 200
     assert response.headers["cache-control"] == "public, max-age=300"
+    assert "set-cookie" not in response.headers
     data = response.json()
     assert data["material_id"] == _MATERIAL_ID
     assert data["subject"] == "dada"
@@ -124,11 +125,15 @@ def test_material_route_returns_reviewed_text_and_safe_refs():
     assert "quote" not in ref
     assert "text_hash" not in ref
     assert "index_text_hash" not in ref
+    assert "A Boggart takes the shape" not in response.text
 
 
 def test_material_route_hides_unknown_ids_and_subjects():
     with _client(_store()) as client:
-        assert client.get("/v1/materials/dada/not-a-material").status_code == 404
+        missing = client.get("/v1/materials/dada/not-a-material")
+        assert missing.status_code == 404
+        assert "cache-control" not in missing.headers
+        assert "set-cookie" not in missing.headers
         assert (
             client.get(f"/v1/materials/astrology/{_MATERIAL_ID}").status_code
             == 422
@@ -136,6 +141,13 @@ def test_material_route_hides_unknown_ids_and_subjects():
         # A registered O.W.L. subject with no published pack is a 404.
         assert (
             client.get(f"/v1/materials/astronomy/{_MATERIAL_ID}").status_code
+            == 404
+        )
+        # A material id from another pack is not served under this subject.
+        assert (
+            client.get(
+                "/v1/materials/dada/charms-dark-creatures-boggarts-counter"
+            ).status_code
             == 404
         )
 

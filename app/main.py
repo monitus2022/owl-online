@@ -64,6 +64,9 @@ from app.trace import TraceSink, current_tracer, end_trace, start_trace
 logger = logging.getLogger(__name__)
 
 _SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+# Public, cacheable pack content: the route needs no session, and issuing a
+# cookie here would make a shared cache store a Set-Cookie response.
+_STATELESS_PATHS = ("/v1/materials/",)
 _SUBJECT_TITLES = dict(SUBJECTS)
 _SSE_EXAMPLE = (
     'event: mode\ndata: {"mode": "answer"}\n\n'
@@ -288,7 +291,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         ip = _client_ip(request, trusted)
         secret = app.state.session_secret
         session = _session_from_cookie(request, secret)
-        issue_cookie = session is None
+        issue_cookie = session is None and not request.url.path.startswith(
+            _STATELESS_PATHS
+        )
         if session is None:
             session = secrets.token_hex(16)
         request.state.client_ip = ip
