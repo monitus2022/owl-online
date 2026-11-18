@@ -261,10 +261,10 @@ Two interfaces keep the boundary between the UI and the services:
 The static subject list decides which departments are open. The venue fetches
 `GET /v1/subjects` for the published pack and the live `persona`,
 `persona_subjects`, `lesson` and `lesson_subjects` flags, so each room checks
-its own subject. A lesson answer labels its evidence: `in_pack` answers say they
-are composed from the department notes and that the citations are source ids,
-not a sentence-level check; `mixed` and `off_pack` answers label the set-text
-tier. The DADA room sends `mode=lesson` only when the API says its
+its own subject. A lesson answer also labels its evidence: `in_pack` answers
+say they are composed from the department notes and that the listed sources
+locate the notes rather than checking each sentence; `mixed` and `off_pack`
+answers label the set-text tier. The DADA room sends `mode=lesson` only when the API says its
 pack is loaded; Charms does the same when its pack and lesson mode are live.
 Each room takes the live voice copy when its subject is in `persona_subjects`,
 and the single `persona_subject` is the default fallback for an older API. A

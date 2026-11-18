@@ -265,15 +265,16 @@ export function ChatPanel({
               )}
               {modeIsLesson && message.scope === "in_pack" && (
                 <p className="scope-note">
-                  Composed from the department notes. The citations are source
-                  ids, not a sentence-level check.
+                  Composed from the department notes. The sources below are
+                  where the notes come from; they are not a sentence-level
+                  check.
                 </p>
               )}
               {modeIsLesson &&
                 (message.scope === "mixed" || message.scope === "off_pack") && (
                   <p className="scope-note">
                     {message.scope === "mixed"
-                      ? "Composed from the department notes and the set texts. The citations are source ids, not a sentence-level check."
+                      ? "Composed from the department notes and the set texts. The sources below are not a sentence-level check."
                       : "Set texts"}
                   </p>
                 )}

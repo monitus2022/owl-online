@@ -99,7 +99,8 @@ auth (#35). Each venue requests its own subject, so the Charms room serves
   flags off the copy addresses the professor without claiming he authored a live
   reply.
 - A lesson answer labels its evidence: `in_pack` and `mixed` answers say they are
-  composed and carry the source-id caveat; `off_pack` answers label the set-text
+  composed and carry the source caveat: the listed sources locate the notes,
+  they are not a sentence-level check. `off_pack` answers label the set-text
   tier. The measured support rate stays published instead of being implied.
 - Exam papers come from the published bank. The server samples the paper,
   keeps the MCQ key, scores objective answers by code and judges short answers

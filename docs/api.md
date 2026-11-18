@@ -336,8 +336,9 @@ The answer is composed teaching prose, not an extract. `material_citations` and
 attestation. The 2026-11-13 lesson evaluation measured 4 of 30 judged answers
 fully supported by their notes, with citation recall 0.9615 and no false
 refusals; comparison prompts are the weakest shape (#251). The web client labels
-`in_pack` and `mixed` answers accordingly, and a client that renders lesson
-answers should carry the same distinction.
+`in_pack` and `mixed` answers accordingly and lists the sources by material,
+book and chapter; a client that renders lesson answers should carry the same
+distinction.
 
 ### `GET /v1/subjects`
 

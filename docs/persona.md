@@ -285,4 +285,4 @@ prompt files that can drift apart.
 | 2026-11-09 | Subject-definition reply added; "what is DADA" and "what is Defence Against the Dark Arts" route to the reviewed definition, while book-context forms stay on the answer path |
 | 2026-11-09 | Lesson voice: persona-first prompt, teaching shape, 250-word target, inline chunk ids hidden from the note prompt, and the #176 conformance fixture; pass rate 0.00 to 0.40 with citation retention 0.79 |
 | 2026-11-10 | Multi-subject registry: shared policy spine plus Potions, Transfiguration, Charms and Herbology cards; DADA remains the seed card |
-| 2026-11-13 | Lesson grounding: evidence groups, a paragraph citation rule and one paragraph retry; the measured support rate is 4 of 30 judged answers, so the UI labels `in_pack` answers as composed from the notes with source ids, not a sentence-level check (#251) |
+| 2026-11-13 | Lesson grounding: evidence groups, a paragraph citation rule and one paragraph retry; the measured support rate is 4 of 30 judged answers, so the UI labels `in_pack` answers as composed from the notes and lists the sources as locators, not a sentence-level check (#251) |
