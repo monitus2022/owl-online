@@ -75,7 +75,7 @@ export function stripChunkRefs(text: string, ids: string[]): string {
   // ellipsis elsewhere in the note is left alone.
   let cleaned = stripped;
   for (let pass = 0; pass < 4; pass += 1) {
-    const next = cleaned.replace(/[,;]\s*(?=[,.;:!?])/g, "");
+    const next = cleaned.replace(/[,;]\s*(?=\.(?!\.)|[,;:!?])/g, "");
     if (next === cleaned) break;
     cleaned = next;
   }

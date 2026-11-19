@@ -49,6 +49,8 @@ from eval.exam.fixtures import build_bank  # noqa: E402
 CHUNK_ID = "b1-c01-0000"
 MATERIAL_ID = "dada-test-material"
 TEXT = "A Boggart takes the shape of what the watcher fears most."
+# The b2 id is deliberately outside the material's source_refs: the note panel
+# must strip only this material's own refs, so the unrelated token has to stay.
 MATERIAL_TEXT = (
     "A Boggart takes the shape of what the watcher fears most [b1-c01-0000], "
     "[b1-c01-0000]. The counter is the Banishing Charm, and the ward keeps a "
