@@ -65,7 +65,7 @@ reviewed pack note from `GET /v1/materials/{subject}/{material_id}` and shows
 its authored text with the inline grounding refs removed and the same refs as
 book locators plus exact chunk ids; a book chip stays a locator and never
 opens novel text. The API payload, verification and typed-citation contract are
-unchanged (#290, #294).
+unchanged (#290, #294, #301).
 
 The venue fetches `GET /v1/subjects`; with `OWL_LESSON_MODE=true` each open room
 whose subject is in `lesson_subjects` sends `mode=lesson`, and with

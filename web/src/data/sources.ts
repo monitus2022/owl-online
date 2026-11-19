@@ -62,16 +62,24 @@ function escapeRegExp(value: string): string {
 export function stripChunkRefs(text: string, ids: string[]): string {
   const unique = Array.from(new Set(ids.filter(Boolean)));
   if (unique.length === 0) return text;
-  const pattern = new RegExp(
-    `\\s*\\[(?:${unique.map(escapeRegExp).join("|")})\\]`,
-    "g",
-  );
-  return text
-    .replace(pattern, "")
-    .replace(/\s+([,.;:!?])/g, "$1")
-    .replace(/([,;:])([.!?])/g, "$2")
-    .replace(/\s{2,}/g, " ")
-    .trim();
+  const union = unique.map(escapeRegExp).join("|");
+  // A ref glued to the next word keeps the space before it; a ref that stands
+  // as its own token takes the space with it, so "most [id], and" reads
+  // "most, and" rather than "most , and".
+  const glued = new RegExp(`\\[(?:${union})\\](?=\\p{L})`, "giu");
+  const standing = new RegExp(`\\s*\\[(?:${union})\\]`, "giu");
+  const stripped = text.replace(glued, "").replace(standing, "");
+  if (stripped === text) return text;
+  // Adjacent refs can leave a comma in front of another punctuation mark.
+  // Only the comma/semicolon artifact is collapsed, so a legitimate colon or
+  // ellipsis elsewhere in the note is left alone.
+  let cleaned = stripped;
+  for (let pass = 0; pass < 4; pass += 1) {
+    const next = cleaned.replace(/[,;]\s*(?=[,.;:!?])/g, "");
+    if (next === cleaned) break;
+    cleaned = next;
+  }
+  return cleaned.replace(/[ \t]{2,}/g, " ").trim();
 }
 
 export function bookLabel(book: number | string, chapter: number | string): string {

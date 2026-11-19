@@ -52,11 +52,12 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   await expect(note.getByText("Boggart", { exact: true })).toBeVisible();
   await expect(
     note.getByText(
-      "A Boggart takes the shape of what the watcher fears most, and the counter is the Banishing Charm.",
+      "A Boggart takes the shape of what the watcher fears most. The counter is the Banishing Charm, and the ward keeps a separate note [b2-c03-0007].",
       { exact: true },
     ),
   ).toBeVisible();
   await expect(note).not.toContainText("[b1-c01-0000]");
+  await expect(note).toContainText("[b2-c03-0007]");
   await expect(note.getByText(/Book 1, Chapter 1/)).toBeVisible();
   await expect(note.getByText("b1-c01-0000", { exact: true })).toBeVisible();
   await page.getByText("Source details").click();
