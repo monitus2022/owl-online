@@ -12,10 +12,11 @@ runtime still reads committed TOML cards; the model only drafts them offline.
 - A human reviews the diff, the brief and the persona probes before publishing.
 - No model runs when a student chats. The card is static at request time.
 
-The five live cards are legacy for this pipeline: they have no brief or
-provenance yet. `python scripts/author_persona.py check` reports them as a
-warning and passes; `--strict` makes the missing briefs a failure once the
-migration is complete.
+Charms is the first migrated card (#303): it has a brief, a published card and
+provenance. The other four live cards are legacy for this pipeline: they have
+no brief or provenance yet. `python scripts/author_persona.py check` reports
+them as a warning and passes; `--strict` makes the missing briefs a failure
+once the migration is complete.
 
 ## Layout
 
@@ -182,9 +183,9 @@ Review checklist:
 
 ## Migration and future subjects
 
-Do not regenerate all five cards at once. Start with one non-DADA card: write a
-brief that describes the reviewed card, generate, compare the diff, review and
-publish. Then repeat.
+Charms is the worked example. Do not regenerate the remaining cards all at
+once: write one brief that describes the reviewed card, generate, compare the
+diff, review and publish. Then repeat.
 
 A new subject still needs the product wiring: the subject key in the taxonomy,
 `PERSONA_SUBJECTS`, the venue entry and the frontend copy. The authoring

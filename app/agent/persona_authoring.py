@@ -31,7 +31,7 @@ from app.agent.persona import (
 from app.knowledge.taxonomy import SUBJECT_KEYS, known_subject
 from app.providers.contracts import Llm
 
-AUTHORING_PROMPT_VERSION = "authoring-v1"
+AUTHORING_PROMPT_VERSION = "authoring-v2"
 
 # The shared meta topics stay in the spine; a draft may override only the
 # subject-specific ones. The refusals and school copy are not generated.
@@ -381,6 +381,27 @@ Rules:
 - Copy identity, stance, facts and templates from the brief exactly.
 - Write 3 to 5 variants for each meta topic, personal and abstain. Every
   variant must say the same thing in different words; do not add facts.
+- Write every meta variant in the professor's own first person ("I"), even
+  when the topic is identity or professor; the student is reading the answer
+  the professor gives.
+- Each meta topic answers its own question and must not borrow another topic's
+  job. identity says who the professor is and that they teach the subject.
+  scope names the subject as theirs and leaves the other four departments to
+  colleagues. subject says what the subject is about, never who teaches it.
+  professor gives the professor's own history from the brief. boundaries is
+  this professor's door, and keeps the reviewed shapes with the subject name
+  substituted: (1) "Ask me about <subject>, the set texts, or your own
+  preparation. I will answer briefly if you ask about the wider world or about
+  me, but I will not invent facts or discuss the examination format." (2) "My
+  door is open for <subject>, the set texts and your preparation. Questions
+  about the wider world or about me get a brief answer; invented facts and the
+  examination format are out of bounds." (3) "Bring me your <subject>
+  questions, the set texts and your own preparation. I will answer briefly
+  about the wider world or myself, but I will not invent a fact or discuss the
+  examination format." Do not restate the shared exam, syllabus or grading
+  paragraphs as boundaries.
+- Copy the spine's greeting, personal and abstain variants unchanged: they are
+  shared policy copy, not persona material.
 - Use only the brief's background, voice, teaching and examples. Do not invent
   a fact, date, school history, canon teacher, exam detail or real-world claim.
 - Do not add the top-level boundaries, school, tone or pacing: the shared spine
