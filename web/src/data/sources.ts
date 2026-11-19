@@ -50,6 +50,30 @@ export function humanizeMaterialId(id: string): string {
     .join(" · ");
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// The authored pack prose carries inline grounding refs such as
+// "[b3-c07-0041]". The note panel already lists each ref as Book/Chapter plus
+// the exact chunk id, so the reading surface drops the inline copies and
+// leaves the provenance line intact. Only the material's own refs are
+// removed, so an unrelated bracketed token survives.
+export function stripChunkRefs(text: string, ids: string[]): string {
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (unique.length === 0) return text;
+  const pattern = new RegExp(
+    `\\s*\\[(?:${unique.map(escapeRegExp).join("|")})\\]`,
+    "g",
+  );
+  return text
+    .replace(pattern, "")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/([,;:])([.!?])/g, "$2")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 export function bookLabel(book: number | string, chapter: number | string): string {
   return `Book ${Number(book)}, Chapter ${Number(chapter)}`;
 }

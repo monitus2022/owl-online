@@ -48,7 +48,10 @@ from eval.exam.fixtures import build_bank  # noqa: E402
 
 CHUNK_ID = "b1-c01-0000"
 MATERIAL_ID = "dada-test-material"
-TEXT = "A Boggart takes the shape of what the watcher fears most."
+TEXT = (
+    "A Boggart takes the shape of what the watcher fears most [b1-c01-0000], "
+    "and the counter is the Banishing Charm [b1-c01-0000]."
+)
 ANSWER = (
     "A Boggart is a shape-shifter that takes the shape of what the watcher "
     f"fears most. [mat:{MATERIAL_ID}] [{CHUNK_ID}]."
