@@ -419,6 +419,99 @@ def test_publish_card_requires_replace_identity_for_a_different_professor(
     assert "Professor Other" in card_path.read_text(encoding="utf-8")
 
 
+def test_publish_card_refuses_an_example_brief(tmp_path):
+    from app.agent.persona_authoring import publish_card
+
+    problems = publish_card(
+        brief_path=EXAMPLE_BRIEF,
+        draft_path=tmp_path / "draft.toml",
+        draft_provenance_path=tmp_path / "draft.json",
+        card_path=tmp_path / "live.toml",
+        provenance_path=tmp_path / "provenance.json",
+        reviewer="Test Reviewer",
+        spine_path=SPINE_PATH,
+    )
+    assert any("briefs" in problem for problem in problems)
+
+
+def test_invalid_draft_leaves_the_live_card_untouched(tmp_path):
+    from app.agent.persona_authoring import publish_card
+
+    brief = _brief()
+    brief_path, draft_path, card_path, final_provenance = _draft_fixture(
+        tmp_path, brief
+    )
+    card_path.parent.mkdir(parents=True, exist_ok=True)
+    live_text = render_card(_generated(brief))
+    card_path.write_text(live_text, encoding="utf-8")
+    draft_path.write_text(
+        draft_path.read_text(encoding="utf-8")
+        + "\n[boundaries]\nfacts = \"Anything goes.\"\n",
+        encoding="utf-8",
+    )
+    problems = publish_card(
+        brief_path=brief_path,
+        draft_path=draft_path,
+        draft_provenance_path=draft_path.with_suffix(".json"),
+        card_path=card_path,
+        provenance_path=final_provenance,
+        reviewer="Test Reviewer",
+        spine_path=SPINE_PATH,
+    )
+    assert problems
+    assert card_path.read_text(encoding="utf-8") == live_text
+
+
+def test_provenance_prompt_and_spine_drift_are_rejected(tmp_path):
+    from app.agent.persona_authoring import (
+        load_provenance,
+        provenance_problems,
+    )
+
+    brief = _brief()
+    brief_path, draft_path, _, _ = _draft_fixture(tmp_path, brief)
+    provenance_path = draft_path.with_suffix(".json")
+    provenance = load_provenance(provenance_path)
+    assert (
+        provenance_problems(
+            brief,
+            provenance,
+            brief_path,
+            draft_path,
+            SPINE_PATH,
+            require_reviewer=False,
+        )
+        == []
+    )
+    provenance["prompt_sha256"] = "deadbeef"
+    assert any(
+        "prompt hash" in problem
+        for problem in provenance_problems(
+            brief,
+            provenance,
+            brief_path,
+            draft_path,
+            SPINE_PATH,
+            require_reviewer=False,
+        )
+    )
+    provenance["prompt_sha256"] = json.loads(
+        provenance_path.read_text(encoding="utf-8")
+    )["prompt_sha256"]
+    provenance["spine_sha256"] = "deadbeef"
+    assert any(
+        "spine hash" in problem
+        for problem in provenance_problems(
+            brief,
+            provenance,
+            brief_path,
+            draft_path,
+            SPINE_PATH,
+            require_reviewer=False,
+        )
+    )
+
+
 def test_brief_contract_rejects_a_shared_spine_fact(tmp_path):
     from app.agent.persona_authoring import validate_brief_contract
 
