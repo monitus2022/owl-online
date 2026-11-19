@@ -861,6 +861,14 @@ def check_authoring(
         warnings.append(message)
         if strict:
             problems.append(message)
+        for provenance_path in (
+            sorted(provenance_dir.glob("*.json"))
+            if provenance_dir.is_dir()
+            else []
+        ):
+            problems.append(
+                f"provenance without a canonical brief: {provenance_path.name}"
+            )
         return problems, warnings
 
     covered: set[str] = set()

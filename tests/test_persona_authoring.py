@@ -281,6 +281,16 @@ def test_strict_fails_when_no_briefs_exist(tmp_path):
     assert any("no persona briefs" in problem for problem in problems)
 
 
+def test_check_rejects_provenance_without_a_canonical_brief(tmp_path):
+    provenance_dir = tmp_path / "config" / "personas" / "provenance"
+    provenance_dir.mkdir(parents=True)
+    (provenance_dir / "orphan.json").write_text(
+        '{"schema_version": 1, "subject": "orphan"}', encoding="utf-8"
+    )
+    problems, _ = check_authoring(tmp_path)
+    assert any("without a canonical brief" in problem for problem in problems)
+
+
 def test_check_accepts_a_complete_fixture_and_rejects_drift(tmp_path):
     brief = _brief()
     brief_path = _write_brief(tmp_path, brief)
