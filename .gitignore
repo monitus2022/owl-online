@@ -5,6 +5,9 @@ __pycache__/
 *.egg-info/
 .uv/
 
+# Local persona drafts (reviewed, then published)
+config/personas/drafts/
+
 # Secrets and local env
 .env
 .env.*

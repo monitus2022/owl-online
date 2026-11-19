@@ -31,7 +31,7 @@ from app.agent.persona import (
 from app.knowledge.taxonomy import SUBJECT_KEYS, known_subject
 from app.providers.contracts import Llm
 
-AUTHORING_PROMPT_VERSION = "authoring-v1"
+AUTHORING_PROMPT_VERSION = "authoring-v2"
 
 # The shared meta topics stay in the spine; a draft may override only the
 # subject-specific ones. The refusals and school copy are not generated.
@@ -378,9 +378,41 @@ Return JSON with exactly this shape:
 }}
 
 Rules:
-- Copy identity, stance, facts and templates from the brief exactly.
-- Write 3 to 5 variants for each meta topic, personal and abstain. Every
-  variant must say the same thing in different words; do not add facts.
+- Copy identity, stance, facts and templates from the brief exactly. The facts
+  and templates objects must be character-for-character copies: do not render a
+  template, fill in its placeholders or invent a key.
+- Write 3 to 5 variants for each meta topic, personal and abstain, except
+  boundaries, which keeps exactly the three reviewed shapes. Every variant
+  must say the same thing in different words; do not add facts.
+- Write every meta variant in the professor's own first person ("I"), even
+  when the topic is identity or professor; the student is reading the answer
+  the professor gives.
+- Each meta topic answers its own question and must not borrow another topic's
+  job. Every identity variant must contain the brief's address ("Professor
+  ...") and say that the professor teaches the subject. Use the address
+  naturally ("I am Professor Raman") rather than stacking the full name and
+  the address together. scope names the
+  subject as theirs and says in every variant that the other four departments
+  are taught by colleagues.
+  subject says what the subject is: when the brief has a subject_definition
+  fact, open with that definition, then the subject_scope; never who teaches
+  it, and never uses the words "I teach" (that is identity, not subject).
+  professor gives the professor's own history and every detail of the brief's
+  background, including the Ministry scheme, the specialism and the founding;
+  no background detail may be dropped. boundaries is
+  this professor's door, and keeps the reviewed shapes with the subject name
+  substituted: (1) "Ask me about <subject>, the set texts, or your own
+  preparation. I will answer briefly if you ask about the wider world or about
+  me, but I will not invent facts or discuss the examination format." (2) "My
+  door is open for <subject>, the set texts and your preparation. Questions
+  about the wider world or about me get a brief answer; invented facts and the
+  examination format are out of bounds." (3) "Bring me your <subject>
+  questions, the set texts and your own preparation. I will answer briefly
+  about the wider world or myself, but I will not invent a fact or discuss the
+  examination format." Do not restate the shared exam, syllabus or grading
+  paragraphs as boundaries.
+- Copy the spine's greeting, personal and abstain variants unchanged: they are
+  shared policy copy, not persona material.
 - Use only the brief's background, voice, teaching and examples. Do not invent
   a fact, date, school history, canon teacher, exam detail or real-world claim.
 - Do not add the top-level boundaries, school, tone or pacing: the shared spine
@@ -422,9 +454,20 @@ async def generate_card(
     llm: Llm,
     *,
     spine_text: str,
+    feedback: list[str] | None = None,
 ) -> GeneratedPersona:
-    """Ask the pinned model for a draft and parse it."""
+    """Ask the pinned model for a draft and parse it.
+
+    `feedback` carries the problems from a rejected draft, so a retry can fix
+    the exact failures instead of sampling blind.
+    """
     system, user = build_prompt(brief, spine_text)
+    if feedback:
+        user += (
+            "\nThe previous draft failed these checks. Return the whole JSON "
+            "again and fix every one:\n"
+            + "\n".join(f"- {problem}" for problem in feedback)
+        )
     text = await llm.generate(system, user)
     return parse_generated(text)
 
@@ -446,8 +489,54 @@ def _variants_problems(where: str, values: list[str]) -> list[str]:
         if _canon_prose(text):
             problems.append(f"{where} names a canon figure")
         if text in seen:
-            problems.append(f"{where} repeats a variant")
+            problems.append(f"{where} repeats a variant: {text[:70]!r}")
         seen.add(text)
+    return problems
+
+
+_PROPER_NOUN = re.compile(r"\b[A-Z][a-z]{2,}\b")
+_SUBJECT_TEACHES = re.compile(r"\bI (?:teach|led|lead)\b", re.IGNORECASE)
+_OTHER_DEPARTMENTS = re.compile(
+    r"\bother (?:four|departments|subjects)\b", re.IGNORECASE
+)
+_SCOPE_LEAVES = re.compile(r"\b(?:colleagues?|taught|led|belong)\b", re.IGNORECASE)
+# A line can start with a capitalised common word; only those are skipped.
+_SENTENCE_START = {
+    "a", "after", "an", "at", "before", "believes", "during", "fought",
+    "he", "her", "his", "holds", "i", "in", "it", "my", "one", "our", "she",
+    "served", "studied", "that", "the", "their", "then", "these", "they",
+    "this", "those", "was", "we", "were", "works",
+}
+
+
+def _proper_nouns(text: str) -> set[str]:
+    """Distinctive names in a background line, minus a common first word."""
+    names = {match.lower() for match in _PROPER_NOUN.findall(text)}
+    first = text.split()[0] if text.split() else ""
+    if first.lower() in _SENTENCE_START:
+        names.discard(first.lower())
+    return names
+
+
+def _background_problems(
+    brief: PersonaBrief, professor_variants: list[str]
+) -> list[str]:
+    """Every background line's proper nouns must reach a professor answer.
+
+    The prose may rephrase anything, but a dropped Ministry scheme or Auror
+    Office is a lost fact, so the distinctive names are the contract.
+    """
+    joined = " ".join(professor_variants).lower()
+    problems: list[str] = []
+    for line in brief.background:
+        missing = sorted(
+            name for name in _proper_nouns(line) if name not in joined
+        )
+        if missing:
+            problems.append(
+                "meta.professor drops background details: "
+                + ", ".join(missing)
+            )
     return problems
 
 
@@ -478,6 +567,38 @@ def validate_generated(
         )
     problems.extend(_variants_problems("personal", generated.personal))
     problems.extend(_variants_problems("abstain", generated.abstain))
+    problems.extend(
+        _background_problems(brief, generated.meta.get("professor", []))
+    )
+    problems.extend(_topic_problems(generated.meta))
+    return problems
+
+
+def _topic_problems(meta: dict[str, list[str]]) -> list[str]:
+    """Topic jobs that phrase-level checks can enforce."""
+    problems: list[str] = []
+    if any(
+        _OTHER_DEPARTMENTS.search(variant)
+        for variant in meta.get("identity", [])
+    ):
+        problems.append(
+            "meta.identity must not discuss the other departments"
+        )
+    if any(_SUBJECT_TEACHES.search(variant) for variant in meta.get("subject", [])):
+        problems.append(
+            "meta.subject describes the subject, not who teaches it"
+        )
+    if any(
+        not (
+            _OTHER_DEPARTMENTS.search(variant)
+            and _SCOPE_LEAVES.search(variant)
+        )
+        for variant in meta.get("scope", [])
+    ):
+        problems.append(
+            "meta.scope must say the other four departments are taught by "
+            "colleagues"
+        )
     return problems
 
 
@@ -626,6 +747,31 @@ def validate_card_delta(
                 "card meta overrides shared topics: "
                 + ", ".join(sorted(str(key) for key in shared))
             )
+        spine_greeting = (spine.get("meta") or {}).get("greeting")
+        if (
+            isinstance(spine_greeting, list)
+            and isinstance(meta.get("greeting"), list)
+            and list(meta["greeting"]) != list(spine_greeting)
+        ):
+            problems.append(
+                "card meta.greeting must match the shared spine"
+            )
+    for section in ("personal", "abstain"):
+        spine_copy = (spine.get(section) or {}).get("response")
+        card_copy = card.get(section) or {}
+        value = (
+            card_copy.get("response")
+            if isinstance(card_copy, dict)
+            else None
+        )
+        if (
+            isinstance(spine_copy, list)
+            and isinstance(value, list)
+            and list(value) != list(spine_copy)
+        ):
+            problems.append(
+                f"card {section}.response must match the shared spine"
+            )
     facts = card.get("facts", {})
     if not isinstance(facts, dict):
         problems.append("card facts is not a table")
@@ -748,6 +894,10 @@ def validate_card_file(
         problems.extend(
             _variants_problems(f"meta.{topic}", list(variants))
         )
+    problems.extend(
+        _background_problems(brief, list(persona.meta.get("professor", [])))
+    )
+    problems.extend(_topic_problems({k: list(v) for k, v in persona.meta.items()}))
     problems.extend(_variants_problems("personal", list(persona.personal)))
     problems.extend(_variants_problems("abstain", list(persona.abstain)))
     return problems
@@ -926,6 +1076,8 @@ def publish_card(
             ]
     card_path.parent.mkdir(parents=True, exist_ok=True)
     card_path.write_text(draft_path.read_text(encoding="utf-8"), encoding="utf-8")
+    provenance["draft"] = _path_label(draft_path, root)
+    provenance["draft_sha256"] = sha256_file(draft_path)
     provenance["card"] = _path_label(card_path, root)
     provenance["card_sha256"] = sha256_file(card_path)
     provenance["reviewed_by"] = reviewer

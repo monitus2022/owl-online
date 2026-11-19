@@ -12,10 +12,11 @@ runtime still reads committed TOML cards; the model only drafts them offline.
 - A human reviews the diff, the brief and the persona probes before publishing.
 - No model runs when a student chats. The card is static at request time.
 
-The five live cards are legacy for this pipeline: they have no brief or
-provenance yet. `python scripts/author_persona.py check` reports them as a
-warning and passes; `--strict` makes the missing briefs a failure once the
-migration is complete.
+Charms is the first migrated card (#303): it has a brief, a published card and
+provenance. The other four live cards are legacy for this pipeline: they have
+no brief or provenance yet. `python scripts/author_persona.py check` reports
+them as a warning and passes; `--strict` makes the missing briefs a failure
+once the migration is complete.
 
 ## Layout
 
@@ -44,7 +45,7 @@ complete file.
 | `subject` | The taxonomy key, for example `charms` |
 | `name`, `address`, `role`, `subject_title` | The fixed identity; copied into the card |
 | `background` | Three to five original facts about the professor |
-| `voice` | Voice direction for the generated meta, personal and abstain lines |
+| `voice` | Voice direction for the generated meta lines; personal, abstain and greeting are copied from the spine |
 | `stance` | The fixed teaching stance; copied into the card |
 | `teaching` | How the professor teaches, corrects and sets practice |
 | `relationships` | Original relationships to the other founders |
@@ -118,15 +119,19 @@ The model returns one object:
 - `identity`: exactly `name`, `address`, `role`, `subject`, copied from the brief.
 - `register`: exactly `stance`, copied from the brief.
 - `meta`: exactly `identity`, `scope`, `subject`, `professor`, `boundaries` and
-  `greeting`, each with three to five variants. The shared exam, syllabus,
-  grading, school and auror topics come from the spine.
-- `personal` and `abstain`: three to five variants each.
+  `greeting`. `identity`, `scope`, `subject` and `professor` carry three to
+  five variants; `boundaries` keeps exactly the three reviewed shapes and
+  `greeting` is copied from the spine.
+  The shared exam, syllabus, grading, school and auror topics come from the
+  spine.
+- `personal` and `abstain`: copied from the spine unchanged.
 - `facts` and `templates`: copied from the brief.
 
 The draft delta never carries the top-level `[boundaries]` policy, school, tone
 or pacing; those stay in the spine. It does carry the required `meta.boundaries`
-subject guidance. It may override `meta.greeting`; the other shared meta topics
-are not generated.
+subject guidance. It carries `meta.greeting`, `personal.response` and
+`abstain.response` as copies of the spine, and the validator rejects a
+paraphrase; the other shared meta topics are not generated.
 
 ## Validation
 
@@ -142,7 +147,12 @@ The checks include:
   shared meta topic;
 - shared spine facts and templates are unchanged; only `professor.background`
   is overridable;
-- every generated meta topic, personal and abstain set has the required count;
+- every generated meta topic has the required count, and personal, abstain and
+  greeting match the spine;
+- every background line's proper nouns reach `meta.professor`, so the Ministry
+  scheme or the Auror Office cannot be dropped;
+- every `meta.scope` variant leaves the other four departments to colleagues,
+  and no `meta.subject` variant says who teaches the subject;
 - no empty or duplicate variants;
 - variant length bounds;
 - no placeholders, HTML, URLs, model or provider wording, or canon names in
@@ -154,18 +164,23 @@ The checks include:
 The model does not decide the facts. A changed name, address, role, subject,
 stance, fact or template is a validation failure, not a prompt suggestion.
 
+`generate` retries when a draft fails, feeding the exact problems back to the
+model; a draft that still fails is never written. The retry is a convenience,
+not a weaker gate: the same checks run in `validate`, `publish` and `check`.
+
 ## Persona review
 
 Before publishing a card, run:
 
 ```text
 uv run pytest tests/test_persona_authoring.py tests/test_personas.py tests/test_persona.py tests/test_persona_graph.py
+uv run pytest eval/
 uv run python scripts/author_persona.py check
 ```
 
-For a card that changes the answer prompt, also run the persona conformance
-suite (#176) and the relevant RAG eval. A full eval run needs a record under
-`docs/runs/`; a `--check` gate does not.
+`eval/persona/` holds the persona conformance suite that CI runs; every card
+copy change needs it, not only a change to the answer prompt. A full RAG eval
+run needs a record under `docs/runs/`; a `--check` gate does not.
 
 Review checklist:
 
@@ -182,9 +197,9 @@ Review checklist:
 
 ## Migration and future subjects
 
-Do not regenerate all five cards at once. Start with one non-DADA card: write a
-brief that describes the reviewed card, generate, compare the diff, review and
-publish. Then repeat.
+Charms is the worked example. Do not regenerate the remaining cards all at
+once: write one brief that describes the reviewed card, generate, compare the
+diff, review and publish. Then repeat.
 
 A new subject still needs the product wiring: the subject key in the taxonomy,
 `PERSONA_SUBJECTS`, the venue entry and the frontend copy. The authoring
