@@ -291,6 +291,66 @@ def test_check_rejects_provenance_without_a_canonical_brief(tmp_path):
     assert any("without a canonical brief" in problem for problem in problems)
 
 
+def test_check_validates_an_invalid_example_brief(tmp_path):
+    example_dir = tmp_path / "config" / "personas" / "examples"
+    example_dir.mkdir(parents=True)
+    text = EXAMPLE_BRIEF.read_text(encoding="utf-8").replace(
+        'study_place = "Hogwarts"', 'study_place = "Durmstrang"'
+    )
+    (example_dir / "bad.toml").write_text(text, encoding="utf-8")
+    problems, _ = check_authoring(tmp_path)
+    assert any("study_place" in problem for problem in problems)
+
+
+def test_check_rejects_orphan_provenance_in_the_normal_branch(tmp_path):
+    brief = _brief()
+    brief_path = _write_brief(tmp_path, brief)
+    card_path = _write_card(tmp_path, brief)
+    _write_provenance(tmp_path, brief, brief_path, card_path)
+    orphan = (
+        tmp_path / "config" / "personas" / "provenance" / "ghost.json"
+    )
+    orphan.write_text('{"schema_version": 1, "subject": "ghost"}', encoding="utf-8")
+    problems, _ = check_authoring(tmp_path)
+    assert any("without a canonical brief" in problem for problem in problems)
+
+
+def test_command_publish_rejects_blank_reviewer_and_external_brief(
+    monkeypatch, tmp_path
+):
+    import argparse
+
+    import scripts.author_persona as cli
+
+    monkeypatch.setattr(cli, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(cli, "BRIEFS", tmp_path / "config" / "personas" / "briefs")
+    monkeypatch.setattr(cli, "PERSONAS", tmp_path / "config" / "personas")
+    monkeypatch.setattr(cli, "DRAFTS", tmp_path / "config" / "personas" / "drafts")
+    monkeypatch.setattr(
+        cli, "PROVENANCE", tmp_path / "config" / "personas" / "provenance"
+    )
+    with pytest.raises(PersonaAuthoringError):
+        cli.command_publish(
+            argparse.Namespace(
+                subject="charms",
+                reviewer="   ",
+                brief=None,
+                draft=None,
+                replace_identity=False,
+            )
+        )
+    with pytest.raises(PersonaAuthoringError):
+        cli.command_publish(
+            argparse.Namespace(
+                subject="charms",
+                reviewer="Reviewer",
+                brief=str(tmp_path / "other.toml"),
+                draft=None,
+                replace_identity=False,
+            )
+        )
+
+
 def test_check_accepts_a_complete_fixture_and_rejects_drift(tmp_path):
     brief = _brief()
     brief_path = _write_brief(tmp_path, brief)
@@ -369,6 +429,7 @@ def test_publish_card_writes_only_after_validation(tmp_path):
         provenance_path=final_provenance,
         reviewer="Test Reviewer",
         spine_path=SPINE_PATH,
+        root=tmp_path,
     )
     assert problems == []
     assert card_path.exists()
@@ -392,6 +453,7 @@ def test_publish_card_refuses_a_blank_reviewer_and_leaves_the_card(tmp_path):
         provenance_path=final_provenance,
         reviewer="   ",
         spine_path=SPINE_PATH,
+        root=tmp_path,
     )
     assert any("reviewer" in problem for problem in problems)
     assert not card_path.exists()
@@ -424,9 +486,47 @@ def test_publish_card_requires_replace_identity_for_a_different_professor(
         provenance_path=final_provenance,
         reviewer="Test Reviewer",
         spine_path=SPINE_PATH,
+        root=tmp_path,
     )
     assert any("different professor" in problem for problem in problems)
     assert "Professor Other" in card_path.read_text(encoding="utf-8")
+
+
+def test_publish_card_refuses_an_external_briefs_directory(tmp_path):
+    from app.agent.persona_authoring import publish_card
+
+    external = tmp_path / "other" / "briefs" / "charms.toml"
+    external.parent.mkdir(parents=True)
+    external.write_text(EXAMPLE_BRIEF.read_text(encoding="utf-8"), encoding="utf-8")
+    problems = publish_card(
+        brief_path=external,
+        draft_path=tmp_path / "draft.toml",
+        draft_provenance_path=tmp_path / "draft.json",
+        card_path=tmp_path / "charms.toml",
+        provenance_path=tmp_path / "provenance.json",
+        reviewer="Test Reviewer",
+        spine_path=SPINE_PATH,
+        root=tmp_path,
+    )
+    assert any("canonical brief" in problem for problem in problems)
+
+
+def test_publish_card_rejects_a_mismatched_card_name(tmp_path):
+    from app.agent.persona_authoring import publish_card
+
+    brief = _brief()
+    brief_path, draft_path, _, final_provenance = _draft_fixture(tmp_path, brief)
+    problems = publish_card(
+        brief_path=brief_path,
+        draft_path=draft_path,
+        draft_provenance_path=draft_path.with_suffix(".json"),
+        card_path=tmp_path / "config" / "personas" / "not-charms.toml",
+        provenance_path=final_provenance,
+        reviewer="Test Reviewer",
+        spine_path=SPINE_PATH,
+        root=tmp_path,
+    )
+    assert any("filename" in problem for problem in problems)
 
 
 def test_publish_card_refuses_an_example_brief(tmp_path):
@@ -467,6 +567,7 @@ def test_invalid_draft_leaves_the_live_card_untouched(tmp_path):
         provenance_path=final_provenance,
         reviewer="Test Reviewer",
         spine_path=SPINE_PATH,
+        root=tmp_path,
     )
     assert problems
     assert card_path.read_text(encoding="utf-8") == live_text
@@ -520,6 +621,19 @@ def test_provenance_prompt_and_spine_drift_are_rejected(tmp_path):
             require_reviewer=False,
         )
     )
+
+
+def test_card_fields_reject_extra_facts_or_templates(tmp_path):
+    brief = _brief()
+    data = _generated_data(brief)
+    data["facts"]["extra"] = "An extra fact."
+    data["templates"]["extra"] = "A template with {extra}."
+    card_path = tmp_path / "card.toml"
+    card_path.write_text(
+        render_card(GeneratedPersona.model_validate(data)), encoding="utf-8"
+    )
+    problems = validate_card_file(brief, card_path)
+    assert any("extra" in problem for problem in problems)
 
 
 def test_brief_contract_rejects_a_shared_spine_fact(tmp_path):

@@ -26,7 +26,7 @@ migration is complete.
 | `config/personas/<subject>.toml` | The live card, a delta merged over the spine |
 | `config/personas/provenance/<subject>.json` | Brief/card hashes, model, prompt version and reviewer |
 | `config/personas/drafts/<subject>.toml` | A generated draft, never loaded by the app |
-| `config/personas/examples/charms.toml` | A complete example brief; not scanned by `check`. A migration brief must describe the existing reviewed card and use its live professor, not this illustrative name. |
+| `config/personas/examples/charms.toml` | A complete example brief. `check` validates its brief contract but does not pair it with a card or provenance; a migration brief must describe the existing reviewed card and use its live professor, not this illustrative name. |
 | `app/agent/persona_authoring.py` | Brief schema, prompt, JSON parser, TOML renderer, validators, provenance |
 | `scripts/author_persona.py` | The generate, validate, check and publish CLI |
 | `tests/test_persona_authoring.py` | Contract and validator tests |

@@ -22,7 +22,12 @@ from string import Formatter
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.agent.persona import META_TOPICS, SPINE_PATH, load_persona_merged
+from app.agent.persona import (
+    META_TOPICS,
+    PERSONAS_DIR,
+    SPINE_PATH,
+    load_persona_merged,
+)
 from app.knowledge.taxonomy import SUBJECT_KEYS, known_subject
 from app.providers.contracts import Llm
 
@@ -44,17 +49,15 @@ MAX_VARIANTS = 5
 MIN_VARIANT_CHARS = 10
 MAX_VARIANT_CHARS = 500
 
-# Canon school staff and a few canon figures must not become the professor.
-# The school and the founders are original; matching is case-sensitive in
-# generated prose so "the seedlings sprout" is not a false positive.
-CANON_NAMES = (
+# Canon names must not become the professor. Unambiguous names are checked
+# anywhere; common-word surnames (Sprout, Vector, Riddle, Moody) need a title
+# or a name field, so "the seedlings sprout" and "vector analysis" pass.
+CANON_UNAMBIGUOUS = (
     "Dumbledore",
     "McGonagall",
     "Snape",
     "Flitwick",
-    "Sprout",
     "Hagrid",
-    "Moody",
     "Lupin",
     "Umbridge",
     "Slughorn",
@@ -63,7 +66,6 @@ CANON_NAMES = (
     "Trelawney",
     "Binns",
     "Burbage",
-    "Vector",
     "Sinistra",
     "Hooch",
     "Pomfrey",
@@ -75,13 +77,64 @@ CANON_NAMES = (
     "Carrow",
     "Crouch",
     "Voldemort",
-    "Riddle",
     "Bellatrix",
+    "Albus",
+    "Severus",
+    "Minerva",
+    "Pomona",
+    "Filius",
+    "Horace",
+    "Sybill",
+    "Rubeus",
+    "Remus",
+    "Alastor",
+    "Dolores",
+    "Gilderoy",
+    "Quirinus",
+    "Cuthbert",
 )
+CANON_AMBIGUOUS = ("Sprout", "Vector", "Riddle", "Moody")
+CANON_ALL = CANON_UNAMBIGUOUS + CANON_AMBIGUOUS
 _CANON_RE = re.compile(
-    r"\b(?:" + "|".join(re.escape(name) for name in CANON_NAMES) + r")\b"
+    r"\b(?:" + "|".join(re.escape(name) for name in CANON_UNAMBIGUOUS) + r")\b"
 )
-_CANON_RE_I = re.compile(_CANON_RE.pattern, re.IGNORECASE)
+_CANON_TITLE_RE = re.compile(
+    r"\b(?:Professor|Prof\.?)\s+(?:"
+    + "|".join(re.escape(name) for name in CANON_ALL)
+    + r")\b",
+    re.IGNORECASE,
+)
+_CANON_NAME_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(name) for name in CANON_ALL) + r")\b",
+    re.IGNORECASE,
+)
+
+
+def _canon_prose(text: str) -> bool:
+    """A canon name in generated prose, with the common-word guard."""
+    return bool(_CANON_RE.search(text) or _CANON_TITLE_RE.search(text))
+
+
+def _canon_name(text: str) -> bool:
+    """A canon name in a name/address field, title or not."""
+    return bool(_CANON_NAME_RE.search(text))
+
+
+def _content_problems(where: str, text: str) -> list[str]:
+    """Placeholder, HTML, URL and model/provider wording checks."""
+    problems: list[str] = []
+    lowered = text.lower()
+    for phrase in _BANNED_PHRASES:
+        if phrase in lowered:
+            problems.append(f"{where} mentions {phrase!r}")
+    if _PLACEHOLDER.search(text):
+        problems.append(f"{where} contains a placeholder")
+    if _HTML_TAG.search(text):
+        problems.append(f"{where} contains HTML")
+    if _URL.search(text):
+        problems.append(f"{where} contains a URL")
+    return problems
+
 
 CARD_SECTIONS = frozenset(
     {"identity", "register", "meta", "personal", "abstain", "facts", "templates"}
@@ -165,19 +218,39 @@ class PersonaBrief(BaseModel):
                 f"{known.name!r}"
             )
         if (
-            _CANON_RE_I.search(self.name)
-            or _CANON_RE_I.search(self.address)
-            or _CANON_RE_I.search(self.role)
+            _canon_name(self.name)
+            or _canon_name(self.address)
+            or _canon_prose(self.role)
         ):
             raise ValueError(
                 "the professor's identity must be original, not a canon name"
             )
-        for value in self.facts.values():
-            if _CANON_RE.search(value):
-                raise ValueError("brief facts must not name a canon figure")
-        for value in self.templates.values():
-            if _CANON_RE.search(value):
-                raise ValueError("brief templates must not name a canon figure")
+        for label, values in (
+            ("background", self.background),
+            ("relationships", self.relationships),
+            ("examples", self.examples),
+            ("avoid", self.avoid),
+        ):
+            if any(_canon_prose(value) for value in values):
+                raise ValueError(f"brief {label} must not name a canon figure")
+        for label, value in (
+            ("voice", self.voice),
+            ("teaching", self.teaching),
+            ("facts", " ".join(self.facts.values())),
+            ("templates", " ".join(self.templates.values())),
+        ):
+            if _canon_prose(value):
+                raise ValueError(f"brief {label} must not name a canon figure")
+        for where, value in (
+            ("name", self.name),
+            ("address", self.address),
+            ("role", self.role),
+            *[(key, item) for key, item in self.facts.items()],
+            *[(key, item) for key, item in self.templates.items()],
+        ):
+            problems = _content_problems(where, value)
+            if problems:
+                raise ValueError(problems[0])
         if not self.facts:
             raise ValueError("the brief needs fixed facts for the persona")
         if not self.templates:
@@ -369,17 +442,8 @@ def _variants_problems(where: str, values: list[str]) -> list[str]:
             problems.append(
                 f"{where} variant is outside the length bounds: {text[:60]!r}"
             )
-        lowered = text.lower()
-        for phrase in _BANNED_PHRASES:
-            if phrase in lowered:
-                problems.append(f"{where} mentions {phrase!r}")
-        if _PLACEHOLDER.search(text):
-            problems.append(f"{where} contains a placeholder")
-        if _HTML_TAG.search(text):
-            problems.append(f"{where} contains HTML")
-        if _URL.search(text):
-            problems.append(f"{where} contains a URL")
-        if _CANON_RE.search(text):
+        problems.extend(_content_problems(where, text))
+        if _canon_prose(text):
             problems.append(f"{where} names a canon figure")
         if text in seen:
             problems.append(f"{where} repeats a variant")
@@ -587,6 +651,53 @@ def validate_card_delta(
     return problems
 
 
+def validate_card_fields(
+    brief: PersonaBrief, card_path: Path, spine_path: Path = SPINE_PATH
+) -> list[str]:
+    """Reject facts or templates that are neither in the brief nor the spine."""
+    try:
+        card = _card_data(card_path)
+    except (OSError, tomllib.TOMLDecodeError) as error:
+        return [f"cannot read card {card_path}: {error}"]
+    spine = _spine_data(spine_path)
+    spine_facts = {
+        str(key): str(value)
+        for key, value in (spine.get("facts") or {}).items()
+    }
+    spine_templates = {
+        str(key): str(value)
+        for key, value in (spine.get("templates") or {}).items()
+    }
+    allowed_facts = set(brief.facts) | set(spine_facts)
+    allowed_templates = set(brief.templates) | set(spine_templates)
+    problems: list[str] = []
+    facts = card.get("facts", {})
+    if isinstance(facts, dict):
+        for key, value in facts.items():
+            key = str(key)
+            if key not in allowed_facts:
+                problems.append(f"card fact {key!r} is not in the brief or spine")
+                continue
+            expected = brief.facts.get(key, spine_facts.get(key))
+            if expected is not None and str(value) != expected:
+                problems.append(f"card fact {key!r} does not match its source")
+    templates = card.get("templates", {})
+    if isinstance(templates, dict):
+        for key, value in templates.items():
+            key = str(key)
+            if key not in allowed_templates:
+                problems.append(
+                    f"card template {key!r} is not in the brief or spine"
+                )
+                continue
+            expected = brief.templates.get(key, spine_templates.get(key))
+            if expected is not None and str(value) != expected:
+                problems.append(
+                    f"card template {key!r} does not match its source"
+                )
+    return problems
+
+
 def validate_card_file(
     brief: PersonaBrief,
     card_path: Path,
@@ -596,6 +707,7 @@ def validate_card_file(
     """Load the merged card with the app's loader and compare fixed fields."""
     problems = validate_brief_contract(brief, spine_path)
     problems.extend(validate_card_delta(card_path, spine_path))
+    problems.extend(validate_card_fields(brief, card_path, spine_path))
     try:
         persona = load_persona_merged(card_path, spine_path)
     except Exception as error:
@@ -617,13 +729,20 @@ def validate_card_file(
     for key, value in brief.templates.items():
         if persona.templates.get(key) != value:
             problems.append(f"card template {key!r} does not match the brief")
-    if _CANON_RE_I.search(persona.address) or _CANON_RE_I.search(persona.role):
+    if _canon_name(persona.address) or _canon_prose(persona.role):
         problems.append("card identity names a canon figure")
+    for where, value in (
+        ("address", persona.address),
+        ("role", persona.role),
+        *[(key, item) for key, item in persona.facts.items()],
+        *[(key, item) for key, item in persona.templates.items()],
+    ):
+        problems.extend(_content_problems(where, value))
     for value in persona.facts.values():
-        if _CANON_RE.search(value):
+        if _canon_prose(value):
             problems.append("card facts name a canon figure")
     for value in persona.templates.values():
-        if _CANON_RE.search(value):
+        if _canon_prose(value):
             problems.append("card templates name a canon figure")
     for topic, variants in persona.meta.items():
         problems.extend(
@@ -755,12 +874,22 @@ def publish_card(
     reviewer = reviewer.strip()
     if not reviewer:
         return ["a reviewer name is required"]
-    if brief_path.parent.name != "briefs":
-        return ["publish requires a brief under config/personas/briefs"]
     try:
         brief = load_brief(brief_path)
     except PersonaAuthoringError as error:
         return [str(error)]
+    repo_root = root or PERSONAS_DIR.parents[1]
+    canonical = (
+        repo_root
+        / "config"
+        / "personas"
+        / "briefs"
+        / f"{brief.subject}.toml"
+    ).resolve()
+    if brief_path.resolve() != canonical:
+        return ["publish requires the canonical brief under config/personas/briefs"]
+    if card_path.stem != brief.subject:
+        return ["the card filename must match the brief subject"]
     if brief.subject == "dada":
         return ["dada is the standalone seed card; the merged pipeline does not publish it"]
     problems = validate_brief_contract(brief, spine_path)
