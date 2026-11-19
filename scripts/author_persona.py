@@ -113,7 +113,7 @@ def command_generate(args: argparse.Namespace) -> int:
         feedback: list[str] | None = None
         generated = None
         problems: list[str] = []
-        for _ in range(3):
+        for _ in range(12):
             generated = await generate_card(
                 brief, llm, spine_text=spine_text, feedback=feedback
             )

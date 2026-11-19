@@ -54,9 +54,12 @@ def _generated_data(brief: PersonaBrief) -> dict[str, object]:
                 f"{name}, at your service; Charms is my department.",
             ],
             "scope": [
-                "Charms covers the principles and careful practice of charm-work.",
-                "This department studies charm theory, movement and safe practice.",
-                "We work on the reasons behind a charm before its performance.",
+                "Charms is my subject; the other four departments are taught "
+                "by my colleagues.",
+                "This department studies charm theory; the other four "
+                "subjects belong to colleagues.",
+                "We work on charm theory, while the other four departments "
+                "are led by colleagues.",
             ],
             "subject": [
                 "Charms is the study of making an object do something it would not do by itself.",
@@ -670,6 +673,42 @@ def test_card_delta_rejects_a_boundaries_override(tmp_path):
     )
     problems = validate_card_delta(card_path, SPINE_PATH)
     assert any("boundaries" in problem for problem in problems)
+
+
+def test_card_file_rejects_dropped_background_and_bad_topic_jobs(tmp_path):
+    from app.agent.persona_authoring import validate_card_file
+
+    brief = _brief()
+    card_path = _write_card(tmp_path, brief)
+
+    def edit(old: str, new: str, *, every: bool = False) -> None:
+        text = card_path.read_text(encoding="utf-8")
+        assert old in text
+        card_path.write_text(
+            text.replace(old, new) if every else text.replace(old, new, 1),
+            encoding="utf-8",
+        )
+
+    edit("Battle of Hogwarts", "battle", every=True)
+    edit("Hogwarts", "School", every=True)
+    edit("Auror Office", "Office", every=True)
+    edit("Ashcombe", "the school", every=True)
+    problems = validate_card_file(brief, card_path)
+    assert any("meta.professor drops background details" in p for p in problems)
+
+    card_path.write_text(
+        render_card(_generated(brief)), encoding="utf-8"
+    )
+    edit("Charms is the study of making", "I teach Charms as the study of making")
+    problems = validate_card_file(brief, card_path)
+    assert any("not who teaches it" in p for p in problems)
+
+    card_path.write_text(
+        render_card(_generated(brief)), encoding="utf-8"
+    )
+    edit("the other four departments are taught", "the departments are taught")
+    problems = validate_card_file(brief, card_path)
+    assert any("other four departments" in p for p in problems)
 
 
 def test_card_delta_rejects_paraphrased_shared_copy(tmp_path):

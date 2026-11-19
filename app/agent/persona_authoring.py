@@ -389,14 +389,17 @@ Rules:
   the professor gives.
 - Each meta topic answers its own question and must not borrow another topic's
   job. Every identity variant must contain the brief's address ("Professor
-  ...") and say that the professor teaches the subject. scope names the
-  subject as theirs and leaves the other four departments to colleagues.
+  ...") and say that the professor teaches the subject. Use the address
+  naturally ("I am Professor Raman") rather than stacking the full name and
+  the address together. scope names the
+  subject as theirs and says in every variant that the other four departments
+  are taught by colleagues.
   subject says what the subject is: when the brief has a subject_definition
   fact, open with that definition, then the subject_scope; never who teaches
-  it, and never says who teaches it. professor gives the professor's own
-  history and every detail of the brief's background, including the Ministry
-  scheme, the specialism and the founding; no background detail may be
-  dropped. boundaries is
+  it, and never uses the words "I teach" (that is identity, not subject).
+  professor gives the professor's own history and every detail of the brief's
+  background, including the Ministry scheme, the specialism and the founding;
+  no background detail may be dropped. boundaries is
   this professor's door, and keeps the reviewed shapes with the subject name
   substituted: (1) "Ask me about <subject>, the set texts, or your own
   preparation. I will answer briefly if you ask about the wider world or about
@@ -486,31 +489,44 @@ def _variants_problems(where: str, values: list[str]) -> list[str]:
         if _canon_prose(text):
             problems.append(f"{where} names a canon figure")
         if text in seen:
-            problems.append(f"{where} repeats a variant")
+            problems.append(f"{where} repeats a variant: {text[:70]!r}")
         seen.add(text)
     return problems
 
 
 _PROPER_NOUN = re.compile(r"\b[A-Z][a-z]{2,}\b")
 _SUBJECT_TEACHES = re.compile(r"\bI (?:teach|led|lead)\b", re.IGNORECASE)
+_SCOPE_OTHER = re.compile(r"\bother\b", re.IGNORECASE)
+_OTHER_DEPARTMENTS = re.compile(
+    r"\bother (?:four|departments|subjects)\b", re.IGNORECASE
+)
+# A line can start with a capitalised common word; only those are skipped.
+_SENTENCE_START = {
+    "a", "after", "an", "at", "before", "believes", "during", "fought",
+    "he", "her", "his", "holds", "i", "in", "it", "my", "one", "our", "she",
+    "served", "studied", "that", "the", "their", "then", "these", "they",
+    "this", "those", "was", "we", "were", "works",
+}
 
 
 def _proper_nouns(text: str) -> set[str]:
-    """Distinctive names in a background line, minus the sentence's first word."""
-    words = text.split()
-    body = " ".join(words[1:]) if len(words) > 1 else ""
-    return {match.lower() for match in _PROPER_NOUN.findall(body)}
+    """Distinctive names in a background line, minus a common first word."""
+    names = {match.lower() for match in _PROPER_NOUN.findall(text)}
+    first = text.split()[0] if text.split() else ""
+    if first.lower() in _SENTENCE_START:
+        names.discard(first.lower())
+    return names
 
 
 def _background_problems(
-    brief: PersonaBrief, generated: GeneratedPersona
+    brief: PersonaBrief, professor_variants: list[str]
 ) -> list[str]:
     """Every background line's proper nouns must reach a professor answer.
 
     The prose may rephrase anything, but a dropped Ministry scheme or Auror
     Office is a lost fact, so the distinctive names are the contract.
     """
-    joined = " ".join(generated.meta.get("professor", [])).lower()
+    joined = " ".join(professor_variants).lower()
     problems: list[str] = []
     for line in brief.background:
         missing = sorted(
@@ -551,13 +567,32 @@ def validate_generated(
         )
     problems.extend(_variants_problems("personal", generated.personal))
     problems.extend(_variants_problems("abstain", generated.abstain))
-    problems.extend(_background_problems(brief, generated))
+    problems.extend(
+        _background_problems(brief, generated.meta.get("professor", []))
+    )
+    problems.extend(_topic_problems(generated.meta))
+    return problems
+
+
+def _topic_problems(meta: dict[str, list[str]]) -> list[str]:
+    """Topic jobs that phrase-level checks can enforce."""
+    problems: list[str] = []
     if any(
-        _SUBJECT_TEACHES.search(variant)
-        for variant in generated.meta.get("subject", [])
+        _OTHER_DEPARTMENTS.search(variant)
+        for variant in meta.get("identity", [])
     ):
         problems.append(
+            "meta.identity must not discuss the other departments"
+        )
+    if any(_SUBJECT_TEACHES.search(variant) for variant in meta.get("subject", [])):
+        problems.append(
             "meta.subject describes the subject, not who teaches it"
+        )
+    if any(
+        not _SCOPE_OTHER.search(variant) for variant in meta.get("scope", [])
+    ):
+        problems.append(
+            "meta.scope must leave the other four departments to colleagues"
         )
     return problems
 
@@ -854,6 +889,10 @@ def validate_card_file(
         problems.extend(
             _variants_problems(f"meta.{topic}", list(variants))
         )
+    problems.extend(
+        _background_problems(brief, list(persona.meta.get("professor", [])))
+    )
+    problems.extend(_topic_problems({k: list(v) for k, v in persona.meta.items()}))
     problems.extend(_variants_problems("personal", list(persona.personal)))
     problems.extend(_variants_problems("abstain", list(persona.abstain)))
     return problems

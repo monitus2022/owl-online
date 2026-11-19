@@ -147,7 +147,12 @@ The checks include:
   shared meta topic;
 - shared spine facts and templates are unchanged; only `professor.background`
   is overridable;
-- every generated meta topic has the required count, and personal, abstain and greeting match the spine;
+- every generated meta topic has the required count, and personal, abstain and
+  greeting match the spine;
+- every background line's proper nouns reach `meta.professor`, so the Ministry
+  scheme or the Auror Office cannot be dropped;
+- every `meta.scope` variant leaves the other four departments to colleagues,
+  and no `meta.subject` variant says who teaches the subject;
 - no empty or duplicate variants;
 - variant length bounds;
 - no placeholders, HTML, URLs, model or provider wording, or canon names in
@@ -158,6 +163,10 @@ The checks include:
 
 The model does not decide the facts. A changed name, address, role, subject,
 stance, fact or template is a validation failure, not a prompt suggestion.
+
+`generate` retries when a draft fails, feeding the exact problems back to the
+model; a draft that still fails is never written. The retry is a convenience,
+not a weaker gate: the same checks run in `validate`, `publish` and `check`.
 
 ## Persona review
 
