@@ -60,10 +60,14 @@ test("the gate keeps the school, the ledger and the button above the fold", asyn
     await page.goto("/");
     await expect(
       page.getByRole("heading", { level: 1, name: SCHOOL }),
-    ).toBeInViewport();
-    await expect(page.getByText(/The revision rooms/)).toBeInViewport();
-    await expect(page.getByLabel("Your name")).toBeInViewport();
-    await expect(page.getByRole("region", { name: GATE })).toBeInViewport();
+    ).toBeInViewport({ ratio: 1 });
+    await expect(page.getByText(/The revision rooms/)).toBeInViewport({
+      ratio: 1,
+    });
+    await expect(page.getByLabel("Your name")).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("region", { name: GATE })).toBeInViewport({
+      ratio: 1,
+    });
     const box = await page
       .getByRole("button", { name: "Enter the grounds" })
       .boundingBox();
