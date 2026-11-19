@@ -496,10 +496,10 @@ def _variants_problems(where: str, values: list[str]) -> list[str]:
 
 _PROPER_NOUN = re.compile(r"\b[A-Z][a-z]{2,}\b")
 _SUBJECT_TEACHES = re.compile(r"\bI (?:teach|led|lead)\b", re.IGNORECASE)
-_SCOPE_OTHER = re.compile(r"\bother\b", re.IGNORECASE)
 _OTHER_DEPARTMENTS = re.compile(
     r"\bother (?:four|departments|subjects)\b", re.IGNORECASE
 )
+_SCOPE_LEAVES = re.compile(r"\b(?:colleagues?|taught|led|belong)\b", re.IGNORECASE)
 # A line can start with a capitalised common word; only those are skipped.
 _SENTENCE_START = {
     "a", "after", "an", "at", "before", "believes", "during", "fought",
@@ -589,10 +589,15 @@ def _topic_problems(meta: dict[str, list[str]]) -> list[str]:
             "meta.subject describes the subject, not who teaches it"
         )
     if any(
-        not _SCOPE_OTHER.search(variant) for variant in meta.get("scope", [])
+        not (
+            _OTHER_DEPARTMENTS.search(variant)
+            and _SCOPE_LEAVES.search(variant)
+        )
+        for variant in meta.get("scope", [])
     ):
         problems.append(
-            "meta.scope must leave the other four departments to colleagues"
+            "meta.scope must say the other four departments are taught by "
+            "colleagues"
         )
     return problems
 

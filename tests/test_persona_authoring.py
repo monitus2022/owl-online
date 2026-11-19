@@ -710,6 +710,30 @@ def test_card_file_rejects_dropped_background_and_bad_topic_jobs(tmp_path):
     problems = validate_card_file(brief, card_path)
     assert any("other four departments" in p for p in problems)
 
+    card_path.write_text(
+        render_card(_generated(brief)), encoding="utf-8"
+    )
+    edit(
+        "This department studies charm theory; the other four "
+        "subjects belong to colleagues.",
+        "Charms is my subject; other subjects exist.",
+    )
+    problems = validate_card_file(brief, card_path)
+    assert any("taught by colleagues" in p for p in problems)
+
+    card_path.write_text(
+        render_card(_generated(brief)), encoding="utf-8"
+    )
+    edit(
+        f"I am {brief.name}, and I teach Charms at Ashcombe Academy.",
+        f"I am {brief.name}; the other departments are not mine.",
+    )
+    problems = validate_card_file(brief, card_path)
+    assert any(
+        "meta.identity must not discuss the other departments" in p
+        for p in problems
+    )
+
 
 def test_card_delta_rejects_paraphrased_shared_copy(tmp_path):
     from app.agent.persona_authoring import validate_card_delta
