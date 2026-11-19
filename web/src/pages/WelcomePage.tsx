@@ -58,7 +58,7 @@ export function WelcomePage() {
             name="student-name"
             type="text"
             autoComplete="given-name"
-            autoFocus
+            required
             maxLength={40}
             placeholder="e.g. Mira"
             value={raw}

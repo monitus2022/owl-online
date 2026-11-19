@@ -5,7 +5,7 @@ import { AcademyFront } from "../components/AcademyFront";
 // gate at full scale; the next step is the cloister of department doors.
 export function FrontPage() {
   return (
-    <AcademyFront>
+    <AcademyFront full>
       <Link to="/cloister" className="btn-primary enter-btn">
         Enter the cloister
       </Link>

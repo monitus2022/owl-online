@@ -45,13 +45,14 @@ holds the thread in process memory only. Threaded prompts include a bounded
 recent-conversation block so the model can resolve follow-ups and comparisons
 (except the experimental multi-book path).
 
-The first visit is gated by the Keeper's welcome (#288). The name is required,
-validated in `src/data/student.ts` (letters, spaces, apostrophes, hyphens and
-full stops, 40 characters at most), and kept in `localStorage` under
+The first visit is the front gate itself: the facade, the school name and the
+promise, with the Keeper's ledger as the name form (#288, #299). The name is
+required, validated in `src/data/student.ts` (letters, spaces, apostrophes,
+hyphens and full stops, 40 characters at most), and kept in `localStorage` under
 `owl.student.name`; `/about` and `/privacy` remain reachable before naming. The
 name is sent as `student_name` on every chat request so the professor can
 address the student, and the API includes it in the answer-cache scope. The
-footer's "Change the name" control clears the value and returns to the welcome.
+footer's "Change the name" control clears the value and returns to the gate.
 The API never stores the name.
 
 Chat answers keep the grounding visible without showing machine ids in the

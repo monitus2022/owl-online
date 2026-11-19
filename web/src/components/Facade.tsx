@@ -23,7 +23,7 @@ export function Facade({ className }: { className?: string }) {
         d="M180 300 V170 Q180 96 320 84 Q460 96 460 170 V300"
       />
       <path
-        className="facade-line gate"
+        className="facade-line facade-arch"
         d="M250 300 V205 Q250 150 320 142 Q390 150 390 205 V300"
       />
       <line className="facade-line" x1="320" y1="142" x2="320" y2="300" />
