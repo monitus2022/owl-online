@@ -1,16 +1,17 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-// The first-run welcome (#288): a hard name gate, a browser-local name, the
-// request field, and the footer control that reopens the welcome. These tests
-// deliberately start with an empty store; the other suites seed a name so they
-// exercise the pages behind the gate.
+// The first-run gate (#288, #299): a hard name requirement, a browser-local
+// name, the request field, and the footer control that reopens the gate. The
+// gate is the front page, so the Keeper and the school name share the screen
+// with the name ledger. These tests deliberately start with an empty store;
+// the other suites seed a name so they exercise the pages behind the gate.
 const NAME_KEY = "owl.student.name";
-const WELCOME = "Welcome to the Academy";
+const GATE = "The Keeper of the Records";
 
 test("the welcome gates every route until a name is entered", async ({ page }) => {
   await page.goto("/venue/defence-against-the-dark-arts");
-  await expect(page.getByRole("heading", { name: WELCOME })).toBeVisible();
+  await expect(page.getByRole("heading", { name: GATE })).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Chat with the professor" }),
   ).toHaveCount(0);
@@ -28,37 +29,37 @@ test("the welcome gates every route until a name is entered", async ({ page }) =
 
 test("the name is required and validated", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Enter the Academy" }).click();
+  await page.getByRole("button", { name: "Enter the grounds" }).click();
   await expect(page.getByRole("alert")).toHaveText(/ledger needs a name/);
 
   await page.getByLabel("Your name").fill("12345");
-  await page.getByRole("button", { name: "Enter the Academy" }).click();
+  await page.getByRole("button", { name: "Enter the grounds" }).click();
   await expect(page.getByRole("alert")).toHaveText(/start with a letter/);
-  await expect(page.getByRole("heading", { name: WELCOME })).toBeVisible();
+  await expect(page.getByRole("heading", { name: GATE })).toBeVisible();
 });
 
 test("a name unlocks the academy and survives a reload", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Your name").fill("  Ada   Lovelace  ");
-  await page.getByRole("button", { name: "Enter the Academy" }).click();
+  await page.getByRole("button", { name: "Enter the grounds" }).click();
 
-  await expect(page.getByRole("link", { name: "Enter the grounds" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Enter the cloister" })).toBeVisible();
   expect(
     await page.evaluate((key) => window.localStorage.getItem(key), NAME_KEY),
   ).toBe("Ada Lovelace");
 
   await page.reload();
-  await expect(page.getByRole("link", { name: "Enter the grounds" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Enter the cloister" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: WELCOME }),
+    page.getByRole("heading", { name: GATE }),
   ).toHaveCount(0);
 });
 
 test("the name is sent with the chat request", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Your name").fill("Ada Lovelace");
-  await page.getByRole("button", { name: "Enter the Academy" }).click();
-  await expect(page.getByRole("link", { name: "Enter the grounds" })).toBeVisible();
+  await page.getByRole("button", { name: "Enter the grounds" }).click();
+  await expect(page.getByRole("link", { name: "Enter the cloister" })).toBeVisible();
 
   let posted: Record<string, unknown> | null = null;
   await page.route("**/v1/chat/stream", async (route) => {
@@ -77,10 +78,10 @@ test("the name is sent with the chat request", async ({ page }) => {
 test("the footer can change the name and reopens the welcome", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Your name").fill("Ada Lovelace");
-  await page.getByRole("button", { name: "Enter the Academy" }).click();
+  await page.getByRole("button", { name: "Enter the grounds" }).click();
   await page.getByRole("button", { name: "Change the name" }).click();
 
-  await expect(page.getByRole("heading", { name: WELCOME })).toBeVisible();
+  await expect(page.getByRole("heading", { name: GATE })).toBeVisible();
   expect(
     await page.evaluate((key) => window.localStorage.getItem(key), NAME_KEY),
   ).toBeNull();

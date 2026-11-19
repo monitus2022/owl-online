@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 
 test("gate -> cloister -> DADA venue", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Enter the grounds" }).click();
+  await page.getByRole("link", { name: "Enter the cloister" }).click();
   await expect(page.getByRole("heading", { name: "The Cloister" })).toBeVisible();
   await page.getByRole("link", { name: new RegExp(DADA) }).click();
   await expect(

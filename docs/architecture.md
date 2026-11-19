@@ -238,12 +238,15 @@ calls `GET /v1/materials/{subject}/{material_id}`. The gate and the cloister are
 static over the session-scoped result store. The build imports no Python,
 renders no model output as HTML, and runs no request-time generation.
 
-A first visit meets a mandatory static welcome from the Keeper of the Records
-(#288). The name it collects is kept in `localStorage` under
+A first visit meets the front gate itself: the academy facade, the school name
+and the one-line promise, with the Keeper's ledger as the name form (#288,
+#299). The name the ledger collects is kept in `localStorage` under
 `owl.student.name`, never in a server record, and every chat request carries it
 as `student_name`; `/about` and `/privacy` stay readable before a name is given,
-and the footer can clear the name and reopen the welcome. This is the
-onboarding slice of the librarian door (#195), not the librarian chat itself.
+and the footer can clear the name and reopen the gate. The gate and the
+post-name front page share one `AcademyFront` component, so the building reads
+the same before and after admission. This is the onboarding slice of the
+librarian door (#195), not the librarian chat itself.
 
 Chat answers keep the evidence legible: inline citation brackets are stripped,
 and the `Sources` row shows material or chapter chips, with the exact ids under

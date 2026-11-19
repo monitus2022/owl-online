@@ -17,8 +17,8 @@ Cloudflare Pages. The API stays separate; the API host serves only the API and
 | `src/api/materials.ts` | Live client for `GET /v1/materials/{subject}/{material_id}`; returns the reviewed pack note and book locators behind a lesson source, never the corpus text. |
 | `src/api/exams.ts` | Live client for the served exam bank: paper descriptors, attempt creation, grading and discarding an ungraded attempt; the API can return the same persisted attempt by id. The browser never sees the MCQ key before the grade response. |
 | `src/api/results.ts` | `ResultsStore` interface; `HttpResultsStore` reads the session-scoped `GET /v1/attempts` history and clears the session's attempts. The server is the source of truth; records are provisional until #35. |
-| `src/pages/` | The Keeper's welcome, front gate, about page, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |
-| `src/components/` | Door, chat panel, source panel, professor silhouette, crest, colonnade backdrop, exam panel, band seal, results card, band strip, history panel, noticeboard, site footer. |
+| `src/pages/` | The front gate (also the Keeper's first-run name gate), about page, cloister (doors + noticeboard), venue (chat, exam room and your-papers tabs). |
+| `src/components/` | Academy front and facade, door, chat panel, source panel, professor silhouette, crest, colonnade backdrop, exam panel, band seal, results card, band strip, history panel, noticeboard, site footer. |
 | `src/styles/base.css` | The theme: dark warm base, gold chrome, `--accent` per subject. |
 
 ## Run locally
