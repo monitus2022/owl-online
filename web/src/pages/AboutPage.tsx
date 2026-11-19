@@ -46,8 +46,9 @@ export function AboutPage() {
           keeps it in this browser under <code>owl.student.name</code>. It is
           never written to a student record and travels only as
           <code>student_name</code> with a chat request, where it is part of the
-          answer-cache scope. Clearing site data, or using Change the name in
-          the footer, removes it and returns to the gate.
+          answer-cache scope. Clearing site data removes it, and the next page
+          load returns to the gate; Change the name in the footer removes it and
+          returns at once.
         </p>
       </section>
 

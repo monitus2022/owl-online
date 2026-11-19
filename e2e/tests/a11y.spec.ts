@@ -8,7 +8,7 @@ const pages = [
 ] as const;
 
 // Seed the student name (#288) so these checks reach the pages behind the
-// welcome gate. welcome.spec.ts runs axe on the welcome itself.
+// gate. welcome.spec.ts runs axe on the gate itself.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem("owl.student.name", "Test Student");

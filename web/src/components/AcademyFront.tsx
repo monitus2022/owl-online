@@ -15,9 +15,7 @@ export function AcademyFront({
 }) {
   return (
     <main className={full ? "gate gate-full" : "gate"}>
-      <Facade
-        className={full ? "gate-facade gate-facade-full" : "gate-facade"}
-      />
+      <Facade className="gate-facade" />
       <p className="kicker">Est. 2008 · The Cotswolds</p>
       <h1 className="school-name">Ashcombe Academy of Magic</h1>
       <p className="gate-tag">

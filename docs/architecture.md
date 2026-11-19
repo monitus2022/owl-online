@@ -244,8 +244,9 @@ and the one-line promise, with the Keeper's ledger as the name form (#288,
 `owl.student.name`, never in a server record, and every chat request carries it
 as `student_name`; `/about` and `/privacy` stay readable before a name is given,
 and the footer can clear the name and reopen the gate. The gate and the
-post-name front page share one `AcademyFront` component, so the building reads
-the same before and after admission. This is the onboarding slice of the
+post-name front page share one `AcademyFront` component, so the same building
+greets the reader before and after admission, with the gate drawn smaller to
+keep the ledger above the fold. This is the onboarding slice of the
 librarian door (#195), not the librarian chat itself.
 
 Chat answers keep the evidence legible: inline citation brackets are stripped,

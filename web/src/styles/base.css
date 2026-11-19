@@ -160,7 +160,13 @@ main {
   filter: drop-shadow(0 18px 40px #d8b46a12);
 }
 
-/* The front page after the name keeps the original full-size facade. */
+/* The front page after the name keeps the original full-size facade. The
+   shell is wider than the gate so the 42rem facade is not clipped by the
+   40rem content box. */
+.gate-full {
+  max-width: 46rem;
+}
+
 .gate-full .gate-facade {
   width: min(100%, 42rem);
 }

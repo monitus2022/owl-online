@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const DADA = "Defence Against the Dark Arts";
 
-// The welcome (#288) gates every route behind a name. Seed one so these tests
+// The gate (#288) stops every route until a name is entered. Seed one so these tests
 // start behind the gate; welcome.spec.ts covers the gate itself.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
