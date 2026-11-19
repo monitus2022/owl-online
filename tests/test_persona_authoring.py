@@ -38,7 +38,8 @@ def _brief() -> PersonaBrief:
 
 def _generated_data(brief: PersonaBrief) -> dict[str, object]:
     name = brief.name
-    return {
+    spine = tomllib.loads(SPINE_PATH.read_text(encoding="utf-8"))
+    data: dict[str, object] = {
         "identity": {
             "name": brief.name,
             "address": brief.address,
@@ -95,6 +96,12 @@ def _generated_data(brief: PersonaBrief) -> dict[str, object]:
         "facts": dict(brief.facts),
         "templates": dict(brief.templates),
     }
+    # The pipeline copies the shared policy copy unchanged; the validators
+    # reject a card that paraphrases it.
+    data["meta"]["greeting"] = list(spine["meta"]["greeting"])
+    data["personal"] = list(spine["personal"]["response"])
+    data["abstain"] = list(spine["abstain"]["response"])
+    return data
 
 
 def _generated(brief: PersonaBrief) -> GeneratedPersona:
@@ -660,6 +667,22 @@ def test_card_delta_rejects_a_boundaries_override(tmp_path):
     )
     problems = validate_card_delta(card_path, SPINE_PATH)
     assert any("boundaries" in problem for problem in problems)
+
+
+def test_card_delta_rejects_paraphrased_shared_copy(tmp_path):
+    from app.agent.persona_authoring import validate_card_delta
+
+    brief = _brief()
+    card_path = _write_card(tmp_path, brief)
+    text = card_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "I am your teacher, not a counsellor",
+        "I am your teacher, not a therapist",
+        1,
+    )
+    card_path.write_text(text, encoding="utf-8")
+    problems = validate_card_delta(card_path, SPINE_PATH)
+    assert any("personal.response" in problem for problem in problems)
 
 
 def test_canon_check_does_not_flag_ordinary_sprout_or_vector():

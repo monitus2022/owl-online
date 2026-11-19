@@ -378,17 +378,23 @@ Return JSON with exactly this shape:
 }}
 
 Rules:
-- Copy identity, stance, facts and templates from the brief exactly.
-- Write 3 to 5 variants for each meta topic, personal and abstain. Every
-  variant must say the same thing in different words; do not add facts.
+- Copy identity, stance, facts and templates from the brief exactly. The facts
+  and templates objects must be character-for-character copies: do not render a
+  template, fill in its placeholders or invent a key.
+- Write 3 to 5 variants for each meta topic, personal and abstain, except
+  boundaries, which keeps exactly the three reviewed shapes. Every variant
+  must say the same thing in different words; do not add facts.
 - Write every meta variant in the professor's own first person ("I"), even
   when the topic is identity or professor; the student is reading the answer
   the professor gives.
 - Each meta topic answers its own question and must not borrow another topic's
-  job. identity says who the professor is and that they teach the subject.
-  scope names the subject as theirs and leaves the other four departments to
-  colleagues. subject says what the subject is about, never who teaches it.
-  professor gives the professor's own history from the brief. boundaries is
+  job. Every identity variant must contain the brief's address ("Professor
+  ...") and say that the professor teaches the subject. scope names the
+  subject as theirs and leaves the other four departments to colleagues.
+  subject says what the subject is: when the brief has a subject_definition
+  fact, open with that definition, then the subject_scope; never who teaches
+  it. professor gives the professor's own history and every detail of the
+  brief's background, including any specialism. boundaries is
   this professor's door, and keeps the reviewed shapes with the subject name
   substituted: (1) "Ask me about <subject>, the set texts, or your own
   preparation. I will answer briefly if you ask about the wider world or about
@@ -646,6 +652,31 @@ def validate_card_delta(
             problems.append(
                 "card meta overrides shared topics: "
                 + ", ".join(sorted(str(key) for key in shared))
+            )
+        spine_greeting = (spine.get("meta") or {}).get("greeting")
+        if (
+            isinstance(spine_greeting, list)
+            and isinstance(meta.get("greeting"), list)
+            and list(meta["greeting"]) != list(spine_greeting)
+        ):
+            problems.append(
+                "card meta.greeting must match the shared spine"
+            )
+    for section in ("personal", "abstain"):
+        spine_copy = (spine.get(section) or {}).get("response")
+        card_copy = card.get(section) or {}
+        value = (
+            card_copy.get("response")
+            if isinstance(card_copy, dict)
+            else None
+        )
+        if (
+            isinstance(spine_copy, list)
+            and isinstance(value, list)
+            and list(value) != list(spine_copy)
+        ):
+            problems.append(
+                f"card {section}.response must match the shared spine"
             )
     facts = card.get("facts", {})
     if not isinstance(facts, dict):
@@ -947,6 +978,8 @@ def publish_card(
             ]
     card_path.parent.mkdir(parents=True, exist_ok=True)
     card_path.write_text(draft_path.read_text(encoding="utf-8"), encoding="utf-8")
+    provenance["draft"] = _path_label(draft_path, root)
+    provenance["draft_sha256"] = sha256_file(draft_path)
     provenance["card"] = _path_label(card_path, root)
     provenance["card_sha256"] = sha256_file(card_path)
     provenance["reviewed_by"] = reviewer

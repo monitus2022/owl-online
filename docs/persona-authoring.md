@@ -45,7 +45,7 @@ complete file.
 | `subject` | The taxonomy key, for example `charms` |
 | `name`, `address`, `role`, `subject_title` | The fixed identity; copied into the card |
 | `background` | Three to five original facts about the professor |
-| `voice` | Voice direction for the generated meta, personal and abstain lines |
+| `voice` | Voice direction for the generated meta lines; personal, abstain and greeting are copied from the spine |
 | `stance` | The fixed teaching stance; copied into the card |
 | `teaching` | How the professor teaches, corrects and sets practice |
 | `relationships` | Original relationships to the other founders |
@@ -119,15 +119,18 @@ The model returns one object:
 - `identity`: exactly `name`, `address`, `role`, `subject`, copied from the brief.
 - `register`: exactly `stance`, copied from the brief.
 - `meta`: exactly `identity`, `scope`, `subject`, `professor`, `boundaries` and
-  `greeting`, each with three to five variants. The shared exam, syllabus,
-  grading, school and auror topics come from the spine.
-- `personal` and `abstain`: three to five variants each.
+  `greeting`. The first five carry three to five variants; `boundaries` keeps
+  exactly the three reviewed shapes and `greeting` is copied from the spine.
+  The shared exam, syllabus, grading, school and auror topics come from the
+  spine.
+- `personal` and `abstain`: copied from the spine unchanged.
 - `facts` and `templates`: copied from the brief.
 
 The draft delta never carries the top-level `[boundaries]` policy, school, tone
 or pacing; those stay in the spine. It does carry the required `meta.boundaries`
-subject guidance. It may override `meta.greeting`; the other shared meta topics
-are not generated.
+subject guidance. It carries `meta.greeting`, `personal.response` and
+`abstain.response` as copies of the spine, and the validator rejects a
+paraphrase; the other shared meta topics are not generated.
 
 ## Validation
 
@@ -143,7 +146,7 @@ The checks include:
   shared meta topic;
 - shared spine facts and templates are unchanged; only `professor.background`
   is overridable;
-- every generated meta topic, personal and abstain set has the required count;
+- every generated meta topic has the required count, and personal, abstain and greeting match the spine;
 - no empty or duplicate variants;
 - variant length bounds;
 - no placeholders, HTML, URLs, model or provider wording, or canon names in
@@ -161,12 +164,13 @@ Before publishing a card, run:
 
 ```text
 uv run pytest tests/test_persona_authoring.py tests/test_personas.py tests/test_persona.py tests/test_persona_graph.py
+uv run pytest eval/
 uv run python scripts/author_persona.py check
 ```
 
-For a card that changes the answer prompt, also run the persona conformance
-suite (#176) and the relevant RAG eval. A full eval run needs a record under
-`docs/runs/`; a `--check` gate does not.
+`eval/persona/` holds the persona conformance suite that CI runs; every card
+copy change needs it, not only a change to the answer prompt. A full RAG eval
+run needs a record under `docs/runs/`; a `--check` gate does not.
 
 Review checklist:
 
