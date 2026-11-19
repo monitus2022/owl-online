@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from pydantic import ValidationError
 from app.agent.persona import SPINE_PATH, load_persona_merged
 from app.agent.persona_authoring import (
     GeneratedPersona,
+    PersonaAuthoringError,
     PersonaBrief,
     build_prompt,
     build_provenance,
@@ -116,6 +118,9 @@ def _write_brief(root: Path, brief: PersonaBrief) -> Path:
 def _write_provenance(
     root: Path, brief: PersonaBrief, brief_path: Path, card_path: Path
 ) -> Path:
+    system, user = build_prompt(
+        brief, SPINE_PATH.read_text(encoding="utf-8")
+    )
     provenance = build_provenance(
         brief=brief,
         brief_path=brief_path,
@@ -123,7 +128,8 @@ def _write_provenance(
         provider="openrouter",
         model="test/model",
         temperature=0.3,
-        prompt_sha=prompt_sha256("system", "user"),
+        prompt_sha=prompt_sha256(system, user),
+        spine_path=SPINE_PATH,
     )
     provenance["reviewed_by"] = "Test Reviewer"
     provenance["reviewed_at"] = "2026-11-18T00:00:00+00:00"
@@ -214,6 +220,22 @@ def test_generate_card_with_a_fake_llm(tmp_path):
     assert validate_card_file(brief, card_path) == []
 
 
+def test_parse_generated_ignores_trailing_prose_with_a_brace():
+    brief = _brief()
+    payload = json.dumps(_generated_data(brief)) + "\nDone, with a trailing }."
+    parsed = parse_generated(payload)
+    assert parsed.identity["name"] == brief.name
+
+
+def test_render_card_escapes_quotes_backslashes_newlines_and_unicode(tmp_path):
+    brief = _brief()
+    data = _generated_data(brief)
+    data["meta"]["greeting"][0] = 'A "quoted" line \\ with a newline\nand café.'
+    text = render_card(GeneratedPersona.model_validate(data))
+    parsed = tomllib.loads(text)
+    assert parsed["meta"]["greeting"][0] == 'A "quoted" line \\ with a newline\nand café.'
+
+
 def test_validate_generated_rejects_identity_and_fact_drift():
     brief = _brief()
     data = _generated_data(brief)
@@ -246,6 +268,19 @@ def test_check_without_briefs_is_a_warning(tmp_path):
     assert any("no persona briefs" in warning for warning in warnings)
 
 
+def test_check_names_the_legacy_cards_on_the_real_repo():
+    problems, warnings = check_authoring(REPO_ROOT)
+    assert problems == []
+    text = " ".join(warnings)
+    for subject in ("dada", "charms", "potions", "transfiguration", "herbology"):
+        assert subject in text
+
+
+def test_strict_fails_when_no_briefs_exist(tmp_path):
+    problems, _ = check_authoring(tmp_path, strict=True)
+    assert any("no persona briefs" in problem for problem in problems)
+
+
 def test_check_accepts_a_complete_fixture_and_rejects_drift(tmp_path):
     brief = _brief()
     brief_path = _write_brief(tmp_path, brief)
@@ -254,7 +289,7 @@ def test_check_accepts_a_complete_fixture_and_rejects_drift(tmp_path):
 
     problems, warnings = check_authoring(tmp_path)
     assert problems == []
-    assert any("without an authoring brief" in warning for warning in warnings)
+    assert warnings == []
 
     # A late human edit invalidates the recorded card hash.
     card_path.write_text(
@@ -274,6 +309,184 @@ def test_check_rejects_missing_provenance(tmp_path):
     _write_card(tmp_path, brief)
     problems, _ = check_authoring(tmp_path)
     assert any("missing provenance" in problem for problem in problems)
+
+
+def _draft_fixture(
+    root: Path, brief: PersonaBrief
+) -> tuple[Path, Path, Path, Path]:
+    brief_path = _write_brief(root, brief)
+    draft_path = root / "config" / "personas" / "drafts" / f"{brief.subject}.toml"
+    draft_path.parent.mkdir(parents=True, exist_ok=True)
+    draft_path.write_text(render_card(_generated(brief)), encoding="utf-8")
+    system, user = build_prompt(
+        brief, SPINE_PATH.read_text(encoding="utf-8")
+    )
+    provenance = build_provenance(
+        brief=brief,
+        brief_path=brief_path,
+        card_path=draft_path,
+        provider="openrouter",
+        model="test/model",
+        temperature=0.3,
+        prompt_sha=prompt_sha256(system, user),
+        spine_path=SPINE_PATH,
+    )
+    draft_provenance = draft_path.with_suffix(".json")
+    draft_provenance.write_text(json.dumps(provenance), encoding="utf-8")
+    card_path = root / "config" / "personas" / f"{brief.subject}.toml"
+    final_provenance = (
+        root
+        / "config"
+        / "personas"
+        / "provenance"
+        / f"{brief.subject}.json"
+    )
+    return brief_path, draft_path, card_path, final_provenance
+
+
+def test_publish_card_writes_only_after_validation(tmp_path):
+    from app.agent.persona_authoring import publish_card
+
+    brief = _brief()
+    brief_path, draft_path, card_path, final_provenance = _draft_fixture(
+        tmp_path, brief
+    )
+    problems = publish_card(
+        brief_path=brief_path,
+        draft_path=draft_path,
+        draft_provenance_path=draft_path.with_suffix(".json"),
+        card_path=card_path,
+        provenance_path=final_provenance,
+        reviewer="Test Reviewer",
+        spine_path=SPINE_PATH,
+    )
+    assert problems == []
+    assert card_path.exists()
+    provenance = json.loads(final_provenance.read_text(encoding="utf-8"))
+    assert provenance["reviewed_by"] == "Test Reviewer"
+    assert provenance["card_sha256"] == sha256_file(card_path)
+
+
+def test_publish_card_refuses_a_blank_reviewer_and_leaves_the_card(tmp_path):
+    from app.agent.persona_authoring import publish_card
+
+    brief = _brief()
+    brief_path, draft_path, card_path, final_provenance = _draft_fixture(
+        tmp_path, brief
+    )
+    problems = publish_card(
+        brief_path=brief_path,
+        draft_path=draft_path,
+        draft_provenance_path=draft_path.with_suffix(".json"),
+        card_path=card_path,
+        provenance_path=final_provenance,
+        reviewer="   ",
+        spine_path=SPINE_PATH,
+    )
+    assert any("reviewer" in problem for problem in problems)
+    assert not card_path.exists()
+
+
+def test_publish_card_requires_replace_identity_for_a_different_professor(
+    tmp_path,
+):
+    from app.agent.persona_authoring import publish_card
+
+    brief = _brief()
+    brief_path, draft_path, card_path, final_provenance = _draft_fixture(
+        tmp_path, brief
+    )
+    other = _generated_data(brief)
+    other["identity"] = {
+        **other["identity"],
+        "name": "Professor Other",
+        "address": "Professor Other",
+    }
+    card_path.parent.mkdir(parents=True, exist_ok=True)
+    card_path.write_text(
+        render_card(GeneratedPersona.model_validate(other)), encoding="utf-8"
+    )
+    problems = publish_card(
+        brief_path=brief_path,
+        draft_path=draft_path,
+        draft_provenance_path=draft_path.with_suffix(".json"),
+        card_path=card_path,
+        provenance_path=final_provenance,
+        reviewer="Test Reviewer",
+        spine_path=SPINE_PATH,
+    )
+    assert any("different professor" in problem for problem in problems)
+    assert "Professor Other" in card_path.read_text(encoding="utf-8")
+
+
+def test_brief_contract_rejects_a_shared_spine_fact(tmp_path):
+    from app.agent.persona_authoring import validate_brief_contract
+
+    data = _brief().model_dump()
+    data["facts"] = {**data["facts"], "study_place": "Durmstrang"}
+    problems = validate_brief_contract(
+        PersonaBrief.model_validate(data), SPINE_PATH
+    )
+    assert any("study_place" in problem for problem in problems)
+
+
+def test_card_delta_rejects_a_boundaries_override(tmp_path):
+    from app.agent.persona_authoring import validate_card_delta
+
+    brief = _brief()
+    card_path = _write_card(tmp_path, brief)
+    card_path.write_text(
+        card_path.read_text(encoding="utf-8")
+        + "\n[boundaries]\nfacts = \"Anything goes.\"\n",
+        encoding="utf-8",
+    )
+    problems = validate_card_delta(card_path, SPINE_PATH)
+    assert any("boundaries" in problem for problem in problems)
+
+
+def test_canon_check_does_not_flag_ordinary_sprout_or_vector():
+    from app.agent.persona_authoring import _variants_problems
+
+    assert _variants_problems(
+        "meta.greeting",
+        [
+            "The seedlings sprout in the greenhouse every spring.",
+            "A vector carries the direction and the length together.",
+            "The lesson begins with a careful observation.",
+        ],
+    ) == []
+    assert any(
+        "canon" in problem
+        for problem in _variants_problems(
+            "meta.greeting",
+            [
+                "Professor Sprout tends the greenhouses.",
+                "A vector carries the direction and the length together.",
+                "The lesson begins with a careful observation.",
+            ],
+        )
+    )
+
+
+def test_draft_target_stays_under_drafts():
+    from scripts.author_persona import DRAFTS, PERSONAS, _draft_target
+
+    assert _draft_target(DRAFTS / "charms.toml") == DRAFTS / "charms.toml"
+    for path in (
+        PERSONAS / "charms.toml",
+        PERSONAS / "spine.toml",
+        DRAFTS / "charms.json",
+    ):
+        with pytest.raises(PersonaAuthoringError):
+            _draft_target(path)
+
+
+def test_sha256_file_normalizes_windows_line_endings(tmp_path):
+    lf = tmp_path / "lf.toml"
+    crlf = tmp_path / "crlf.toml"
+    lf.write_bytes(b"name = 'Vane'\n")
+    crlf.write_bytes(b"name = 'Vane'\r\n")
+    assert sha256_file(lf) == sha256_file(crlf)
 
 
 def test_publish_requires_a_reviewer():

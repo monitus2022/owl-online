@@ -77,7 +77,9 @@ uv run python scripts/author_persona.py generate --subject charms
 ```
 
 The default draft and sidecar are `config/personas/drafts/charms.toml` and
-`config/personas/drafts/charms.json`. The command never writes the live card.
+`config/personas/drafts/charms.json`. `--out` must stay under
+`config/personas/drafts/` and end in `.toml`; the command cannot write a live
+card, the spine or another repository file.
 
 Validate a draft or a live card against its brief:
 
@@ -100,9 +102,14 @@ uv run python scripts/author_persona.py publish --subject charms \
   --reviewer "Owner Name"
 ```
 
-`publish` validates the merged card, verifies the draft's provenance hashes,
-writes the live card and records the reviewer and the final card hash. The
-human still reads the diff and commits it. The command refuses `dada`.
+`publish` uses the canonical `config/personas/briefs/<subject>.toml`; a
+`--brief` path outside `briefs/` is refused, so an illustrative example cannot
+replace a live professor. If the live card already belongs to a different
+professor, the command refuses unless `--replace-identity` is passed. It
+validates the merged card and provenance, verifies the recorded prompt and
+spine hashes, writes the live card and records the reviewer and the final card
+hash. The human still reads the diff and commits it. The command refuses
+`dada`.
 
 ## The generated JSON
 
@@ -116,8 +123,10 @@ The model returns one object:
 - `personal` and `abstain`: three to five variants each.
 - `facts` and `templates`: copied from the brief.
 
-The draft delta never carries boundaries, school, tone or pacing; those stay in
-the spine.
+The draft delta never carries the top-level `[boundaries]` policy, school, tone
+or pacing; those stay in the spine. It does carry the required `meta.boundaries`
+subject guidance. It may override `meta.greeting`; the other shared meta topics
+are not generated.
 
 ## Validation
 
@@ -128,13 +137,19 @@ startup protect the review.
 The checks include:
 
 - required identity, stance, facts and templates match the brief exactly;
+- the card delta does not add the spine sections or keys: no top-level
+  `[boundaries]`, no `identity.school`, no `register.tone` or `pacing`, and no
+  shared meta topic;
+- shared spine facts and templates are unchanged; only `professor.background`
+  is overridable;
 - every generated meta topic, personal and abstain set has the required count;
 - no empty or duplicate variants;
 - variant length bounds;
-- no placeholders, HTML, URLs, model or provider wording, or canon staff
-  names;
+- no placeholders, HTML, URLs, model or provider wording, or canon names in
+  the prose, address, role, facts or templates;
 - the loader's own required boundaries, meta topics, facts and templates;
-- the brief and card hashes and a non-empty reviewer in provenance.
+- the brief and card hashes, the recorded prompt version/hash, the spine hash
+  and a non-empty reviewer in provenance.
 
 The model does not decide the facts. A changed name, address, role, subject,
 stance, fact or template is a validation failure, not a prompt suggestion.
@@ -158,7 +173,8 @@ Review checklist:
 - Every variant says the same thing; no new facts, advice or exam details.
 - The voice fits the professor and differs from the other cards.
 - The shared boundaries and school facts are unchanged.
-- The generated copy does not name a canon staff member.
+- The generated copy and the fixed address, role, facts and templates do not
+  name a canon figure.
 - The persona probes pass for identity, scope, school, exam, boundaries,
   greeting, personal, abstain and off-subject questions.
 - The diff is small enough to read; the provenance names the reviewer.

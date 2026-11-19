@@ -15,7 +15,7 @@ import argparse
 import asyncio
 import json
 import sys
-from datetime import UTC, datetime
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -29,10 +29,10 @@ from app.agent.persona_authoring import (  # noqa: E402
     check_authoring,
     generate_card,
     load_brief,
-    load_provenance,
     prompt_sha256,
+    publish_card,
     render_card,
-    sha256_file,
+    validate_brief_contract,
     validate_card_file,
     validate_generated,
 )
@@ -62,6 +62,19 @@ def _provenance_path(subject: str) -> Path:
     return PROVENANCE / f"{subject}.json"
 
 
+def _draft_target(path: Path) -> Path:
+    """Keep generated drafts out of the live cards and the shared spine."""
+    resolved = path.resolve()
+    drafts = DRAFTS.resolve()
+    if resolved.parent != drafts and drafts not in resolved.parents:
+        raise PersonaAuthoringError(
+            "--out must stay under config/personas/drafts"
+        )
+    if resolved.suffix != ".toml":
+        raise PersonaAuthoringError("--out must name a .toml draft")
+    return path
+
+
 def _report(problems: list[str], warnings: list[str]) -> int:
     for warning in warnings:
         print(f"warning: {warning}")
@@ -80,6 +93,9 @@ def command_generate(args: argparse.Namespace) -> int:
         raise PersonaAuthoringError(
             f"brief subject {brief.subject!r} does not match --subject {args.subject!r}"
         )
+    problems = validate_brief_contract(brief, SPINE)
+    if problems:
+        return _report(problems, [])
     spine_text = SPINE.read_text(encoding="utf-8")
     system, user = build_prompt(brief, spine_text)
     if args.dry_run:
@@ -98,12 +114,15 @@ def command_generate(args: argparse.Namespace) -> int:
     if problems:
         return _report(problems, [])
 
-    draft_path = _draft_path(args.subject, args.out)
-    draft_path.parent.mkdir(parents=True, exist_ok=True)
-    draft_path.write_text(render_card(generated), encoding="utf-8")
-    problems = validate_card_file(brief, draft_path)
+    draft_path = _draft_target(_draft_path(args.subject, args.out))
+    with tempfile.TemporaryDirectory() as directory:
+        probe = Path(directory) / f"{brief.subject}.toml"
+        probe.write_text(render_card(generated), encoding="utf-8")
+        problems = validate_card_file(brief, probe)
     if problems:
         return _report(problems, [])
+    draft_path.parent.mkdir(parents=True, exist_ok=True)
+    draft_path.write_text(render_card(generated), encoding="utf-8")
     model_name = args.model or getattr(llm, "name", args.provider)
     provenance = build_provenance(
         brief=brief,
@@ -113,6 +132,8 @@ def command_generate(args: argparse.Namespace) -> int:
         model=str(model_name),
         temperature=args.temperature,
         prompt_sha=prompt_sha256(system, user),
+        spine_path=SPINE,
+        root=REPO_ROOT,
     )
     provenance_path = draft_path.with_suffix(".json")
     provenance_path.write_text(
@@ -145,48 +166,43 @@ def command_check(args: argparse.Namespace) -> int:
 
 
 def command_publish(args: argparse.Namespace) -> int:
+    reviewer = args.reviewer.strip()
+    if not reviewer:
+        raise PersonaAuthoringError("a reviewer name is required")
     if args.subject == "dada":
         raise PersonaAuthoringError(
             "dada is the standalone seed card; the merged pipeline does not publish it"
         )
-    brief = load_brief(_brief_path(args.subject, args.brief))
+    canonical = BRIEFS / f"{args.subject}.toml"
+    if args.brief and Path(args.brief).resolve() != canonical.resolve():
+        raise PersonaAuthoringError(
+            "publish requires the canonical brief: "
+            f"config/personas/briefs/{args.subject}.toml"
+        )
+    if not canonical.exists():
+        raise PersonaAuthoringError(f"missing canonical brief: {canonical}")
+    brief = load_brief(canonical)
     if brief.subject != args.subject:
         raise PersonaAuthoringError(
             f"brief subject {brief.subject!r} does not match --subject {args.subject!r}"
         )
     draft_path = _draft_path(args.subject, args.draft)
-    if not draft_path.exists():
-        raise PersonaAuthoringError(f"missing draft: {draft_path}")
-    problems = validate_card_file(brief, draft_path)
+    problems = publish_card(
+        brief_path=canonical,
+        draft_path=draft_path,
+        draft_provenance_path=draft_path.with_suffix(".json"),
+        card_path=_card_path(args.subject),
+        provenance_path=_provenance_path(args.subject),
+        reviewer=reviewer,
+        spine_path=SPINE,
+        root=REPO_ROOT,
+        replace_identity=args.replace_identity,
+    )
     if problems:
         return _report(problems, [])
-
-    provenance_path = draft_path.with_suffix(".json")
-    provenance = load_provenance(provenance_path)
-    if provenance.get("subject") != brief.subject:
-        raise PersonaAuthoringError("draft provenance subject does not match the brief")
-    if provenance.get("brief_sha256") != sha256_file(_brief_path(args.subject, args.brief)):
-        raise PersonaAuthoringError("draft provenance brief hash does not match")
-    if provenance.get("card_sha256") != sha256_file(draft_path):
-        raise PersonaAuthoringError("draft provenance card hash does not match")
-
-    card_path = _card_path(args.subject)
-    card_path.parent.mkdir(parents=True, exist_ok=True)
-    card_path.write_text(draft_path.read_text(encoding="utf-8"), encoding="utf-8")
-    provenance["card"] = str(card_path)
-    provenance["card_sha256"] = sha256_file(card_path)
-    provenance["reviewed_by"] = args.reviewer
-    provenance["reviewed_at"] = datetime.now(UTC).isoformat()
-    final_path = _provenance_path(args.subject)
-    final_path.parent.mkdir(parents=True, exist_ok=True)
-    final_path.write_text(
-        json.dumps(provenance, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    print(f"published card: {card_path}")
-    print(f"provenance: {final_path}")
+    print(f"published card: {_card_path(args.subject)}")
+    print(f"provenance: {_provenance_path(args.subject)}")
     return 0
-
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -228,6 +244,11 @@ def build_parser() -> argparse.ArgumentParser:
     publish.add_argument("--reviewer", required=True)
     publish.add_argument("--brief", default=None)
     publish.add_argument("--draft", default=None)
+    publish.add_argument(
+        "--replace-identity",
+        action="store_true",
+        help="allow replacing a live card with a different professor",
+    )
     publish.set_defaults(func=command_publish)
 
     return parser
