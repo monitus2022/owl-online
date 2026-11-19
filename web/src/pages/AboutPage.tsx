@@ -39,6 +39,19 @@ export function AboutPage() {
         </p>
       </section>
 
+      <section aria-labelledby="about-name">
+        <h2 id="about-name">Your name and this browser</h2>
+        <p>
+          The gate asks for the name the professors should use, and the ledger
+          keeps it in this browser under <code>owl.student.name</code>. It is
+          never written to a student record and travels only as
+          <code>student_name</code> with a chat request, where it is part of the
+          answer-cache scope. Clearing site data removes it, and the next page
+          load returns to the gate; Change the name in the footer removes it and
+          returns at once.
+        </p>
+      </section>
+
       <section aria-labelledby="about-letters">
         <h2 id="about-letters">The letters O to T</h2>
         <p>
