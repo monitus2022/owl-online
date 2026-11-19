@@ -248,6 +248,20 @@ def load_persona(path: Path = PERSONA_PATH) -> Persona:
     return _persona_from_data(data)
 
 
+def load_persona_merged(
+    path: Path, spine_path: Path = SPINE_PATH
+) -> Persona:
+    """Read a card delta over the shared spine and validate the merged card.
+
+    The authoring drafts use this path: a generated card carries only the
+    subject-specific sections, and the spine supplies the shared school,
+    boundaries and refusal copy.
+    """
+    spine = tomllib.loads(spine_path.read_text(encoding="utf-8"))
+    card = tomllib.loads(path.read_text(encoding="utf-8"))
+    return _persona_from_data(_deep_merge(spine, card))
+
+
 def _deep_merge(
     base: dict[str, object], override: dict[str, object]
 ) -> dict[str, object]:

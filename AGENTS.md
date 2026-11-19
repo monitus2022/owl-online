@@ -37,6 +37,7 @@ Run these from the repository root.
 - Frontend build: `npm --prefix web run build` (type-checks too; matches the Pages build and the `web` CI job)
 - Browser E2E: `npm --prefix e2e test` (after `npm ci --prefix web`, `npm ci --prefix e2e` and `npx --prefix e2e playwright install chromium`; runs the stub API and the Vite frontend)
 - Tests: `pytest`
+- Persona authoring check: `uv run python scripts/author_persona.py check` (runs in CI; the five live cards warn as legacy until briefed)
 - Eval harness tests: `pytest eval/`
 - Eval gate: `uv run python scripts/run_eval.py --check`
 - RAG eval: `uv run python scripts/run_rag_eval.py` (or `uv run python scripts/run_eval.py --rag`)
@@ -81,7 +82,7 @@ Layout:
 - `docs/architecture.md` - living diagrams (contracts, module deps, chat flows, exam-bank boundary); update when a contract, an adapter, or the top-level flow changes
 - `docs/workplan.md` - phase plan, ticket map, grading and memory decisions
 - `docs/routing-contracts.md` - contract and authority routing plan (#216): policy, closed facts and teaching; gates, citation types and the residual measurement bar
-- `docs/persona.md` and `docs/personas.md` - the DADA card and the four non-DADA cards; the TOML files under `config/` are the source of truth
+- `docs/persona.md` and `docs/personas.md` - the DADA card and the four non-DADA cards; the TOML files under `config/` are the source of truth; `docs/persona-authoring.md` is the brief-driven pipeline for new or revised cards
 - `docs/exams/` - bank blueprint, artifact rules, serving contract, published bank records, manifest snapshots and the DADA grading probe (#188-#193, #213)
 - `docs/lexicon-canon-index.md` - plan of record for the hp-lexicon canon index (#125-#128); update it when a parse rule, an artifact contract or the source policy changes
 - `docs/runs/` - one committed Markdown record per eval run, plus the template and index

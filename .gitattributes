@@ -1,0 +1,2 @@
+config/persona.toml text eol=lf
+config/personas/** text eol=lf
