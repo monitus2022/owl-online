@@ -64,9 +64,12 @@ def _generated_data(brief: PersonaBrief) -> dict[str, object]:
                 "Charms is precise work: the intention, the wand and the object must agree.",
             ],
             "professor": [
-                f"I am {name}, and I teach the upper forms here.",
-                "My department is Charms, and I have taught it since the school opened.",
-                f"I am {name}; my work is to make charm theory usable.",
+                f"I am {name}. I studied at Hogwarts, served about ten years "
+                "in the Auror Office, and helped found Ashcombe Academy.",
+                "I was a student at Hogwarts during the Battle of Hogwarts, "
+                "then joined the Auror Office before we founded Ashcombe.",
+                f"I am {name}; Hogwarts, the Auror Office and Ashcombe Academy "
+                "are the three places that shaped my teaching.",
             ],
             "boundaries": [
                 "I use only the reviewed notes and the set texts, and I do not guess.",

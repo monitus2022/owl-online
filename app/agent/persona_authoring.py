@@ -393,8 +393,10 @@ Rules:
   subject as theirs and leaves the other four departments to colleagues.
   subject says what the subject is: when the brief has a subject_definition
   fact, open with that definition, then the subject_scope; never who teaches
-  it. professor gives the professor's own history and every detail of the
-  brief's background, including any specialism. boundaries is
+  it, and never says who teaches it. professor gives the professor's own
+  history and every detail of the brief's background, including the Ministry
+  scheme, the specialism and the founding; no background detail may be
+  dropped. boundaries is
   this professor's door, and keeps the reviewed shapes with the subject name
   substituted: (1) "Ask me about <subject>, the set texts, or your own
   preparation. I will answer briefly if you ask about the wider world or about
@@ -449,9 +451,20 @@ async def generate_card(
     llm: Llm,
     *,
     spine_text: str,
+    feedback: list[str] | None = None,
 ) -> GeneratedPersona:
-    """Ask the pinned model for a draft and parse it."""
+    """Ask the pinned model for a draft and parse it.
+
+    `feedback` carries the problems from a rejected draft, so a retry can fix
+    the exact failures instead of sampling blind.
+    """
     system, user = build_prompt(brief, spine_text)
+    if feedback:
+        user += (
+            "\nThe previous draft failed these checks. Return the whole JSON "
+            "again and fix every one:\n"
+            + "\n".join(f"- {problem}" for problem in feedback)
+        )
     text = await llm.generate(system, user)
     return parse_generated(text)
 
@@ -475,6 +488,39 @@ def _variants_problems(where: str, values: list[str]) -> list[str]:
         if text in seen:
             problems.append(f"{where} repeats a variant")
         seen.add(text)
+    return problems
+
+
+_PROPER_NOUN = re.compile(r"\b[A-Z][a-z]{2,}\b")
+_SUBJECT_TEACHES = re.compile(r"\bI (?:teach|led|lead)\b", re.IGNORECASE)
+
+
+def _proper_nouns(text: str) -> set[str]:
+    """Distinctive names in a background line, minus the sentence's first word."""
+    words = text.split()
+    body = " ".join(words[1:]) if len(words) > 1 else ""
+    return {match.lower() for match in _PROPER_NOUN.findall(body)}
+
+
+def _background_problems(
+    brief: PersonaBrief, generated: GeneratedPersona
+) -> list[str]:
+    """Every background line's proper nouns must reach a professor answer.
+
+    The prose may rephrase anything, but a dropped Ministry scheme or Auror
+    Office is a lost fact, so the distinctive names are the contract.
+    """
+    joined = " ".join(generated.meta.get("professor", [])).lower()
+    problems: list[str] = []
+    for line in brief.background:
+        missing = sorted(
+            name for name in _proper_nouns(line) if name not in joined
+        )
+        if missing:
+            problems.append(
+                "meta.professor drops background details: "
+                + ", ".join(missing)
+            )
     return problems
 
 
@@ -505,6 +551,14 @@ def validate_generated(
         )
     problems.extend(_variants_problems("personal", generated.personal))
     problems.extend(_variants_problems("abstain", generated.abstain))
+    problems.extend(_background_problems(brief, generated))
+    if any(
+        _SUBJECT_TEACHES.search(variant)
+        for variant in generated.meta.get("subject", [])
+    ):
+        problems.append(
+            "meta.subject describes the subject, not who teaches it"
+        )
     return problems
 
 

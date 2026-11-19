@@ -119,8 +119,9 @@ The model returns one object:
 - `identity`: exactly `name`, `address`, `role`, `subject`, copied from the brief.
 - `register`: exactly `stance`, copied from the brief.
 - `meta`: exactly `identity`, `scope`, `subject`, `professor`, `boundaries` and
-  `greeting`. The first five carry three to five variants; `boundaries` keeps
-  exactly the three reviewed shapes and `greeting` is copied from the spine.
+  `greeting`. `identity`, `scope`, `subject` and `professor` carry three to
+  five variants; `boundaries` keeps exactly the three reviewed shapes and
+  `greeting` is copied from the spine.
   The shared exam, syllabus, grading, school and auror topics come from the
   spine.
 - `personal` and `abstain`: copied from the spine unchanged.

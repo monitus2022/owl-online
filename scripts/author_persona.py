@@ -109,9 +109,22 @@ def command_generate(args: argparse.Namespace) -> int:
         temperature=args.temperature,
         max_tokens=args.max_tokens,
     )
-    generated = asyncio.run(generate_card(brief, llm, spine_text=spine_text))
-    problems = validate_generated(brief, generated)
-    if problems:
+    async def draft() -> tuple[object, list[str]]:
+        feedback: list[str] | None = None
+        generated = None
+        problems: list[str] = []
+        for _ in range(3):
+            generated = await generate_card(
+                brief, llm, spine_text=spine_text, feedback=feedback
+            )
+            problems = validate_generated(brief, generated)
+            if not problems:
+                break
+            feedback = problems
+        return generated, problems
+
+    generated, problems = asyncio.run(draft())
+    if problems or generated is None:
         return _report(problems, [])
 
     draft_path = _draft_target(_draft_path(args.subject, args.out))
