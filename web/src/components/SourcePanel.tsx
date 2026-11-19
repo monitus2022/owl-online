@@ -2,7 +2,12 @@ import { useId, useRef, useState } from "react";
 import { getMaterial } from "../api/materials";
 import type { MaterialDetail } from "../api/materials";
 import { SUBJECTS } from "../data/subjects";
-import { bookLabel, rawSourceGroups, sourceChips } from "../data/sources";
+import {
+  bookLabel,
+  rawSourceGroups,
+  sourceChips,
+  stripChunkRefs,
+} from "../data/sources";
 
 // The sources row and the reviewed-note panel behind a material source.
 //
@@ -150,7 +155,12 @@ export function SourcePanel({
               <p className="material-meta">
                 {detail.topic_title} · reviewed note · pack {detail.pack_version}
               </p>
-              <p className="material-text">{detail.text}</p>
+              <p className="material-text">
+                {stripChunkRefs(
+                  detail.text,
+                  detail.source_refs.map((ref) => ref.chunk_id),
+                )}
+              </p>
               {detail.source_refs.length > 0 && (
                 <p className="material-refs">
                   Sources:{" "}

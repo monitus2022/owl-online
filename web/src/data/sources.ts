@@ -50,6 +50,38 @@ export function humanizeMaterialId(id: string): string {
     .join(" · ");
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// The authored pack prose carries inline grounding refs such as
+// "[b3-c07-0041]". The note panel already lists each ref as Book/Chapter plus
+// the exact chunk id, so the reading surface drops the inline copies and
+// leaves the provenance line intact. Only the material's own refs are
+// removed, so an unrelated bracketed token survives.
+export function stripChunkRefs(text: string, ids: string[]): string {
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (unique.length === 0) return text;
+  const union = unique.map(escapeRegExp).join("|");
+  // A ref glued to the next word keeps the space before it; a ref that stands
+  // as its own token takes the space with it, so "most [id], and" reads
+  // "most, and" rather than "most , and".
+  const glued = new RegExp(`\\[(?:${union})\\](?=\\p{L})`, "giu");
+  const standing = new RegExp(`\\s*\\[(?:${union})\\]`, "giu");
+  const stripped = text.replace(glued, "").replace(standing, "");
+  if (stripped === text) return text;
+  // Adjacent refs can leave a comma in front of another punctuation mark.
+  // Only the comma/semicolon artifact is collapsed, so a legitimate colon or
+  // ellipsis elsewhere in the note is left alone.
+  let cleaned = stripped;
+  for (let pass = 0; pass < 4; pass += 1) {
+    const next = cleaned.replace(/[,;]\s*(?=\.(?!\.)|[,;:!?])/g, "");
+    if (next === cleaned) break;
+    cleaned = next;
+  }
+  return cleaned.replace(/[ \t]{2,}/g, " ").trim();
+}
+
 export function bookLabel(book: number | string, chapter: number | string): string {
   return `Book ${Number(book)}, Chapter ${Number(chapter)}`;
 }
