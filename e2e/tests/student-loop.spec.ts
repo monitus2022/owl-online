@@ -87,6 +87,21 @@ test("a failed reviewed note says so and offers a retry", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
 });
 
+test("the dev evidence inspector shows the retrieved evidence", async ({ page }) => {
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByText("A Boggart is a shape-shifter")).toBeVisible();
+
+  const inspector = page.locator(".evidence-inspector");
+  await expect(inspector).toBeVisible();
+  await inspector.getByText(/Evidence inspector/).click();
+  await expect(inspector).toContainText("prompt");
+  await expect(inspector).toContainText("attempts");
+  await expect(inspector).toContainText("grounded");
+});
+
+
 test("the reviewed note fits a narrow screen", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/venue/defence-against-the-dark-arts");

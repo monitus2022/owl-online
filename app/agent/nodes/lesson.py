@@ -80,4 +80,5 @@ async def lesson_node(
         "abstain_reason": result.abstain_reason,
         "retry_reason": result.retry_reason,
         "prompt_chars": result.prompt_chars,
+        "prompt_sha256": result.prompt_sha256,
     }

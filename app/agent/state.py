@@ -59,3 +59,4 @@ class AgentState(TypedDict, total=False):
     retry_reason: str | None
     llm_model: str
     prompt_chars: int
+    prompt_sha256: str

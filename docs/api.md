@@ -663,6 +663,20 @@ uses the `detail` shape. Every response carries `X-Request-ID`.
 `/v1/chat` has a deadline (`OWL_ASK_TIMEOUT_S`, default 30s). `/v1/chat/stream` is not
 bounded, because a legitimate stream can outlive the deadline.
 
+## Operator evidence (OWL_DEV_EVIDENCE)
+
+Off by default and off in deployment. When `OWL_DEV_EVIDENCE=true`, the
+`/v1/chat` response and the final `/v1/chat/stream` event include an
+`evidence` object: the retrieved chunks with id, book, chapter, score and
+text; the prompt fingerprint and length; attempts and model calls; the
+abstention and retry reasons; the lesson scope and selected materials.
+
+The chunk text is copyrighted corpus text. The schema labels the field
+operator-only, the student UI never requests or renders it, and the Vite dev
+build shows it only in a collapsed inspector. The production bundle is checked
+in CI to contain no inspector. Leave the flag off everywhere except a local
+review run.
+
 ## Session, CORS and limits
 
 - The API issues a signed `owl_session` cookie: HttpOnly, `SameSite=None` when

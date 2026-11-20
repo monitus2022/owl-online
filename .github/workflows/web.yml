@@ -45,3 +45,10 @@ jobs:
 
       - name: Type check and build
         run: npm run build
+
+      - name: Assert the operator evidence inspector is compiled out
+        run: |
+          if grep -r "Evidence inspector" dist; then
+            echo "operator-only evidence inspector leaked into the production bundle"
+            exit 1
+          fi

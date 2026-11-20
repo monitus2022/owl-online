@@ -78,6 +78,8 @@ async def answer_node(
         "abstained": result.abstained,
         "attempts": result.attempts,
         "model_calls": result.model_calls,
+        "prompt_chars": result.prompt_chars,
+        "prompt_sha256": result.prompt_sha256,
         "multi_book": result.multi_book,
         "abstain_reason": result.abstain_reason,
         "retry_reason": result.retry_reason,

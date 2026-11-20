@@ -863,6 +863,9 @@ async def ask_lesson(
         retry_reason=retry_reason,
         model_calls=attempt,
         prompt_chars=len(final_system) + len(prompt),
+        prompt_sha256=hashlib.sha256(
+            f"{final_system}\n{prompt}".encode()
+        ).hexdigest()[:16],
         selected_material_ids=selected_ids,
         selection_scores=selection_scores,
         uncovered_terms=uncovered_list,
