@@ -636,7 +636,7 @@ async def test_ask_lesson_addresses_a_named_student_and_leaves_the_unnamed_promp
         student_name="Ada Lovelace",
     )
     assert named.systems
-    assert "called Ada Lovelace" in named.systems[0]
+    assert "called [Ada Lovelace]" in named.systems[0]
 
     unnamed = StaticLlm(draft)
     await ask_lesson(

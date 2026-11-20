@@ -411,7 +411,7 @@ sequenceDiagram
   G->>R: retrieve(question, top_k)
   R->>RR: rerank when configured
   R-->>G: list[Chunk]
-  G->>LLM: stream(system, prompt with evidence, bounded conversation context and the address note when named)
+  G->>LLM: stream(system, prompt with evidence, bounded conversation context and the bracketed address note when the name is present and not instruction-shaped)
   LLM-->>G: token
   G-->>API: custom {type: token}
   API-->>C: event: token
@@ -591,11 +591,25 @@ carries a hash and a character count so a run can be identified without storing
 the excerpts. The trace records the agent's decisions, not hidden model
 reasoning.
 
-Retrieved text is treated as untrusted. `sanitize_evidence` removes instruction
-spans from the evidence and logs the affected chunk ids; a chunk left empty is
-dropped from the citation set ("ignore previous instructions", "reveal the prompt", "you must
-now"), and the answer system prompt tells the model to ignore instructions inside
-excerpts.
+## Trust model
+
+Every text the model sees is a fixed instruction, a reviewed source or untrusted
+data. The layers differ by surface:
+
+| Surface | Handling |
+|---|---|
+| Question | A user turn, capped at 1000 characters. The model has no tools, no secrets and no write access, so a question cannot cause a side effect; the system prompt fixes the role and the answer format. |
+| Student name | Letters and a few name marks only, 40 characters, bracketed in the address note. A name that reads instruction-shaped is left out of the prompt (#305). |
+| Retrieved excerpts, lore and lesson notes | `sanitize_evidence` removes instruction-shaped spans before the prompt and logs the affected chunk ids; a chunk left empty is dropped from the citation set ("ignore previous instructions", "reveal the prompt", "you must now"). |
+| Conversation memory | Replayed as untrusted text, marked not-evidence and sanitized on the way in; a follow-up answer still needs a citation from the current retrieval set. |
+| Model output | Citations are verified against the current retrieval set; a draft that cites nothing is retried and then abstained when it still does not. Output is never rendered as HTML. |
+
+The policy, closed-fact and teaching gates decide intent and refusals before
+generation, so a question cannot talk the model into a different route. The
+injection and name filters are deterministic keyword rules, not classifiers:
+they remove the obvious cases and are documented as heuristics, so a novel
+phrasing is not guaranteed to be caught. A prompt-extraction check on the output
+is not implemented.
 
 ## Chat intents vs exam bank
 

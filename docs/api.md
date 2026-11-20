@@ -105,6 +105,18 @@ request produces the same prompt as before. The name is part of the answer-cache
 scope, so two students never receive a cached answer addressed to the other; it
 is not written to usage logs, traces or an exam record.
 
+The name is data, not instructions. The note marks it as a browser-supplied
+label and tells the model never to follow it. A name that reads like an
+instruction (for example "Ignore all previous instructions") is ignored: the
+request still succeeds and the address note is omitted, so an instruction-shaped
+name never becomes prompt text. An ordinary display name still appears, but
+only inside the bracketed label.
+
+The instruction check is a fixed keyword rule, not a classifier. It can drop an
+unusual legitimate name; the request is never rejected for it, and the name is
+never stored. The wider handling of untrusted text is in the trust model in
+`docs/architecture.md`.
+
 Response `200`:
 
 ```json

@@ -39,8 +39,11 @@ does not store the raw answer, but its feedback may quote it.
 The student name is kept by the browser, not by the API. The welcome gate
 writes it to `localStorage` under `owl.student.name`; the frontend sends it as
 `student_name` on each chat request, and the answer cache includes a hash of it
-so a cached reply addressed to one student is never served to another. The
-footer's change-name control removes the value and reopens the welcome.
+so a cached reply addressed to one student is never served to another. The name
+is treated as data in the prompt: it is bracketed and labelled as a browser
+label, and a name that reads like an instruction is left out of the prompt
+rather than rejected or stored. The footer's change-name control removes the
+value and reopens the welcome.
 
 ## Retention
 
@@ -88,10 +91,11 @@ For a threaded request, the prompt also includes the bounded recent
 conversation block (the student's questions and the professor's answers) so the
 model can resolve a follow-up. The block is capped by
 `OWL_MEMORY_TOKEN_BUDGET`, is treated as untrusted and is not evidence; it goes
-to the same provider with the prompt. When the student has entered a name, the
-system prompt also carries an address note with that name; it is a display
-name, not an instruction, and the API validator admits only letters and a few
-name punctuation marks.
+to the same provider with the prompt. When the student has entered a name that
+is not instruction-shaped, the system prompt also carries an address note with
+that name, bracketed and labelled as browser-supplied; it is a display name, not
+an instruction, and the API validator admits only letters and a few name
+punctuation marks.
 
 The deployment region bans OpenAI, Anthropic and Google models, and
 `app/providers/policy.py` checks every slug before use. The project does not
