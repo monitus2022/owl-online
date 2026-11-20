@@ -133,6 +133,7 @@ jobs:
             -e OWL_PERSONA="__OWL_PERSONA__" \
             -e OWL_PERSONA_SUBJECT="__OWL_PERSONA_SUBJECT__" \
             -e OWL_CORS_ORIGINS="__OWL_CORS_ORIGINS__" \
+            -e OWL_DEV_EVIDENCE=false \
             -e OWL_EXAM_STORE_PATH="__OWL_EXAM_STORE_PATH__" \
             -e OWL_EXAM_JUDGE_CACHE_PATH="__OWL_EXAM_JUDGE_CACHE_PATH__" \
             -v __DATA_DIR__:/data \

@@ -123,7 +123,10 @@ class EvidenceReport(BaseModel):
     """
 
     chunks: list[EvidenceChunk] = Field(default_factory=list)
-    prompt_sha256: str = ""
+    prompt_sha256: str = Field(
+        default="",
+        description="First 16 hex chars of the prompt hash; matches the trace prompt_sha.",
+    )
     prompt_chars: int = 0
     attempts: int = 0
     model_calls: int = 0

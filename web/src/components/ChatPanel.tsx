@@ -205,7 +205,9 @@ export function ChatPanel({
             scope: data.scope ?? undefined,
             abstained: data.abstained,
             mode: data.mode ?? draft.mode,
-            evidence: data.evidence ?? undefined,
+            evidence: import.meta.env.DEV
+              ? (data.evidence ?? undefined)
+              : undefined,
           }));
         } else if (streamEvent.name === "error") {
           const data = streamEvent.data as { detail: string };

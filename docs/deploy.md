@@ -178,6 +178,7 @@ control the non-secret runtime toggles. The workflow passes them with `-e`, and
 | `OWL_CORS_ORIGINS` | `https://owl.monitus.org` | comma-separated browser origins allowed to call the API; the Pages preview regex is separate |
 | `OWL_EXAM_STORE_PATH` | `/data/exams/exams.db` | the imported bank plus persisted attempts; must be absolute and writable |
 | `OWL_EXAM_JUDGE_CACHE_PATH` | `/data/exam_judge_cache.jsonl` | judge-response cache; must be absolute and writable, and survives a redeploy on the volume |
+| `OWL_DEV_EVIDENCE` | `false` | operator evidence inspector for local reviews; the workflow hard-codes it off because it returns copyrighted chunk text |
 
 Short-term chat memory is on by default (`OWL_MEMORY_ENABLED=true`) and only
 used when a request sends a `thread_id`. `OWL_MEMORY_WINDOW` (default 6) and

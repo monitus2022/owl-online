@@ -649,6 +649,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             subject or app_settings.persona_subject
         ) in PERSONAS
 
+    # exclude_none keeps the operator evidence field out of the public payload;
+    # it also drops any future nullable AskResponse field, so add those
+    # deliberately.
     @app.post(
         "/v1/chat",
         response_model=AskResponse,
@@ -933,25 +936,28 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     if cached.abstained:
                         yield {"event": "reset", "data": json.dumps({})}
                     typed, errors = _typed_and_errors(cached, mode="answer")
+                    cached_payload: dict[str, object] = {
+                        "answer": cached.answer,
+                        "citations": cached.citations,
+                        "lore_citations": cached.lore_citations,
+                        "material_citations": cached.material_citations,
+                        "typed_citations": typed,
+                        "citation_errors": errors,
+                        "scope": cached.scope,
+                        "abstained": cached.abstained,
+                        "needs_input": False,
+                        "attempts": cached.attempts,
+                        "mode": "answer",
+                        "thread_id": "",
+                    }
+                    cached_evidence = evidence_payload(
+                        cached, enabled=app_settings.dev_evidence
+                    )
+                    if cached_evidence is not None:
+                        cached_payload["evidence"] = cached_evidence.model_dump()
                     yield {
                         "event": "final",
-                        "data": json.dumps(
-                            {
-                                "answer": cached.answer,
-                                "citations": cached.citations,
-                                "lore_citations": cached.lore_citations,
-                                "material_citations": cached.material_citations,
-                                "typed_citations": typed,
-                                "citation_errors": errors,
-                                "scope": cached.scope,
-                                "abstained": cached.abstained,
-                                "needs_input": False,
-                                "attempts": cached.attempts,
-                                "mode": "answer",
-                                "thread_id": "",
-                            },
-                            ensure_ascii=False,
-                        ),
+                        "data": json.dumps(cached_payload, ensure_ascii=False),
                     }
                 finally:
                     limiter.release(decision.token)
@@ -1026,6 +1032,13 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 scope=final.get("scope"),
                 prompt_chars=int(final.get("prompt_chars") or 0),
                 prompt_sha256=str(final.get("prompt_sha256") or ""),
+                prompt_length=int(final.get("prompt_length") or 0),
+                retry_reason=final.get("retry_reason"),
+                selected_material_ids=list(
+                    final.get("selected_material_ids", [])
+                ),
+                selection_scores=dict(final.get("selection_scores", {})),
+                uncovered_terms=list(final.get("uncovered_terms", [])),
                 lore_chars=int(final.get("lore_chars") or 0),
                 abstained=bool(final.get("abstained", False)),
                 chunks=list(final.get("chunks", [])),

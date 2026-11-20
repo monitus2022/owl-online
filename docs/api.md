@@ -206,7 +206,7 @@ The response is `text/event-stream`. Events:
 | `mode` | `{"mode": "answer"}` | after the router; can be `policy`, `fact`, `clarify`, `abstain`, `answer`, `practice`, `feedback`, `meta`, `personal` or `lesson` |
 | `token` | `{"text": "..."}` | each streamed token |
 | `reset` | `{}` or `{"reason": "retry"}` / `{"reason": "fallback"}` | clear the draft before a retry, a fallback, an error, or an abstained final |
-| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode`, `thread_id` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode`, `thread_id`, `evidence` (operator-only, only when `OWL_DEV_EVIDENCE=true`) | once, authoritative |
 | `error` | `{"detail": "..."}` | terminal; always preceded by `reset` |
 
 `final` is the authoritative payload. A client should replace the draft on
@@ -672,10 +672,11 @@ text; the prompt fingerprint and length; attempts and model calls; the
 abstention and retry reasons; the lesson scope and selected materials.
 
 The chunk text is copyrighted corpus text. The schema labels the field
-operator-only, the student UI never requests or renders it, and the Vite dev
-build shows it only in a collapsed inspector. The production bundle is checked
-in CI to contain no inspector. Leave the flag off everywhere except a local
-review run.
+operator-only, the Vite dev build shows it only in a collapsed inspector, and
+the production bundle is checked in CI to contain no inspector. The server
+attaches the field to the shared stream when the flag is on, so the client
+stores it only in a development build. The deployment workflow hard-codes the
+flag off. Leave it off everywhere except a local review run.
 
 ## Session, CORS and limits
 

@@ -48,7 +48,8 @@ jobs:
 
       - name: Assert the operator evidence inspector is compiled out
         run: |
-          if grep -r "Evidence inspector" dist; then
+          test -d dist
+          if grep -rE "Evidence inspector|evidence-inspector" dist/assets/*.js; then
             echo "operator-only evidence inspector leaked into the production bundle"
             exit 1
           fi

@@ -253,7 +253,8 @@ Chat answers keep the evidence legible: inline citation brackets are stripped,
 and the `Sources` row shows material or chapter chips, with the exact ids under
 `Source details`. A material chip opens the reviewed
 pack note from the material route; book chips never open novel text (#290,
-#294).
+#294). A local review run with `OWL_DEV_EVIDENCE` can show retrieved chunk text
+in the operator inspector; the flag is off in deployment (#295).
 
 Two interfaces keep the boundary between the UI and the services:
 
@@ -331,7 +332,7 @@ sequenceDiagram
       A-->>API: AskResult(abstain, abstain_reason, attempts)
     end
   end
-  API-->>C: AskResponse {answer, citations, lore_citations, material_citations, typed_citations, citation_errors, abstained}
+  API-->>C: AskResponse {answer, citations, lore_citations, material_citations, typed_citations, citation_errors, abstained, evidence?}
 ```
 
 One deadline covers the whole request: `OWL_ASK_TIMEOUT_S` (default 30 s) wraps
@@ -962,8 +963,8 @@ generate) for the per-call detail.
 |---|---|---|---|
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
-| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars, selected_material_ids, selection_scores, uncovered_terms, multi_book |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, student name, standalone question, resolved entity, messages, summary, conversation context, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, multi-book flag, subject, persona flag, top-k, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars |
+| `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars, prompt_sha256, prompt_length, selected_material_ids, selection_scores, uncovered_terms, multi_book |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, student name, standalone question, resolved entity, messages, summary, conversation context, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, multi-book flag, subject, persona flag, top-k, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars, prompt_sha256, prompt_length |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

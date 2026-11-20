@@ -6,7 +6,6 @@ loaded lore entry. No evidence in either space, a weak top hit with no lore
 match, or an uncited answer means abstain rather than guess.
 """
 
-import hashlib
 import logging
 import re
 import time
@@ -193,9 +192,11 @@ class AskResult:
     needs_input: bool = False
     # The experimental multi-book path does not consume thread context.
     multi_book: bool = False
-    # First-attempt prompt fingerprint for the operator evidence inspector
-    # (#295). Empty when the path does not build a prompt.
+    # Prompt fingerprint for the operator evidence inspector (#295): the
+    # served composition on the lesson path, the first composition on the
+    # corpus path. Empty when the path does not build a prompt.
     prompt_sha256: str = ""
+    prompt_length: int = 0
 
 
 def retrieval_floor(
@@ -488,9 +489,7 @@ async def ask(
         lore_entries,
         conversation_context=conversation_context,
     )
-    prompt_sha256 = hashlib.sha256(
-        f"{system}\n{prompt}".encode()
-    ).hexdigest()[:16]
+    fingerprint = prompt_fingerprint(system, prompt)
     if on_stage is not None:
         on_stage("generate")
     generate_start = time.perf_counter()
@@ -568,8 +567,8 @@ async def ask(
         retry_reason=retry_reason,
         model_calls=attempt,
         lore_chars=sum(len(entry.body) for entry in lore_entries),
-        prompt_chars=len(system) + len(prompt),
-        prompt_sha256=prompt_sha256,
+        prompt_sha256=str(fingerprint["prompt_sha"]),
+        prompt_length=int(fingerprint["prompt_chars"]),
     )
     if tracer is not None:
         tracer.emit(

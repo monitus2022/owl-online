@@ -61,11 +61,12 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   await expect(note.getByText(/Book 1, Chapter 1/)).toBeVisible();
   await expect(note.getByText("b1-c01-0000", { exact: true })).toBeVisible();
   await page.getByText("Source details").click();
+  const details = page.locator(".citation-details");
   await expect(
-    page.getByText("dada-test-material", { exact: true }),
+    details.getByText("dada-test-material", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("lesson:b1-c01-0000#b1-c01-0000", { exact: true }),
+    details.getByText("lesson:b1-c01-0000#b1-c01-0000", { exact: true }),
   ).toBeVisible();
 });
 
@@ -99,6 +100,8 @@ test("the dev evidence inspector shows the retrieved evidence", async ({ page })
   await expect(inspector).toContainText("prompt");
   await expect(inspector).toContainText("attempts");
   await expect(inspector).toContainText("grounded");
+  await expect(inspector).toContainText(/[0-9a-f]{16}/);
+  await expect(inspector).toContainText("dada-test-material");
 });
 
 

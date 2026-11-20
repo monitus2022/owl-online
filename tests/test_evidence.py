@@ -4,9 +4,11 @@ import json
 
 from fastapi.testclient import TestClient
 
+from app.api.evidence import evidence_payload
 from app.api.runtime import Runtime
 from app.config import Settings
 from app.main import create_app
+from app.pipeline.generate import AskResult
 from app.schemas import Chunk, ChunkMetadata
 
 _TWO_LEG = 2.0 / 61
@@ -64,7 +66,7 @@ def _final(client: TestClient) -> dict[str, object]:
 
 
 def test_dev_evidence_is_off_by_default() -> None:
-    assert Settings().dev_evidence is False
+    assert Settings.model_fields["dev_evidence"].default is False
 
 
 def test_chat_response_omits_evidence_when_disabled() -> None:
@@ -99,4 +101,31 @@ def test_stream_carries_evidence_when_enabled() -> None:
     with _client(True) as client:
         evidence = _final(client)["evidence"]
     assert evidence["chunks"][0]["text"] == "Rowan trims the wick."
-    assert evidence["prompt_sha256"]
+    assert len(evidence["prompt_sha256"]) == 16
+
+
+def test_stream_cache_hit_keeps_evidence() -> None:
+    with _client(True) as client:
+        first = _final(client)
+        second = _final(client)
+    assert first["evidence"]["chunks"]
+    assert second["evidence"]["chunks"]
+
+
+def test_report_carries_lesson_diagnostics_and_retry_reason() -> None:
+    result = AskResult(
+        answer="",
+        selected_material_ids=["dada-test-material"],
+        selection_scores={"dada-test-material": 0.7},
+        uncovered_terms=["wrist angle"],
+        retry_reason="leak",
+        prompt_sha256="a" * 16,
+        prompt_length=42,
+    )
+    report = evidence_payload(result, enabled=True)
+    assert report is not None
+    assert report.selected_material_ids == ["dada-test-material"]
+    assert report.selection_scores == {"dada-test-material": 0.7}
+    assert report.uncovered_terms == ["wrist angle"]
+    assert report.retry_reason == "leak"
+    assert report.prompt_chars == 42

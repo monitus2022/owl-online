@@ -60,3 +60,7 @@ class AgentState(TypedDict, total=False):
     llm_model: str
     prompt_chars: int
     prompt_sha256: str
+    prompt_length: int
+    selected_material_ids: list[str]
+    selection_scores: dict[str, float]
+    uncovered_terms: list[str]

@@ -9,16 +9,11 @@ is documented as operator-only, and the student UI never requests it.
 from __future__ import annotations
 
 from app.api.schemas import EvidenceChunk, EvidenceReport
-from app.config import settings
 from app.pipeline.generate import AskResult
 
 
-def evidence_payload(
-    result: AskResult, *, enabled: bool | None = None
-) -> EvidenceReport | None:
+def evidence_payload(result: AskResult, *, enabled: bool) -> EvidenceReport | None:
     """The report for one result, or None when the operator flag is off."""
-    if enabled is None:
-        enabled = settings.dev_evidence
     if not enabled:
         return None
     return EvidenceReport(
@@ -33,7 +28,7 @@ def evidence_payload(
             for chunk in result.chunks
         ],
         prompt_sha256=result.prompt_sha256,
-        prompt_chars=result.prompt_chars,
+        prompt_chars=result.prompt_length,
         attempts=result.attempts,
         model_calls=result.model_calls,
         abstained=result.abstained,
