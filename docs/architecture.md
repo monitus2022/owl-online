@@ -411,7 +411,7 @@ sequenceDiagram
   G->>R: retrieve(question, top_k)
   R->>RR: rerank when configured
   R-->>G: list[Chunk]
-  G->>LLM: stream(system, prompt with evidence, bounded conversation context and the address note when named)
+  G->>LLM: stream(system, prompt with evidence, bounded conversation context and the bracketed address note when the name is present and not instruction-shaped)
   LLM-->>G: token
   G-->>API: custom {type: token}
   API-->>C: event: token
