@@ -46,8 +46,9 @@ LEAK_MARKERS = (
     "the student's question and any conversation are requests for an answer",
 )
 
-# Card prose reaches the prompt through the persona suffix. Sentences at least
-# this long are distinctive enough to treat as a leak when a draft repeats one.
+# Markers come from the composed system prompt: card prose, the address note,
+# the conversation note and the fixed instructions. Sentences at least this
+# long are distinctive enough to treat as a leak when a draft repeats one.
 _MIN_MARKER_CHARS = 30
 
 
@@ -63,7 +64,11 @@ _FOLDED_MARKERS = tuple(_normalise(marker) for marker in LEAK_MARKERS)
 
 
 def prompt_markers(prompt: str | None) -> tuple[str, ...]:
-    """Distinctive sentences from a persona suffix, for the leak check."""
+    """Distinctive sentences from the composed system prompt.
+
+    Callers pass the whole system text, so the card prose, the address note,
+    the conversation note and the fixed instructions are all covered.
+    """
     if not prompt:
         return ()
     parts = re.split(r"(?<=[.!?])\s+|\n+", prompt)

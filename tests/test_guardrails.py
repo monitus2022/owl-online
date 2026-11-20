@@ -194,6 +194,26 @@ def test_evidence_sanitizer_leaves_classroom_prose_alone() -> None:
         assert line in cleaned
 
 
+async def test_the_address_note_is_a_leak_marker() -> None:
+    note = "The student you are speaking with is called [Ada]. [b1-c01-0000]"
+    llm = _Scripted([note, note])
+    result = await ask(
+        "Who trims the wick?",
+        retriever=_Retriever(),
+        llm=llm,
+        student_name="Ada",
+    )
+    assert result.abstained
+    assert result.retry_reason == "leak"
+
+
+def test_composed_prompt_markers_leave_ordinary_answers_alone() -> None:
+    markers = prompt_markers(SYSTEM_PROMPT)
+    assert markers
+    assert not leaks_instructions("Use only those excerpts.", markers)
+    assert not leaks_instructions(ABSTAIN_MESSAGE, markers)
+
+
 async def test_a_persona_card_sentence_is_caught_on_the_ask_path() -> None:
     from app.agent.persona import PERSONA
 

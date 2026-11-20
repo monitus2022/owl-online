@@ -666,6 +666,22 @@ async def test_ask_lesson_abstains_on_a_repeated_leak():
 
 
 @pytest.mark.asyncio
+async def test_ask_lesson_abstains_on_a_boilerplate_leak():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    leak = (
+        "Every paragraph that makes a factual claim must cite the note or "
+        "excerpt it comes from. [mat:dada-dark-creatures-boggarts-nature]."
+    )
+    llm = ScriptedLlm([leak, leak])
+    result = await ask_lesson(
+        "How does a boggart work?", selector=selector, subject="dada", llm=llm
+    )
+    assert result.abstained
+    assert result.abstain_reason == "refused"
+    assert result.material_citations == []
+
+
+@pytest.mark.asyncio
 async def test_ask_lesson_abstains_on_a_persona_card_leak():
     selector = await LessonSelector.build(_store(), KeywordEmbedder())
     leak = (

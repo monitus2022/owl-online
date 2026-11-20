@@ -271,7 +271,6 @@ def ground_answer(
 ) -> AskResult:
     """Accept only citations that name a retrieved chunk or a loaded lore entry."""
     if leaks_instructions(answer, extra_markers):
-        logger.warning("abstain (leak): draft repeated system instructions")
         return AskResult(
             ABSTAIN_MESSAGE,
             abstained=True,
@@ -510,6 +509,10 @@ async def ask(
             extra_markers=markers,
         )
         verdict = verify_draft(draft, result, extra_markers=markers)
+        if verdict.reason == "leak":
+            logger.warning(
+                "leak: draft repeated system instructions (attempt %d)", attempt
+            )
         if tracer is not None:
             tracer.emit(
                 "verify",
