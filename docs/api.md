@@ -114,7 +114,8 @@ only inside the bracketed label.
 
 The instruction check is a fixed keyword rule, not a classifier. It can drop an
 unusual legitimate name; the request is never rejected for it, and the name is
-never stored.
+never stored. The wider handling of untrusted text is in the trust model in
+`docs/architecture.md`.
 
 Response `200`:
 
