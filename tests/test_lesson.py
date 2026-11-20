@@ -760,7 +760,7 @@ async def test_ask_lesson_traces_selection_and_scope(tmp_path):
     sink = TraceSink(trace_path)
     token = start_trace("lesson-test", sink)
     try:
-        await ask_lesson(
+        result = await ask_lesson(
             "How does a boggart work?", selector=selector, subject="dada", llm=llm
         )
     finally:
@@ -784,6 +784,9 @@ async def test_ask_lesson_traces_selection_and_scope(tmp_path):
     assert result_span["attempts"] == 1
     assert result_span["uncited_paragraphs"] == 0
     assert result_span["fallback"] is False
+    assert result_span["prompt_sha"] == result.prompt_sha256
+    assert result_span["prompt_chars"] == result.prompt_length
+    assert result.prompt_sha256
 
 
 @pytest.mark.asyncio

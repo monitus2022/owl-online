@@ -676,6 +676,8 @@ async def ask_lesson(
         if tracer is not None:
             tracer.emit(
                 "lesson_result",
+                prompt_sha=result.prompt_sha256,
+                prompt_chars=result.prompt_length,
                 abstained=result.abstained,
                 abstain_reason=result.abstain_reason,
                 retry_reason=result.retry_reason,
