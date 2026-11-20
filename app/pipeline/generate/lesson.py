@@ -770,6 +770,11 @@ async def ask_lesson(
         result = ground_lesson_answer(draft, materials, chunks, scope=scope)
         leak = leaks_instructions(draft, markers)
         if leak:
+            logger.warning(
+                "leak: draft repeated system instructions "
+                "(intent=lesson, attempt %d)",
+                attempt,
+            )
             result = AskResult(
                 ABSTAIN_MESSAGE,
                 abstained=True,
