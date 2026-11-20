@@ -178,7 +178,6 @@ control the non-secret runtime toggles. The workflow passes them with `-e`, and
 | `OWL_CORS_ORIGINS` | `https://owl.monitus.org` | comma-separated browser origins allowed to call the API; the Pages preview regex is separate |
 | `OWL_EXAM_STORE_PATH` | `/data/exams/exams.db` | the imported bank plus persisted attempts; must be absolute and writable |
 | `OWL_EXAM_JUDGE_CACHE_PATH` | `/data/exam_judge_cache.jsonl` | judge-response cache; must be absolute and writable, and survives a redeploy on the volume |
-| `OWL_DEV_EVIDENCE` | `false` | operator evidence inspector for local reviews; the workflow hard-codes it off because it returns copyrighted chunk text |
 
 Short-term chat memory is on by default (`OWL_MEMORY_ENABLED=true`) and only
 used when a request sends a `thread_id`. `OWL_MEMORY_WINDOW` (default 6) and
@@ -198,7 +197,10 @@ container with the variables.
 
 The workflow always injects these eight keys (the repository variable or its
 default), so they override `owl.env` even when no repository variable is set.
-The file entries are only for manual `docker run` or Compose.
+It also injects one fixed key that is not a repository variable:
+`OWL_DEV_EVIDENCE=false`. That flag returns copyrighted chunk text when on, so
+the workflow hard-codes it off; a repository variable with that name has no
+effect. The file entries are only for manual `docker run` or Compose.
 `OWL_LESSON_MODE` also needs a valid published pack for the request subject;
 the default API subject is `OWL_PERSONA_SUBJECT` (default `dada`).
 

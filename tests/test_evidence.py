@@ -39,10 +39,36 @@ class _Llm:
         yield "Rowan trims the wick [b1-c01-0000]."
 
 
-def _client(dev_evidence: bool) -> TestClient:
+class _RetryLlm:
+    """First draft uncited, second draft grounded, so ask() retries once."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def _next(self) -> str:
+        self.calls += 1
+        return (
+            "Rowan trims the wick."
+            if self.calls == 1
+            else "Rowan trims the wick [b1-c01-0000]."
+        )
+
+    async def generate(self, system: str, prompt: str, *, context=None) -> str:
+        return self._next()
+
+    def stream(self, system: str, prompt: str, *, context=None):
+        answer = self._next()
+
+        async def pieces():
+            yield answer
+
+        return pieces()
+
+
+def _client(dev_evidence: bool, llm: object | None = None) -> TestClient:
     app = create_app(
         app_settings=Settings(dev_evidence=dev_evidence),
-        runtime=Runtime(retriever=_Retriever(), llm=_Llm()),
+        runtime=Runtime(retriever=_Retriever(), llm=llm or _Llm()),
     )
     return TestClient(app)
 
@@ -110,6 +136,13 @@ def test_stream_cache_hit_keeps_evidence() -> None:
         second = _final(client)
     assert first["evidence"]["chunks"]
     assert second["evidence"]["chunks"]
+
+
+def test_stream_reports_the_retry_reason() -> None:
+    with _client(True, llm=_RetryLlm()) as client:
+        evidence = _final(client)["evidence"]
+    assert evidence["retry_reason"] == "uncited"
+    assert evidence["attempts"] == 2
 
 
 def test_report_carries_lesson_diagnostics_and_retry_reason() -> None:

@@ -669,7 +669,8 @@ Off by default and off in deployment. When `OWL_DEV_EVIDENCE=true`, the
 `/v1/chat` response and the final `/v1/chat/stream` event include an
 `evidence` object: the retrieved chunks with id, book, chapter, score and
 text; the prompt fingerprint and length; attempts and model calls; the
-abstention and retry reasons; the lesson scope and selected materials.
+abstention and retry reasons; the lesson scope, selected materials and their
+scores when the embedding leg scored them.
 
 The chunk text is copyrighted corpus text. The schema labels the field
 operator-only, the Vite dev build shows it only in a collapsed inspector, and

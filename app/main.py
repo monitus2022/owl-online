@@ -236,6 +236,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             logger.warning(
                 "OWL_SESSION_SECRET is unset; sessions reset on every restart"
             )
+        if app_settings.dev_evidence:
+            logger.warning(
+                "OWL_DEV_EVIDENCE is on; responses carry copyrighted corpus "
+                "text and this must never be enabled in deployment"
+            )
         app.state.session_secret = app_settings.session_secret or secrets.token_hex(32)
         app.state.limiter = ChatLimiter(app_settings)
         app.state.exam_limiter = ExamAttemptLimiter(app_settings)

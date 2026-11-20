@@ -34,7 +34,12 @@ export function EvidenceInspector({ evidence }: { evidence: EvidenceReport }) {
             <dt>materials</dt>
             <dd>
               {evidence.selected_material_ids.map((id) => (
-                <code key={id}>{id} </code>
+                <code key={id}>
+                  {id}
+                  {evidence.selection_scores[id] !== undefined
+                    ? ` (${evidence.selection_scores[id].toFixed(3)})`
+                    : ""}{" "}
+                </code>
               ))}
             </dd>
           </>
