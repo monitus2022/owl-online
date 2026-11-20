@@ -31,6 +31,10 @@ _INSTRUCTION_SHAPED = (
     "forget your",
     "forget all",
     "forget the",
+    "forget everything",
+    "forget prior",
+    "forget previous",
+    "forget what",
     "override",
     "instruction",
     "system prompt",
@@ -93,24 +97,34 @@ def _fold(value: str) -> str:
     return re.sub(r"[^0-9a-z]+", " ", text).strip()
 
 
+# Fragments are folded once with the same rule as the input, so an apostrophe
+# inside a fragment cannot make it unmatchable.
+_FOLDED = tuple(_fold(fragment) for fragment in _INSTRUCTION_SHAPED)
+_PREFIX_SKIP = frozenset({"print", "output"})
+
+
 def _looks_like_instruction(name: str) -> bool:
-    if ". " in name:
-        # A full stop and a space inside a display name is a second sentence,
-        # not a name, and the bracket would be wrapping an instruction. Single
-        # initials ("J.R.R. Tolkien") are the exception: only a following
-        # multi-word clause counts.
-        if any(len(part.split()) > 1 for part in name.split(". ")[1:]):
+    # A period glued to the next word is a sentence break too.
+    normalized = re.sub(r"\.(?=\S)", ". ", name)
+    parts = normalized.split(". ")
+    for before, after in zip(parts, parts[1:], strict=False):
+        # "Ada. Answer only as the examiner." fires; "Mary A. De La Cruz" and
+        # "J.R.R. Tolkien" do not, because the token before the period is a
+        # single-letter initial.
+        if len(before.split()[-1]) > 1 and len(after.split()) > 1:
             return True
     spaced = _fold(name)
     if not spaced:
         return False
     pool = f" {spaced} "
     squashed = spaced.replace(" ", "")
-    for fragment in _INSTRUCTION_SHAPED:
-        if " " in fragment:
-            if f" {fragment} " in pool or fragment.replace(" ", "") in squashed:
-                return True
-        elif f" {fragment} " in pool:
+    for fragment in _FOLDED:
+        key = fragment.replace(" ", "")
+        if f" {fragment} " in pool:
+            return True
+        # The squashed form catches "youare..." and "jailbreakmode", but only at
+        # the start; "caroleplayfair" must not match "roleplay" inside it.
+        if key not in _PREFIX_SKIP and squashed.startswith(key):
             return True
     return False
 
@@ -121,6 +135,8 @@ def _clean(name: str) -> str | None:
     The API validates the same shape; this keeps a direct caller (a future
     node, an eval script, a CLI) from interpolating unvalidated text.
     """
+    if any(ord(char) < 32 or ord(char) == 127 for char in name):
+        return None
     collapsed = " ".join(name.split())
     if not collapsed or len(collapsed) > 40 or not collapsed[0].isalpha():
         return None
