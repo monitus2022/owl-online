@@ -740,9 +740,6 @@ async def ask_lesson(
         system, retry_system = lesson_system_prompts(
             scope, persona=persona, persona_suffix=persona_suffix
         )
-    markers = prompt_markers(
-        persona_suffix or (persona.answer_suffix() if persona is not None else None)
-    )
     note = student_note(student_name)
     if note:
         system = f"{system}\n\n{note}"
@@ -751,6 +748,7 @@ async def ask_lesson(
         system = f"{system}\n\n{CONVERSATION_NOTE}"
         retry_system = f"{retry_system}\n\n{CONVERSATION_NOTE}"
     paragraph_retry_system = f"{system}\n\n{LESSON_PARAGRAPH_RETRY}"
+    markers = prompt_markers(system)
     prompt = build_lesson_prompt(
         prompt_question,
         materials,

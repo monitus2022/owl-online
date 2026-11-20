@@ -105,8 +105,11 @@ _CITATION = re.compile(r"\[([^\]]+)\]")
 _INJECTION = re.compile(
     r"(ignore|disregard|forget)\s+(all\s+)?(previous|prior|above)\s+"
     r"(instructions|rules)"
-    r"|(reveal|show|print|repeat)\s+(the\s+)?(system\s+prompt|"
-    r"your\s+(instructions|rules)|the\s+(instructions|rules)\s+above)"
+    r"|(reveal|show|print|repeat)\s+(the\s+)?(system\s+)?prompt"
+    r"|(reveal|show|print|repeat)\s+(the\s+)?(your\s+(instructions|rules)|"
+    r"the\s+(instructions|rules)\s+above)"
+    r"|you\s+must\s+(now|instead)\b(?=\s+(ignore|reveal|show|print|repeat|"
+    r"answer|act|obey|output|disregard))"
     r"|new\s+instructions?\s*:"
     r"|act\s+as\s+(the\s+)?(system|developer|assistant)\b",
     re.IGNORECASE | re.DOTALL,
@@ -468,7 +471,6 @@ async def ask(
     if persona_suffix:
         system = f"{system}\n\n{persona_suffix}"
         retry_system = f"{retry_system}\n\n{persona_suffix}"
-    markers = prompt_markers(persona_suffix)
     note = student_note(student_name)
     if note:
         system = f"{system}\n\n{note}"
@@ -476,6 +478,7 @@ async def ask(
     if conversation_context:
         system = f"{system}\n\n{CONVERSATION_NOTE}"
         retry_system = f"{retry_system}\n\n{CONVERSATION_NOTE}"
+    markers = prompt_markers(system)
     prompt = build_prompt(
         prompt_question,
         chunks,
