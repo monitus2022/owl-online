@@ -21,6 +21,30 @@ export type ChatMode =
 
 export type LessonScope = "in_pack" | "mixed" | "off_pack" | "abstained";
 
+export interface EvidenceChunk {
+  id: string;
+  book: number;
+  chapter: number;
+  score: number;
+  text: string;
+}
+
+export interface EvidenceReport {
+  chunks: EvidenceChunk[];
+  prompt_sha256: string;
+  prompt_chars: number;
+  attempts: number;
+  model_calls: number;
+  abstained: boolean;
+  abstain_reason: string | null;
+  retry_reason: string | null;
+  scope: string | null;
+  selected_material_ids: string[];
+  selection_scores: Record<string, number>;
+  uncovered_terms: string[];
+  multi_book: boolean;
+}
+
 export interface FinalPayload {
   answer: string;
   citations: string[];
@@ -34,6 +58,7 @@ export interface FinalPayload {
   attempts?: number;
   mode?: ChatMode;
   thread_id?: string;
+  evidence?: EvidenceReport | null;
 }
 
 export type StreamEvent =

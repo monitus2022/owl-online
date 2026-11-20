@@ -285,6 +285,7 @@ def build_app():
         lesson_mode=True,
         persona=True,
         lesson_fallback=True,
+        dev_evidence=True,
         session_secret="e2e-session-secret",
         cors_origins="http://127.0.0.1:5500,http://localhost:5500",
         chat_per_minute=1000,

@@ -85,6 +85,11 @@ auth (#35). Each venue requests its own subject, so the Charms room serves
   root directory set to `web`.
 - Output directory: `web/dist`.
 - Environment variable: `VITE_OWL_API_BASE=https://api.monitus.org`.
+- Operator evidence: run the API with `OWL_DEV_EVIDENCE=true` next to the Vite
+  dev server, and a chat answer carries a collapsed "Evidence inspector" with
+  the retrieved chunks, scores, prompt fingerprint and verification state. The
+  production build strips it, and CI fails if the inspector string appears in
+  `dist/`. Never enable the flag in deployment.
 - SPA fallback: `public/_redirects` serves `index.html` for deep links.
 - CORS: the API already allows any `https://*.pages.dev` origin (including
   deploy previews) with credentials, via `OWL_CORS_ORIGIN_REGEX`.

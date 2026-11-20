@@ -28,6 +28,7 @@ from app.agent.memory import memory_saver
 from app.agent.persona import PERSONAS
 from app.agent.router import classify
 from app.api.cache import AnswerCache, cache_key
+from app.api.evidence import evidence_payload
 from app.api.limits import ChatLimiter, Decision, ExamAttemptLimiter
 from app.api.metrics import Metrics
 from app.api.runtime import (
@@ -234,6 +235,11 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
         if not app_settings.session_secret:
             logger.warning(
                 "OWL_SESSION_SECRET is unset; sessions reset on every restart"
+            )
+        if app_settings.dev_evidence:
+            logger.warning(
+                "OWL_DEV_EVIDENCE is on; responses carry copyrighted corpus "
+                "text and this must never be enabled in deployment"
             )
         app.state.session_secret = app_settings.session_secret or secrets.token_hex(32)
         app.state.limiter = ChatLimiter(app_settings)
@@ -648,15 +654,20 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             subject or app_settings.persona_subject
         ) in PERSONAS
 
+    # exclude_none keeps the operator evidence field out of the public payload;
+    # it also drops any future nullable AskResponse field, so add those
+    # deliberately.
     @app.post(
         "/v1/chat",
         response_model=AskResponse,
+        response_model_exclude_none=True,
         tags=["chat"],
         summary="Ask one grounded question",
     )
     @app.post(
         "/ask",
         response_model=AskResponse,
+        response_model_exclude_none=True,
         tags=["chat"],
         summary="Ask one grounded question (deprecated alias)",
         deprecated=True,
@@ -719,6 +730,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     material_citations=cached.material_citations,
                     typed_citations=typed,
                     citation_errors=errors,
+                    evidence=evidence_payload(
+                        cached, enabled=app_settings.dev_evidence
+                    ),
                 )
             start = time.perf_counter()
             try:
@@ -779,6 +793,9 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 material_citations=result.material_citations,
                 typed_citations=typed,
                 citation_errors=errors,
+                evidence=evidence_payload(
+                    result, enabled=app_settings.dev_evidence
+                ),
             )
         finally:
             limiter.release(decision.token)
@@ -924,25 +941,28 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                     if cached.abstained:
                         yield {"event": "reset", "data": json.dumps({})}
                     typed, errors = _typed_and_errors(cached, mode="answer")
+                    cached_payload: dict[str, object] = {
+                        "answer": cached.answer,
+                        "citations": cached.citations,
+                        "lore_citations": cached.lore_citations,
+                        "material_citations": cached.material_citations,
+                        "typed_citations": typed,
+                        "citation_errors": errors,
+                        "scope": cached.scope,
+                        "abstained": cached.abstained,
+                        "needs_input": False,
+                        "attempts": cached.attempts,
+                        "mode": "answer",
+                        "thread_id": "",
+                    }
+                    cached_evidence = evidence_payload(
+                        cached, enabled=app_settings.dev_evidence
+                    )
+                    if cached_evidence is not None:
+                        cached_payload["evidence"] = cached_evidence.model_dump()
                     yield {
                         "event": "final",
-                        "data": json.dumps(
-                            {
-                                "answer": cached.answer,
-                                "citations": cached.citations,
-                                "lore_citations": cached.lore_citations,
-                                "material_citations": cached.material_citations,
-                                "typed_citations": typed,
-                                "citation_errors": errors,
-                                "scope": cached.scope,
-                                "abstained": cached.abstained,
-                                "needs_input": False,
-                                "attempts": cached.attempts,
-                                "mode": "answer",
-                                "thread_id": "",
-                            },
-                            ensure_ascii=False,
-                        ),
+                        "data": json.dumps(cached_payload, ensure_ascii=False),
                     }
                 finally:
                     limiter.release(decision.token)
@@ -1016,6 +1036,14 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
                 needs_input=bool(final.get("needs_input", False)),
                 scope=final.get("scope"),
                 prompt_chars=int(final.get("prompt_chars") or 0),
+                prompt_sha256=str(final.get("prompt_sha256") or ""),
+                prompt_length=int(final.get("prompt_length") or 0),
+                retry_reason=final.get("retry_reason"),
+                selected_material_ids=list(
+                    final.get("selected_material_ids", [])
+                ),
+                selection_scores=dict(final.get("selection_scores", {})),
+                uncovered_terms=list(final.get("uncovered_terms", [])),
                 lore_chars=int(final.get("lore_chars") or 0),
                 abstained=bool(final.get("abstained", False)),
                 chunks=list(final.get("chunks", [])),
@@ -1045,25 +1073,28 @@ def create_app(app_settings: Settings | None = None, runtime: Runtime | None = N
             typed, errors = _typed_and_errors(
                 result, mode=mode, needs_input=bool(final.get("needs_input", False))
             )
+            evidence = evidence_payload(
+                result, enabled=app_settings.dev_evidence
+            )
+            payload: dict[str, object] = {
+                "answer": final.get("answer", ""),
+                "citations": final.get("citations", []),
+                "lore_citations": final.get("lore_citations", []),
+                "material_citations": final.get("material_citations", []),
+                "typed_citations": typed,
+                "citation_errors": errors,
+                "scope": final.get("scope"),
+                "abstained": final.get("abstained", False),
+                "needs_input": final.get("needs_input", False),
+                "attempts": final.get("attempts", 1),
+                "mode": mode,
+                "thread_id": thread_id if use_memory else "",
+            }
+            if evidence is not None:
+                payload["evidence"] = evidence.model_dump()
             yield {
                 "event": "final",
-                "data": json.dumps(
-                    {
-                        "answer": final.get("answer", ""),
-                        "citations": final.get("citations", []),
-                        "lore_citations": final.get("lore_citations", []),
-                        "material_citations": final.get("material_citations", []),
-                        "typed_citations": typed,
-                        "citation_errors": errors,
-                        "scope": final.get("scope"),
-                        "abstained": final.get("abstained", False),
-                        "needs_input": final.get("needs_input", False),
-                        "attempts": final.get("attempts", 1),
-                        "mode": mode,
-                        "thread_id": thread_id if use_memory else "",
-                    },
-                    ensure_ascii=False,
-                ),
+                "data": json.dumps(payload, ensure_ascii=False),
             }
 
 

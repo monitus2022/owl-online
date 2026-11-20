@@ -197,7 +197,10 @@ container with the variables.
 
 The workflow always injects these eight keys (the repository variable or its
 default), so they override `owl.env` even when no repository variable is set.
-The file entries are only for manual `docker run` or Compose.
+It also injects one fixed key that is not a repository variable:
+`OWL_DEV_EVIDENCE=false`. That flag returns copyrighted chunk text when on, so
+the workflow hard-codes it off; a repository variable with that name has no
+effect. The file entries are only for manual `docker run` or Compose.
 `OWL_LESSON_MODE` also needs a valid published pack for the request subject;
 the default API subject is `OWL_PERSONA_SUBJECT` (default `dada`).
 

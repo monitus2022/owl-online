@@ -1001,6 +1001,63 @@ main {
   color: var(--ink-dim);
 }
 
+/* Operator evidence inspector (#295); rendered only in a dev build. */
+
+.evidence-inspector {
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+
+.evidence-inspector summary {
+  cursor: pointer;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+}
+
+.evidence-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 0.7rem;
+  margin: 0.6rem 0;
+}
+
+.evidence-facts dt {
+  color: var(--ink-dim);
+}
+
+.evidence-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.evidence-chunks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.evidence-chunk-head {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--gold);
+}
+
+.evidence-chunk-text {
+  margin: 0.15rem 0 0;
+  color: var(--ink);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 .material-status {
   margin: 0;
   font-size: 0.85rem;

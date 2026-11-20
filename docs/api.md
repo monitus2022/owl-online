@@ -206,7 +206,7 @@ The response is `text/event-stream`. Events:
 | `mode` | `{"mode": "answer"}` | after the router; can be `policy`, `fact`, `clarify`, `abstain`, `answer`, `practice`, `feedback`, `meta`, `personal` or `lesson` |
 | `token` | `{"text": "..."}` | each streamed token |
 | `reset` | `{}` or `{"reason": "retry"}` / `{"reason": "fallback"}` | clear the draft before a retry, a fallback, an error, or an abstained final |
-| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode`, `thread_id` | once, authoritative |
+| `final` | `answer`, `citations`, `lore_citations`, `material_citations`, `typed_citations`, `citation_errors`, `scope`, `abstained`, `needs_input`, `attempts`, `mode`, `thread_id`, `evidence` (operator-only, only when `OWL_DEV_EVIDENCE=true`) | once, authoritative |
 | `error` | `{"detail": "..."}` | terminal; always preceded by `reset` |
 
 `final` is the authoritative payload. A client should replace the draft on
@@ -662,6 +662,22 @@ uses the `detail` shape. Every response carries `X-Request-ID`.
 
 `/v1/chat` has a deadline (`OWL_ASK_TIMEOUT_S`, default 30s). `/v1/chat/stream` is not
 bounded, because a legitimate stream can outlive the deadline.
+
+## Operator evidence (OWL_DEV_EVIDENCE)
+
+Off by default and off in deployment. When `OWL_DEV_EVIDENCE=true`, the
+`/v1/chat` response and the final `/v1/chat/stream` event include an
+`evidence` object: the retrieved chunks with id, book, chapter, score and
+text; the prompt fingerprint and length; attempts and model calls; the
+abstention and retry reasons; the lesson scope, selected materials and their
+scores when the embedding leg scored them.
+
+The chunk text is copyrighted corpus text. The schema labels the field
+operator-only, the Vite dev build shows it only in a collapsed inspector, and
+the production bundle is checked in CI to contain no inspector. The server
+attaches the field to the shared stream when the flag is on, so the client
+stores it only in a development build. The deployment workflow hard-codes the
+flag off. Leave it off everywhere except a local review run.
 
 ## Session, CORS and limits
 

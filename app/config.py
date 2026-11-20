@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Experimental multi-book answer path: per-book extraction, merge, one
     # synthesis and a coverage statement. Off keeps the single-pass answer.
     multi_book: bool = False
+    # Operator-only evidence for local reviews (#295). Off in deployment: the
+    # response carries retrieved chunk text only when this is true.
+    dev_evidence: bool = False
     # Persona layer: the reviewed professor tone, scripted meta and personal
     # replies. Off keeps the plain grounded assistant.
     persona: bool = False

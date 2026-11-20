@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { askStream, ChatError } from "../api/chat";
-import type { ChatMode, LessonScope } from "../api/chat";
+import type { ChatMode, EvidenceReport, LessonScope } from "../api/chat";
 import { startersFor } from "../data/subjects";
 import type { PersonaState, Subject } from "../data/subjects";
 import { stripCitationMarkers } from "../data/sources";
 import { useStudentName } from "../data/student";
+import { EvidenceInspector } from "./EvidenceInspector";
 import { Silhouette } from "./Silhouette";
 import { SourcePanel } from "./SourcePanel";
 
@@ -26,6 +27,7 @@ interface Message {
   scope?: LessonScope;
   abstained?: boolean;
   failed?: boolean;
+  evidence?: EvidenceReport;
 }
 
 const THREAD_ID = /^[A-Za-z0-9_-]{8,64}$/;
@@ -188,6 +190,7 @@ export function ChatPanel({
             scope?: LessonScope | null;
             abstained: boolean;
             mode?: ChatMode;
+            evidence?: EvidenceReport | null;
           };
           const chips = [
             ...(data.citations ?? []),
@@ -202,6 +205,9 @@ export function ChatPanel({
             scope: data.scope ?? undefined,
             abstained: data.abstained,
             mode: data.mode ?? draft.mode,
+            evidence: import.meta.env.DEV
+              ? (data.evidence ?? undefined)
+              : undefined,
           }));
         } else if (streamEvent.name === "error") {
           const data = streamEvent.data as { detail: string };
@@ -288,6 +294,9 @@ export function ChatPanel({
                   citations={message.citations}
                   typedCitations={message.typedCitations}
                 />
+              )}
+              {import.meta.env.DEV && message.evidence && (
+                <EvidenceInspector evidence={message.evidence} />
               )}
               {message.abstained && (
                 <p className="abstain-note">

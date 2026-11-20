@@ -50,7 +50,7 @@ from app.pipeline.generate.guards import (
 )
 from app.providers.contracts import Llm, Retriever
 from app.schemas import Chunk
-from app.trace import current_tracer
+from app.trace import current_tracer, prompt_fingerprint
 
 if TYPE_CHECKING:
     from app.agent.persona import Persona
@@ -676,6 +676,8 @@ async def ask_lesson(
         if tracer is not None:
             tracer.emit(
                 "lesson_result",
+                prompt_sha=result.prompt_sha256,
+                prompt_chars=result.prompt_length,
                 abstained=result.abstained,
                 abstain_reason=result.abstain_reason,
                 retry_reason=result.retry_reason,
@@ -863,6 +865,12 @@ async def ask_lesson(
         retry_reason=retry_reason,
         model_calls=attempt,
         prompt_chars=len(final_system) + len(prompt),
+        prompt_sha256=str(
+            prompt_fingerprint(final_system, prompt)["prompt_sha"]
+        ),
+        prompt_length=int(
+            prompt_fingerprint(final_system, prompt)["prompt_chars"]
+        ),
         selected_material_ids=selected_ids,
         selection_scores=selection_scores,
         uncovered_terms=uncovered_list,

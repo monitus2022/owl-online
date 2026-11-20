@@ -192,6 +192,11 @@ class AskResult:
     needs_input: bool = False
     # The experimental multi-book path does not consume thread context.
     multi_book: bool = False
+    # Prompt fingerprint for the operator evidence inspector (#295): the
+    # served composition on the lesson path, the first composition on the
+    # corpus path. Empty when the path does not build a prompt.
+    prompt_sha256: str = ""
+    prompt_length: int = 0
 
 
 def retrieval_floor(
@@ -484,6 +489,7 @@ async def ask(
         lore_entries,
         conversation_context=conversation_context,
     )
+    fingerprint = prompt_fingerprint(system, prompt)
     if on_stage is not None:
         on_stage("generate")
     generate_start = time.perf_counter()
@@ -561,6 +567,8 @@ async def ask(
         retry_reason=retry_reason,
         model_calls=attempt,
         lore_chars=sum(len(entry.body) for entry in lore_entries),
+        prompt_sha256=str(fingerprint["prompt_sha"]),
+        prompt_length=int(fingerprint["prompt_chars"]),
     )
     if tracer is not None:
         tracer.emit(

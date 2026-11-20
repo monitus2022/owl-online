@@ -104,6 +104,42 @@ class StreamRequest(AskRequest):
         return self
 
 
+class EvidenceChunk(BaseModel):
+    """One retrieved chunk in the operator-only evidence report."""
+
+    id: str
+    book: int
+    chapter: int
+    score: float
+    text: str
+
+
+class EvidenceReport(BaseModel):
+    """Operator-only retrieval and verification details (#295).
+
+    Present only when OWL_DEV_EVIDENCE is on. It can carry copyrighted corpus
+    text, so it is never enabled in deployment and must not be shown to
+    students.
+    """
+
+    chunks: list[EvidenceChunk] = Field(default_factory=list)
+    prompt_sha256: str = Field(
+        default="",
+        description="First 16 hex chars of the prompt hash; matches the trace prompt_sha.",
+    )
+    prompt_chars: int = 0
+    attempts: int = 0
+    model_calls: int = 0
+    abstained: bool = False
+    abstain_reason: str | None = None
+    retry_reason: str | None = None
+    scope: str | None = None
+    selected_material_ids: list[str] = Field(default_factory=list)
+    selection_scores: dict[str, float] = Field(default_factory=dict)
+    uncovered_terms: list[str] = Field(default_factory=list)
+    multi_book: bool = False
+
+
 class AskResponse(BaseModel):
     """A grounded answer with the book chunk ids and lore ids it cites."""
 
@@ -132,6 +168,13 @@ class AskResponse(BaseModel):
     material_citations: list[str] = Field(default_factory=list)
     typed_citations: list[str] = Field(default_factory=list)
     citation_errors: list[str] = Field(default_factory=list)
+    evidence: EvidenceReport | None = Field(
+        default=None,
+        description=(
+            "Operator-only retrieval and verification details. Present only "
+            "when OWL_DEV_EVIDENCE is on; never enabled in deployment."
+        ),
+    )
 
 
 class SubjectsResponse(BaseModel):

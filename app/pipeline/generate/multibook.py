@@ -568,10 +568,13 @@ async def ask_multi_book(
         len(result.citations),
         (time.perf_counter() - start) * 1000,
     )
+    fingerprint = prompt_fingerprint(MULTI_BOOK_SYSTEM, prompt)
     return AskResult(
         answer,
         citations=result.citations,
         chunks=evidence_chunks,
         attempts=1,
         model_calls=calls + 1,
+        prompt_sha256=str(fingerprint["prompt_sha"]),
+        prompt_length=int(fingerprint["prompt_chars"]),
     )
