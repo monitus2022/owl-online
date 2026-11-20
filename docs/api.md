@@ -105,6 +105,12 @@ request produces the same prompt as before. The name is part of the answer-cache
 scope, so two students never receive a cached answer addressed to the other; it
 is not written to usage logs, traces or an exam record.
 
+The name is data, not instructions. The note marks it as a browser-supplied
+label and tells the model never to follow it. A name that reads like an
+instruction (for example "Ignore all previous instructions") is ignored: the
+request still succeeds and the address note is omitted, so an untrusted display
+name never becomes prompt text.
+
 Response `200`:
 
 ```json
