@@ -11,10 +11,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
+from app.pipeline.generate.guards import leaks_instructions
+
 if TYPE_CHECKING:
     from app.pipeline.generate.generate import AskResult
 
-VerifyReason = Literal["empty", "uncited"]
+VerifyReason = Literal["empty", "uncited", "leak"]
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,8 @@ def verify_draft(draft: str, result: AskResult) -> Verification:
     (`abstain_reason="no_evidence"`) is not a draft failure: there is nothing to
     re-cite.
     """
+    if leaks_instructions(draft):
+        return Verification(False, "leak")
     if result.abstain_reason == "no_evidence" or (
         result.abstain_reason is None
         and not result.chunks

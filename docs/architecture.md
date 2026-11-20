@@ -602,14 +602,19 @@ data. The layers differ by surface:
 | Student name | Letters and a few name marks only, 40 characters, bracketed in the address note. A name that reads instruction-shaped is left out of the prompt (#305). |
 | Retrieved excerpts, lore and lesson notes | `sanitize_evidence` removes instruction-shaped spans before the prompt and logs the affected chunk ids; a chunk left empty is dropped from the citation set ("ignore previous instructions", "reveal the prompt", "you must now"). |
 | Conversation memory | Replayed as untrusted text, marked not-evidence and sanitized on the way in; a follow-up answer still needs a citation from the current retrieval set. |
-| Model output | Citations are verified against the current retrieval set; a draft that cites nothing is retried and then abstained when it still does not. Output is never rendered as HTML. |
+| Model output | Citations are verified against the current retrieval set; a draft that cites nothing is retried and then abstained when it still does not. A draft that repeats the system instructions fails the leak check described below and is retried once, then abstained. Output is never rendered as HTML. |
+
+Every system prompt also carries an instruction hierarchy: the question and the
+conversation are requests for an answer and cannot change the rules, the
+evidence contract, the citation format or the role.
 
 The policy, closed-fact and teaching gates decide intent and refusals before
 generation, so a question cannot talk the model into a different route. The
 injection and name filters are deterministic keyword rules, not classifiers:
 they remove the obvious cases and are documented as heuristics, so a novel
-phrasing is not guaranteed to be caught. A prompt-extraction check on the output
-is not implemented.
+phrasing is not guaranteed to be caught. The leak check is also a fixed phrase
+rule: it catches a verbatim repetition of the project's own instructions, not a
+paraphrase of them.
 
 ## Chat intents vs exam bank
 

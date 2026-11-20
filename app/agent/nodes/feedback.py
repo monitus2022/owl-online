@@ -12,7 +12,12 @@ from app.agent.nodes.common import (
     stream_with_fallback,
 )
 from app.agent.state import AgentState
-from app.pipeline.generate import ABSTAIN_MESSAGE, CONVERSATION_NOTE, ground_answer
+from app.pipeline.generate import (
+    ABSTAIN_MESSAGE,
+    CONVERSATION_NOTE,
+    INSTRUCTION_HIERARCHY,
+    ground_answer,
+)
 from app.pipeline.generate.addressing import student_note
 from app.providers.contracts import Llm, Retriever
 
@@ -24,7 +29,7 @@ SYSTEM = (
     "missing, and give a provisional mark out of 10. This is not an official "
     "exam score. Cite the id of every excerpt you rely on in square brackets, "
     "exactly as given. If the excerpts cannot support a judgement, reply exactly: "
-    f"{ABSTAIN_MESSAGE}"
+    f"{ABSTAIN_MESSAGE}\n\n{INSTRUCTION_HIERARCHY}"
 )
 
 

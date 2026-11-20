@@ -12,7 +12,12 @@ from app.agent.nodes.common import (
     stream_with_fallback,
 )
 from app.agent.state import AgentState
-from app.pipeline.generate import ABSTAIN_MESSAGE, CONVERSATION_NOTE, ground_answer
+from app.pipeline.generate import (
+    ABSTAIN_MESSAGE,
+    CONVERSATION_NOTE,
+    INSTRUCTION_HIERARCHY,
+    ground_answer,
+)
 from app.pipeline.generate.addressing import student_note
 from app.providers.contracts import Llm, Retriever
 
@@ -22,7 +27,7 @@ SYSTEM = (
     "brief answer or marking points. Cite the id of every excerpt you use in "
     "square brackets, exactly as given. This is conversational practice, not a "
     "formal exam. If the excerpts cannot support the request, reply exactly: "
-    f"{ABSTAIN_MESSAGE}"
+    f"{ABSTAIN_MESSAGE}\n\n{INSTRUCTION_HIERARCHY}"
 )
 
 
