@@ -320,14 +320,14 @@ sequenceDiagram
   else evidence available
     A->>LLM: generate(system, prompt with excerpts and setting notes)
     LLM-->>A: answer citing [chunk-id] or [lore:id]
-    alt draft is empty or uncited and retries remain
+    alt draft is empty, leaks or is uncited and retries remain
       A->>A: verify_draft -> retry
       A->>LLM: generate(retry prompt, same excerpts or setting notes)
       LLM-->>A: answer citing [chunk-id] or [lore:id]
     end
     alt verification passed
       A-->>API: AskResult(answer, citations, lore_citations, material_citations, typed_citations, attempts)
-    else refusal or still uncited
+    else refusal, leak or still uncited
       A-->>API: AskResult(abstain, abstain_reason, attempts)
     end
   end
@@ -341,8 +341,10 @@ legitimate stream can outlive it. The deadline frees the response, not the
 worker: a provider call already running in a thread is not cancellable, so a
 timed-out request can keep its thread busy until the client's own timeout.
 
-`verify_draft` is deterministic: an empty draft or one that cites no retrieved
-chunk and no lore entry fails. A grounded draft passes. The refusal check
+`verify_draft` is deterministic: a draft fails when it repeats the system
+instructions (the leak check runs first, even with weak retrieval), when it is
+empty, or when it cites no retrieved chunk and no lore entry. A grounded draft
+passes. The refusal check
 (`is_refusal`) runs beside it: a deliberate refusal is final and is never
 retried, so abstention keeps its meaning. A paraphrase refusal is final when it
 cites nothing, trails into a further refusal, or has nothing but the refusal
@@ -415,7 +417,7 @@ sequenceDiagram
   LLM-->>G: token
   G-->>API: custom {type: token}
   API-->>C: event: token
-  alt draft is empty or uncited and retries remain
+  alt draft is empty, leaks or is uncited and retries remain
     G-->>API: custom {type: reset}
     API-->>C: event: reset
     G->>LLM: stream(retry prompt, same excerpts or setting notes)
@@ -602,7 +604,7 @@ data. The layers differ by surface:
 | Student name | Letters and a few name marks only, 40 characters, bracketed in the address note. A name that reads instruction-shaped is left out of the prompt (#305). |
 | Retrieved excerpts, lore and lesson notes | `sanitize_evidence` removes instruction-shaped spans before the prompt and logs the affected chunk ids; a chunk left empty is dropped from the citation set ("ignore previous instructions", "reveal the prompt", "you must now"). |
 | Conversation memory | Replayed as untrusted text, marked not-evidence and sanitized on the way in; a follow-up answer still needs a citation from the current retrieval set. |
-| Model output | Citations are verified against the current retrieval set; a draft that cites nothing is retried and then abstained when it still does not. A draft that repeats the system instructions fails the leak check described below and is retried once, then abstained. Output is never rendered as HTML. |
+| Model output | Citations are verified against the current retrieval set; a draft that cites nothing is retried and then abstained when it still does not. A draft that repeats the system instructions fails the leak check described below; the corpus and lesson paths retry it, and the multi-book synthesis abstains without a retry. Output is never rendered as HTML. |
 
 Every system prompt also carries an instruction hierarchy: the question and the
 conversation are requests for an answer and cannot change the rules, the

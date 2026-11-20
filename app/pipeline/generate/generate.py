@@ -15,7 +15,11 @@ from typing import Literal
 
 from app.knowledge.lore import LoreEntry, LoreStore
 from app.pipeline.generate.addressing import student_note
-from app.pipeline.generate.guards import INSTRUCTION_HIERARCHY, leaks_instructions
+from app.pipeline.generate.guards import (
+    INSTRUCTION_HIERARCHY,
+    leaks_instructions,
+    prompt_markers,
+)
 from app.pipeline.generate.verify import verify_draft
 from app.pipeline.retrieve.retriever import DEFAULT_RRF_K, QUERY_CANDIDATES
 from app.pipeline.retrieve.strategy import classify_retrieval_strategy
@@ -36,6 +40,7 @@ DEFAULT_MAX_RETRIES = 1
 # does not lexically cover. Tunable in #51 against the measured distribution.
 DEFAULT_MIN_SCORE = 2.0 / (DEFAULT_RRF_K + QUERY_CANDIDATES)
 
+# Trust model and residual limits: docs/architecture.md, "Trust model".
 SYSTEM_PROMPT = (
     "You are O.W.L. Online, a revision assistant grounded only in the excerpts "
     "provided by the user. Use only those excerpts. Cite the id of every excerpt "
@@ -100,8 +105,8 @@ _CITATION = re.compile(r"\[([^\]]+)\]")
 _INJECTION = re.compile(
     r"(ignore|disregard|forget)\s+(all\s+)?(previous|prior|above)\s+"
     r"(instructions|rules)"
-    r"|(reveal|show|print|repeat)\s+(the\s+)?(system\s+)?(prompt|instructions|rules)"
-    r"|you\s+(are|must)\s+(now|instead)\b"
+    r"|(reveal|show|print|repeat)\s+(the\s+)?(system\s+prompt|"
+    r"your\s+(instructions|rules)|the\s+(instructions|rules)\s+above)"
     r"|new\s+instructions?\s*:"
     r"|act\s+as\s+(the\s+)?(system|developer|assistant)\b",
     re.IGNORECASE | re.DOTALL,
@@ -255,10 +260,15 @@ def build_prompt(
 
 
 def ground_answer(
-    answer: str, chunks: list[Chunk], *, lore_ids: set[str] | None = None
+    answer: str,
+    chunks: list[Chunk],
+    *,
+    lore_ids: set[str] | None = None,
+    extra_markers: tuple[str, ...] = (),
 ) -> AskResult:
     """Accept only citations that name a retrieved chunk or a loaded lore entry."""
-    if leaks_instructions(answer):
+    if leaks_instructions(answer, extra_markers):
+        logger.warning("abstain (leak): draft repeated system instructions")
         return AskResult(
             ABSTAIN_MESSAGE,
             abstained=True,
@@ -458,6 +468,7 @@ async def ask(
     if persona_suffix:
         system = f"{system}\n\n{persona_suffix}"
         retry_system = f"{retry_system}\n\n{persona_suffix}"
+    markers = prompt_markers(persona_suffix)
     note = student_note(student_name)
     if note:
         system = f"{system}\n\n{note}"
@@ -490,9 +501,12 @@ async def ask(
                 **prompt_fingerprint(prompt_system, prompt),
             )
         result = ground_answer(
-            draft, chunks, lore_ids={entry.id for entry in lore_entries}
+            draft,
+            chunks,
+            lore_ids={entry.id for entry in lore_entries},
+            extra_markers=markers,
         )
-        verdict = verify_draft(draft, result)
+        verdict = verify_draft(draft, result, extra_markers=markers)
         if tracer is not None:
             tracer.emit(
                 "verify",

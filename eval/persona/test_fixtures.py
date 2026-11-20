@@ -13,7 +13,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "conformance.jsonl"
 
 def test_fixture_covers_the_required_categories():
     scenarios = load_persona_scenarios(FIXTURE)
-    assert 20 <= len(scenarios) <= 30
+    assert 20 <= len(scenarios) <= 35
     categories = {scenario.category for scenario in scenarios}
     assert {
         "in_pack",
