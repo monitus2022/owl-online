@@ -11,10 +11,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
+from app.pipeline.generate.guards import leaks_instructions
+
 if TYPE_CHECKING:
     from app.pipeline.generate.generate import AskResult
 
-VerifyReason = Literal["empty", "uncited"]
+VerifyReason = Literal["empty", "uncited", "leak"]
 
 
 @dataclass(frozen=True)
@@ -25,14 +27,24 @@ class Verification:
     reason: VerifyReason | None = None
 
 
-def verify_draft(draft: str, result: AskResult) -> Verification:
+def verify_draft(
+    draft: str,
+    result: AskResult,
+    *,
+    extra_markers: tuple[str, ...] = (),
+) -> Verification:
     """Judge one draft against two deterministic rules.
 
     `result` is the grounded form of the same draft, so a missing citation means
     the answer is ungrounded even when the draft text is long. A weak retrieval
     (`abstain_reason="no_evidence"`) is not a draft failure: there is nothing to
     re-cite.
+
+    The leak check runs first, before the no-evidence early return: a draft that
+    repeats the system instructions must fail even when retrieval is weak.
     """
+    if leaks_instructions(draft, extra_markers):
+        return Verification(False, "leak")
     if result.abstain_reason == "no_evidence" or (
         result.abstain_reason is None
         and not result.chunks

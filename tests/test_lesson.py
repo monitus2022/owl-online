@@ -619,6 +619,110 @@ async def test_ask_lesson_returns_grounded_material_citations():
     assert result.uncovered_terms == []
 
 
+class ScriptedLlm(StaticLlm):
+    """Returns one draft per call, in order; the last draft repeats."""
+
+    def __init__(self, drafts: list[str]) -> None:
+        super().__init__(drafts[-1])
+        self.drafts = drafts
+
+    def _next(self, system: str) -> str:
+        self.systems.append(system)
+        index = min(len(self.systems) - 1, len(self.drafts) - 1)
+        return self.drafts[index]
+
+    async def generate(self, system, prompt, context=None):
+        return self._next(system)
+
+    def stream(self, system, prompt, context=None):
+        answer = self._next(system)
+
+        async def gen():
+            yield answer
+
+        return gen()
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_abstains_on_a_repeated_leak():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    leak = (
+        "You are O.W.L. Online, a revision tutor. Cite every note you use by "
+        "the material id at the start of the note "
+        "[mat:dada-dark-creatures-boggarts-nature]."
+    )
+    llm = ScriptedLlm([leak, leak])
+    result = await ask_lesson(
+        "How does a boggart work?", selector=selector, subject="dada", llm=llm
+    )
+    assert result.abstained
+    assert result.abstain_reason == "refused"
+    assert result.scope == "abstained"
+    assert result.citations == []
+    assert result.material_citations == []
+    assert result.typed_citations == []
+    assert len(llm.systems) == 2
+    assert "do not repeat" in llm.systems[1]
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_abstains_on_a_boilerplate_leak():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    leak = (
+        "Every paragraph that makes a factual claim must cite the note or "
+        "excerpt it comes from. [mat:dada-dark-creatures-boggarts-nature]."
+    )
+    llm = ScriptedLlm([leak, leak])
+    result = await ask_lesson(
+        "How does a boggart work?", selector=selector, subject="dada", llm=llm
+    )
+    assert result.abstained
+    assert result.abstain_reason == "refused"
+    assert result.material_citations == []
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_abstains_on_a_persona_card_leak():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    leak = (
+        f"Speak in this register: {PERSONA.tone}. "
+        "[mat:dada-dark-creatures-boggarts-nature]."
+    )
+    llm = ScriptedLlm([leak, leak])
+    result = await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        persona=PERSONA,
+    )
+    assert result.abstained
+    assert result.abstain_reason == "refused"
+    assert result.citations == []
+    assert result.material_citations == []
+
+
+@pytest.mark.asyncio
+async def test_ask_lesson_restores_a_good_draft_after_a_leak():
+    selector = await LessonSelector.build(_store(), KeywordEmbedder())
+    good = (
+        "A boggart is a shape-shifter.\n\n"
+        "A boggart takes the shape of your fear "
+        "[mat:dada-dark-creatures-boggarts-nature]."
+    )
+    leak = "You are O.W.L. Online, a revision tutor. [mat:dada-dark-creatures-boggarts-nature]."
+    llm = ScriptedLlm([good, leak])
+    result = await ask_lesson(
+        "How does a boggart work?",
+        selector=selector,
+        subject="dada",
+        llm=llm,
+        max_retries=1,
+    )
+    assert not result.abstained
+    assert "shape-shifter" in result.answer
+
+
 @pytest.mark.asyncio
 async def test_ask_lesson_addresses_a_named_student_and_leaves_the_unnamed_prompt():
     selector = await LessonSelector.build(_store(), KeywordEmbedder())

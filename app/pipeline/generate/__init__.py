@@ -16,6 +16,11 @@ from app.pipeline.generate.generate import (
     retrieval_floor,
     sanitize_evidence,
 )
+from app.pipeline.generate.guards import (
+    INSTRUCTION_HIERARCHY,
+    leaks_instructions,
+    prompt_markers,
+)
 from app.pipeline.generate.lesson import ask_lesson, build_lesson_prompt, ground_lesson_answer
 from app.pipeline.generate.verify import Verification, verify_draft
 
@@ -25,6 +30,7 @@ __all__ = [
     "DEFAULT_MAX_RETRIES",
     "DEFAULT_MIN_SCORE",
     "DEFAULT_TOP_K",
+    "INSTRUCTION_HIERARCHY",
     "RETRY_SYSTEM_PROMPT",
     "SYSTEM_PROMPT",
     "AskResult",
@@ -35,6 +41,8 @@ __all__ = [
     "build_prompt",
     "ground_answer",
     "ground_lesson_answer",
+    "leaks_instructions",
+    "prompt_markers",
     "render_evidence",
     "retrieval_floor",
     "sanitize_evidence",

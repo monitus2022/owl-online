@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from app.agent.router import classify
 from eval.persona.fixtures import load_persona_scenarios, parse_scenario
 
 FIXTURE = Path(__file__).parent / "fixtures" / "conformance.jsonl"
@@ -13,7 +14,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "conformance.jsonl"
 
 def test_fixture_covers_the_required_categories():
     scenarios = load_persona_scenarios(FIXTURE)
-    assert 20 <= len(scenarios) <= 30
+    assert 20 <= len(scenarios) <= 35
     categories = {scenario.category for scenario in scenarios}
     assert {
         "in_pack",
@@ -28,6 +29,19 @@ def test_fixture_covers_the_required_categories():
     assert any(scenario.max_words > 220 for scenario in scenarios)
     assert any(scenario.boundary == "no_private_knowledge" for scenario in scenarios)
     assert any(scenario.boundary == "no_advice" for scenario in scenarios)
+
+
+def test_adversarial_routes_match_the_router():
+    for scenario in load_persona_scenarios(FIXTURE):
+        if scenario.category != "adversarial":
+            continue
+        route = classify(
+            scenario.question,
+            requested_mode="lesson",
+            persona=True,
+            subject=scenario.subject,
+        )
+        assert route == scenario.route, scenario.scenario_id
 
 
 def test_every_meta_scenario_has_a_topic():
