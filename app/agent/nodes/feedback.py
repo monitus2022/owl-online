@@ -4,6 +4,8 @@ This is not an official exam score. Formal attempts are graded deterministically
 against stored mark schemes in the exam bank.
 """
 
+import logging
+
 from langgraph.config import get_stream_writer
 
 from app.agent.nodes.common import (
@@ -17,9 +19,12 @@ from app.pipeline.generate import (
     CONVERSATION_NOTE,
     INSTRUCTION_HIERARCHY,
     ground_answer,
+    leaks_instructions,
 )
 from app.pipeline.generate.addressing import student_note
 from app.providers.contracts import Llm, Retriever
+
+logger = logging.getLogger(__name__)
 
 MISSING_ANSWER = "I need the answer you want feedback on."
 
@@ -89,6 +94,10 @@ async def feedback_node(
         intent="feedback",
     )
     result = ground_answer(text, chunks)
+    if result.abstained and leaks_instructions(text):
+        logger.warning(
+            "abstain (leak): draft repeated system instructions (intent=feedback)"
+        )
     return {
         "chunks": chunks,
         "answer": result.answer,

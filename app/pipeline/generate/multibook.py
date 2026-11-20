@@ -21,7 +21,7 @@ from app.pipeline.generate.generate import (
     one_draft,
     sanitize_evidence,
 )
-from app.pipeline.generate.guards import INSTRUCTION_HIERARCHY
+from app.pipeline.generate.guards import INSTRUCTION_HIERARCHY, leaks_instructions
 from app.pipeline.retrieve.multibook import BookRetriever, retrieve_multi_book
 from app.providers.contracts import Llm
 from app.schemas import Chunk
@@ -513,6 +513,10 @@ async def ask_multi_book(
     refused = is_refusal(raw, cited=bool(_CITATION.search(raw)))
     draft = _filter_supported_lines(raw, evidence_chunks)
     result = ground_answer(draft, evidence_chunks)
+    if leaks_instructions(raw):
+        logger.warning(
+            "leak: draft repeated system instructions (intent=multi_book)"
+        )
     # Coverage follows the lines that survived binding, not the raw extracts:
     # a book whose only line was dropped is not claimed as covered.
     by_id = {chunk.id: chunk for chunk in evidence_chunks}
