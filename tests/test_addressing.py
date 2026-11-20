@@ -133,6 +133,7 @@ def test_instruction_shaped_names_are_not_put_in_the_prompt(raw: str) -> None:
         "Carole Playfair",
         "Mary A. De La Cruz",
         "John F. Kennedy Jr",
+        "Printer",
     ],
 )
 def test_ordinary_names_still_get_a_note(raw: str) -> None:
