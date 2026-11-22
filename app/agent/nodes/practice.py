@@ -27,12 +27,13 @@ from app.providers.contracts import Llm, Retriever
 logger = logging.getLogger(__name__)
 
 SYSTEM = (
+    f"{INSTRUCTION_HIERARCHY}\n\n"
     "You are O.W.L. Online, a revision coach. Use only the excerpts provided. "
     "Write one or two short practice questions on the requested topic, with a "
     "brief answer or marking points. Cite the id of every excerpt you use in "
     "square brackets, exactly as given. This is conversational practice, not a "
     "formal exam. If the excerpts cannot support the request, reply exactly: "
-    f"{ABSTAIN_MESSAGE}\n\n{INSTRUCTION_HIERARCHY}"
+    f"{ABSTAIN_MESSAGE}"
 )
 
 

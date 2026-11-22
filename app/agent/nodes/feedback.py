@@ -29,12 +29,13 @@ logger = logging.getLogger(__name__)
 MISSING_ANSWER = "I need the answer you want feedback on."
 
 SYSTEM = (
+    f"{INSTRUCTION_HIERARCHY}\n\n"
     "You are O.W.L. Online, a revision coach. Give formative feedback on the "
     "student's answer using only the excerpts. Say what is right, what is "
     "missing, and give a provisional mark out of 10. This is not an official "
     "exam score. Cite the id of every excerpt you rely on in square brackets, "
     "exactly as given. If the excerpts cannot support a judgement, reply exactly: "
-    f"{ABSTAIN_MESSAGE}\n\n{INSTRUCTION_HIERARCHY}"
+    f"{ABSTAIN_MESSAGE}"
 )
 
 

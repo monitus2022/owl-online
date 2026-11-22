@@ -118,6 +118,8 @@ so on.
 | 2026-11-13 | #251 | `20261113T082310Z` | `rag-eval` (shipped) | n/a | n/a | 4/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
 | 2026-11-13 | #251 | `20261113T082614Z` | `rag-eval` (baseline re-pin) | n/a | n/a | 4/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
 | 2026-11-13 | #251 | `20261113T090915Z` | `rag-eval` (post-review verification) | n/a | n/a | 4/30 | [Lesson grounding first slice](2026-11-13-251-lesson-faithfulness.md) |
+| 2026-11-22 | #310 | `20261122T120323Z` | `pinned` (hierarchy prepended) | 0.76 | 0.31 | 13/15 | [Instruction hierarchy order](2026-11-22-310-hierarchy-order.md) |
+| 2026-11-22 | #310 | `20261122T122234Z` | `rag-eval` (hierarchy first, persona) | n/a | n/a | 11/30 | [Instruction hierarchy order](2026-11-22-310-hierarchy-order.md) |
 
 Exam-bank runs use `n/a` for the chat metrics; the deterministic, independent
 and calibration tables are in the record.

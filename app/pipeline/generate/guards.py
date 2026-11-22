@@ -2,10 +2,12 @@
 
 Two pieces live here:
 
-- `INSTRUCTION_HIERARCHY` is appended to every answering system prompt. It says
-  that the student's question and the conversation are requests, not
-  instructions that can change the rules, the evidence contract or the answer
-  format.
+- `INSTRUCTION_HIERARCHY` opens every answering system prompt, and the
+  citation/abstention contract closes the first-attempt answer prompts. #310
+  moved it from the end to the start: as a closing line it cost grounded rate
+  on the pinned corpus eval. It says the student's question and the conversation
+  are requests, not instructions that can change the rules, the evidence
+  contract or the answer format.
 - `leaks_instructions` catches a draft that repeats those instructions instead
   of answering. It is a fixed phrase check, not a classifier: it catches a
   verbatim leak of the project's prompt text and leaves normal prose alone.

@@ -641,7 +641,7 @@ uv run python scripts/run_persona_eval.py
 ```
 
 The runner compares the pre-#176 lesson prompt (grounding rules first, then the
-tone suffix) with the shipped persona-first prompt on the same selector,
+tone suffix) with the shipped hierarchy-first prompt on the same selector,
 retriever and generator. It runs three samples per scenario per condition. The
 deterministic checks run first:
 

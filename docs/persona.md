@@ -207,9 +207,9 @@ Rules invariant across tiers:
 
 ## Lesson voice
 
-Lesson answers are persona-first. The system prompt opens with Professor Crane's
-identity, register and stance, then the teaching shape, then the grounding rules,
-and closes with a short voice reminder. The shape is: a direct answer first, why
+Lesson answers lead with the instruction hierarchy. Then comes Professor
+Crane's identity, register and stance, then the teaching shape, then the
+grounding rules, and a short voice reminder closes. The shape is: a direct answer first, why
 it matters, one example only if the notes support it, one caution only if the
 notes support it, and one short check. Unsupported sections are left out. The
 answer target is under 220 words.
