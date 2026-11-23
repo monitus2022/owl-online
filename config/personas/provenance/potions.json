@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "subject": "potions",
+  "brief": "config/personas/briefs/potions.toml",
+  "brief_sha256": "6e28b8c6e8c622f7994344555d22078a4a681ed1d1d3013f62c208778b13842b",
+  "card": "config/personas/potions.toml",
+  "card_sha256": "cf9670468e21343960c04f8066ea187ba433e6316ff903df92bfb87c3b93d392",
+  "provider": "openrouter",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "prompt_version": "authoring-v2",
+  "prompt_sha256": "8e638ba29e31932814c050de26004aa4d322bc0568cd8cf5c277dfa3e4a2ac0d",
+  "spine_sha256": "68f9e1b33f211260945f007b3dea3a2141876b2a321d5e4b70bec749205ad4ac",
+  "temperature": 0.2,
+  "generated_at": "2026-11-23T10:48:30.637266+00:00",
+  "reviewed_by": "monitus2022",
+  "reviewed_at": "2026-11-23T10:48:44.702172+00:00",
+  "draft": "config/personas/drafts/potions.toml",
+  "draft_sha256": "cf9670468e21343960c04f8066ea187ba433e6316ff903df92bfb87c3b93d392"
+}
