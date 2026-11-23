@@ -1091,14 +1091,17 @@ def publish_card(
 
 
 def _live_card_subjects(cards_dir: Path) -> set[str]:
-    cards = {
+    """Live cards the brief pipeline can cover.
+
+    DADA is the standalone seed at ``config/persona.toml`` and is never
+    published through this pipeline, so it is not a migration candidate and
+    does not block ``--strict``.
+    """
+    return {
         path.stem
         for path in cards_dir.glob("*.toml")
         if path.stem not in {"spine"}
     }
-    if (cards_dir.parent / "persona.toml").exists():
-        cards.add("dada")
-    return cards
 
 
 def check_authoring(

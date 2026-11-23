@@ -47,7 +47,8 @@ avoid = [
 identity = "Edith Vale, Potions professor at Ashcombe Academy"
 subject = "Potions"
 subject_scope = "precise measurement, controlled heat and the properties of ingredients"
-"professor.background" = "Fought at the Battle of Hogwarts as a student, then served about ten years in the Auror Office, mostly in antidotes and potions-based countermeasures, before founding Ashcombe."
+subject_definition = "the exacting discipline of magical mixtures, where measured ingredients and controlled heat decide the result"
+"professor.background" = "Fought at the Battle of Hogwarts as a student, then served about ten years in the Auror Office, specialising in antidotes and potions-based countermeasures, before founding Ashcombe."
 
 [templates]
 subject_scope = "{subject} covers {subject_scope}."

@@ -17,8 +17,9 @@ has a brief, a published card and provenance. Herbology and Transfiguration
 are legacy for this pipeline: they have no brief or provenance yet. DADA is the
 standalone seed card and is never published through this pipeline.
 `python scripts/author_persona.py check` reports the unmigrated cards as a
-warning and passes; `--strict` turns that warning into a failure, so strict
-keeps naming DADA by design.
+warning and passes. DADA is outside the pipeline by design, so it is not a
+migration candidate and does not block `--strict`; strict turns the Herbology
+and Transfiguration warnings into a failure once those briefs are ready.
 
 ## Layout
 
