@@ -1,6 +1,6 @@
 # Workplan
 
-Last updated: 2026-11-14.
+Last updated: 2026-11-24.
 
 This page is the plan of record for the V2-V4 work. Update it when a phase,
 boundary or ticket changes. The architecture page describes what is built; this
@@ -9,6 +9,12 @@ page describes what comes next and why.
 ## Current status
 
 - V1 is shipped.
+- The persona rollout is complete: all four non-DADA cards use the brief-driven
+  pipeline and published provenance (#303, #312, #314, #316); DADA remains the
+  standalone seed.
+- The #310 prompt ordering moved the judged lesson faithfulness run from 4/30
+  to 11/30 with citation recall 0.9615; the record is
+  `docs/runs/2026-11-22-310-hierarchy-order.md`.
 - The V2 chat foundation is delivered: LangGraph intents, verification and retry,
   guardrails, cost controls, tracing and the local eval gate. The deterministic
   PR CI gate is in place (#16); the live gate runs on the host because the
