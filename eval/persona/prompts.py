@@ -1,6 +1,6 @@
 """The pre-#176 lesson prompt, kept only as the conformance baseline.
 
-The candidate is the shipped persona-first composition. The baseline is the
+The candidate is the shipped hierarchy-first composition. The baseline is the
 composition that produced the observed third-person smoke answer: grounding
 rules first, then the reviewed tone suffix. Keeping it here means the before and
 after are measured on the same code path without shipping a second prompt style.

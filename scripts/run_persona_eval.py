@@ -2,7 +2,7 @@
 
 The command needs the host corpus, the DADA pack and model keys because the
 pack prose and corpus are not in git. It compares the pre-#176 lesson prompt
-with the persona-first prompt on the same fixture, then prints the record
+with the hierarchy-first prompt on the same fixture, then prints the record
 summary.
 
 Run:

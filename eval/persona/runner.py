@@ -1,7 +1,7 @@
 """Run the persona-conformance fixture for a baseline and a candidate prompt.
 
 The baseline is the pre-#176 lesson composition; the candidate is the shipped
-persona-first composition. Both use the same selector, retriever, generator and
+hierarchy-first composition. Both use the same selector, retriever, generator and
 judge, so the only difference is the prompt. The judge never sees the condition.
 """
 

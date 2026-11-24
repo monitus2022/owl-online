@@ -607,9 +607,11 @@ data. The layers differ by surface:
 | Conversation memory | Replayed as untrusted text, marked not-evidence and sanitized on the way in; a follow-up answer still needs a citation from the current retrieval set. |
 | Model output | Citations are verified against the current retrieval set; a draft that cites nothing is retried and then abstained when it still does not. A draft that repeats the system instructions fails the leak check described below; the corpus and lesson paths retry it, and the multi-book synthesis abstains without a retry. Output is never rendered as HTML. |
 
-Every system prompt also carries an instruction hierarchy: the question and the
-conversation are requests for an answer and cannot change the rules, the
-evidence contract, the citation format or the role.
+Every answering system prompt opens with an instruction hierarchy: the question
+and the conversation are requests for an answer and cannot change the rules, the
+evidence contract, the citation format or the role. The first-attempt answer
+prompts close with the citation and abstention contract; #310 records why the
+hierarchy must lead rather than trail.
 
 The policy, closed-fact and teaching gates decide intent and refusals before
 generation, so a question cannot talk the model into a different route. The
@@ -638,7 +640,7 @@ off.
 | `personal` | persona on; a personal message | reviewed acknowledgement and redirect, no model call | no | no |
 | `fact` | a closed lore fact matched by the contract gate | reviewed setting text from the lore pack, `[lore:<id>]` citations, no model call | no | no |
 | `clarify` | an ambiguous scope/assessment ask | one scripted disambiguation line, no model call | no | no |
-| `lesson` | contract gates miss, a teaching term matches, explicit `mode=lesson`, `OWL_LESSON_MODE` on | persona-first teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
+| `lesson` | contract gates miss, a teaching term matches, explicit `mode=lesson`, `OWL_LESSON_MODE` on | hierarchy-first, persona-led teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
 
 Lesson mode is the one intent grounded in a subject pack first; the corpus is a
 labelled fallback when the pack is thin. The selector is derived at startup by
@@ -660,10 +662,11 @@ unclassified traffic abstains, and the one measured residual is the
 hex-versus-jinx lesson gap where the terms match but no material entails the
 answer.
 
-With the persona on, the lesson system prompt is persona-first: identity,
-register and stance precede the grounding rules, a short voice reminder closes
-them, and the teaching shape is a direct answer, why it matters, an example only
-when the notes support it, a caution only when the notes support it, and a short
+With the persona on, the lesson system prompt opens with the instruction
+hierarchy, then the persona preamble: identity, register and stance, then the
+grounding rules, and a short voice reminder closes. The teaching shape is a
+direct answer, why it matters, an example only when the notes support it, a
+caution only when the notes support it, and a short
 check, under 220 words. Every substantive paragraph carries a citation, and a
 draft with an uncited paragraph gets one paragraph-specific retry. The note prose
 is rendered without its inline book chunk ids, so the only note citation the

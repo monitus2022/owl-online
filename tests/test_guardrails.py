@@ -18,13 +18,19 @@ from app.pipeline.generate import (
     verify_draft,
 )
 from app.pipeline.generate.generate import (
+    LORE_ONLY_RETRY_SYSTEM_PROMPT,
     LORE_ONLY_SYSTEM_PROMPT,
+    LORE_RETRY_SYSTEM_PROMPT,
     LORE_SYSTEM_PROMPT,
 )
 from app.pipeline.generate.lesson import (
+    LESSON_MIXED_RETRY_SYSTEM_PROMPT,
     LESSON_MIXED_SYSTEM_PROMPT,
+    LESSON_OFF_PACK_RETRY_SYSTEM_PROMPT,
     LESSON_OFF_PACK_SYSTEM_PROMPT,
+    LESSON_RETRY_SYSTEM_PROMPT,
     LESSON_SYSTEM_PROMPT,
+    lesson_system_prompts,
 )
 from app.pipeline.generate.multibook import (
     MULTI_BOOK_BATCH_EXTRACT_SYSTEM,
@@ -95,10 +101,39 @@ class _Scripted:
         MULTI_BOOK_SYSTEM,
         MULTI_BOOK_EXTRACT_SYSTEM,
         MULTI_BOOK_BATCH_EXTRACT_SYSTEM,
+        LORE_RETRY_SYSTEM_PROMPT,
+        LORE_ONLY_RETRY_SYSTEM_PROMPT,
+        LESSON_RETRY_SYSTEM_PROMPT,
+        LESSON_MIXED_RETRY_SYSTEM_PROMPT,
+        LESSON_OFF_PACK_RETRY_SYSTEM_PROMPT,
     ],
 )
-def test_every_prompt_carries_the_instruction_hierarchy(prompt: str) -> None:
-    assert INSTRUCTION_HIERARCHY in prompt
+def test_every_prompt_leads_with_the_instruction_hierarchy(prompt: str) -> None:
+    assert prompt.startswith(INSTRUCTION_HIERARCHY)
+    assert prompt.count(INSTRUCTION_HIERARCHY) == 1
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        SYSTEM_PROMPT,
+        LORE_SYSTEM_PROMPT,
+        LORE_ONLY_SYSTEM_PROMPT,
+        PRACTICE_SYSTEM,
+        FEEDBACK_SYSTEM,
+    ],
+)
+def test_the_abstain_contract_closes_the_answer_prompts(prompt: str) -> None:
+    assert prompt.rstrip().endswith(ABSTAIN_MESSAGE)
+
+
+def test_the_persona_lesson_prompt_still_leads_with_the_hierarchy() -> None:
+    from app.agent.persona import PERSONA
+
+    system, retry = lesson_system_prompts("in_pack", persona=PERSONA)
+    assert system.startswith(INSTRUCTION_HIERARCHY)
+    assert system.count(INSTRUCTION_HIERARCHY) == 1
+    assert retry.startswith(INSTRUCTION_HIERARCHY)
 
 
 @pytest.mark.parametrize(
