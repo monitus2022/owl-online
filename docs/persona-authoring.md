@@ -12,14 +12,14 @@ runtime still reads committed TOML cards; the model only drafts them offline.
 - A human reviews the diff, the brief and the persona probes before publishing.
 - No model runs when a student chats. The card is static at request time.
 
-Charms is the first migrated card (#303) and Potions the second (#312): each
-has a brief, a published card and provenance. Herbology and Transfiguration
-are legacy for this pipeline: they have no brief or provenance yet. DADA is the
-standalone seed card and is never published through this pipeline.
+Charms (#303), Potions (#312) and Transfiguration (#314) are migrated: each
+has a brief, a published card and provenance. Herbology is legacy for this
+pipeline: it has no brief or provenance yet. DADA is the standalone seed card
+and is never published through this pipeline.
 `python scripts/author_persona.py check` reports the unmigrated cards as a
 warning and passes. DADA is outside the pipeline by design, so it is not a
 migration candidate and does not block `--strict`; strict turns the Herbology
-and Transfiguration warnings into a failure once those briefs are ready.
+warning into a failure once that brief is ready.
 
 ## Layout
 
@@ -106,7 +106,10 @@ uv run python scripts/author_persona.py publish --subject charms \
   --reviewer "Owner Name"
 ```
 
-`publish` uses the canonical `config/personas/briefs/<subject>.toml`; a
+`config/personas/drafts/` is gitignored: the draft and its sidecar stay local,
+and provenance records the draft hash so a reviewer can confirm the published
+card matches the reviewed draft. `publish` uses the canonical
+`config/personas/briefs/<subject>.toml`; a
 `--brief` path outside `briefs/` is refused, so an illustrative example cannot
 replace a live professor. If the live card already belongs to a different
 professor, the command refuses unless `--replace-identity` is passed. It
