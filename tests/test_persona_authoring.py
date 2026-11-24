@@ -281,13 +281,13 @@ def test_check_without_briefs_is_a_warning(tmp_path):
     assert any("no persona briefs" in warning for warning in warnings)
 
 
-def test_check_names_the_legacy_cards_on_the_real_repo():
+def test_check_reports_no_legacy_cards_on_the_real_repo():
     problems, warnings = check_authoring(REPO_ROOT)
     assert problems == []
-    text = " ".join(warnings)
-    assert "herbology" in text
-    for subject in ("dada", "charms", "potions", "transfiguration"):
-        assert subject not in text
+    assert warnings == []
+    strict_problems, strict_warnings = check_authoring(REPO_ROOT, strict=True)
+    assert strict_problems == []
+    assert strict_warnings == []
 
 
 def test_strict_fails_when_no_briefs_exist(tmp_path):

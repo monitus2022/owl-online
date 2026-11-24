@@ -12,14 +12,12 @@ runtime still reads committed TOML cards; the model only drafts them offline.
 - A human reviews the diff, the brief and the persona probes before publishing.
 - No model runs when a student chats. The card is static at request time.
 
-Charms (#303), Potions (#312) and Transfiguration (#314) are migrated: each
-has a brief, a published card and provenance. Herbology is legacy for this
-pipeline: it has no brief or provenance yet. DADA is the standalone seed card
-and is never published through this pipeline.
-`python scripts/author_persona.py check` reports the unmigrated cards as a
-warning and passes. DADA is outside the pipeline by design, so it is not a
-migration candidate and does not block `--strict`; strict turns the Herbology
-warning into a failure once that brief is ready.
+Charms (#303), Potions (#312), Transfiguration (#314) and Herbology (#316) are
+migrated: each has a brief, a published card and provenance. DADA is the
+standalone seed card and is never published through this pipeline.
+`python scripts/author_persona.py check` passes with no legacy warning. DADA is
+outside the pipeline by design, so it is not a migration candidate and does not
+block `--strict`; strict passes with the four migrated cards.
 
 ## Layout
 
