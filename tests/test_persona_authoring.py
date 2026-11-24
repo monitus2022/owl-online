@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 import tomllib
 from pathlib import Path
 
@@ -281,13 +282,25 @@ def test_check_without_briefs_is_a_warning(tmp_path):
     assert any("no persona briefs" in warning for warning in warnings)
 
 
-def test_check_names_the_legacy_cards_on_the_real_repo():
+def test_check_reports_no_legacy_cards_on_the_real_repo():
     problems, warnings = check_authoring(REPO_ROOT)
     assert problems == []
-    text = " ".join(warnings)
-    assert "herbology" in text
-    for subject in ("dada", "charms", "potions", "transfiguration"):
-        assert subject not in text
+    assert warnings == []
+    strict_problems, strict_warnings = check_authoring(REPO_ROOT, strict=True)
+    assert strict_problems == []
+    assert strict_warnings == []
+
+
+def test_check_warns_about_an_uncovered_live_card(tmp_path):
+    shutil.copytree(REPO_ROOT / "config" / "personas", tmp_path / "config" / "personas")
+    (tmp_path / "config" / "personas" / "astronomy.toml").write_text(
+        "[identity]\nname = \"Bare Card\"\n", encoding="utf-8"
+    )
+    problems, warnings = check_authoring(tmp_path)
+    assert problems == []
+    assert any("astronomy" in warning for warning in warnings)
+    strict_problems, _ = check_authoring(tmp_path, strict=True)
+    assert any("astronomy" in problem for problem in strict_problems)
 
 
 def test_strict_fails_when_no_briefs_exist(tmp_path):

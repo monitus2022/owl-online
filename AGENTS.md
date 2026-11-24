@@ -37,7 +37,7 @@ Run these from the repository root.
 - Frontend build: `npm --prefix web run build` (type-checks too; matches the Pages build and the `web` CI job)
 - Browser E2E: `npm --prefix e2e test` (after `npm ci --prefix web`, `npm ci --prefix e2e` and `npx --prefix e2e playwright install chromium`; runs the stub API and the Vite frontend)
 - Tests: `pytest`
-- Persona authoring check: `uv run python scripts/author_persona.py check` (runs in CI; Charms, Potions and Transfiguration are migrated, Herbology warns as legacy until briefed, and DADA is the standalone seed outside the pipeline)
+- Persona authoring check: `uv run python scripts/author_persona.py check` (runs in CI; all four non-DADA cards are migrated and `--strict` passes; DADA is the standalone seed outside the pipeline)
 - Eval harness tests: `pytest eval/`
 - Eval gate: `uv run python scripts/run_eval.py --check`
 - RAG eval: `uv run python scripts/run_rag_eval.py` (or `uv run python scripts/run_eval.py --rag`)

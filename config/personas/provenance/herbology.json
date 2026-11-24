@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "subject": "herbology",
+  "brief": "config/personas/briefs/herbology.toml",
+  "brief_sha256": "4b4a7f9d789e37c97803d9d5861d197136cd0bcfcc992b913aa323185c00ad61",
+  "card": "config/personas/herbology.toml",
+  "card_sha256": "d7ac8156277a221c8377c41d51746ce8fd50a78d25ba6edb646e9264ea5613e2",
+  "provider": "openrouter",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "prompt_version": "authoring-v2",
+  "prompt_sha256": "4bb2aa5483a83a079b104599babb5a42c1324e55af052422c3571ce00520cbf3",
+  "spine_sha256": "68f9e1b33f211260945f007b3dea3a2141876b2a321d5e4b70bec749205ad4ac",
+  "temperature": 0.2,
+  "generated_at": "2026-11-24T06:59:27.125866+00:00",
+  "reviewed_by": "monitus2022",
+  "reviewed_at": "2026-11-24T06:59:39.652394+00:00",
+  "draft": "config/personas/drafts/herbology.toml",
+  "draft_sha256": "d7ac8156277a221c8377c41d51746ce8fd50a78d25ba6edb646e9264ea5613e2"
+}
