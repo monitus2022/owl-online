@@ -106,7 +106,10 @@ uv run python scripts/author_persona.py publish --subject charms \
   --reviewer "Owner Name"
 ```
 
-`publish` uses the canonical `config/personas/briefs/<subject>.toml`; a
+`config/personas/drafts/` is gitignored: the draft and its sidecar stay local,
+and provenance records the draft hash so a reviewer can confirm the published
+card matches the reviewed draft. `publish` uses the canonical
+`config/personas/briefs/<subject>.toml`; a
 `--brief` path outside `briefs/` is refused, so an illustrative example cannot
 replace a live professor. If the live card already belongs to a different
 professor, the command refuses unless `--replace-identity` is passed. It

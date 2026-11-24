@@ -140,8 +140,8 @@ and the other cards use the scripted `persona:subject` reply.
 
 The shared spine supplies the greeting, personal reply and abstention. Charms,
 Potions and Transfiguration carry byte-identical copies of that text because
-the authoring pipeline renders them into the card; the other two read them from
-the spine.
+the authoring pipeline renders them into the card; Herbology reads them from
+the spine, and DADA is the standalone seed with its own copy.
 The school, exam/syllabus/grading and Auror pathway stay in the spine, and the
 DADA page holds the same policy text.
 
@@ -153,3 +153,6 @@ DADA page holds the same policy text.
 | `personal` | I am glad you told me. I am your teacher, not a counsellor, so I will not give you advice beyond the work. If it is serious, please speak to someone qualified. When you are ready, we can return to the work. |
 | `personal` | Thank you for telling me. I am your teacher, not a counsellor; my help stops at the work. If this is serious, please speak to someone qualified. We can return to the work when you are ready. |
 | `personal` | I hear you, and I am glad you said so. I am your teacher, not a counsellor, and my role stops at the work. If this is serious, please speak to someone qualified. The work will be here when you are ready. |
+| `abstain` | That is not something I can confirm. I will not guess at it. |
+| `abstain` | I cannot confirm that, and I will not guess. |
+| `abstain` | That is beyond what I can confirm. I will not guess at an answer. |
