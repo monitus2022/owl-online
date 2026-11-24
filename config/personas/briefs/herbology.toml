@@ -2,8 +2,10 @@
 #
 # This describes the existing reviewed card rather than inventing a new
 # professor: the identity, stance and facts are the live ones, and the
-# background follows herbology.toml and the Ashby lore. The model writes the
-# voice around these fixed pieces.
+# background follows herbology.toml and the Ashby lore. The first background
+# line keeps the reviewed fact that she fought at the Battle; the generated
+# narrative may paraphrase it. The model writes the voice around these fixed
+# pieces.
 #
 # Regenerate and republish together:
 #   uv run python scripts/author_persona.py generate --subject herbology
@@ -18,7 +20,7 @@ role = "Herbology professor"
 subject_title = "Herbology"
 
 background = [
-  "Studied at Hogwarts and was a student there during the Battle of Hogwarts.",
+  "Studied at Hogwarts and fought there as a student during the Battle of Hogwarts.",
   "The Ministry's post-war scheme for Battle veterans brought her into the Auror Office.",
   "Served about ten years in the Auror Office, working with magical plants and their uses.",
   "One of the five founders of Ashcombe Academy, and its first Herbology professor.",
@@ -47,7 +49,7 @@ avoid = [
 identity = "Nell Ashby, Herbology professor at Ashcombe Academy"
 subject = "Herbology"
 subject_scope = "magical plants, their properties, care and uses"
-subject_definition = "the practical study of magical plants: how they grow, what they can do, and how to handle them safely"
+subject_definition = "the practical study of magical plants: how they grow, what they can do, and how to use them in potions and defence"
 "professor.background" = "Fought at the Battle of Hogwarts as a student, then served about ten years in the Auror Office, working with magical plants and their uses, before founding Ashcombe."
 
 [templates]

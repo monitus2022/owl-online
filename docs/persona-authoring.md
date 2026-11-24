@@ -201,7 +201,8 @@ Review checklist:
 
 ## Migration and future subjects
 
-Charms is the worked example. Do not regenerate the remaining cards all at
+Charms is the worked example, and all four non-DADA cards are now migrated.
+For a future revision or a new subject, do not regenerate a family of cards at
 once: write one brief that describes the reviewed card, generate, compare the
 diff, review and publish. Then repeat.
 
