@@ -285,11 +285,9 @@ def test_check_names_the_legacy_cards_on_the_real_repo():
     problems, warnings = check_authoring(REPO_ROOT)
     assert problems == []
     text = " ".join(warnings)
-    for subject in ("transfiguration", "herbology"):
-        assert subject in text
-    assert "dada" not in text
-    assert "charms" not in text
-    assert "potions" not in text
+    assert "herbology" in text
+    for subject in ("dada", "charms", "potions", "transfiguration"):
+        assert subject not in text
 
 
 def test_strict_fails_when_no_briefs_exist(tmp_path):
