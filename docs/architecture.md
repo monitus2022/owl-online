@@ -694,7 +694,8 @@ post-war outline as public history, but a detail still cites the book chunks and
 he does not claim private knowledge of the people named in the book chunks.
 
 The registry loads five cards: the DADA seed plus Potions, Transfiguration,
-Charms and Herbology, merged over a shared policy spine. The API and graph select
+Charms and Herbology. The four non-DADA cards are merged over a shared policy
+spine, and DADA remains the standalone seed. The API and graph select
 the request subject's card from the registry, so a Charms request uses Professor
 Raman and a DADA request uses Professor Crane. The contract gates resolve the
 request subject's card (#219/#222); the legacy `meta_topic` cue table stays

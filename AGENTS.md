@@ -22,7 +22,8 @@ browser-local student name (#288), which the chat prompts use as an address.
 The lesson and multi-turn RAG baseline is committed
 (#248); implicit follow-ups are resolved before retrieval (#249), and
 lesson grounding and cross-subject referral are the active gaps (#251,
-#253); the #251 first slice moved lesson faithfulness to 4/30, and the judge is
+#253); the #251 first slice moved lesson faithfulness to 4/30 and the #310
+prompt ordering to 11/30, and the judge is
 calibrated and owner-adopted (#258). The
 project's point is the evaluation discipline and the full-stack agent, not the
 corpus.
@@ -51,7 +52,7 @@ imports them. The runtime image installs base only (`uv sync
 ## Verification (required)
 
 - Run the eval gate before considering a change done.
-- CI runs `uv run ruff check .`, `uv run pytest tests` and `uv run pytest eval/` on every pull request (`.github/workflows/eval.yml`). The `web` workflow runs `npm ci` and `npm run build` in `web/` on every pull request; pick its `build` check as required alongside `lint-and-tests` after the first green run. The `docker` workflow builds the API image on every pull request without pushing, so a broken Dockerfile cannot reach the deploy workflow. The live gate runs on the host before merge because the corpus is not in git.
+- CI runs `uv run ruff check .`, `uv run pytest tests`, the persona authoring check and `uv run pytest eval/` on every pull request (`.github/workflows/eval.yml`). The `web` workflow runs `npm ci` and `npm run build` in `web/` on every pull request; pick its `build` check as required alongside `lint-and-tests` after the first green run. The `docker` workflow builds the API image on every pull request without pushing, so a broken Dockerfile cannot reach the deploy workflow. The live gate runs on the host before merge because the corpus is not in git.
 - After any full run of `scripts/run_eval.py`, write a run record in `docs/runs/` before the change is done. `--check` gates an existing run and needs no record.
 - Do not regress retrieval or faithfulness beyond the noise band.
 - Do not merge a change that fails the eval gate.
@@ -72,7 +73,7 @@ Layout:
 - `app/pipeline/` - ingest, index, retrieve (hybrid + rerank), generate; offline exam bank authoring and validation live in `scripts/author_subject_bank.py` and `app/exam/bank.py`; `ingest/lexicon/` holds the hp-lexicon canon-index harvester (spike grammar and parsers plus the #126 discovery/fetch/harvest modules)
 - `app/providers/` - model adapters (OpenRouter Llm; Bedrock reranker, embedder and Converse Llm)
 - `app/agent/` - LangGraph chat graph, node functions, state (V2); short-term memory (`memory.py`, resolve/remember nodes) behind an opt-in `thread_id`, with a bounded conversation block in the chat prompts; the policy, closed-fact and teaching gates plus the typed citation routes; lesson mode is an explicit `mode=lesson` behind `OWL_LESSON_MODE`
-- `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts), Charms at 1.0.0 (50 materials, 49 concepts), Potions at 1.0.0 (34/34), Transfiguration at 1.0.0 (34/29) and Herbology at 1.0.0 (33/31); DADA feeds lesson mode through a derived in-memory material selector (#166); reference prefill and coverage maintenance remain on #128
+- `app/knowledge/` - lore pack schema and selection; the canon-index resolver (`lexicon.py`, #127): agreement join, chunk-candidate resolution, integrity verification and review samples over the gitignored harvest artifacts; subject taxonomy, material packs and validation landed with #87 (PR #153); the DADA pack is published at 1.0.0 (25 materials, 21 concepts), Charms at 1.0.0 (50 materials, 49 concepts), Potions at 1.0.0 (34/34), Transfiguration at 1.0.0 (34/29) and Herbology at 1.0.0 (33/31); all five published packs feed lesson mode through per-subject derived in-memory material selectors (#166); reference prefill and coverage maintenance remain on #128
 - `app/storage/` - SQLite bank store (#189) plus attempt persistence, session ownership and grading records (#193/#206)
 - `app/grading/` - built hybrid grader (#192): deterministic MCQ scoring, one-call LLM rubric judge for short answers, deterministic score bands; the bank eval and judge calibration are in `eval/exam/` (#191, #261, #264, #266, #267); served attempts are #193; the same grader serves all five banks (#213 pattern)
 - `data/subjects/` - local subject packs; all five O.W.L. packs are published; source text stays out of git
