@@ -337,6 +337,42 @@ are dropped; the API keeps serving.
 Verify with `aws s3 ls "s3://$LOG_BUCKET/owl-online/" --recursive | tail` and
 `aws s3api get-bucket-lifecycle-configuration --bucket "$LOG_BUCKET"`.
 
+## Latency triage
+
+The app access line measures only the time after uvicorn receives the request,
+so it cannot see a stall at the edge. The 2026-11-26 incident showed the shape:
+the browser waited 55 s for `GET /v1/subjects`, while the app logged
+`GET /v1/subjects -> 200 in 1ms` and a direct request to the Elastic IP
+answered in 0.2 s. The public path through Cloudflare returned `522` and the
+nginx access log recorded `499` when the client gave up.
+
+Start with the layer, not the code:
+
+1. Probe the origin directly, bypassing Cloudflare:
+   `curl -sk --resolve api.monitus.org:443:13.208.134.172 https://api.monitus.org/health`
+2. Probe the public URL in a loop and record status and time:
+   `for i in $(seq 1 20); do curl -s -o /dev/null -w '%{http_code} %{time_total}\n' https://api.monitus.org/health; done`
+3. Check the Cloudflare dashboard for `522`/`524`, origin response time and the
+   origin record. One dead record in a multi-record set or a load-balancer pool
+   produces this intermittent split.
+4. Add `$request_time` and `$upstream_response_time` to the nginx `main` log
+   format before the next incident. The default format cannot separate edge
+   delay from origin processing:
+
+   ```
+   log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                   '$status $body_bytes_sent "$http_referer" '
+                   '"$http_user_agent" "$http_x_forwarded_for" '
+                   'rt=$request_time urt=$upstream_response_time';
+   ```
+5. A `499` means the client closed before nginx answered; a `522` means
+   Cloudflare could not connect at all. Neither is an app error.
+
+The app is not the place to fix an edge stall. The client bounds the wait
+(5 s for `/v1/subjects`, 20 s for the first stream response and 30 s between
+chunks) so a stall becomes a visible retry, not a frozen room. Per-API
+monitoring and synthetic checks are tracked in #325.
+
 ## One-time host setup
 
 The pipeline ships only the image. Do these once on the instance:

@@ -27,6 +27,7 @@ interface Message {
   scope?: LessonScope;
   abstained?: boolean;
   failed?: boolean;
+  retry?: string;
   evidence?: EvidenceReport;
 }
 
@@ -157,7 +158,7 @@ export function ChatPanel({
     setMessages((current) => [
       ...current,
       { id: studentId, role: "student", text },
-      { id: professorId, role: "professor", text: "" },
+      { id: professorId, role: "professor", text: "", retry: text },
     ]);
 
     try {
@@ -205,6 +206,7 @@ export function ChatPanel({
             scope: data.scope ?? undefined,
             abstained: data.abstained,
             mode: data.mode ?? draft.mode,
+            failed: false,
             evidence: import.meta.env.DEV
               ? (data.evidence ?? undefined)
               : undefined,
@@ -287,6 +289,16 @@ export function ChatPanel({
               <p className={message.failed ? "chat-text chat-failed" : "chat-text"}>
                 {displayText || (message.role === "professor" ? "…" : "")}
               </p>
+              {message.failed && message.retry && (
+                <button
+                  type="button"
+                  className="btn-quiet chat-retry"
+                  onClick={() => void send(message.retry ?? "")}
+                  disabled={busy || !ready}
+                >
+                  Try again
+                </button>
+              )}
               {message.role === "professor" && (
                 <SourcePanel
                   subject={subject.apiSubject}

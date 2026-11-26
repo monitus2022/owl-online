@@ -889,6 +889,12 @@ main {
   color: var(--danger);
 }
 
+.chat-retry {
+  margin: 0.35rem 0 0.5rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+}
+
 .mode-badge {
   display: inline-block;
   font-size: 0.68rem;

@@ -71,6 +71,13 @@ export type StreamEvent =
 
 export class ChatError extends Error {}
 
+// A request that never reaches the stream, or a stream that stops producing
+// chunks, must not leave the chat on an ellipsis forever. The server may take
+// a few seconds to retrieve and start the first token; after that, a long gap
+// means the edge or the model stalled.
+const FIRST_RESPONSE_TIMEOUT_MS = 20_000;
+const STREAM_IDLE_TIMEOUT_MS = 30_000;
+
 export async function* askStream(
   question: string,
   personaState: PersonaState,
@@ -79,6 +86,11 @@ export async function* askStream(
   threadId?: string,
   studentName?: string | null,
 ): AsyncGenerator<StreamEvent> {
+  const controller = new AbortController();
+  const firstResponse = window.setTimeout(
+    () => controller.abort(),
+    FIRST_RESPONSE_TIMEOUT_MS,
+  );
   let response: Response;
   try {
     response = await fetch(`${apiBase()}/v1/chat/stream`, {
@@ -94,9 +106,15 @@ export async function* askStream(
         // send the same body as before.
         ...(studentName ? { student_name: studentName } : {}),
       }),
+      signal: controller.signal,
     });
   } catch {
+    if (controller.signal.aborted) {
+      throw new ChatError("The Academy did not answer in time. Please ask again.");
+    }
     throw new ChatError("Could not reach the Academy. Is the server running?");
+  } finally {
+    window.clearTimeout(firstResponse);
   }
   if (!response.ok || !response.body) {
     throw new ChatError(await problemMessage(response, personaState));
@@ -105,8 +123,36 @@ export async function* askStream(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let idle: number | undefined;
+
+  function armIdle(): void {
+    if (idle !== undefined) window.clearTimeout(idle);
+    idle = window.setTimeout(() => controller.abort(), STREAM_IDLE_TIMEOUT_MS);
+  }
+
+  function disarmIdle(): void {
+    if (idle !== undefined) {
+      window.clearTimeout(idle);
+      idle = undefined;
+    }
+  }
+
+  async function readChunk(): Promise<ReadableStreamReadResult<Uint8Array>> {
+    armIdle();
+    try {
+      return await reader.read();
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new ChatError("The answer stalled. Please ask again.");
+      }
+      throw error;
+    } finally {
+      disarmIdle();
+    }
+  }
+
   while (true) {
-    const { value, done } = await reader.read();
+    const { value, done } = await readChunk();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const frames = buffer.split(/\r?\n\r?\n/);

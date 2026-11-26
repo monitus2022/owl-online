@@ -296,6 +296,37 @@ test("the venue stays open when the subjects API is unreachable", async ({
   );
 });
 
+test("the room opens when the subjects request is slow", async ({ page }) => {
+  await page.route("**/v1/subjects", () => {
+    // Leave the request pending: the room must open on the static data
+    // instead of waiting for a response that may never arrive.
+  });
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await expect(page.getByLabel("Your question")).toBeEnabled({
+    timeout: 4000,
+  });
+});
+
+test("a failed answer offers a retry", async ({ page }) => {
+  let attempts = 0;
+  await page.route("**/v1/chat/stream", async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(
+    page.getByText("Could not reach the Academy. Is the server running?"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText("A Boggart is a shape-shifter")).toBeVisible();
+});
+
 test("the education paraphrase answers from the persona fact", async ({
   page,
 }) => {
