@@ -7,11 +7,7 @@ import { ChatPanel } from "../components/ChatPanel";
 import { ExamPanel } from "../components/ExamPanel";
 import { HistoryPanel } from "../components/HistoryPanel";
 import { Silhouette } from "../components/Silhouette";
-import {
-  fetchSubjects,
-  readCachedSubjects,
-  SUBJECTS_TIMEOUT_MS,
-} from "../api/subjects";
+import { fetchSubjects, readCachedSubjects } from "../api/subjects";
 import type { SubjectsPayload } from "../api/subjects";
 import { getSubject } from "../data/subjects";
 import type { Subject } from "../data/subjects";
@@ -53,7 +49,7 @@ export function VenuePage() {
     const grace = window.setTimeout(() => {
       if (active) setGraceElapsed(true);
     }, READY_GRACE_MS);
-    fetchSubjects({ timeoutMs: SUBJECTS_TIMEOUT_MS })
+    fetchSubjects()
       .then((payload) => {
         if (!active) return;
         setDepartment(payload);

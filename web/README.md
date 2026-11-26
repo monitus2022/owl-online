@@ -105,11 +105,15 @@ auth (#35). Each venue requests its own subject, so the Charms room serves
   chat with a note, and a statically "soon" department stays furnished. With the
   flags off the copy addresses the professor without claiming he authored a live
   reply.
-- The room does not wait on `GET /v1/subjects`. The payload is cached for five
-  minutes and the request times out after five seconds; a first visit opens on
+- The room does not wait on `GET /v1/subjects`. The payload is cached for one
+  minute and the request times out after five seconds; a first visit opens on
   the static subject data after a two-second grace, and a late response
-  upgrades the lesson and persona flags. A stalled chat stream is bounded on
-  the client and offers Try again instead of an endless placeholder.
+  upgrades the lesson and persona flags. A question sent inside that grace
+  window is routed as `auto`, not `lesson`; it is still grounded, and the next
+  turn uses the upgraded flags. A stalled chat stream is bounded on the client:
+  keep-alive pings do not reset the idle clock, and a timeout, a stream error
+  or a clean close without a `final` offers Try again instead of an endless
+  placeholder.
 - A lesson answer labels its evidence: `in_pack` and `mixed` answers say they are
   composed and carry the source caveat: the listed sources locate the notes,
   they are not a sentence-level check. `off_pack` answers label the set-text

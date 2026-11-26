@@ -147,20 +147,35 @@ export function ChatPanel({
     );
   }
 
-  async function send(raw: string) {
+  async function send(raw: string, retryId?: number) {
     const text = raw.trim();
     if (text === "" || busy || !ready) return;
     setQuestion("");
     setBusy(true);
 
-    const studentId = nextId.current++;
-    const professorId = nextId.current++;
-    setMessages((current) => [
-      ...current,
-      { id: studentId, role: "student", text },
-      { id: professorId, role: "professor", text: "", retry: text },
-    ]);
+    let professorId: number;
+    if (retryId !== undefined) {
+      // Reuse the failed turn so the same question is not sent twice and the
+      // thread memory sees one turn, not a duplicate.
+      professorId = retryId;
+      updateProfessor(professorId, () => ({
+        id: professorId,
+        role: "professor",
+        text: "",
+        retry: text,
+      }));
+    } else {
+      const studentId = nextId.current++;
+      professorId = nextId.current++;
+      setMessages((current) => [
+        ...current,
+        { id: studentId, role: "student", text },
+        { id: professorId, role: "professor", text: "", retry: text },
+      ]);
+    }
 
+    let sawFinal = false;
+    let sawError = false;
     try {
       for await (const streamEvent of askStream(
         text,
@@ -182,6 +197,7 @@ export function ChatPanel({
         } else if (streamEvent.name === "reset") {
           updateProfessor(professorId, (draft) => ({ ...draft, text: "" }));
         } else if (streamEvent.name === "final") {
+          sawFinal = true;
           const data = streamEvent.data as {
             answer: string;
             citations?: string[];
@@ -211,7 +227,8 @@ export function ChatPanel({
               ? (data.evidence ?? undefined)
               : undefined,
           }));
-        } else if (streamEvent.name === "error") {
+        } else if (streamEvent.name === "error" && !sawFinal) {
+          sawError = true;
           const data = streamEvent.data as { detail: string };
           updateProfessor(professorId, (draft) => ({
             ...draft,
@@ -220,7 +237,22 @@ export function ChatPanel({
           }));
         }
       }
+      if (!sawFinal && !sawError) {
+        // A clean close without a final event is a failed turn, not a finished
+        // one: the placeholder must not survive the stream.
+        updateProfessor(professorId, (draft) => ({
+          ...draft,
+          text:
+            draft.text === ""
+              ? "The Academy closed the answer early. Please ask again."
+              : `${draft.text}\nThe Academy closed the answer early. Please ask again.`,
+          failed: true,
+        }));
+      }
     } catch (error) {
+      // A late read error after the final event does not invalidate a complete
+      // answer, and a handled error event is already on screen.
+      if (sawFinal || sawError) return;
       const detail =
         error instanceof ChatError
           ? error.message
@@ -286,15 +318,19 @@ export function ChatPanel({
                       : "Set texts"}
                   </p>
                 )}
-              <p className={message.failed ? "chat-text chat-failed" : "chat-text"}>
+              <p
+                className={message.failed ? "chat-text chat-failed" : "chat-text"}
+                role={message.failed ? "alert" : undefined}
+              >
                 {displayText || (message.role === "professor" ? "…" : "")}
               </p>
               {message.failed && message.retry && (
                 <button
                   type="button"
                   className="btn-quiet chat-retry"
-                  onClick={() => void send(message.retry ?? "")}
+                  onClick={() => void send(message.retry ?? "", message.id)}
                   disabled={busy || !ready}
+                  aria-label={`Try again: ${message.retry}`}
                 >
                   Try again
                 </button>

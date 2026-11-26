@@ -368,10 +368,11 @@ Start with the layer, not the code:
 5. A `499` means the client closed before nginx answered; a `522` means
    Cloudflare could not connect at all. Neither is an app error.
 
-The app is not the place to fix an edge stall. The client bounds the wait
-(5 s for `/v1/subjects`, 20 s for the first stream response and 30 s between
-chunks) so a stall becomes a visible retry, not a frozen room. Per-API
-monitoring and synthetic checks are tracked in #325.
+The app is not the place to fix an edge stall. The client bounds both waits:
+a `/v1/subjects` stall opens the room on static data after the grace, and a
+chat stream stall (20 s for the response headers, 30 s between data-bearing
+events) becomes a visible Try again. Per-API monitoring and synthetic checks
+are tracked in #325.
 
 ## One-time host setup
 

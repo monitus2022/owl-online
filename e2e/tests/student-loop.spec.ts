@@ -25,8 +25,16 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   await expect(
     page.getByRole("region", { name: "Chat with the professor" }),
   ).toBeVisible();
+  // Wait for the live lesson flag, then pin the mode on the request so a slow
+  // /v1/subjects cannot silently turn this into an auto-routed answer.
+  await expect(
+    page.getByText(/I teach from the department's reviewed notes/),
+  ).toBeVisible();
+  const stream = page.waitForRequest("**/v1/chat/stream");
   await page.getByLabel("Your question").fill("What is a Boggart?");
   await page.getByRole("button", { name: "Ask" }).click();
+  const request = await stream;
+  expect(request.postDataJSON()).toMatchObject({ mode: "lesson" });
   const answer = page
     .locator(".chat-text")
     .filter({ hasText: "A Boggart is a shape-shifter" });
@@ -323,8 +331,58 @@ test("a failed answer offers a retry", async ({ page }) => {
   await expect(
     page.getByText("Could not reach the Academy. Is the server running?"),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Try again" }).click();
+  await page.getByRole("button", { name: /Try again/ }).click();
   await expect(page.getByText("A Boggart is a shape-shifter")).toBeVisible();
+  // The retry reuses the failed turn; the question is not sent twice.
+  await expect(page.locator(".chat-student")).toHaveCount(1);
+});
+
+test("a stream that closes without a final offers a retry", async ({ page }) => {
+  await page.route("**/v1/chat/stream", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      // A keep-alive comment is not a final event, and the stream then closes.
+      body: ": ping - 2026-11-26T00:00:00Z\n\n",
+    }),
+  );
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByText(/closed the answer early/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Try again/ })).toBeVisible();
+});
+
+test("a ping-only stream times out and offers a retry", async ({ page }) => {
+  await page.clock.install();
+  await page.route("**/v1/chat/stream", (route) =>
+    route.continue({ url: "http://127.0.0.1:8001/v1/test/ping-stream" }),
+  );
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  const stream = page.waitForResponse("**/v1/test/ping-stream");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await stream;
+  // Give the generator a moment to arm its idle timer, then jump past it.
+  await page.waitForTimeout(100);
+  await page.clock.fastForward(31_000);
+  await expect(page.getByText(/The answer stalled/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Try again/ })).toBeVisible();
+});
+
+test("a cached subjects payload opens the next venue while the API hangs", async ({
+  page,
+}) => {
+  const first = page.waitForResponse("**/v1/subjects");
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await first;
+  await page.route("**/v1/subjects", () => {
+    // Hang the refresh so only the session cache can open the next room.
+  });
+  await page.goto("/venue/charms");
+  await expect(page.getByLabel("Your question")).toBeEnabled({
+    timeout: 1500,
+  });
 });
 
 test("the education paraphrase answers from the persona fact", async ({

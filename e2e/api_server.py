@@ -13,6 +13,7 @@ Run:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 import tempfile
@@ -23,6 +24,7 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 import uvicorn  # noqa: E402
+from fastapi.responses import StreamingResponse  # noqa: E402
 from langgraph.checkpoint.memory import MemorySaver  # noqa: E402
 
 from app.agent import build_graph  # noqa: E402
@@ -296,7 +298,20 @@ def build_app():
         exam_attempts_per_day_signed_in=1000,
         exam_attempts_per_day_ip=1000,
     )
-    return create_app(app_settings=settings, runtime=runtime)
+    app = create_app(app_settings=settings, runtime=runtime)
+
+    @app.post("/v1/test/ping-stream")
+    async def ping_stream() -> StreamingResponse:
+        """A stream that only sends keep-alive comments, for the idle timeout."""
+
+        async def frames():
+            for _ in range(240):
+                yield ": ping\n\n"
+                await asyncio.sleep(0.5)
+
+        return StreamingResponse(frames(), media_type="text/event-stream")
+
+    return app
 
 
 def main() -> None:

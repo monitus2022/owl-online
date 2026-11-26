@@ -72,9 +72,10 @@ export type StreamEvent =
 export class ChatError extends Error {}
 
 // A request that never reaches the stream, or a stream that stops producing
-// chunks, must not leave the chat on an ellipsis forever. The server may take
-// a few seconds to retrieve and start the first token; after that, a long gap
-// means the edge or the model stalled.
+// data events, must not leave the chat on an ellipsis forever. The server may
+// take a few seconds to retrieve and start the first token; after that, a long
+// gap means the edge or the model stalled. Keep-alive comments do not count as
+// progress: sse-starlette pings every 15 s while the server is blocked.
 const FIRST_RESPONSE_TIMEOUT_MS = 20_000;
 const STREAM_IDLE_TIMEOUT_MS = 30_000;
 
@@ -137,42 +138,44 @@ export async function* askStream(
     }
   }
 
-  async function readChunk(): Promise<ReadableStreamReadResult<Uint8Array>> {
-    armIdle();
-    try {
-      return await reader.read();
-    } catch (error) {
-      if (controller.signal.aborted) {
-        throw new ChatError("The answer stalled. Please ask again.");
-      }
-      throw error;
-    } finally {
-      disarmIdle();
-    }
-  }
-
-  while (true) {
-    const { value, done } = await readChunk();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const frames = buffer.split(/\r?\n\r?\n/);
-    buffer = frames.pop() ?? "";
-    for (const frame of frames) {
-      let name = "message";
-      let data = "";
-      for (const line of frame.split(/\r?\n/)) {
-        if (line.startsWith("event: ")) name = line.slice(7).trim();
-        else if (line.startsWith("data: ")) data += line.slice(6);
-      }
-      if (!data) continue;
-      let payload: unknown;
+  armIdle();
+  try {
+    while (true) {
+      let chunk: ReadableStreamReadResult<Uint8Array>;
       try {
-        payload = JSON.parse(data);
-      } catch {
-        continue;
+        chunk = await reader.read();
+      } catch (error) {
+        if (controller.signal.aborted) {
+          throw new ChatError("The answer stalled. Please ask again.");
+        }
+        throw error;
       }
-      yield { name, data: payload } as StreamEvent;
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+      const frames = buffer.split(/\r?\n\r?\n/);
+      buffer = frames.pop() ?? "";
+      for (const frame of frames) {
+        let name = "message";
+        let data = "";
+        for (const line of frame.split(/\r?\n/)) {
+          if (line.startsWith("event: ")) name = line.slice(7).trim();
+          else if (line.startsWith("data: ")) data += line.slice(6);
+        }
+        if (!data) continue;
+        let payload: unknown;
+        try {
+          payload = JSON.parse(data);
+        } catch {
+          continue;
+        }
+        // A comment or keep-alive frame carries no data and must not reset the
+        // clock; only a real event proves the stream is alive.
+        armIdle();
+        yield { name, data: payload } as StreamEvent;
+      }
     }
+  } finally {
+    disarmIdle();
   }
 }
 

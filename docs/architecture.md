@@ -266,10 +266,12 @@ Two interfaces keep the boundary between the UI and the services:
 The static subject list decides which departments are open. The venue fetches
 `GET /v1/subjects` for the published pack and the live `persona`,
 `persona_subjects`, `lesson` and `lesson_subjects` flags, so each room checks
-its own subject. The fetch is bounded at 5 seconds and cached for 5 minutes; a
+its own subject. The fetch is bounded at 5 seconds and cached for one minute; a
 cached payload opens the room immediately, and a first visit opens on the
 static subject data after a 2-second grace. A response that lands later still
-upgrades the lesson and persona flags. A lesson answer also labels its evidence: `in_pack` and
+upgrades the lesson and persona flags. A question sent inside the grace window
+is routed as `auto`, not `lesson`; it is still grounded, and the next turn uses
+the upgraded flags. A lesson answer also labels its evidence: `in_pack` and
 `mixed` answers say the answer is composed and that the listed sources locate
 the notes rather than checking each sentence; `off_pack` answers label the
 set-text tier. The DADA room sends `mode=lesson` only when the API says its
@@ -342,9 +344,11 @@ One deadline covers the whole request: `OWL_ASK_TIMEOUT_S` (default 30 s) wraps
 retrieve plus generate. On expiry `/v1/chat` returns 504 with `{error, request_id}`
 and logs the stage that was running; `/v1/chat/stream` is not bounded on the
 server, because a legitimate stream can outlive it. The client bounds the
-stream instead: 20 seconds for the first response and 30 seconds between
-chunks. A timeout marks the turn failed and offers Try again, so the chat
-cannot sit on an ellipsis. The deadline frees the response, not the
+stream instead: 20 seconds for the response headers and 30 seconds between
+data-bearing events. Keep-alive comments do not reset that clock, so a server
+blocked behind its pings still times out. A timeout, a clean close without a
+`final` event, or a stream error marks the turn failed and offers Try again, so
+the chat cannot sit on an ellipsis. The deadline frees the response, not the
 worker: a provider call already running in a thread is not cancellable, so a
 timed-out request can keep its thread busy until the client's own timeout.
 

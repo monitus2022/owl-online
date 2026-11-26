@@ -34,13 +34,13 @@ export interface SubjectsPayload {
   persona_subjects: string[];
 }
 
-export const SUBJECTS_TIMEOUT_MS = 5000;
+const SUBJECTS_TIMEOUT_MS = 5000;
 
 const CACHE_KEY = "owl.subjects.v1";
-// Pack and flag changes are rare and the payload carries a version, so a short
-// cache is enough to make a venue-to-venue walk instant without hiding a
-// deploy for long.
-const CACHE_TTL_MS = 5 * 60 * 1000;
+// Pack and flag changes are rare, but a stale lesson flag would send
+// `mode=lesson` to an API that has disabled it. A short cache still makes a
+// venue-to-venue walk instant and limits the stale window to a minute.
+const CACHE_TTL_MS = 60 * 1000;
 
 interface CachedSubjects {
   saved_at: number;
@@ -77,6 +77,7 @@ export function readCachedSubjects(): SubjectsPayload | null {
     const parsed = JSON.parse(raw) as Partial<CachedSubjects>;
     if (
       typeof parsed.saved_at !== "number" ||
+      parsed.saved_at > Date.now() ||
       Date.now() - parsed.saved_at > CACHE_TTL_MS ||
       parsed.payload === undefined
     ) {
