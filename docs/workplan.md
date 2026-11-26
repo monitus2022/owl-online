@@ -710,6 +710,12 @@ Phase C; it does not block Phase D.
 
 ## Ticket map
 
+### Now - stability
+
+| Ticket | Scope | Milestone |
+|---|---|---|
+| #323 | Bound the venue load and the chat stream when the edge stalls; identify the Cloudflare-to-origin layer | V3 - Product |
+
 ### Now - RAG hardening
 
 | Ticket | Scope | Milestone |
@@ -741,6 +747,7 @@ Phase C; it does not block Phase D.
 |---|---|---|
 | #195 | Librarian: sixth, non-teaching door for history and referral (L4 reuses #253's referral contract) | V3 - Product |
 | #74/#75 | EBS data volume and GitHub OIDC | V2 - Deepening |
+| #325 | Per-API latency monitoring across the edge and origin: structured access logs, CloudWatch or Athena, synthetic checks | Future / Backlog |
 
 ### Icebox
 

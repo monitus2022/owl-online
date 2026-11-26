@@ -27,6 +27,7 @@ interface Message {
   scope?: LessonScope;
   abstained?: boolean;
   failed?: boolean;
+  retry?: string;
   evidence?: EvidenceReport;
 }
 
@@ -146,20 +147,37 @@ export function ChatPanel({
     );
   }
 
-  async function send(raw: string) {
+  async function send(raw: string, retryId?: number) {
     const text = raw.trim();
     if (text === "" || busy || !ready) return;
     setQuestion("");
     setBusy(true);
 
-    const studentId = nextId.current++;
-    const professorId = nextId.current++;
-    setMessages((current) => [
-      ...current,
-      { id: studentId, role: "student", text },
-      { id: professorId, role: "professor", text: "" },
-    ]);
+    let professorId: number;
+    if (retryId !== undefined) {
+      // Reuse the failed turn so the transcript shows one question and the
+      // answer streams back into the same bubble. A request that already
+      // reached the server may still appear once more in thread memory; this
+      // is a UI retry, not an idempotent request.
+      professorId = retryId;
+      updateProfessor(professorId, () => ({
+        id: professorId,
+        role: "professor",
+        text: "",
+        retry: text,
+      }));
+    } else {
+      const studentId = nextId.current++;
+      professorId = nextId.current++;
+      setMessages((current) => [
+        ...current,
+        { id: studentId, role: "student", text },
+        { id: professorId, role: "professor", text: "", retry: text },
+      ]);
+    }
 
+    let sawFinal = false;
+    let sawError = false;
     try {
       for await (const streamEvent of askStream(
         text,
@@ -181,6 +199,7 @@ export function ChatPanel({
         } else if (streamEvent.name === "reset") {
           updateProfessor(professorId, (draft) => ({ ...draft, text: "" }));
         } else if (streamEvent.name === "final") {
+          sawFinal = true;
           const data = streamEvent.data as {
             answer: string;
             citations?: string[];
@@ -196,29 +215,56 @@ export function ChatPanel({
             ...(data.citations ?? []),
             ...(data.lore_citations ?? []).map((id) => `lore:${id}`),
           ];
+          const answer = typeof data.answer === "string" ? data.answer : "";
+          const empty = answer.trim() === "";
           updateProfessor(professorId, (draft) => ({
             ...draft,
-            text: data.answer,
+            text: empty
+              ? data.abstained
+                ? ""
+                : "The Academy returned an empty answer. Please ask again."
+              : answer,
             materials: data.material_citations ?? [],
             citations: chips,
             typedCitations: data.typed_citations ?? [],
             scope: data.scope ?? undefined,
             abstained: data.abstained,
             mode: data.mode ?? draft.mode,
+            failed: empty && !data.abstained,
             evidence: import.meta.env.DEV
               ? (data.evidence ?? undefined)
               : undefined,
           }));
-        } else if (streamEvent.name === "error") {
-          const data = streamEvent.data as { detail: string };
+        } else if (streamEvent.name === "error" && !sawFinal) {
+          sawError = true;
+          const data = streamEvent.data as { detail?: unknown };
+          const detail =
+            typeof data.detail === "string"
+              ? data.detail
+              : "The professor's answer failed. Please try again.";
           updateProfessor(professorId, (draft) => ({
             ...draft,
-            text: data.detail,
+            text: detail,
             failed: true,
           }));
         }
       }
+      if (!sawFinal && !sawError) {
+        // A clean close without a final event is a failed turn, not a finished
+        // one: the placeholder must not survive the stream.
+        updateProfessor(professorId, (draft) => ({
+          ...draft,
+          text:
+            draft.text === ""
+              ? "The Academy closed the answer early. Please ask again."
+              : `${draft.text}\nThe Academy closed the answer early. Please ask again.`,
+          failed: true,
+        }));
+      }
     } catch (error) {
+      // A late read error after the final event does not invalidate a complete
+      // answer, and a handled error event is already on screen.
+      if (sawFinal || sawError) return;
       const detail =
         error instanceof ChatError
           ? error.message
@@ -227,6 +273,10 @@ export function ChatPanel({
         ...draft,
         text: draft.text === "" ? detail : `${draft.text}\n${detail}`,
         failed: true,
+        retry:
+          error instanceof ChatError && !error.retryable
+            ? undefined
+            : draft.retry,
       }));
     } finally {
       setBusy(false);
@@ -284,9 +334,34 @@ export function ChatPanel({
                       : "Set texts"}
                   </p>
                 )}
-              <p className={message.failed ? "chat-text chat-failed" : "chat-text"}>
-                {displayText || (message.role === "professor" ? "…" : "")}
+              <p
+                className={message.failed ? "chat-text chat-failed" : "chat-text"}
+                role={message.failed ? "alert" : undefined}
+              >
+                {displayText ||
+                  (message.role === "professor"
+                    ? message.abstained
+                      ? ""
+                      : "…"
+                    : "")}
               </p>
+              {message.failed &&
+                message.retry &&
+                index === messages.length - 1 && (
+                  <button
+                    type="button"
+                    className="btn-quiet chat-retry"
+                    onClick={() => void send(message.retry ?? "", message.id)}
+                    disabled={busy || !ready}
+                    aria-label={`Try again: ${
+                      message.retry.length > 60
+                        ? `${message.retry.slice(0, 60)}…`
+                        : message.retry
+                    }`}
+                  >
+                    Try again
+                  </button>
+                )}
               {message.role === "professor" && (
                 <SourcePanel
                   subject={subject.apiSubject}

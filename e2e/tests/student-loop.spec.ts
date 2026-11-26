@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const DADA = "Defence Against the Dark Arts";
+const API_BASE = "http://127.0.0.1:8001";
 
 // The gate (#288) stops every route until a name is entered. Seed one so these tests
 // start behind the gate; welcome.spec.ts covers the gate itself.
@@ -25,8 +26,16 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   await expect(
     page.getByRole("region", { name: "Chat with the professor" }),
   ).toBeVisible();
+  // Wait for the live lesson flag, then pin the mode on the request so a slow
+  // /v1/subjects cannot silently turn this into an auto-routed answer.
+  await expect(
+    page.getByText(/I teach from the department's reviewed notes/),
+  ).toBeVisible();
+  const stream = page.waitForRequest("**/v1/chat/stream");
   await page.getByLabel("Your question").fill("What is a Boggart?");
   await page.getByRole("button", { name: "Ask" }).click();
+  const request = await stream;
+  expect(request.postDataJSON()).toMatchObject({ mode: "lesson" });
   const answer = page
     .locator(".chat-text")
     .filter({ hasText: "A Boggart is a shape-shifter" });
@@ -291,6 +300,155 @@ test("the venue stays open when the subjects API is unreachable", async ({
   await expect(
     page.getByRole("region", { name: "Chat with the professor" }),
   ).toBeVisible();
+  await expect(page.getByRole("status")).toContainText(
+    "reviewed notes are not loaded",
+  );
+});
+
+test("the room opens when the subjects request is slow", async ({ page }) => {
+  await page.route("**/v1/subjects", () => {
+    // Leave the request pending: the room must open on the static data
+    // instead of waiting for a response that may never arrive.
+  });
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await expect(page.getByLabel("Your question")).toBeEnabled({
+    timeout: 4000,
+  });
+});
+
+test("a failed answer offers a retry", async ({ page }) => {
+  let attempts = 0;
+  await page.route("**/v1/chat/stream", async (route) => {
+    if (route.request().method() === "OPTIONS") {
+      await route.continue();
+      return;
+    }
+    attempts += 1;
+    if (attempts === 1) {
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(
+    page.getByText("Could not reach the Academy. Is the server running?"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Try again/ }).click();
+  await expect(page.getByText("A Boggart is a shape-shifter")).toBeVisible();
+  // The retry reuses the failed turn; the question is not sent twice.
+  await expect(page.locator(".chat-student")).toHaveCount(1);
+});
+
+test("a stream that closes without a final offers a retry", async ({ page }) => {
+  await page.route("**/v1/chat/stream", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      headers: {
+        "Access-Control-Allow-Origin": "http://127.0.0.1:5500",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+      // A keep-alive comment is not a final event, and the stream then closes.
+      body: ": ping - 2026-11-26T00:00:00Z\n\n",
+    }),
+  );
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByText(/closed the answer early/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Try again/ })).toBeVisible();
+});
+
+test("a ping-only stream times out and offers a retry", async ({ page }) => {
+  await page.clock.install();
+  await page.route("**/v1/chat/stream", (route) => {
+    if (route.request().method() === "OPTIONS") return route.continue();
+    return route.continue({ url: `${API_BASE}/v1/test/ping-stream` });
+  });
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  const stream = page.waitForResponse("**/v1/test/ping-stream");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await stream;
+  // Let real pings arrive while the fake clock advances. A timer reset on
+  // every raw read would move its deadline past 36 s; the data-event timer
+  // stays at 30 s from the last real event.
+  for (let i = 0; i < 6; i += 1) {
+    await page.clock.runFor(1000);
+    await page.waitForTimeout(150);
+  }
+  await page.clock.fastForward(25_100);
+  await expect(page.getByText(/The answer stalled/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Try again/ })).toBeVisible();
+});
+
+test("a stalled error body times out instead of hanging", async ({ page }) => {
+  await page.clock.install();
+  await page.route("**/v1/chat/stream", (route) => {
+    if (route.request().method() === "OPTIONS") return route.continue();
+    return route.continue({ url: `${API_BASE}/v1/test/stall-error` });
+  });
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  const response = page.waitForResponse("**/v1/test/stall-error");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await response;
+  await page.clock.fastForward(21_000);
+  await expect(page.getByText(/did not answer in time/)).toBeVisible();
+});
+
+test("a chat request that never returns headers times out", async ({ page }) => {
+  await page.clock.install();
+  await page.route("**/v1/chat/stream", (route) => {
+    if (route.request().method() === "OPTIONS") return route.continue();
+    // Leave the POST pending: no headers, no stream.
+  });
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.getByLabel("Your question").fill("What is a Boggart?");
+  const post = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && request.url().includes("/v1/chat/stream"),
+  );
+  await page.getByRole("button", { name: "Ask" }).click();
+  await post;
+  await page.clock.fastForward(21_000);
+  await expect(page.getByText(/did not answer in time/)).toBeVisible();
+});
+
+test("a cached subjects payload opens the next venue while the API hangs", async ({
+  page,
+}) => {
+  const first = page.waitForResponse("**/v1/subjects");
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await first;
+  await page.waitForFunction(
+    () => sessionStorage.getItem("owl.subjects.v1") !== null,
+  );
+  await page.route("**/v1/subjects", () => {
+    // Hang the refresh so only the session cache can open the next room.
+  });
+  await page.goto("/venue/charms");
+  await expect(page.getByLabel("Your question")).toBeEnabled({
+    timeout: 1500,
+  });
+});
+
+test("a subjects request that never answers times out and shows the note", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.route("**/v1/subjects", () => {
+    // Never answer: the 5 s abort must fall back to the static data.
+  });
+  await page.goto("/venue/defence-against-the-dark-arts");
+  await page.clock.fastForward(2_100);
+  await expect(page.getByLabel("Your question")).toBeEnabled();
+  await page.clock.fastForward(4_500);
   await expect(page.getByRole("status")).toContainText(
     "reviewed notes are not loaded",
   );

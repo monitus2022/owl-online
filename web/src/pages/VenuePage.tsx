@@ -7,7 +7,7 @@ import { ChatPanel } from "../components/ChatPanel";
 import { ExamPanel } from "../components/ExamPanel";
 import { HistoryPanel } from "../components/HistoryPanel";
 import { Silhouette } from "../components/Silhouette";
-import { fetchSubjects } from "../api/subjects";
+import { fetchSubjects, readCachedSubjects } from "../api/subjects";
 import type { SubjectsPayload } from "../api/subjects";
 import { getSubject } from "../data/subjects";
 import type { Subject } from "../data/subjects";
@@ -15,6 +15,11 @@ import type { Subject } from "../data/subjects";
 // The study venue. The subject accent is injected as a CSS variable for the
 // whole page, so every control, focus ring and seal picks up the department
 // colour from the subject data alone.
+
+// A first visit gives /v1/subjects this long to answer before the room opens
+// on the static subject data. The request keeps running and upgrades the
+// lesson and persona flags when it lands; a cached payload skips the wait.
+const READY_GRACE_MS = 2000;
 
 type Tab = "chat" | "exam" | "papers";
 
@@ -28,25 +33,41 @@ export function VenuePage() {
   const { slug } = useParams();
   const subject = getSubject(slug);
   const [tab, setTab] = useState<Tab>("chat");
-  const [department, setDepartment] = useState<SubjectsPayload | null>(null);
-  const [departmentChecked, setDepartmentChecked] = useState(false);
+  // A cached payload makes a venue-to-venue walk instant and keeps lesson mode
+  // correct on the first question. Without one, the room still opens after a
+  // short grace instead of waiting for a slow or black-holed request.
+  const [department, setDepartment] = useState<SubjectsPayload | null>(() =>
+    readCachedSubjects(),
+  );
+  const [departmentChecked, setDepartmentChecked] = useState(
+    department !== null,
+  );
+  const [graceElapsed, setGraceElapsed] = useState(department !== null);
 
   useEffect(() => {
     let active = true;
+    const grace = window.setTimeout(() => {
+      if (active) setGraceElapsed(true);
+    }, READY_GRACE_MS);
     fetchSubjects()
       .then((payload) => {
-        if (active) {
-          setDepartment(payload);
-          setDepartmentChecked(true);
-        }
+        if (!active) return;
+        setDepartment(payload);
+        setDepartmentChecked(true);
+        setGraceElapsed(true);
       })
       .catch(() => {
-        // Keep the static stand-in when the API is unreachable; chat will
-        // report the connection failure on the first question.
-        if (active) setDepartmentChecked(true);
-      });
+        // Keep the static stand-in when the API is unreachable or too slow;
+        // chat will report the connection failure on the first question.
+        if (active) {
+          setDepartmentChecked(true);
+          setGraceElapsed(true);
+        }
+      })
+      .finally(() => window.clearTimeout(grace));
     return () => {
       active = false;
+      window.clearTimeout(grace);
     };
   }, []);
 
@@ -192,12 +213,15 @@ export function VenuePage() {
         aria-labelledby="tab-chat"
         hidden={tab !== "chat"}
       >
+        {/* A question sent inside the grace window is routed as auto; it is
+            still grounded, and the room upgrades to lesson mode when the
+            payload lands. Waiting longer would restore the frozen room. */}
         <ChatPanel
           key={room.slug}
           subject={room}
           lesson={lesson}
           lessonFallback={lessonFallback}
-          ready={departmentChecked}
+          ready={departmentChecked || graceElapsed}
         />
       </div>
       <div

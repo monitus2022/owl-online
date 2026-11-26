@@ -266,11 +266,17 @@ Two interfaces keep the boundary between the UI and the services:
 The static subject list decides which departments are open. The venue fetches
 `GET /v1/subjects` for the published pack and the live `persona`,
 `persona_subjects`, `lesson` and `lesson_subjects` flags, so each room checks
-its own subject. A lesson answer also labels its evidence: `in_pack` and
-`mixed` answers say the answer is composed and that the listed sources locate
-the notes rather than checking each sentence; `off_pack` answers label the
-set-text tier. The DADA room sends `mode=lesson` only when the API says its
-pack is loaded; Charms does the same when its pack and lesson mode are live.
+its own subject. The fetch is bounded at 5 seconds and cached for one minute; a
+cached payload enables the chat immediately, and a first visit enables it on
+the static subject data after a 2-second grace. A response that lands later
+still upgrades the lesson and persona flags. A question sent inside the grace
+window is routed as `auto`, not `lesson`; it is still grounded, and the next
+turn uses the upgraded flags. A lesson answer also labels its evidence:
+`in_pack` and `mixed` answers say the answer is composed and that the listed
+sources locate the notes rather than checking each sentence; `off_pack`
+answers label the set-text tier. The DADA room sends `mode=lesson` only when
+the API says its pack is loaded; Charms does the same when its pack and lesson
+mode are live.
 Each room takes the live voice copy when its subject is in `persona_subjects`,
 and the single `persona_subject` is the default fallback for an older API. A
 statically open department with no pack stays on the corpus path with a note; a
@@ -337,10 +343,19 @@ sequenceDiagram
 
 One deadline covers the whole request: `OWL_ASK_TIMEOUT_S` (default 30 s) wraps
 retrieve plus generate. On expiry `/v1/chat` returns 504 with `{error, request_id}`
-and logs the stage that was running; `/v1/chat/stream` is not bounded, because a
-legitimate stream can outlive it. The deadline frees the response, not the
-worker: a provider call already running in a thread is not cancellable, so a
-timed-out request can keep its thread busy until the client's own timeout.
+and logs the stage that was running; `/v1/chat/stream` is not bounded on the
+server, because a legitimate stream can outlive it. The client bounds the
+stream instead: 20 seconds for the response headers and 30 seconds without a
+data-bearing event, including the first gap. Keep-alive comments do not reset
+that clock, so a server blocked behind its pings still times out. A timeout, a
+clean close without a `final` event, an empty non-abstained final or a stream
+error marks the turn failed; a transient failure offers Try again, while a 4xx,
+a 429 or the app's daily-pause 503 shows the message without a retry that
+cannot succeed. A stalled
+error body is bounded by the same header timeout. The deadline frees the
+response, not the worker: a provider call already running in a thread is not
+cancellable, so a timed-out request can keep its thread busy until the client's
+own timeout.
 
 `verify_draft` is deterministic: a draft fails when it repeats the system
 instructions (the leak check runs first, even with weak retrieval), when it is
