@@ -125,6 +125,8 @@ async def main() -> int:
     )
     for slug in models:
         llm = make_llm("openrouter", model=slug, temperature=0.0, max_tokens=512)
+        # No lesson selector: this sweep measures the corpus fallback for
+        # practice, not the pack-backed route.
         graph = build_graph(setup.retriever, llm)
         latencies: list[float] = []
         rows = []

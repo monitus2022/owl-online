@@ -3,6 +3,10 @@
 import re
 
 from app.agent import build_graph
+from app.knowledge.citations import check_authority
+from app.knowledge.materials import Material, SourceRef
+from app.pipeline.generate import ABSTAIN_MESSAGE
+from app.providers.errors import ProviderError
 from app.schemas import Chunk, ChunkMetadata
 
 _TWO_LEG = 2.0 / 61
@@ -34,16 +38,166 @@ class _Retriever:
 class _Llm:
     def __init__(self, text: str) -> None:
         self.text = text
+        self.systems: list[str] = []
+        self.prompts: list[str] = []
 
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
         return self.text
 
     def stream(self, system: str, prompt: str, *, context=None):
+        self.systems.append(system)
+        self.prompts.append(prompt)
+
         async def gen():
             for piece in re.findall(r"\S+\s*", self.text):
                 yield piece
 
         return gen()
+
+
+class _Selector:
+    """The subset of LessonSelector the practice node uses."""
+
+    def __init__(
+        self,
+        materials: list[Material],
+        *,
+        lexical: list[Material] | None = None,
+    ) -> None:
+        self._materials = materials
+        self._lexical = lexical or []
+        self.select_calls = 0
+        self.select_top_k: list[int] = []
+
+    def subjects(self) -> tuple[str, ...]:
+        return ("charms",)
+
+    def select_lexical(
+        self,
+        question: str,
+        *,
+        subject: str,
+        top_k: int,
+    ) -> list[Material]:
+        return self._lexical[:top_k]
+
+    async def select(
+        self,
+        question: str,
+        *,
+        subject: str,
+        top_k: int,
+        min_score: float,
+    ) -> list[Material]:
+        self.select_calls += 1
+        self.select_top_k.append(top_k)
+        return self._materials[:top_k]
+
+
+class _FilteringSelector(_Selector):
+    def __init__(self, materials: list[Material], *, drop: str) -> None:
+        super().__init__(materials)
+        self.drop = drop
+        self.filtered: list[list[str]] = []
+
+    def filter_ambiguous(
+        self,
+        subject: str,
+        question: str,
+        materials: list[Material],
+    ) -> list[Material]:
+        self.filtered.append([material.material_id for material in materials])
+        return [
+            material
+            for material in materials
+            if material.material_id != self.drop
+        ]
+
+
+class _TwoSubjectSelector:
+    """A selector that returns a different material per subject."""
+
+    def __init__(self) -> None:
+        self.charms = _material()
+        self.dada = _material(
+            material_id="dada-boggart",
+            text="A boggart takes the shape of the viewer's fear.",
+            subject="dada",
+            concept="boggart",
+            chunk_id="b3-c07-0000",
+            book=3,
+            chapter=7,
+            quote="A boggart takes the shape of the viewer's fear.",
+        )
+
+    def subjects(self) -> tuple[str, ...]:
+        return ("charms", "dada")
+
+    def _for(self, subject: str) -> list[Material]:
+        return [self.charms] if subject == "charms" else [self.dada]
+
+    def select_lexical(
+        self,
+        question: str,
+        *,
+        subject: str,
+        top_k: int,
+    ) -> list[Material]:
+        return self._for(subject)[:top_k]
+
+    async def select(
+        self,
+        question: str,
+        *,
+        subject: str,
+        top_k: int,
+        min_score: float,
+    ) -> list[Material]:
+        return self._for(subject)[:top_k]
+
+
+class _BrokenSelector(_Selector):
+    async def select(
+        self,
+        question: str,
+        *,
+        subject: str,
+        top_k: int,
+        min_score: float,
+    ) -> list[Material]:
+        raise ProviderError("selector down")
+
+
+def _material(
+    material_id: str = "charms-wick-trimming",
+    text: str = "Rowan trims the wick with a clean cut.",
+    *,
+    subject: str = "charms",
+    concept: str = "wick-trimming",
+    chunk_id: str = "b1-c01-0000",
+    book: int = 1,
+    chapter: int = 1,
+    quote: str = "Rowan trims the wick.",
+) -> Material:
+    return Material(
+        material_id=material_id,
+        subject=subject,
+        topic=f"{subject}-foundations",
+        concept=concept,
+        kind="spell",
+        text=text,
+        review_status="reviewed",
+        source_refs=[
+            SourceRef(
+                chunk_id=chunk_id,
+                book=book,
+                chapter=chapter,
+                quote=quote,
+                text_hash="abc123",
+                index_text_hash="abc123",
+            )
+        ],
+    )
 
 
 async def test_answer_route_grounds_and_cites():
@@ -93,6 +247,222 @@ async def test_practice_route_returns_cited_practice_material():
     assert state["mode"] == "practice"
     assert state["citations"] == ["b1-c01-0000"]
     assert state["abstained"] is False
+
+
+async def test_practice_uses_the_subject_pack():
+    retriever = _Retriever()
+    llm = _Llm(
+        "Practice question: What does Rowan trim? "
+        "[mat:charms-wick-trimming]\nAnswer: The wick."
+    )
+    graph = build_graph(retriever, llm, lesson=_Selector([_material()]))
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "student_name": "Ada Lovelace",
+            "top_k": 5,
+        }
+    )
+    assert state["mode"] == "practice"
+    assert state["abstained"] is False
+    assert state["material_citations"] == ["charms-wick-trimming"]
+    assert state["citations"] == ["b1-c01-0000"]
+    assert state["typed_citations"] == [
+        "lesson:charms-wick-trimming#b1-c01-0000",
+        "lesson:b1-c01-0000#b1-c01-0000",
+    ]
+    assert check_authority(state["typed_citations"], mode="practice") == []
+    # The pack path never reaches the corpus retriever.
+    assert retriever.queries == []
+    assert "Lesson notes (this department)" in llm.prompts[0]
+    assert "Rowan trims the wick" in llm.prompts[0]
+    assert "called [Ada Lovelace]" in llm.systems[0]
+
+
+async def test_practice_falls_back_when_the_pack_has_no_materials():
+    retriever = _Retriever()
+    llm = _Llm("Practice question: Who trims the wick? [b1-c01-0000]\nAnswer: Rowan.")
+    graph = build_graph(retriever, llm, lesson=_Selector([]))
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["mode"] == "practice"
+    assert state["citations"] == ["b1-c01-0000"]
+    assert retriever.queries
+
+
+async def test_practice_falls_back_for_a_subject_without_a_selector():
+    retriever = _Retriever()
+    llm = _Llm("Practice question: Who trims the wick? [b1-c01-0000]\nAnswer: Rowan.")
+    graph = build_graph(retriever, llm, lesson=_Selector([_material()]))
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "dada",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["mode"] == "practice"
+    assert state["citations"] == ["b1-c01-0000"]
+    assert retriever.queries
+
+
+async def test_practice_prefers_a_curated_material():
+    lexical = _material(
+        material_id="charms-lexical",
+        text="A clean cut keeps the wick steady.",
+        quote="A clean cut keeps the wick steady.",
+    )
+    embedded = _material(
+        material_id="charms-embedded",
+        text="A steady flame needs a trimmed wick.",
+        quote="A steady flame needs a trimmed wick.",
+    )
+    llm = _Llm("Practice question: What does a clean cut do? [mat:charms-lexical]")
+    graph = build_graph(
+        _Retriever(),
+        llm,
+        lesson=_Selector([embedded], lexical=[lexical]),
+    )
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question about a clean cut",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["material_citations"] == ["charms-lexical"]
+    prompt = llm.prompts[0]
+    assert prompt.index("[mat:charms-lexical]") < prompt.index(
+        "[mat:charms-embedded]"
+    )
+
+
+async def test_practice_applies_filter_ambiguous_and_caps_materials():
+    kept = _material(
+        material_id="charms-kept",
+        text="A clean cut keeps the wick steady.",
+        quote="A clean cut keeps the wick steady.",
+    )
+    dropped = _material(
+        material_id="charms-grim",
+        text="The Grim is a spectral dog.",
+        quote="The Grim is a spectral dog.",
+    )
+    llm = _Llm("Practice question: What keeps the wick steady? [mat:charms-kept]")
+    selector = _FilteringSelector([kept, dropped], drop="charms-grim")
+    graph = build_graph(_Retriever(), llm, lesson=selector)
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["material_citations"] == ["charms-kept"]
+    prompt = llm.prompts[0]
+    assert "[mat:charms-kept]" in prompt
+    assert "[mat:charms-grim]" not in prompt
+    assert selector.filtered == [["charms-kept", "charms-grim"]]
+    # top_k=5 is still capped at PRACTICE_MATERIALS before selection.
+    assert selector.select_top_k == [3]
+
+
+async def test_practice_skips_the_embedding_leg_when_lexical_fills_the_limit():
+    lexical = [
+        _material(
+            material_id=f"charms-lexical-{index}",
+            text=f"Note {index} about trimming the wick.",
+            quote=f"Note {index} about trimming the wick.",
+        )
+        for index in range(3)
+    ]
+    selector = _Selector([], lexical=lexical)
+    llm = _Llm("Practice question: What trims the wick? [mat:charms-lexical-0]")
+    graph = build_graph(_Retriever(), llm, lesson=selector)
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question about trimming",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["material_citations"] == ["charms-lexical-0"]
+    assert selector.select_calls == 0
+    assert "Note 0 about trimming the wick" in llm.prompts[0]
+
+
+async def test_practice_uses_only_the_room_subject():
+    llm = _Llm(
+        "Practice question: What does Rowan trim? [mat:charms-wick-trimming]"
+    )
+    graph = build_graph(_Retriever(), llm, lesson=_TwoSubjectSelector())
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["material_citations"] == ["charms-wick-trimming"]
+    assert "boggart" not in llm.prompts[0].lower()
+    assert "Rowan trims the wick" in llm.prompts[0]
+
+
+async def test_practice_refuses_a_prompt_leak_on_the_pack_path():
+    llm = _Llm("Use only the lesson notes provided. [mat:charms-wick-trimming]")
+    graph = build_graph(_Retriever(), llm, lesson=_Selector([_material()]))
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["mode"] == "practice"
+    assert state["abstained"] is True
+    assert state["answer"] == ABSTAIN_MESSAGE
+    assert state["citations"] == []
+    assert state["material_citations"] == []
+
+
+async def test_practice_falls_back_when_the_selector_raises():
+    retriever = _Retriever()
+    llm = _Llm("Practice question: Who trims the wick? [b1-c01-0000]\nAnswer: Rowan.")
+    graph = build_graph(retriever, llm, lesson=_BrokenSelector([]))
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["mode"] == "practice"
+    assert state["citations"] == ["b1-c01-0000"]
+    assert retriever.queries
 
 
 async def test_feedback_route_uses_the_student_answer():

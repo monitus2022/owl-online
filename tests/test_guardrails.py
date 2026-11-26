@@ -3,6 +3,7 @@
 import pytest
 
 from app.agent.nodes.feedback import SYSTEM as FEEDBACK_SYSTEM
+from app.agent.nodes.practice import PACK_SYSTEM as PRACTICE_PACK_SYSTEM
 from app.agent.nodes.practice import SYSTEM as PRACTICE_SYSTEM
 from app.pipeline.generate import (
     ABSTAIN_MESSAGE,
@@ -97,6 +98,7 @@ class _Scripted:
         LESSON_MIXED_SYSTEM_PROMPT,
         LESSON_OFF_PACK_SYSTEM_PROMPT,
         PRACTICE_SYSTEM,
+        PRACTICE_PACK_SYSTEM,
         FEEDBACK_SYSTEM,
         MULTI_BOOK_SYSTEM,
         MULTI_BOOK_EXTRACT_SYSTEM,
@@ -120,6 +122,7 @@ def test_every_prompt_leads_with_the_instruction_hierarchy(prompt: str) -> None:
         LORE_SYSTEM_PROMPT,
         LORE_ONLY_SYSTEM_PROMPT,
         PRACTICE_SYSTEM,
+        PRACTICE_PACK_SYSTEM,
         FEEDBACK_SYSTEM,
     ],
 )

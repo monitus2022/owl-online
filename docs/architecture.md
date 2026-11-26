@@ -432,6 +432,11 @@ sequenceDiagram
   API-->>C: event: final {answer, citations, lore_citations, material_citations, typed_citations, citation_errors, scope, abstained, needs_input, attempts, mode, thread_id}
 ```
 
+The diagram draws the corpus path. Practice skips retrieval whenever the
+selector yields a material. Lesson selects its notes first but still retrieves
+the corpus for the thin or off-pack fallback. The corpus step remains for
+answer, feedback and the practice fallback.
+
 SSE events:
 
 | Event | Payload | When |
@@ -632,7 +637,7 @@ off.
 | Intent | Trigger | Output | Persisted | Authoritative |
 |---|---|---|---|---|
 | `answer` | a question about the books | grounded explanation with citations | no | no |
-| `practice` | "give me a practice question on ..." | one or two grounded questions, streamed | no | no |
+| `practice` | "give me a practice question on ..." | one or two grounded questions from the room's pack (corpus fallback), streamed | no | no |
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
 | `meta` | persona on; identity, subject scope, subject definition, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `policy` | exam, syllabus, grading, mark scheme or a jailbreak | reviewed refusal from the card, or a generic refusal when persona is off | no | no |
@@ -642,8 +647,8 @@ off.
 | `clarify` | an ambiguous scope/assessment ask | one scripted disambiguation line, no model call | no | no |
 | `lesson` | contract gates miss, a teaching term matches, explicit `mode=lesson`, `OWL_LESSON_MODE` on | hierarchy-first, persona-led teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
 
-Lesson mode is the one intent grounded in a subject pack first; the corpus is a
-labelled fallback when the pack is thin. The selector is derived at startup by
+Lesson mode is the teaching intent grounded in a subject pack first; the corpus
+is a labelled fallback when the pack is thin. The selector is derived at startup by
 embedding material texts in memory and scoring a question by cosine; the corpus join through `source_refs` remains the
 grounding check, not the selector. A pack-backed lesson answer cites material ids
 in `material_citations` and their book chunks in `citations`; an off-pack answer
@@ -651,6 +656,13 @@ has empty `material_citations` and cites the retrieved book chunks directly.
 With the flag off a request whose classified intent is lesson is rejected;
 a `mode=lesson` request that the gates route to policy, fact, clarify or
 abstain is served, and the measured corpus path is unchanged.
+
+Practice is pack-first when the request subject has a published pack and the
+lesson selector has vectors for it: the node picks up to three reviewed materials,
+writes from their notes and cites their material ids, so a Charms room cannot
+return a DADA question. A subject without a selector, or a pack with no usable
+material, keeps the corpus path. Practice stays single-pass; it does not run
+the lesson verification retries and does not add a lesson scope note.
 
 The #216 target is answer contract and knowledge authority, not whether a
 phrasing is already in the cue list: policy, closed facts and teaching are

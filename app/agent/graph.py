@@ -170,22 +170,34 @@ def build_graph(
     graph.add_edge("policy", "remember")
     graph.add_edge("abstain", "remember")
 
-    for name, node in (
-        ("practice", practice_node),
-        ("feedback", feedback_node),
-    ):
-        graph.add_node(
-            name,
-            partial(
-                node,
-                retriever=retriever,
-                llm=small_llm or llm,
-                fallback_llm=llm if small_llm is not None else None,
-                top_k=top_k,
-                min_score=min_score,
-            ),
-        )
-        graph.add_edge(name, "remember")
+    chat_llm = small_llm or llm
+    chat_fallback = llm if small_llm is not None else None
+    graph.add_node(
+        "practice",
+        partial(
+            practice_node,
+            retriever=retriever,
+            llm=chat_llm,
+            fallback_llm=chat_fallback,
+            top_k=top_k,
+            min_score=min_score,
+            selector=lesson,
+            default_subject=default_subject,
+        ),
+    )
+    graph.add_node(
+        "feedback",
+        partial(
+            feedback_node,
+            retriever=retriever,
+            llm=chat_llm,
+            fallback_llm=chat_fallback,
+            top_k=top_k,
+            min_score=min_score,
+        ),
+    )
+    graph.add_edge("practice", "remember")
+    graph.add_edge("feedback", "remember")
 
     graph.add_edge("remember", END)
     graph.add_edge(START, "resolve")

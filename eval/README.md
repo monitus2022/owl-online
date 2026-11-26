@@ -564,6 +564,11 @@ because the judge's reasoning tokens otherwise consume the budget. A model list
 and fixture can be passed with `--models` and `--fixture`. The script exits
 non-zero when no verdict parses, so a broken run cannot look like a result.
 
+The sweep builds the graph without a lesson selector, so its practice rows
+measure the corpus fallback, not the shipped pack-backed practice path. The
+pack-backed route is covered by the practice node tests and the room smoke
+check; include it here only after the harness loads the pack selector.
+
 ## Exam-bank eval (#191, #261, #264, #266, #267)
 
 The subject bank eval is separate from the chat eval. It needs the local bank,
