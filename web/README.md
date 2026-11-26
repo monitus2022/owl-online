@@ -114,7 +114,8 @@ auth (#35). Each venue requests its own subject, so the Charms room serves
   client: keep-alive pings do not reset the idle clock, and a timeout, a stream
   error, an empty non-abstained final or a clean close without a `final` fails
   visibly instead of leaving an endless placeholder. Transient failures offer
-  Try again; a 4xx or a 429/503 does not offer a retry that cannot succeed.
+  Try again; a 4xx, a 429 or the app's daily-pause 503 does not offer a retry
+  that cannot succeed.
 - A lesson answer labels its evidence: `in_pack` and `mixed` answers say they are
   composed and carry the source caveat: the listed sources locate the notes,
   they are not a sentence-level check. `off_pack` answers label the set-text

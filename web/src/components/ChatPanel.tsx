@@ -215,8 +215,8 @@ export function ChatPanel({
             ...(data.citations ?? []),
             ...(data.lore_citations ?? []).map((id) => `lore:${id}`),
           ];
-          const empty = typeof data.answer === "string" && data.answer.trim() === "";
           const answer = typeof data.answer === "string" ? data.answer : "";
+          const empty = answer.trim() === "";
           updateProfessor(professorId, (draft) => ({
             ...draft,
             text: empty

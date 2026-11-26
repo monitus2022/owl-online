@@ -349,8 +349,9 @@ stream instead: 20 seconds for the response headers and 30 seconds without a
 data-bearing event, including the first gap. Keep-alive comments do not reset
 that clock, so a server blocked behind its pings still times out. A timeout, a
 clean close without a `final` event, an empty non-abstained final or a stream
-error marks the turn failed; a transient failure offers Try again, while a 4xx
-or a 429/503 shows the message without a retry that cannot succeed. A stalled
+error marks the turn failed; a transient failure offers Try again, while a 4xx,
+a 429 or the app's daily-pause 503 shows the message without a retry that
+cannot succeed. A stalled
 error body is bounded by the same header timeout. The deadline frees the
 response, not the worker: a provider call already running in a thread is not
 cancellable, so a timed-out request can keep its thread busy until the client's
