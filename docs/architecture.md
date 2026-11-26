@@ -632,7 +632,7 @@ off.
 | Intent | Trigger | Output | Persisted | Authoritative |
 |---|---|---|---|---|
 | `answer` | a question about the books | grounded explanation with citations | no | no |
-| `practice` | "give me a practice question on ..." | one or two grounded questions, streamed | no | no |
+| `practice` | "give me a practice question on ..." | one or two grounded questions from the room's pack (corpus fallback), streamed | no | no |
 | `feedback` | "mark my answer", or a supplied answer | formative feedback and a provisional mark | no | no |
 | `meta` | persona on; identity, subject scope, subject definition, school, professor, Auror pathway, boundaries, greeting | reviewed text from the persona card, no model call | no | no |
 | `policy` | exam, syllabus, grading, mark scheme or a jailbreak | reviewed refusal from the card, or a generic refusal when persona is off | no | no |
@@ -651,6 +651,13 @@ has empty `material_citations` and cites the retrieved book chunks directly.
 With the flag off a request whose classified intent is lesson is rejected;
 a `mode=lesson` request that the gates route to policy, fact, clarify or
 abstain is served, and the measured corpus path is unchanged.
+
+Practice is pack-first when the request subject has a published pack and the
+lesson selector has vectors for it: the node picks three reviewed materials,
+writes from their notes and cites their material ids, so a Charms room cannot
+return a DADA question. A subject without a selector, or a pack with no usable
+material, keeps the corpus path. Practice stays single-pass; it does not run
+the lesson verification retries and does not add a lesson scope note.
 
 The #216 target is answer contract and knowledge authority, not whether a
 phrasing is already in the cue list: policy, closed facts and teaching are

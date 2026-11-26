@@ -3,6 +3,8 @@
 import re
 
 from app.agent import build_graph
+from app.knowledge.citations import check_authority
+from app.knowledge.materials import Material, SourceRef
 from app.schemas import Chunk, ChunkMetadata
 
 _TWO_LEG = 2.0 / 61
@@ -34,16 +36,63 @@ class _Retriever:
 class _Llm:
     def __init__(self, text: str) -> None:
         self.text = text
+        self.systems: list[str] = []
+        self.prompts: list[str] = []
 
     async def generate(self, system: str, prompt: str, *, context=None) -> str:
         return self.text
 
     def stream(self, system: str, prompt: str, *, context=None):
+        self.systems.append(system)
+        self.prompts.append(prompt)
+
         async def gen():
             for piece in re.findall(r"\S+\s*", self.text):
                 yield piece
 
         return gen()
+
+
+class _Selector:
+    """The subset of LessonSelector the practice node uses."""
+
+    def __init__(self, materials: list[Material]) -> None:
+        self._materials = materials
+
+    def subjects(self) -> tuple[str, ...]:
+        return ("charms",)
+
+    async def select(
+        self,
+        question: str,
+        *,
+        subject: str,
+        top_k: int,
+        min_score: float,
+    ) -> list[Material]:
+        return self._materials[:top_k]
+
+
+def _material() -> Material:
+    return Material(
+        material_id="charms-wick-trimming",
+        subject="charms",
+        topic="charms-foundations",
+        concept="wick-trimming",
+        kind="spell",
+        text="Rowan trims the wick with a clean cut.",
+        review_status="reviewed",
+        source_refs=[
+            SourceRef(
+                chunk_id="b1-c01-0000",
+                book=1,
+                chapter=1,
+                quote="Rowan trims the wick.",
+                text_hash="abc123",
+                index_text_hash="abc123",
+            )
+        ],
+    )
 
 
 async def test_answer_route_grounds_and_cites():
@@ -93,6 +142,75 @@ async def test_practice_route_returns_cited_practice_material():
     assert state["mode"] == "practice"
     assert state["citations"] == ["b1-c01-0000"]
     assert state["abstained"] is False
+
+
+async def test_practice_uses_the_subject_pack():
+    retriever = _Retriever()
+    llm = _Llm(
+        "Practice question: What does Rowan trim? "
+        "[mat:charms-wick-trimming]\nAnswer: The wick."
+    )
+    graph = build_graph(retriever, llm, lesson=_Selector([_material()]))
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "student_name": "Ada Lovelace",
+            "top_k": 5,
+        }
+    )
+    assert state["mode"] == "practice"
+    assert state["abstained"] is False
+    assert state["material_citations"] == ["charms-wick-trimming"]
+    assert state["citations"] == ["b1-c01-0000"]
+    assert state["typed_citations"] == [
+        "lesson:charms-wick-trimming#b1-c01-0000",
+        "lesson:b1-c01-0000#b1-c01-0000",
+    ]
+    assert check_authority(state["typed_citations"], mode="practice") == []
+    # The pack path never reaches the corpus retriever.
+    assert retriever.queries == []
+    assert "Lesson notes (this department)" in llm.prompts[0]
+    assert "Rowan trims the wick" in llm.prompts[0]
+    assert "called [Ada Lovelace]" in llm.systems[0]
+
+
+async def test_practice_falls_back_when_the_pack_has_no_materials():
+    retriever = _Retriever()
+    llm = _Llm("Practice question: Who trims the wick? [b1-c01-0000]\nAnswer: Rowan.")
+    graph = build_graph(retriever, llm, lesson=_Selector([]))
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["mode"] == "practice"
+    assert state["citations"] == ["b1-c01-0000"]
+    assert retriever.queries
+
+
+async def test_practice_falls_back_for_a_subject_without_a_selector():
+    retriever = _Retriever()
+    llm = _Llm("Practice question: Who trims the wick? [b1-c01-0000]\nAnswer: Rowan.")
+    graph = build_graph(retriever, llm, lesson=_Selector([_material()]))
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "dada",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["mode"] == "practice"
+    assert state["citations"] == ["b1-c01-0000"]
+    assert retriever.queries
 
 
 async def test_feedback_route_uses_the_student_answer():
