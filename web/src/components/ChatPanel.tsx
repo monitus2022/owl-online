@@ -215,14 +215,15 @@ export function ChatPanel({
             ...(data.citations ?? []),
             ...(data.lore_citations ?? []).map((id) => `lore:${id}`),
           ];
-          const empty = data.answer.trim() === "";
+          const empty = typeof data.answer === "string" && data.answer.trim() === "";
+          const answer = typeof data.answer === "string" ? data.answer : "";
           updateProfessor(professorId, (draft) => ({
             ...draft,
             text: empty
               ? data.abstained
-                ? "The professor could not ground this in the texts."
+                ? ""
                 : "The Academy returned an empty answer. Please ask again."
-              : data.answer,
+              : answer,
             materials: data.material_citations ?? [],
             citations: chips,
             typedCitations: data.typed_citations ?? [],
@@ -236,10 +237,14 @@ export function ChatPanel({
           }));
         } else if (streamEvent.name === "error" && !sawFinal) {
           sawError = true;
-          const data = streamEvent.data as { detail: string };
+          const data = streamEvent.data as { detail?: unknown };
+          const detail =
+            typeof data.detail === "string"
+              ? data.detail
+              : "The professor's answer failed. Please try again.";
           updateProfessor(professorId, (draft) => ({
             ...draft,
-            text: data.detail,
+            text: detail,
             failed: true,
           }));
         }
@@ -333,7 +338,12 @@ export function ChatPanel({
                 className={message.failed ? "chat-text chat-failed" : "chat-text"}
                 role={message.failed ? "alert" : undefined}
               >
-                {displayText || (message.role === "professor" ? "…" : "")}
+                {displayText ||
+                  (message.role === "professor"
+                    ? message.abstained
+                      ? ""
+                      : "…"
+                    : "")}
               </p>
               {message.failed &&
                 message.retry &&

@@ -319,6 +319,10 @@ test("the room opens when the subjects request is slow", async ({ page }) => {
 test("a failed answer offers a retry", async ({ page }) => {
   let attempts = 0;
   await page.route("**/v1/chat/stream", async (route) => {
+    if (route.request().method() === "OPTIONS") {
+      await route.continue();
+      return;
+    }
     attempts += 1;
     if (attempts === 1) {
       await route.abort();
@@ -346,6 +350,8 @@ test("a stream that closes without a final offers a retry", async ({ page }) => 
       headers: {
         "Access-Control-Allow-Origin": "http://127.0.0.1:5500",
         "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
       },
       // A keep-alive comment is not a final event, and the stream then closes.
       body: ": ping - 2026-11-26T00:00:00Z\n\n",
@@ -376,7 +382,7 @@ test("a ping-only stream times out and offers a retry", async ({ page }) => {
     await page.clock.runFor(1000);
     await page.waitForTimeout(150);
   }
-  await page.clock.fastForward(24_100);
+  await page.clock.fastForward(25_100);
   await expect(page.getByText(/The answer stalled/)).toBeVisible();
   await expect(page.getByRole("button", { name: /Try again/ })).toBeVisible();
 });
@@ -442,7 +448,7 @@ test("a subjects request that never answers times out and shows the note", async
   await page.goto("/venue/defence-against-the-dark-arts");
   await page.clock.fastForward(2_100);
   await expect(page.getByLabel("Your question")).toBeEnabled();
-  await page.clock.fastForward(3_400);
+  await page.clock.fastForward(4_500);
   await expect(page.getByRole("status")).toContainText(
     "reviewed notes are not loaded",
   );

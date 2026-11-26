@@ -370,9 +370,9 @@ Start with the layer, not the code:
 
 The app is not the place to fix an edge stall. The client bounds both waits:
 a `/v1/subjects` stall opens the room on static data after the grace, and a
-chat stream stall (20 s for the response headers, 30 s between data-bearing
-events) becomes a visible Try again. Per-API monitoring and synthetic checks
-are tracked in #325.
+chat stream stall (20 s for the response headers, 30 s without a data-bearing
+event including the first gap) becomes a visible Try again. Per-API monitoring
+and synthetic checks are tracked in #325.
 
 ## One-time host setup
 

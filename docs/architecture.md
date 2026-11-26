@@ -271,11 +271,12 @@ cached payload enables the chat immediately, and a first visit enables it on
 the static subject data after a 2-second grace. A response that lands later
 still upgrades the lesson and persona flags. A question sent inside the grace
 window is routed as `auto`, not `lesson`; it is still grounded, and the next
-turn uses the upgraded flags. A lesson answer also labels its evidence: `in_pack` and
-`mixed` answers say the answer is composed and that the listed sources locate
-the notes rather than checking each sentence; `off_pack` answers label the
-set-text tier. The DADA room sends `mode=lesson` only when the API says its
-pack is loaded; Charms does the same when its pack and lesson mode are live.
+turn uses the upgraded flags. A lesson answer also labels its evidence:
+`in_pack` and `mixed` answers say the answer is composed and that the listed
+sources locate the notes rather than checking each sentence; `off_pack`
+answers label the set-text tier. The DADA room sends `mode=lesson` only when
+the API says its pack is loaded; Charms does the same when its pack and lesson
+mode are live.
 Each room takes the live voice copy when its subject is in `persona_subjects`,
 and the single `persona_subject` is the default fallback for an older API. A
 statically open department with no pack stays on the corpus path with a note; a

@@ -131,11 +131,11 @@ export async function* askStream(
       // the next room load gets the fresh flags.
       clearCachedSubjects();
     }
-    let detail: string;
+    let problem: { message: string; retryable: boolean };
     try {
       // Keep the first-response timer armed while the error body is read; a
       // gateway can send headers and then stall the body.
-      detail = await problemMessage(response, personaState);
+      problem = await problemMessage(response, personaState);
     } catch {
       if (controller.signal.aborted) {
         throw new ChatError(
@@ -149,12 +149,7 @@ export async function* askStream(
     if (controller.signal.aborted) {
       throw new ChatError("The Academy did not answer in time. Please ask again.");
     }
-    throw new ChatError(
-      detail,
-      !response.ok
-        ? response.status >= 500 && response.status !== 503
-        : true,
-    );
+    throw new ChatError(problem.message, problem.retryable);
   }
   window.clearTimeout(firstResponse);
 
@@ -221,30 +216,53 @@ export async function* askStream(
 async function problemMessage(
   response: Response,
   personaState: PersonaState,
-): Promise<string> {
+): Promise<{ message: string; retryable: boolean }> {
   let problem: { error?: string; reason?: string; retry_after?: number; detail?: string };
   try {
     problem = await response.json();
   } catch {
     problem = {};
   }
+  // A 200 with no body is a server fault, not a client error; anything the
+  // status says is 5xx is worth one retry. A 4xx is not.
+  const retryable = response.ok || response.status >= 500;
   if (response.status === 429) {
     const wait = problem.retry_after ?? 60;
-    return `Too many questions at once — the queue outside the office clears in ${wait} seconds.`;
+    return {
+      message: `Too many questions at once — the queue outside the office clears in ${wait} seconds.`,
+      retryable: false,
+    };
   }
   if (response.status === 503) {
-    const reason = problem.reason ? ` (${problem.reason})` : "";
+    if (!problem.reason) {
+      // A gateway or edge 503 has no app reason; treat it as transient.
+      return {
+        message: "The Academy is unavailable right now. Please try again.",
+        retryable: true,
+      };
+    }
+    const reason = ` (${problem.reason})`;
     const quiet =
       personaState === "live" ? "The professor is resting" : "The study rooms are quiet";
-    return `${quiet} tonight — chat is briefly paused for the day${reason}. The exam rooms are unaffected.`;
+    return {
+      message: `${quiet} tonight — chat is briefly paused for the day${reason}. The exam rooms are unaffected.`,
+      retryable: false,
+    };
   }
   if (
     response.status === 400 &&
     /lesson mode/i.test(`${problem.detail ?? ""} ${problem.error ?? ""}`)
   ) {
-    return "The teaching notes are no longer loaded for this room. Reload the room and ask again.";
+    return {
+      message:
+        "The teaching notes are no longer loaded for this room. Reload the room and ask again.",
+      retryable: false,
+    };
   }
-  if (problem.error) return problem.error;
-  if (problem.detail) return problem.detail;
-  return "Something went wrong at the Academy. Please try again.";
+  if (problem.error) return { message: problem.error, retryable };
+  if (problem.detail) return { message: problem.detail, retryable };
+  return {
+    message: "Something went wrong at the Academy. Please try again.",
+    retryable,
+  };
 }
