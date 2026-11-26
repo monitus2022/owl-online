@@ -432,6 +432,11 @@ sequenceDiagram
   API-->>C: event: final {answer, citations, lore_citations, material_citations, typed_citations, citation_errors, scope, abstained, needs_input, attempts, mode, thread_id}
 ```
 
+The diagram draws the corpus path. The lesson path and the pack-backed practice
+path select their notes before retrieval, so their `retrieve` step is skipped
+when the pack has a selector for the request subject; the corpus step remains
+for answer, feedback and the practice fallback.
+
 SSE events:
 
 | Event | Payload | When |
@@ -642,8 +647,8 @@ off.
 | `clarify` | an ambiguous scope/assessment ask | one scripted disambiguation line, no model call | no | no |
 | `lesson` | contract gates miss, a teaching term matches, explicit `mode=lesson`, `OWL_LESSON_MODE` on | hierarchy-first, persona-led teaching prose from selected pack materials, `[mat:<id>]` citations plus resolved book refs; labelled corpus fallback when the pack is thin (`scope`) | no | no |
 
-Lesson mode is the one intent grounded in a subject pack first; the corpus is a
-labelled fallback when the pack is thin. The selector is derived at startup by
+Lesson mode is the teaching intent grounded in a subject pack first; the corpus
+is a labelled fallback when the pack is thin. The selector is derived at startup by
 embedding material texts in memory and scoring a question by cosine; the corpus join through `source_refs` remains the
 grounding check, not the selector. A pack-backed lesson answer cites material ids
 in `material_citations` and their book chunks in `citations`; an off-pack answer
@@ -653,7 +658,7 @@ a `mode=lesson` request that the gates route to policy, fact, clarify or
 abstain is served, and the measured corpus path is unchanged.
 
 Practice is pack-first when the request subject has a published pack and the
-lesson selector has vectors for it: the node picks three reviewed materials,
+lesson selector has vectors for it: the node picks up to three reviewed materials,
 writes from their notes and cites their material ids, so a Charms room cannot
 return a DADA question. A subject without a selector, or a pack with no usable
 material, keeps the corpus path. Practice stays single-pass; it does not run

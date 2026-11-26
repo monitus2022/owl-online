@@ -26,6 +26,7 @@ from app.pipeline.generate import (
     INSTRUCTION_HIERARCHY,
     ground_answer,
     leaks_instructions,
+    prompt_markers,
 )
 from app.pipeline.generate.addressing import student_note
 from app.pipeline.generate.lesson import ground_lesson_answer, render_materials
@@ -95,30 +96,34 @@ async def select_materials(
     lexical = getattr(selector, "select_lexical", None)
     if callable(lexical):
         materials = list(lexical(question, subject=subject, top_k=limit))
-    if len(materials) >= limit:
-        return materials[:limit]
-    seen = {material.material_id for material in materials}
-    try:
-        more = await selector.select(
-            question,
-            subject=subject,
-            top_k=limit,
-            min_score=0.0,
-        )
-    except (ProviderError, ValueError) as error:
-        # Practice is additive. A failed selector must not take the room down;
-        # the corpus path below still answers.
-        logger.warning(
-            "practice pack selection failed for %s: %s", subject, type(error).__name__
-        )
-        more = []
-    for material in more:
-        if material.material_id not in seen:
-            materials.append(material)
-            seen.add(material.material_id)
-        if len(materials) >= limit:
-            break
-    return materials
+    if len(materials) < limit:
+        seen = {material.material_id for material in materials}
+        try:
+            more = await selector.select(
+                question,
+                subject=subject,
+                top_k=limit,
+                min_score=0.0,
+            )
+        except (ProviderError, ValueError) as error:
+            # Practice is additive. A failed selector must not take the room
+            # down; the corpus path below still answers.
+            logger.warning(
+                "practice pack selection failed for %s: %s",
+                subject,
+                type(error).__name__,
+            )
+            more = []
+        for material in more:
+            if material.material_id not in seen:
+                materials.append(material)
+                seen.add(material.material_id)
+            if len(materials) >= limit:
+                break
+    filter_fn = getattr(selector, "filter_ambiguous", None)
+    if callable(filter_fn):
+        materials = filter_fn(subject, question, materials)
+    return materials[:limit]
 
 
 async def practice_node(
@@ -152,6 +157,7 @@ async def practice_node(
             materials,
             context=state.get("conversation_context", ""),
         )
+        markers = prompt_markers(system)
         text, model_used, attempts = await stream_with_fallback(
             llm,
             fallback_llm,
@@ -160,12 +166,26 @@ async def practice_node(
             get_stream_writer(),
             intent="practice",
         )
-        result = ground_lesson_answer(text, materials, scope="in_pack")
-        if result.abstained and leaks_instructions(text):
+        selected = [material.material_id for material in materials]
+        if leaks_instructions(text, markers):
             logger.warning(
-                "abstain (leak): draft repeated system instructions "
-                "(intent=practice, pack)"
+                "leak: pack practice repeated system instructions"
             )
+            return {
+                "chunks": [],
+                "answer": ABSTAIN_MESSAGE,
+                "citations": [],
+                "material_citations": [],
+                "typed_citations": [],
+                # Practice is not a lesson answer; the scope field stays null.
+                "scope": None,
+                "abstained": True,
+                "abstain_reason": "refused",
+                "llm_model": model_used,
+                "attempts": attempts,
+                "selected_material_ids": selected,
+            }
+        result = ground_lesson_answer(text, materials, scope="in_pack")
         return {
             "chunks": [],
             "answer": result.answer,
@@ -177,9 +197,7 @@ async def practice_node(
             "abstained": result.abstained,
             "llm_model": model_used,
             "attempts": attempts,
-            "selected_material_ids": [
-                material.material_id for material in materials
-            ],
+            "selected_material_ids": selected,
         }
 
     chunks = await retrieve_evidence(

@@ -194,8 +194,8 @@ feedback, meta and personal keep their normal handling, so a venue that defaults
 to lesson still greets and tests correctly.
 
 When the request subject has a published pack and lesson mode has a selector for
-it, a practice request is written from three reviewed materials, and the final
-payload carries `material_citations` and typed `lesson:` citations; `citations`
+it, a practice request is written from up to three reviewed materials, and the
+final payload carries `material_citations` and typed `lesson:` citations; `citations`
 then lists the source-ref chunk ids. A subject without a selector falls back to
 the corpus and carries chunk citations, as before. Practice stays single-pass
 either way; it does not run the lesson verification retries.
