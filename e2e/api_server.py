@@ -305,11 +305,23 @@ def build_app():
         """A stream that only sends keep-alive comments, for the idle timeout."""
 
         async def frames():
-            for _ in range(240):
+            for _ in range(600):
                 yield ": ping\n\n"
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.2)
 
         return StreamingResponse(frames(), media_type="text/event-stream")
+
+    @app.post("/v1/test/stall-error")
+    async def stall_error() -> StreamingResponse:
+        """A 503 whose headers arrive before a body that never finishes."""
+
+        async def body():
+            await asyncio.sleep(120)
+            yield "{}"
+
+        return StreamingResponse(
+            body(), status_code=503, media_type="application/json"
+        )
 
     return app
 

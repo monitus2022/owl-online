@@ -155,8 +155,10 @@ export function ChatPanel({
 
     let professorId: number;
     if (retryId !== undefined) {
-      // Reuse the failed turn so the same question is not sent twice and the
-      // thread memory sees one turn, not a duplicate.
+      // Reuse the failed turn so the transcript shows one question and the
+      // answer streams back into the same bubble. A request that already
+      // reached the server may still appear once more in thread memory; this
+      // is a UI retry, not an idempotent request.
       professorId = retryId;
       updateProfessor(professorId, () => ({
         id: professorId,
@@ -213,16 +215,21 @@ export function ChatPanel({
             ...(data.citations ?? []),
             ...(data.lore_citations ?? []).map((id) => `lore:${id}`),
           ];
+          const empty = data.answer.trim() === "";
           updateProfessor(professorId, (draft) => ({
             ...draft,
-            text: data.answer,
+            text: empty
+              ? data.abstained
+                ? "The professor could not ground this in the texts."
+                : "The Academy returned an empty answer. Please ask again."
+              : data.answer,
             materials: data.material_citations ?? [],
             citations: chips,
             typedCitations: data.typed_citations ?? [],
             scope: data.scope ?? undefined,
             abstained: data.abstained,
             mode: data.mode ?? draft.mode,
-            failed: false,
+            failed: empty && !data.abstained,
             evidence: import.meta.env.DEV
               ? (data.evidence ?? undefined)
               : undefined,
@@ -261,6 +268,10 @@ export function ChatPanel({
         ...draft,
         text: draft.text === "" ? detail : `${draft.text}\n${detail}`,
         failed: true,
+        retry:
+          error instanceof ChatError && !error.retryable
+            ? undefined
+            : draft.retry,
       }));
     } finally {
       setBusy(false);
@@ -324,17 +335,23 @@ export function ChatPanel({
               >
                 {displayText || (message.role === "professor" ? "…" : "")}
               </p>
-              {message.failed && message.retry && (
-                <button
-                  type="button"
-                  className="btn-quiet chat-retry"
-                  onClick={() => void send(message.retry ?? "", message.id)}
-                  disabled={busy || !ready}
-                  aria-label={`Try again: ${message.retry}`}
-                >
-                  Try again
-                </button>
-              )}
+              {message.failed &&
+                message.retry &&
+                index === messages.length - 1 && (
+                  <button
+                    type="button"
+                    className="btn-quiet chat-retry"
+                    onClick={() => void send(message.retry ?? "", message.id)}
+                    disabled={busy || !ready}
+                    aria-label={`Try again: ${
+                      message.retry.length > 60
+                        ? `${message.retry.slice(0, 60)}…`
+                        : message.retry
+                    }`}
+                  >
+                    Try again
+                  </button>
+                )}
               {message.role === "professor" && (
                 <SourcePanel
                   subject={subject.apiSubject}

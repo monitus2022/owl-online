@@ -90,6 +90,14 @@ export function readCachedSubjects(): SubjectsPayload | null {
   }
 }
 
+export function clearCachedSubjects(): void {
+  try {
+    window.sessionStorage.removeItem(CACHE_KEY);
+  } catch {
+    // A blocked store has nothing to clear.
+  }
+}
+
 function writeCachedSubjects(payload: SubjectsPayload): void {
   try {
     window.sessionStorage.setItem(
@@ -101,13 +109,11 @@ function writeCachedSubjects(payload: SubjectsPayload): void {
   }
 }
 
-export async function fetchSubjects(
-  options: { timeoutMs?: number } = {},
-): Promise<SubjectsPayload> {
+export async function fetchSubjects(): Promise<SubjectsPayload> {
   const controller = new AbortController();
   const timer = window.setTimeout(
     () => controller.abort(),
-    options.timeoutMs ?? SUBJECTS_TIMEOUT_MS,
+    SUBJECTS_TIMEOUT_MS,
   );
   try {
     const response = await fetch(`${apiBase()}/v1/subjects`, {

@@ -1,4 +1,5 @@
 import { apiBase } from "./base";
+import { clearCachedSubjects } from "./subjects";
 import type { PersonaState } from "../data/subjects";
 
 // Client for POST /v1/chat/stream, the SSE contract in docs/api.md. The server
@@ -69,7 +70,15 @@ export type StreamEvent =
   | { name: "error"; data: { detail: string } }
   | { name: string; data: unknown };
 
-export class ChatError extends Error {}
+export class ChatError extends Error {
+  constructor(
+    message: string,
+    readonly retryable = true,
+  ) {
+    super(message);
+    this.name = "ChatError";
+  }
+}
 
 // A request that never reaches the stream, or a stream that stops producing
 // data events, must not leave the chat on an ellipsis forever. The server may
@@ -110,16 +119,44 @@ export async function* askStream(
       signal: controller.signal,
     });
   } catch {
+    window.clearTimeout(firstResponse);
     if (controller.signal.aborted) {
       throw new ChatError("The Academy did not answer in time. Please ask again.");
     }
     throw new ChatError("Could not reach the Academy. Is the server running?");
-  } finally {
-    window.clearTimeout(firstResponse);
   }
   if (!response.ok || !response.body) {
-    throw new ChatError(await problemMessage(response, personaState));
+    if (response.status === 400) {
+      // A stale cached lesson flag is the common 400 here; drop the cache so
+      // the next room load gets the fresh flags.
+      clearCachedSubjects();
+    }
+    let detail: string;
+    try {
+      // Keep the first-response timer armed while the error body is read; a
+      // gateway can send headers and then stall the body.
+      detail = await problemMessage(response, personaState);
+    } catch {
+      if (controller.signal.aborted) {
+        throw new ChatError(
+          "The Academy did not answer in time. Please ask again.",
+        );
+      }
+      throw new ChatError("Something went wrong at the Academy. Please try again.");
+    } finally {
+      window.clearTimeout(firstResponse);
+    }
+    if (controller.signal.aborted) {
+      throw new ChatError("The Academy did not answer in time. Please ask again.");
+    }
+    throw new ChatError(
+      detail,
+      !response.ok
+        ? response.status >= 500 && response.status !== 503
+        : true,
+    );
   }
+  window.clearTimeout(firstResponse);
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -200,6 +237,12 @@ async function problemMessage(
     const quiet =
       personaState === "live" ? "The professor is resting" : "The study rooms are quiet";
     return `${quiet} tonight — chat is briefly paused for the day${reason}. The exam rooms are unaffected.`;
+  }
+  if (
+    response.status === 400 &&
+    /lesson mode/i.test(`${problem.detail ?? ""} ${problem.error ?? ""}`)
+  ) {
+    return "The teaching notes are no longer loaded for this room. Reload the room and ask again.";
   }
   if (problem.error) return problem.error;
   if (problem.detail) return problem.detail;
