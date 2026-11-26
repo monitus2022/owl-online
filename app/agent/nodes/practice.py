@@ -195,6 +195,7 @@ async def practice_node(
             # Practice is not a lesson answer; the scope field stays null.
             "scope": None,
             "abstained": result.abstained,
+            "abstain_reason": result.abstain_reason,
             "llm_model": model_used,
             "attempts": attempts,
             "selected_material_ids": selected,

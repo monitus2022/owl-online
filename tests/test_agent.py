@@ -66,6 +66,8 @@ class _Selector:
     ) -> None:
         self._materials = materials
         self._lexical = lexical or []
+        self.select_calls = 0
+        self.select_top_k: list[int] = []
 
     def subjects(self) -> tuple[str, ...]:
         return ("charms",)
@@ -87,7 +89,29 @@ class _Selector:
         top_k: int,
         min_score: float,
     ) -> list[Material]:
+        self.select_calls += 1
+        self.select_top_k.append(top_k)
         return self._materials[:top_k]
+
+
+class _FilteringSelector(_Selector):
+    def __init__(self, materials: list[Material], *, drop: str) -> None:
+        super().__init__(materials)
+        self.drop = drop
+        self.filtered: list[list[str]] = []
+
+    def filter_ambiguous(
+        self,
+        subject: str,
+        question: str,
+        materials: list[Material],
+    ) -> list[Material]:
+        self.filtered.append([material.material_id for material in materials])
+        return [
+            material
+            for material in materials
+            if material.material_id != self.drop
+        ]
 
 
 class _TwoSubjectSelector:
@@ -325,6 +349,64 @@ async def test_practice_prefers_a_curated_material():
     assert prompt.index("[mat:charms-lexical]") < prompt.index(
         "[mat:charms-embedded]"
     )
+
+
+async def test_practice_applies_filter_ambiguous_and_caps_materials():
+    kept = _material(
+        material_id="charms-kept",
+        text="A clean cut keeps the wick steady.",
+        quote="A clean cut keeps the wick steady.",
+    )
+    dropped = _material(
+        material_id="charms-grim",
+        text="The Grim is a spectral dog.",
+        quote="The Grim is a spectral dog.",
+    )
+    llm = _Llm("Practice question: What keeps the wick steady? [mat:charms-kept]")
+    selector = _FilteringSelector([kept, dropped], drop="charms-grim")
+    graph = build_graph(_Retriever(), llm, lesson=selector)
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question.",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["material_citations"] == ["charms-kept"]
+    prompt = llm.prompts[0]
+    assert "[mat:charms-kept]" in prompt
+    assert "[mat:charms-grim]" not in prompt
+    assert selector.filtered == [["charms-kept", "charms-grim"]]
+    # top_k=5 is still capped at PRACTICE_MATERIALS before selection.
+    assert selector.select_top_k == [3]
+
+
+async def test_practice_skips_the_embedding_leg_when_lexical_fills_the_limit():
+    lexical = [
+        _material(
+            material_id=f"charms-lexical-{index}",
+            text=f"Note {index} about trimming the wick.",
+            quote=f"Note {index} about trimming the wick.",
+        )
+        for index in range(3)
+    ]
+    selector = _Selector([], lexical=lexical)
+    llm = _Llm("Practice question: What trims the wick? [mat:charms-lexical-0]")
+    graph = build_graph(_Retriever(), llm, lesson=selector)
+    state = await graph.ainvoke(
+        {
+            "question": "Give me a practice question about trimming",
+            "requested_mode": "practice",
+            "subject": "charms",
+            "student_answer": None,
+            "top_k": 5,
+        }
+    )
+    assert state["material_citations"] == ["charms-lexical-0"]
+    assert selector.select_calls == 0
+    assert "Note 0 about trimming the wick" in llm.prompts[0]
 
 
 async def test_practice_uses_only_the_room_subject():

@@ -432,10 +432,10 @@ sequenceDiagram
   API-->>C: event: final {answer, citations, lore_citations, material_citations, typed_citations, citation_errors, scope, abstained, needs_input, attempts, mode, thread_id}
 ```
 
-The diagram draws the corpus path. The lesson path and the pack-backed practice
-path select their notes before retrieval, so their `retrieve` step is skipped
-when the pack has a selector for the request subject; the corpus step remains
-for answer, feedback and the practice fallback.
+The diagram draws the corpus path. Practice skips retrieval whenever the
+selector yields a material. Lesson selects its notes first but still retrieves
+the corpus for the thin or off-pack fallback. The corpus step remains for
+answer, feedback and the practice fallback.
 
 SSE events:
 
