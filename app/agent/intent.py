@@ -272,9 +272,13 @@ class ResidualClassifier:
                     (time.perf_counter() - started) * 1000,
                 )
         self.latencies_ms.append((time.perf_counter() - started) * 1000)
-        if len(self._cache) >= CACHE_ENTRIES:
-            self._cache.clear()
-        self._cache[key] = candidate
+        if candidate is not None:
+            # A timeout, an IAM denial or a malformed reply must not poison the
+            # question for the life of the process; only a usable label is
+            # cached.
+            if len(self._cache) >= CACHE_ENTRIES:
+                self._cache.clear()
+            self._cache[key] = candidate
         return candidate
 
     def _ensure_loop(self) -> asyncio.AbstractEventLoop:

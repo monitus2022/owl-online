@@ -268,7 +268,7 @@ fix.
 | Region | `ap-northeast-3` |
 | Elastic IP | `13.208.134.172` |
 | Instance role | `monitus-ec2-ecr-role` (`AmazonSSMManagedInstanceCore`, `AmazonEC2ContainerRegistryReadOnly`, `owl-online-bedrock`) |
-| Bedrock policy | `owl-online-bedrock`: `bedrock:Rerank` on `*`, `bedrock:InvokeModel` on the Titan and rerank model ARNs, and `bedrock:InvokeModel` plus `bedrock:InvokeModelWithResponseStream` on the Llm model ARN (or inference-profile ARN) in `ap-northeast-1` |
+| Bedrock policy | `owl-online-bedrock`: `bedrock:Rerank` on `*`, `bedrock:InvokeModel` on the Titan and rerank model ARNs, `bedrock:InvokeModel` plus `bedrock:InvokeModelWithResponseStream` on the Llm model ARN (or inference-profile ARN) in `ap-northeast-1`, and `bedrock:InvokeModel` on the APAC Nova Micro inference profile and the Nova Micro foundation models for the #327 classifier |
 | Data volume | `/data` on the instance root volume |
 
 The Bedrock Llm needs both invoke actions on the exact model or inference-profile
@@ -281,6 +281,15 @@ arn:aws:bedrock:ap-northeast-1::foundation-model/qwen.qwen3-32b-v1:0
 If the chosen model is served through an inference profile, grant the same
 actions on the profile ARN instead. Converse streaming fails without
 `bedrock:InvokeModelWithResponseStream`.
+
+The #327 residual classifier uses `apac.amazon.nova-micro-v1:0` in
+`ap-northeast-1`. Grant `bedrock:InvokeModel` on the APAC inference profile and
+on `amazon.nova-micro-v1:0` in the six APAC regions the profile routes to. The
+instance policy uses the profile pattern
+`arn:aws:bedrock:ap-northeast-1:079897132929:inference-profile/*`; the exact
+profile id alone returned `AccessDeniedException` at runtime, while the
+account-scoped profile wildcard succeeded. A missing grant is no override: the
+classifier logs the provider error and the deterministic route stands.
 
 ## Log shipping
 

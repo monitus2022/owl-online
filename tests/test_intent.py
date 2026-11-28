@@ -19,6 +19,23 @@ from app.trace import TraceSink, end_trace, start_trace
 FIXTURE = Path(__file__).parents[1] / "eval" / "fixtures" / "lore"
 
 
+class SequenceLlm:
+    """A fixed sequence of replies, one per call."""
+
+    def __init__(self, replies: list[str]) -> None:
+        self.name = "sequence/intent"
+        self.replies = replies
+        self.calls = 0
+
+    async def generate(self, system, prompt, context=None):
+        reply = self.replies[min(self.calls, len(self.replies) - 1)]
+        self.calls += 1
+        return reply
+
+    def stream(self, system, prompt, context=None):  # pragma: no cover - contract
+        raise NotImplementedError
+
+
 class ScriptedLlm:
     """One fixed reply, with a call count and an optional delay."""
 
@@ -92,6 +109,25 @@ def test_classifier_caches_by_question_previous_and_subject():
     assert first == second
     assert intent.llm.calls == 1
     asyncio.run(intent.classify("Where am I?", previous="and the school?", subject="dada"))
+    assert intent.llm.calls == 2
+
+
+def test_a_failed_reply_is_not_cached():
+    intent = ResidualClassifier(
+        llm=SequenceLlm(
+            [
+                "not json",
+                '{"contract": "lore", "entry_id": "school-001"}',
+            ]
+        ),
+        lore=load_lore(FIXTURE),
+        personas=PERSONAS,
+        timeout_s=1.5,
+    )
+    assert asyncio.run(intent.classify("Where am I?", subject="dada")) is None
+    second = asyncio.run(intent.classify("Where am I?", subject="dada"))
+    assert second is not None
+    assert second.entry_id == "school-001"
     assert intent.llm.calls == 2
 
 
