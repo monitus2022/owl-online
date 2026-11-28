@@ -1,3 +1,4 @@
+import { chatErrorCopy } from "../copy/errors";
 import { apiBase } from "./base";
 import { clearCachedSubjects } from "./subjects";
 import type { PersonaState } from "../data/subjects";
@@ -121,9 +122,9 @@ export async function* askStream(
   } catch {
     window.clearTimeout(firstResponse);
     if (controller.signal.aborted) {
-      throw new ChatError("The Academy did not answer in time. Please ask again.");
+      throw new ChatError(chatErrorCopy.timeout);
     }
-    throw new ChatError("Could not reach the Academy. Is the server running?");
+    throw new ChatError(chatErrorCopy.unreachable);
   }
   if (!response.ok || !response.body) {
     if (response.status === 400) {
@@ -139,15 +140,15 @@ export async function* askStream(
     } catch {
       if (controller.signal.aborted) {
         throw new ChatError(
-          "The Academy did not answer in time. Please ask again.",
+          chatErrorCopy.timeout,
         );
       }
-      throw new ChatError("Something went wrong at the Academy. Please try again.");
+      throw new ChatError(chatErrorCopy.generic);
     } finally {
       window.clearTimeout(firstResponse);
     }
     if (controller.signal.aborted) {
-      throw new ChatError("The Academy did not answer in time. Please ask again.");
+      throw new ChatError(chatErrorCopy.timeout);
     }
     throw new ChatError(problem.message, problem.retryable);
   }
@@ -178,7 +179,7 @@ export async function* askStream(
         chunk = await reader.read();
       } catch (error) {
         if (controller.signal.aborted) {
-          throw new ChatError("The answer stalled. Please ask again.");
+          throw new ChatError(chatErrorCopy.stalled);
         }
         throw error;
       }
@@ -229,7 +230,7 @@ async function problemMessage(
   if (response.status === 429) {
     const wait = problem.retry_after ?? 60;
     return {
-      message: `Too many questions at once — the queue outside the office clears in ${wait} seconds.`,
+      message: chatErrorCopy.rateLimited(wait),
       retryable: false,
     };
   }
@@ -237,15 +238,16 @@ async function problemMessage(
     if (!problem.reason) {
       // A gateway or edge 503 has no app reason; treat it as transient.
       return {
-        message: "The Academy is unavailable right now. Please try again.",
+        message: chatErrorCopy.unavailable,
         retryable: true,
       };
     }
-    const reason = ` (${problem.reason})`;
     const quiet =
-      personaState === "live" ? "The professor is resting" : "The study rooms are quiet";
+      personaState === "live"
+        ? chatErrorCopy.quietProfessor
+        : chatErrorCopy.quietRooms;
     return {
-      message: `${quiet} tonight — chat is briefly paused for the day${reason}. The exam rooms are unaffected.`,
+      message: chatErrorCopy.paused(quiet, problem.reason ?? null),
       retryable: false,
     };
   }
@@ -254,15 +256,14 @@ async function problemMessage(
     /lesson mode/i.test(`${problem.detail ?? ""} ${problem.error ?? ""}`)
   ) {
     return {
-      message:
-        "The teaching notes are no longer loaded for this room. Reload the room and ask again.",
+      message: chatErrorCopy.staleNotes,
       retryable: false,
     };
   }
   if (problem.error) return { message: problem.error, retryable };
   if (problem.detail) return { message: problem.detail, retryable };
   return {
-    message: "Something went wrong at the Academy. Please try again.",
+    message: chatErrorCopy.generic,
     retryable,
   };
 }

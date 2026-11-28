@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { BAND_LABELS } from "../api/exams";
 import type { StoredAttempt } from "../api/results";
+import { papersCopy } from "../copy";
 import { SUBJECTS } from "../data/subjects";
 import { bandTone } from "./BandStrip";
 
@@ -21,27 +22,29 @@ export function ProgressBoard({
 }) {
   return (
     <section className="progress" aria-label="Department noticeboard">
-      <h2>The noticeboard</h2>
-      <div className="notice notice-mock">
-        Practice marks are kept for this visit until school accounts arrive.
-      </div>
+      <h2>{papersCopy.progress.heading}</h2>
+      <div className="notice notice-mock">{papersCopy.progress.notice}</div>
       <ul className="progress-grid" role="list" aria-live="polite">
         {SUBJECTS.map((subject) => {
           const best = bests[subject.slug];
           let state: string;
           if (loading) {
-            state = "checking the records…";
+            state = papersCopy.progress.checking;
           } else if (best === undefined) {
-            state = "the records could not be read";
+            state = papersCopy.progress.unreadable;
           } else if (best) {
             state =
               best.band && best.total !== null
-                ? `best: ${BAND_LABELS[best.band]} (${best.total}/${best.max})`
-                : "a paper was kept back";
+                ? papersCopy.progress.best(
+                    BAND_LABELS[best.band],
+                    best.total,
+                    best.max,
+                  )
+                : papersCopy.progress.keptBack;
           } else if (subject.status === "open") {
-            state = "the room is furnished, no papers sat yet";
+            state = papersCopy.progress.furnished;
           } else {
-            state = "the door is closed";
+            state = papersCopy.progress.closed;
           }
           return (
             <li
