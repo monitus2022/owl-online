@@ -97,6 +97,14 @@ class Settings(BaseSettings):
     routing: Literal["off", "intent"] = "off"
     small_provider: Literal["openrouter", "bedrock"] = "openrouter"
     small_model: str = "mistralai/mistral-small-3.2-24b-instruct"
+    # Residual intent classifier (#327). Off keeps the deterministic router
+    # alone; shadow records the label without changing the route; on applies
+    # the evidence-gated override. Nova Micro needs the APAC inference profile
+    # in ap-northeast-1; direct on-demand throughput is not offered there.
+    intent_classifier: Literal["off", "shadow", "on"] = "off"
+    intent_classifier_provider: Literal["bedrock", "openrouter"] = "bedrock"
+    intent_classifier_model: str = "apac.amazon.nova-micro-v1:0"
+    intent_classifier_timeout_s: float = Field(default=1.5, gt=0, le=5)
     # Signs the anonymous session cookie. Empty means a random per-process
     # secret, which resets sessions on restart; set it in production.
     session_secret: str = ""
@@ -115,6 +123,21 @@ class Settings(BaseSettings):
             if self.small_provider == "bedrock" and "/" in self.small_model:
                 raise ValueError(
                     "Bedrock small models use the provider.model-id form, not a slug"
+                )
+        if self.intent_classifier != "off":
+            if (
+                self.intent_classifier_provider == "openrouter"
+                and "/" not in self.intent_classifier_model
+            ):
+                raise ValueError(
+                    "OpenRouter intent models use the vendor/model slug"
+                )
+            if (
+                self.intent_classifier_provider == "bedrock"
+                and "/" in self.intent_classifier_model
+            ):
+                raise ValueError(
+                    "Bedrock intent models use the provider.model-id form, not a slug"
                 )
         return self
 

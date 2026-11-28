@@ -33,19 +33,42 @@ TIERS = frozenset({"book", "product", "secondary"})
 # A setting question must name Ashcombe, a founder, the faculty, the founders
 # of Ashcombe, the Auror pathway or the post-war/public-history setting. A book
 # question that merely shares "Defence Against the Dark Arts" must not pull lore
-# into the prompt.
+# into the prompt. The phrases are the same family the router's `_SCHOOL` gate
+# uses; a new school phrasing belongs in both places, and
+# `eval/routing/test_paraphrase.py` pins the shipped examples.
 _SETTING_CUE = re.compile(
     r"\b(ashcombe|professor crane|professor vale|professor hale|"
-    r"professor raman|professor ashby|the school|this school|the academy|"
+    r"professor raman|professor ashby|the school|this school|"
+    r"the academy|this academy|the campus|this place|this building|"
     r"the faculty|five founders|ashcombe founders|founders of ashcombe|"
     r"the school'?s founders|the academy'?s founders|"
+    r"headmaster|headmistress|student body|departments|"
+    r"when was it founded|where am i|who is in charge|"
     r"auror pathway|auror office|auror subjects?|post-war|public history)\b",
+    re.IGNORECASE,
+)
+# A book question is never a setting question, even when it shares a cue word
+# such as "headmaster" or "departments". This is the single book-context gate:
+# the router imports it for its contract guards and `select` uses it to keep
+# Ashcombe notes out of a Hogwarts prompt. Keep the tokens here, not in a second
+# copy, so the answer path and the router cannot drift.
+BOOK_CONTEXT = re.compile(
+    r"\b(hogwarts|durmstrang|beauxbatons|ilvermorny|books?|novels?|book \d|"
+    r"book one|book two|book three|book four|book five|book six|book seven|"
+    r"first year|second year|third year|fourth year|fifth year|sixth year|"
+    r"seventh year|year (?:one|two|three|four|five|six|seven)|"
+    r"harry|ron|hermione|voldemort|dumbledore|snape|draco|hagrid|sirius|"
+    r"bellatrix|mcgonagall|lupin|quirrell|lockhart|moody|umbridge|carrow|"
+    r"crouch|tonks|pomfrey|muggles?|azkaban|diagon alley|hogsmeade|"
+    r"privet drive|gryffindor|slytherin|ravenclaw|hufflepuff|"
+    r"o\.?w\.?l\.?|exam room|exam hall|school of witchcraft and wizardry|"
+    r"battle of hogwarts)\b",
     re.IGNORECASE,
 )
 DEFAULT_LORE_TOP_K = 3
 # Bump when the selection algorithm changes: the answer cache scope includes
 # this so a weight-only change cannot be served from an old selection.
-LORE_SELECTION_VERSION = "weighted-title-tags-v1"
+LORE_SELECTION_VERSION = "weighted-title-tags-aliases-v2"
 TITLE_TAG_WEIGHT = 2
 _WORD = re.compile(r"[a-z0-9]+")
 _STOP = frozenset(
@@ -145,12 +168,33 @@ class LoreStore:
 
         With `require_cue`, a question must name the setting before any entry is
         returned. That keeps a book question about Defence Against the Dark Arts
-        from pulling the school's setting notes into its prompt. Title and tag
-        hits are weighted `TITLE_TAG_WEIGHT` times a body hit, because the title
-        and tags are curated.
+        from pulling the school's setting notes into its prompt. A book question
+        that names Hogwarts, the books or a book character is rejected before
+        the cue is considered. Callers that already know the turn is a setting
+        question, such as the residual classifier's evidence gate, use `ranked`
+        or pass `require_cue=False`.
+
+        Title, tag and alias hits are weighted `TITLE_TAG_WEIGHT` times a body
+        hit, because those fields are curated. Aliases are authored paraphrase
+        surface, so a question worded as "the academy" can reach `school-001`
+        without editing the entry body.
         """
+        if BOOK_CONTEXT.search(question):
+            return []
         if require_cue and _SETTING_CUE.search(question) is None:
             return []
+        return [entry for _, entry in self.ranked(question, subject=subject)][: max(1, limit)]
+
+    def ranked(
+        self, question: str, *, subject: str | None = None
+    ) -> list[tuple[int, LoreEntry]]:
+        """Every scored entry, best first, for the evidence gate and selection.
+
+        An entry with no shared term is omitted, so an empty list means the
+        question carries no lexical signal for the pack. The gate treats that
+        case specially: the classifier may still name an entry, because a
+        paraphrase such as "Where am I" has no word the entries share.
+        """
         query = _tokens(question)
         if not query:
             return []
@@ -159,7 +203,7 @@ class LoreStore:
             if subject is not None and entry.subject not in (subject, "all"):
                 continue
             title_tags = _tokens(
-                " ".join((entry.title, " ".join(entry.tags)))
+                " ".join((entry.title, " ".join(entry.tags), " ".join(entry.aliases)))
             )
             body = _tokens(entry.body)
             # Title and tags are curated, so a hit there is worth more than a
@@ -169,7 +213,7 @@ class LoreStore:
             if score:
                 scored.append((score, entry))
         scored.sort(key=lambda item: (-item[0], item[1].id))
-        return [entry for _, entry in scored[: max(1, limit)]]
+        return scored
 
 
 def _tokens(text: str) -> set[str]:

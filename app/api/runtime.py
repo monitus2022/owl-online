@@ -3,6 +3,7 @@
 The API receives wired contracts and never builds a provider per request.
 """
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 
@@ -10,6 +11,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
 from app.agent import build_graph
+from app.agent.intent import ResidualClassifier
 from app.agent.memory import memory_saver
 from app.agent.persona import PERSONAS
 from app.config import Settings
@@ -36,6 +38,7 @@ class Runtime:
     stateless_agent: CompiledStateGraph | None = None
     index_hash: str = "unknown-index"
     small_llm: Llm | None = None
+    intent_classifier: ResidualClassifier | None = None
     lore: LoreStore | None = None
     packs: tuple[PackSummary, ...] = ()
     pack_store: PackStore | None = None
@@ -51,6 +54,9 @@ class Runtime:
 
     async def aclose(self) -> None:
         """Release provider clients and the serving store on shutdown."""
+        if self.intent_classifier is not None:
+            # The classifier owns its client and its loop; close both there.
+            await asyncio.to_thread(self.intent_classifier.close)
         components = [self.retriever, self.llm, self.small_llm, self.exam_judge]
         components.extend(self.exam_judges.values())
         seen: set[int] = set()
@@ -164,6 +170,44 @@ async def build_runtime(settings: Settings) -> Runtime:
         if settings.routing == "intent"
         else None
     )
+    intent_classifier: ResidualClassifier | None = None
+    if settings.intent_classifier != "off":
+        if lore is None:
+            logger.warning(
+                "intent classifier disabled: no lore pack at %s",
+                settings.lore_path,
+            )
+        else:
+            try:
+                intent_llm = make_llm(
+                    settings.intent_classifier_provider,
+                    model=settings.intent_classifier_model,
+                    temperature=0.0,
+                    max_tokens=64,
+                    timeout=settings.intent_classifier_timeout_s,
+                    max_attempts=0,
+                )
+                intent_classifier = ResidualClassifier(
+                    llm=intent_llm,
+                    lore=lore,
+                    personas=PERSONAS if settings.persona else None,
+                    timeout_s=settings.intent_classifier_timeout_s,
+                )
+            except Exception as error:
+                # The classifier is additive. A bad model pin must not take
+                # the deterministic router down with it.
+                logger.warning(
+                    "intent classifier disabled: %s: %s",
+                    type(error).__name__,
+                    error,
+                )
+            else:
+                logger.info(
+                    "intent classifier %s: %s (%d prompt chars)",
+                    settings.intent_classifier,
+                    intent_classifier.model,
+                    intent_classifier.prompt_chars(settings.persona_subject),
+                )
     exam_store: ExamStore | None = None
     exam_judges: dict[str, Llm] = {}
     exam_cache: JudgeCache | None = None
@@ -236,6 +280,8 @@ async def build_runtime(settings: Settings) -> Runtime:
             default_subject=settings.persona_subject,
             lore=lore,
             small_llm=small_llm,
+            intent_classifier=intent_classifier,
+            intent_mode=settings.intent_classifier,
             lesson=lesson,
             lesson_top_k=settings.lesson_top_k,
             lesson_min_score=settings.lesson_min_score,
@@ -255,6 +301,7 @@ async def build_runtime(settings: Settings) -> Runtime:
         agent=agent,
         stateless_agent=stateless_agent,
         small_llm=small_llm,
+        intent_classifier=intent_classifier,
         packs=packs,
         pack_store=pack_store,
         lesson=lesson,

@@ -8,11 +8,15 @@ a separate offline pipeline with stored mark schemes and deterministic scoring.
 """
 
 import re
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from app.agent.intent import Candidate, ResidualClassifier
 from app.agent.persona import PERSONA, PERSONAS, Persona
 from app.agent.state import AgentState, Mode, RequestedMode
+from app.knowledge.lore import BOOK_CONTEXT as _BOOK_CONTEXT
+from app.knowledge.lore import LoreStore
 from app.knowledge.terms import content_terms
 from app.trace import current_tracer
 
@@ -70,18 +74,6 @@ _PRACTICE_FORMAT_GUARD = re.compile(
     r"\b(?:give me\s+)?(?:a\s+|an\s+|some\s+)?practice\s+"
     r"(?:exam|test|paper)\s+(?:questions?\s+)?"
     r"(?:formats?|contents?|schedules?|dates?)\b",
-    re.IGNORECASE,
-)
-# A curriculum question with a book context is a book question, not a syllabus
-# question. The guard keeps "What is the DADA curriculum at Hogwarts?" on the
-# answer path while "What is the DADA curriculum?" routes to the syllabus.
-_BOOK_CONTEXT = re.compile(
-    r"\b(hogwarts|books?|novels?|book \d|book one|book two|book three|"
-    r"book four|book five|book six|book seven|first year|second year|"
-    r"third year|fourth year|fifth year|sixth year|seventh year|"
-    r"year (?:one|two|three|four|five|six|seven)|quirrell|lockhart|lupin|"
-    r"moody|umbridge|snape|carrow|crouch|tonks|pomfrey|o\.?w\.?l\.?|"
-    r"exam room|exam hall)\b",
     re.IGNORECASE,
 )
 _SUBJECT_NAME = (
@@ -299,8 +291,9 @@ _SCOPE_AMBIGUOUS = re.compile(
     re.IGNORECASE,
 )
 _SCHOOL_AMBIGUOUS = re.compile(
-    r"\b(tell me about (?:the|your) (?:old )?school|which school are you from|"
-    r"what is your school)\b",
+    r"\b(tell me about (?:the|your|this) (?:old )?(?:school|academy)|"
+    r"which school are you from|what is your school|what is this school|"
+    r"which school is this)\b",
     re.IGNORECASE,
 )
 _EDUCATION = re.compile(
@@ -327,10 +320,20 @@ _TEACHING_RECORD = re.compile(
     r"\b(set texts|teaching record|policy on the set texts)\b", re.IGNORECASE
 )
 _SCHOOL = re.compile(
-    r"\b(ashcombe|the school|this school|the academy|founders? of ashcombe|"
-    r"who founded|when was ashcombe founded|where is ashcombe|"
-    r"how many students|house system|five departments|school's history|"
-    r"school's founding|departments does ashcombe)\b",
+    r"\b(ashcombe|the school|this school|school'?s|the academy|this academy|"
+    r"the campus|this place|this building|"
+    r"what kind of school|what sort of school|where am i|where are we|"
+    r"where exactly am i|"
+    r"founders? of ashcombe|who founded|when was ashcombe founded|"
+    r"when was it founded|where is ashcombe|how many students|"
+    r"house system|what houses|does this school have houses|"
+    r"five departments|what departments|which departments|"
+    r"how many departments|who are the founders|who were the founders|"
+    r"five founders|the five founders|"
+    r"departments does ashcombe|school'?s history|school'?s founding|"
+    r"headmaster|headmistress|leads the school|"
+    r"who is in charge here|who is in charge of (?:this|the) (?:school|academy)|"
+    r"who runs this place|student body|the faculty)\b",
     re.IGNORECASE,
 )
 _AUROR = re.compile(
@@ -340,7 +343,10 @@ _AUROR = re.compile(
 )
 _TIMELINE_1998 = re.compile(r"\b(1998|battle of hogwarts)\b", re.IGNORECASE)
 _TIMELINE_2008 = re.compile(r"\b2008\b")
-_TIMELINE_2026 = re.compile(r"\b2026\b|present year", re.IGNORECASE)
+_TIMELINE_2026 = re.compile(
+    r"\b2026\b|present year|current year|what year is it|what is the year",
+    re.IGNORECASE,
+)
 _PUBLIC_RECORD = re.compile(
     r"\b(public record|public-record|people in the books|private knowledge)\b",
     re.IGNORECASE,
@@ -467,6 +473,32 @@ def contract_decision(
         or (_FEEDBACK_ASK.search(question) and _FEEDBACK_TARGET.search(question))
     ):
         return ContractDecision("answer", reason="explicit feedback request")
+
+    # A setting question and an assessment question in the same turn cannot be
+    # answered by either contract. Ask one short question instead of letting the
+    # policy gate swallow the setting half. The book-context guard keeps a
+    # Hogwarts exam question on the book path.
+    if (
+        (
+            _EXAM_WORDS.search(question)
+            or re.search(
+                r"\b(syllabus|grading|grade|mark scheme|marking)\b",
+                question,
+                re.IGNORECASE,
+            )
+        )
+        and not book_context
+        and not _EDUCATION.search(question)
+        and (
+            _SCHOOL.search(question)
+            or _TIMELINE_1998.search(question)
+            or _TIMELINE_2008.search(question)
+            or _TIMELINE_2026.search(question)
+            or _AUROR.search(question)
+            or _TEACHING_RECORD.search(question)
+        )
+    ):
+        return ContractDecision("clarify", reason="setting and assessment")
 
     if re.search(
         r"\b(what does the course cover|what is on the course|"
@@ -742,11 +774,183 @@ def classify(
     return auto
 
 
+# A weak lexical signal is only evidence when the question itself points at the
+# setting: a deictic ("this", "here"), the speaker ("I", "we"), or a setting
+# word. Without one, a lore label on a book definition such as "What is a
+# Boggart?" has nothing to stand on.
+_WEAK_SETTING = re.compile(
+    r"\b(this|these|here|there|our|we|us|i|my|academy|ashcombe|school|"
+    r"campus|building|place|auror|professor|faculty|founder|department|"
+    r"student|headmaster|headmistress|year|staff|subject|people)\b",
+    re.IGNORECASE,
+)
+# A persona label needs a second-person or professor cue. "Who is in charge
+# here?" is a setting question, not an identity question, even though both are
+# "who" questions.
+_PERSONA_CUE = re.compile(
+    r"\b(you|your|yours|yourself|professor|crane|vale|hale|raman|ashby|"
+    r"background|story|experience|study|studied|education|teach|teaches|"
+    r"teaching|subject)\b",
+    re.IGNORECASE,
+)
+_POLICY_CUE = re.compile(
+    r"\b(exam(?:ination)?s?|test(?:s|ed|ing)?|assessment(?:s)?|"
+    r"syllabus|grade[ds]?|grading|mark(?:s|ing)?|mark scheme|paper(?:s)?)\b",
+    re.IGNORECASE,
+)
+
+
+def _persona_topic(question: str) -> str:
+    if re.search(
+        r"\b(background|story|experience|study|studied|education|auror|"
+        r"where did|where were)\b",
+        question,
+        re.IGNORECASE,
+    ):
+        return "professor"
+    if re.search(
+        r"\b(subject|teach|teaching|department|cover|cover(s|ed)?)\b",
+        question,
+        re.IGNORECASE,
+    ):
+        return "subject"
+    if re.search(
+        r"\b(can you|limits?|will you not|what do you cover|help with)\b",
+        question,
+        re.IGNORECASE,
+    ):
+        return "boundaries"
+    return "identity"
+
+
+def _lore_evidence(
+    lore: LoreStore | None,
+    question: str,
+    subject: str,
+    entry_id: str,
+    previous: str = "",
+) -> bool:
+    """The named entry must exist, match the room, and beat the runner-up.
+
+    An empty ranked list is the paraphrase case: no entry shares a word with
+    the question, so the model's semantic link is the only evidence available
+    and existence plus subject is enough. A weak single-token hit is treated the
+    same way. Anything stronger must agree with the choice and leave a margin,
+    because `fact_node` returns the body verbatim with no later verification.
+    """
+    if lore is None:
+        return False
+    entry = lore.get(entry_id)
+    if entry is None or entry.subject not in (subject, "all"):
+        return False
+    # A book question that mentions a school is still a book question. The
+    # previous turn is context for a fragment, never for the entry score.
+    context = f"{previous} {question}".strip()
+    if _BOOK_CONTEXT.search(context):
+        return False
+    # Score across every room: the runner-up should be the strongest alternative
+    # anywhere in the pack, not only in this room, so a room entry cannot win by
+    # default. The candidate's subject is checked separately above.
+    ranked = lore.ranked(question)
+    scores = {candidate.id: score for score, candidate in ranked}
+    if entry_id not in scores:
+        return (
+            not ranked or ranked[0][0] <= 1
+        ) and bool(_WEAK_SETTING.search(context))
+    runner_up = max(
+        (score for score, candidate in ranked if candidate.id != entry_id),
+        default=0,
+    )
+    return scores[entry_id] > runner_up
+
+
+def _persona_evidence(
+    personas: dict[str, Persona] | None,
+    subject: str,
+    question: str,
+    previous: str = "",
+) -> str | None:
+    """The scripted topic the turn would use, or None when the card has none."""
+    card = (personas or {}).get(subject)
+    if card is None:
+        return None
+    if not _PERSONA_CUE.search(question) and not _PERSONA_CUE.search(previous):
+        return None
+    topic = _persona_topic(question)
+    for candidate in (topic, "professor", "subject", "boundaries", "identity"):
+        if card.meta_response(candidate):
+            return candidate
+    return None
+
+
+def _policy_evidence(question: str, previous: str) -> bool:
+    return bool(_POLICY_CUE.search(question) or _POLICY_CUE.search(previous))
+
+
+def _override(
+    candidate: Candidate,
+    question: str,
+    previous: str,
+    *,
+    subject: str,
+    lore: LoreStore | None,
+    personas: dict[str, Persona] | None,
+) -> tuple[dict[str, object], int] | None:
+    """The first candidate with real evidence, as a payload and its index."""
+    choices = [(candidate.contract, candidate.entry_id)]
+    if candidate.second_contract is not None:
+        choices.append((candidate.second_contract, candidate.second_entry_id))
+    for index, (contract, entry_id) in enumerate(choices):
+        if contract == "lore" and entry_id:
+            # The model may answer with an authored alias. Resolve to the
+            # canonical id before the gate and the citation, so `fact_node` and
+            # the typed citation always agree.
+            entry = lore.get(entry_id) if lore is not None else None
+            if entry is not None and _lore_evidence(
+                lore, question, subject, entry.id, previous
+            ):
+                return {
+                    "mode": "fact",
+                    "routed_mode": "fact",
+                    "fact_ids": [f"lore:{entry.id}"],
+                }, index
+        elif contract == "persona":
+            topic = _persona_evidence(personas, subject, question, previous)
+            if topic is not None:
+                return {
+                    "mode": "meta",
+                    "routed_mode": "meta",
+                    "meta_topic": topic,
+                }, index
+        elif contract == "policy":
+            if _policy_evidence(question, previous):
+                return {
+                    "mode": "policy",
+                    "routed_mode": "policy",
+                    "meta_topic": _policy_topic(question),
+                }, index
+        elif contract == "clarify":
+            if candidate.second_contract in {"lore", "persona", "policy"}:
+                return {"mode": "clarify", "routed_mode": "clarify"}, index
+    return None
+
+
+def _classify_residual(
+    intent: ResidualClassifier, question: str, previous: str, subject: str
+) -> Candidate | None:
+    """Run the classifier on its own long-lived loop, bounded by its timeout."""
+    return intent.classify_sync(question, previous=previous, subject=subject)
+
+
 def route(
     state: AgentState,
     *,
     persona: bool = False,
     teaching_terms: Callable[[str], set[str]] | None = None,
+    intent: ResidualClassifier | None = None,
+    intent_mode: str = "off",
+    lore: LoreStore | None = None,
+    personas: dict[str, Persona] | None = None,
 ) -> dict[str, object]:
     question = state.get("standalone_question") or state["question"]
     forced = state.get("forced_mode")
@@ -793,6 +997,42 @@ def route(
             )
         if mode == "fact":
             payload["fact_ids"] = list(decision.fact_ids)
+
+    deterministic = mode
+    trace_fields: dict[str, object] = {}
+    if mode == "abstain" and intent is not None and intent_mode in {"shadow", "on"}:
+        started = time.perf_counter()
+        candidate = _classify_residual(
+            intent,
+            question,
+            state.get("last_student_message", ""),
+            subject,
+        )
+        elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
+        trace_fields = {
+            "classifier_model": intent.model,
+            "classifier_label": candidate.contract if candidate else None,
+            "classifier_entry": candidate.entry_id if candidate else None,
+            "classifier_second": candidate.second_contract if candidate else None,
+            "classifier_ms": elapsed_ms,
+            "deterministic_label": deterministic,
+        }
+        payload["classifier_used"] = True
+        if intent_mode == "on" and candidate is not None:
+            override = _override(
+                candidate,
+                question,
+                state.get("last_student_message", ""),
+                subject=subject,
+                lore=lore,
+                personas=personas,
+            )
+            if override is not None:
+                payload, choice = override
+                payload["classifier_used"] = True
+                payload["classifier_choice"] = choice
+                mode = str(payload["mode"])
+
     tracer = current_tracer()
     if tracer is not None:
         tracer.emit(
@@ -800,5 +1040,6 @@ def route(
             intent=mode,
             requested=state.get("requested_mode", "auto"),
             question_chars=len(question),
+            **trace_fields,
         )
     return payload

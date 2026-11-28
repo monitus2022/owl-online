@@ -23,6 +23,7 @@ class AgentState(TypedDict, total=False):
     question: str
     standalone_question: str
     resolved_entity: str
+    last_student_message: str
     messages: list[dict[str, str]]
     summary: str
     conversation_context: str
@@ -34,6 +35,8 @@ class AgentState(TypedDict, total=False):
     forced_mode: str | None
     preferred_mode: str | None
     routed_mode: str
+    classifier_used: bool
+    classifier_choice: int | None
     multi_book: bool
     requested_mode: RequestedMode
     subject: str

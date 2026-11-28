@@ -243,6 +243,7 @@ class BedrockLlm:
         timeout: float = DEFAULT_TIMEOUT,
         temperature: float | None = None,
         max_tokens: int = DEFAULT_LLM_MAX_TOKENS,
+        max_attempts: int = _MAX_RETRIES,
     ) -> None:
         self.name = f"bedrock/{model}"  # manifest pin + logging
         self._model = model
@@ -251,7 +252,11 @@ class BedrockLlm:
         self._client = client or boto3.client(
             "bedrock-runtime",
             region_name=region,
-            config=Config(read_timeout=timeout, retries={"max_attempts": _MAX_RETRIES}),
+            config=Config(
+                read_timeout=timeout,
+                connect_timeout=min(timeout, 60.0),
+                retries={"max_attempts": max_attempts},
+            ),
         )
 
     async def generate(

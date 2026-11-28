@@ -10,6 +10,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from app.agent.intent import ResidualClassifier
 from app.agent.memory import TOKEN_BUDGET, WINDOW_MESSAGES
 from app.agent.nodes.answer import answer_node
 from app.agent.nodes.feedback import feedback_node
@@ -49,6 +50,8 @@ def build_graph(
     lore: LoreStore | None = None,
     lore_subject: str = "dada",
     small_llm: Llm | None = None,
+    intent_classifier: ResidualClassifier | None = None,
+    intent_mode: str = "off",
     lesson: LessonSelector | None = None,
     lesson_subject: str = "dada",
     lesson_top_k: int = LESSON_TOP_K,
@@ -92,6 +95,10 @@ def build_graph(
             route,
             persona=persona_enabled,
             teaching_terms=teaching_terms,
+            intent=intent_classifier,
+            intent_mode=intent_mode,
+            lore=lore,
+            personas=personas,
         ),
     )
 

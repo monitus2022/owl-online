@@ -12,7 +12,7 @@ are Mermaid code, so they render on GitHub and diff in review like any other fil
 | Layer | Path | Responsibility |
 |---|---|---|
 | HTTP | `app/api/`, `app/main.py` | routes, CORS, request/response schemas, composition root |
-| Agent | `app/agent/` | LangGraph state, short-term memory resolver, contract-aware router, answer / practice / feedback / meta / personal / lesson / fact / clarify / policy / abstain nodes |
+| Agent | `app/agent/` | LangGraph state, short-term memory resolver, contract-aware router, evidence-gated residual classifier, answer / practice / feedback / meta / personal / lesson / fact / clarify / policy / abstain nodes |
 | Knowledge | `app/knowledge/` | lore pack schema, loader and setting-note selection; subject taxonomy, material records, source refs, pack storage, validation and published-pack summaries (#87); the derived in-memory material selector for lesson mode (#166), the plural-aware term helper, the curated concept-title/alias matcher and the typed citation authority checker (#218); the DADA, Charms, Potions, Transfiguration and Herbology packs are published; reference prefill and coverage maintenance remain on #128 |
 | Exam bank | `app/exam/`, `app/storage/` | bank records, pack/corpus validator, SQLite import and the served attempt (#193); DADA 1.1.0 (#190, #271) and the Charms (#213), Potions (#228), Transfiguration (#230) and Herbology (#231) banks 1.0.0 are published |
 | Pipeline | `app/pipeline/` | ingest, index, retrieve (hybrid + rerank), generate |
@@ -30,7 +30,7 @@ Pipeline stages, in order:
 | Index | `app/pipeline/index/` | `build_index`, `build_lexical_index` (uses `Chunk.context` when present) |
 | Retrieve | `app/pipeline/retrieve/` | `compose_retriever`, `HybridRetriever.retrieve` (filter + decompose + hybrid + rerank), `diagnose` |
 | Generate | `app/pipeline/generate/` | `ask`, `ask_multi_book` (flag-gated), `ask_lesson` (pack-first scope with a labelled corpus fallback), `student_note`, `build_prompt`, `ground_answer`, `ground_lesson_answer`, `verify_draft` |
-| Agent | `app/agent/` | `build_graph`, `route`, `resolve_node`, `remember_node`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node`, `lesson_node`, `fact_node`, `clarify_node`, `policy_node`, `abstain_node` |
+| Agent | `app/agent/` | `build_graph`, `route`, `ResidualClassifier`, `resolve_node`, `remember_node`, `answer_node`, `practice_node`, `feedback_node`, `meta_node`, `personal_node`, `lesson_node`, `fact_node`, `clarify_node`, `policy_node`, `abstain_node` |
 
 `parse_chapters` drops the front matter before book 1 and trims the previous
 book's trailing copyright page plus the next book's dedication and contents from
@@ -424,6 +424,7 @@ sequenceDiagram
   API->>G: astream(state, config thread_id when threaded, student_name when present)
   G->>G: resolve -> rewrite a follow-up, bound window and summary
   G->>G: router -> policy | fact | clarify | abstain | answer | practice | feedback | meta | personal | lesson
+  G->>LLM: residual classifier on abstain (shadow records, on applies the evidence gate)
   G-->>API: mode update
   API-->>C: event: mode
   G->>R: retrieve(question, top_k)
@@ -478,6 +479,21 @@ meta and personal keep their routes, so a lesson-default venue still greets and
 tests.
 Name variants and fuzzy spellings of the professor are normalised before the
 persona cues; book professors such as Snape stay on the answer path.
+
+The residual classifier (#327) runs only when those gates leave the turn at
+`abstain`. It is a small pinned model on Bedrock (`apac.amazon.nova-micro-v1:0`)
+with temperature 0, a 1.5 s timeout, no retry and a bounded cache. It returns an
+ordinal top-2 of `lore | persona | policy | clarify | none`, never a probability
+and never `lesson`; `none` means no override. The router then applies an
+evidence gate to each candidate: a lore entry must exist, match the room and
+beat the runner-up (or the question must point at the setting with no lexical
+signal), a persona label needs a scripted topic and a second-person or professor
+cue, a policy label needs a policy word in the current or previous turn, and a
+clarify label needs two different real sources. Book-context questions are
+rejected for lore. `OWL_INTENT_CLASSIFIER=off` keeps the deterministic router
+alone, `shadow` records the comparison on the router event and changes nothing,
+and `on` applies the override. The catalogue is built from `lore.entries` at
+startup; the student's last turn is context for a fragment, never evidence.
 Meta and personal skip retrieval and the model, so they stream no tokens. Tokens
 are a draft. Citation validation runs on the complete answer, so an ungrounded
 stream emits `reset` before the authoritative `final` event. A failed
@@ -597,7 +613,8 @@ deployment region bans them regardless of host.
 
 Each request can emit flat JSONL span records under the request id. The stream
 path emits `resolve` (rewritten flag, rule, query hash and length), `router`
-(intent, requested mode and question length), `retrieval_strategy` (strategy,
+(intent, requested mode, question length, and on a residual the six
+`classifier_*` / `deterministic_label` fields), `retrieval_strategy` (strategy,
 reason and cues), `retrieve` (chunk ids and top score), one `generate` per
 attempt (model, prompt hash and length), `verify` (ok and reason), `retry`, and
 `final`.
@@ -995,7 +1012,7 @@ generate) for the per-call detail.
 | `Chunk` | `app/schemas.py` | pydantic | retrieved passage, metadata, optional generated context for indexing, relevance or fused score |
 | `ChunkMetadata` | `app/schemas.py` | pydantic | book and chapter identity |
 | `AskResult` | `app/pipeline/generate/generate.py` | dataclass | answer, citations, lore_citations, material_citations, typed_citations, scope, lore_chars, abstained, needs_input, chunks, attempts, model_calls, retry_reason, abstain_reason, prompt_chars, prompt_sha256, prompt_length, selected_material_ids, selection_scores, uncovered_terms, multi_book |
-| `AgentState` | `app/agent/state.py` | TypedDict | question, student name, standalone question, resolved entity, messages, summary, conversation context, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, requested mode, multi-book flag, subject, persona flag, top-k, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars, prompt_sha256, prompt_length, selected_material_ids, selection_scores, uncovered_terms |
+| `AgentState` | `app/agent/state.py` | TypedDict | question, student name, standalone question, resolved entity, last student message, messages, summary, conversation context, last entity/person/place, last mode, pending clarify, forced mode, preferred mode, routed mode, classifier used/choice, requested mode, multi-book flag, subject, persona flag, top-k, chat mode, meta topic, fact ids, student answer, chunks, answer, citations, lore_citations, material_citations, typed_citations, scope, abstained, needs_input, attempts, model_calls, abstain_reason, retry_reason, llm_model, prompt_chars, prompt_sha256, prompt_length, selected_material_ids, selection_scores, uncovered_terms |
 | `RetrievalSetup` | `app/pipeline/retrieve/composition.py` | dataclass | wired retriever plus build facts |
 | `BuiltIndex` | `app/pipeline/index/builder.py` | dataclass | collection, rebuilt flag, dims |
 | `IngestSummary` | `app/pipeline/ingest/ingest_corpus.py` | dataclass | ingestion counts and sizes |

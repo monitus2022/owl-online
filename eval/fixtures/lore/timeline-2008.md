@@ -5,6 +5,7 @@ tier = "product"
 title = "2008: the founding of Ashcombe"
 source = "authored; reviewed 2026-11-07"
 tags = ["timeline", "founding", "school"]
+aliases = ["founding", "founded"]
 +++
 
 The five friends founded Ashcombe Academy of Magic in the Cotswolds, one department each.

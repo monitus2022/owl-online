@@ -40,6 +40,14 @@ def resolve_node(
         pending_clarify=bool(state.get("pending_clarify", False)),
         subject=state.get("subject") or "dada",
     )
+    previous = next(
+        (
+            message.get("content", "")
+            for message in reversed(messages)
+            if message.get("role") == "user" and message.get("content", "").strip()
+        ),
+        "",
+    )
     tracer = current_tracer()
     if tracer is not None:
         tracer.emit(
@@ -57,6 +65,7 @@ def resolve_node(
         "resolved_entity": resolution.entity or "",
         "forced_mode": resolution.forced_mode,
         "preferred_mode": resolution.preferred_mode,
+        "last_student_message": previous,
     }
 
 
