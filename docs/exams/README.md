@@ -171,8 +171,8 @@ the web client presents as the professor's note speaking to the student; a
 blank answer uses the deterministic no-answer text as the note. Each criterion
 `reason` is shown as a marking note. MCQ feedback is the deterministic grader
 text, and a kept-back answer shows its state in place of the note. The judge
-prompt itself is unchanged. An unresolved judge result sets `needs_review` and leaves the total
-and band null.
+prompt itself is unchanged. An unresolved judge result sets `needs_review` and
+leaves the total and band null.
 
 Attempts are scoped to the signed anonymous session cookie. The list route
 returns only the current session's graded attempts, and fetching or grading
