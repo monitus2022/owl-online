@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { AcademyFront } from "../components/AcademyFront";
+import { gateCopy } from "../copy";
 import { parseStudentName, setStudentName } from "../data/student";
 
 // The first-run gate, delivered by the Keeper of the Records. The facade, the
@@ -34,8 +35,8 @@ export function WelcomePage() {
     <AcademyFront>
       <section className="porch" aria-labelledby={keeperId}>
         <p className="ledger-rule" aria-hidden="true">
-          <span>Ledger of new readers</span>
-          <span>No. 001</span>
+          <span>{gateCopy.ledgerRule}</span>
+          <span>{gateCopy.ledgerNumber}</span>
         </p>
         <div className="porch-head">
           <span className="keeper-seal" aria-hidden="true">
@@ -43,16 +44,13 @@ export function WelcomePage() {
           </span>
           <div>
             <h2 className="porch-title" id={keeperId}>
-              The Keeper of the Records
+              {gateCopy.title}
             </h2>
-            <p className="porch-line">
-              “The ledger needs a name before the professors can greet you
-              properly.”
-            </p>
+            <p className="porch-line">{gateCopy.quote}</p>
           </div>
         </div>
         <form className="porch-form" onSubmit={onSubmit} noValidate>
-          <label htmlFor={fieldId}>Your name</label>
+          <label htmlFor={fieldId}>{gateCopy.nameLabel}</label>
           <input
             id={fieldId}
             name="student-name"
@@ -60,7 +58,7 @@ export function WelcomePage() {
             autoComplete="given-name"
             required
             maxLength={40}
-            placeholder="e.g. Mira"
+            placeholder={gateCopy.placeholder}
             value={raw}
             aria-invalid={error !== null}
             aria-describedby={error ? `${hintId} ${errorId}` : hintId}
@@ -70,8 +68,7 @@ export function WelcomePage() {
             }}
           />
           <p className="porch-hint" id={hintId}>
-            A first name is enough. It stays in this browser, never in a
-            student record.
+            {gateCopy.hint}
           </p>
           {error && (
             <p className="porch-error" id={errorId} role="alert">
@@ -79,7 +76,7 @@ export function WelcomePage() {
             </p>
           )}
           <button className="btn-primary" type="submit">
-            Enter the grounds
+            {gateCopy.enter}
           </button>
         </form>
       </section>

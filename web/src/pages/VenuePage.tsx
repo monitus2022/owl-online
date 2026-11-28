@@ -9,6 +9,7 @@ import { HistoryPanel } from "../components/HistoryPanel";
 import { Silhouette } from "../components/Silhouette";
 import { fetchSubjects, readCachedSubjects } from "../api/subjects";
 import type { SubjectsPayload } from "../api/subjects";
+import { venueCopy } from "../copy";
 import { getSubject } from "../data/subjects";
 import type { Subject } from "../data/subjects";
 
@@ -24,9 +25,9 @@ const READY_GRACE_MS = 2000;
 type Tab = "chat" | "exam" | "papers";
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "chat", label: "Ask the professor" },
-  { id: "exam", label: "Exam room" },
-  { id: "papers", label: "Your papers" },
+  { id: "chat", label: venueCopy.tabs.chat },
+  { id: "exam", label: venueCopy.tabs.exam },
+  { id: "papers", label: venueCopy.tabs.papers },
 ];
 
 export function VenuePage() {
@@ -148,11 +149,8 @@ export function VenuePage() {
         <ArchBackdrop crest={room.crest} dim />
         <div className="soon-card">
           <Crest crest={room.crest} className="soon-crest" />
-          <h2>The classroom is being furnished</h2>
-          <p>
-            {room.blurb} This department opens when its exam bank is
-            published.
-          </p>
+          <h2>{venueCopy.soonTitle}</h2>
+          <p>{venueCopy.soonBody(room.blurb)}</p>
         </div>
       </main>
     );
@@ -176,7 +174,9 @@ export function VenuePage() {
           <h1>{room.name}</h1>
           <p className="venue-professor">
             {room.professor}
-            {room.personaState === "live" || vacant ? "" : " — voice in rehearsal"}
+            {room.personaState === "live" || vacant
+              ? ""
+              : venueCopy.voiceInRehearsal}
           </p>
         </div>
         <Crest crest={room.crest} className="venue-crest" />
@@ -184,8 +184,7 @@ export function VenuePage() {
       <ArchBackdrop crest={room.crest} />
       {packMissing && tab === "chat" && (
         <p className="venue-note" role="status" aria-live="polite">
-          The department's reviewed notes are not loaded on the server; answers
-          come from the set texts until they are available.
+          {venueCopy.packMissing}
         </p>
       )}
       <div className="tabs" role="tablist" aria-label="Room" onKeyDown={moveTab}>
