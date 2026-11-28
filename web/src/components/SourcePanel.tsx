@@ -49,7 +49,9 @@ export function SourcePanel({
   const panelId = useId();
 
   const openSource = sources.find((source) => source.materialId === open);
-  const panelLabel = sourceCopy.noteTitle(openSource?.label ?? null);
+  const panelLabel = sourceCopy.noteTitle(
+    openSource ? openSource.label : null,
+  );
 
   if (sources.length === 0 && rawGroups.length === 0) return null;
 
@@ -144,7 +146,7 @@ export function SourcePanel({
                 className="btn-quiet material-retry"
                 onClick={() => void load(open)}
               >
-                Try again
+                {sourceCopy.retry}
               </button>
             </>
           )}

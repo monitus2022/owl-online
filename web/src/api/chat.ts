@@ -1,4 +1,4 @@
-import { chatErrorCopy } from "../copy";
+import { chatErrorCopy } from "../copy/errors";
 import { apiBase } from "./base";
 import { clearCachedSubjects } from "./subjects";
 import type { PersonaState } from "../data/subjects";

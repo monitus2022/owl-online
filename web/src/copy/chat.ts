@@ -1,10 +1,11 @@
 import type { ChatMode, LessonScope } from "../api/chat";
 import type { PersonaState, Subject } from "../data/subjects";
+import { sharedCopy } from "./shared";
 
 // Student-facing room copy. The professor's scripted replies live in the
 // persona cards; this file owns the shared chat chrome around them.
 
-export const MODE_LABELS: Record<ChatMode, string> = {
+const MODE_LABELS: Record<ChatMode, string> = {
   answer: "Answer",
   practice: "Practice",
   feedback: "Feedback",
@@ -17,6 +18,10 @@ export const MODE_LABELS: Record<ChatMode, string> = {
   abstain: "Office note",
 };
 
+// The server emits meta, personal, fact, policy and abstain only when
+// OWL_PERSONA is on. The badge reads "Professor" when the venue's API-derived
+// persona state is live; the static subject value is only the fallback when
+// /v1/subjects is unreachable.
 export function modeLabel(
   mode: ChatMode,
   personaState: PersonaState,
@@ -98,5 +103,5 @@ export const chatCopy = {
   },
   ask: "Ask",
   thinking: "Thinking…",
-  retry: "Try again",
+  retry: sharedCopy.retry,
 } as const;

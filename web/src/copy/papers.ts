@@ -1,8 +1,10 @@
+import { sharedCopy } from "./shared";
+
 // Student-facing paper history, noticeboard and best-mark copy.
 
 export const papersCopy = {
   history: {
-    heading: "Your papers",
+    heading: sharedCopy.yourPapers,
     notice:
       "Marks are kept for this visit to the Academy and shown for this department. A school account will one day keep them across terms.",
     failed:

@@ -338,7 +338,9 @@ export function ExamPanel({
           <fieldset key={question.id} className="question">
             <legend>
               {index + 1}. {question.prompt}
-              <span className="question-marks">[{question.marks} marks]</span>
+              <span className="question-marks">
+                {examCopy.questionMarks(question.marks)}
+              </span>
             </legend>
             {question.kind === "mcq" ? (
               <div className="options">

@@ -1,6 +1,7 @@
 // Student-facing exam room and returned-paper copy.
 
-export const CRITERION_LABELS: Record<string, string> = {
+// The rubric ids are internal shape, not student-facing words.
+const CRITERION_LABELS: Record<string, string> = {
   correctness: "Facts and accuracy",
   completeness: "Coverage and explanation",
 };
@@ -25,6 +26,7 @@ export const examCopy = {
   practiceNotice:
     "Practice result. The marks and band are the department's; the expected answer and the professor's note are returned with your parchment.",
   marks: (marks: number, max: number): string => `${marks}/${max}`,
+  questionMarks: (marks: number): string => `[${marks} marks]`,
   keptMark: "kept",
   needsReview:
     "The department has kept this answer back; this copy carries no final band.",
