@@ -46,10 +46,15 @@ def make_llm(
     model: str | None = None,
     temperature: float | None = None,
     max_tokens: int | None = None,
+    timeout: float | None = None,
+    max_attempts: int | None = None,
 ) -> Llm:
     """Build an Llm for a provider name"""
     resolved = model or (DEFAULT_MODEL if provider == "openrouter" else settings.bedrock_llm_model)
     ensure_allowed_model(resolved)
+    extra = {}
+    if timeout is not None:
+        extra["timeout"] = timeout
     match provider:
         case "openrouter":
             return OpenRouterLlm(
@@ -57,8 +62,11 @@ def make_llm(
                 api_key=settings.openrouter_api_key,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                **extra,
             )
         case "bedrock":
+            if max_attempts is not None:
+                extra["max_attempts"] = max_attempts
             return BedrockLlm(
                 model=resolved,
                 region=settings.aws_region,
@@ -68,6 +76,7 @@ def make_llm(
                     if max_tokens is None
                     else max_tokens
                 ),
+                **extra,
             )
         case _:
             raise ValueError(f"unknown provider: {provider}")

@@ -703,4 +703,39 @@ uv run python scripts/measure_subject_routing.py
 cross-authority cases. `eval/routing/test_citations.py` runs the checker over
 every row.
 
+The #327 slices cover setting phrasing and the residual classifier:
+
+| Fixture | Contents |
+|---|---|
+| `paraphrase.jsonl` | 77 setting utterances: the measured phrasings, typo and idiom variants, 8 multi-intent turns and 6 no-fact turns |
+| `must_not.jsonl` | 40 book questions that carry setting words; any `lore` route is a false positive |
+| `multiturn.jsonl` | 22 conversations whose follow-up needs the previous turn's topic |
+
+All three are frozen with a SHA-256 in `eval/routing/test_paraphrase.py`. The
+deterministic measurement is:
+
+```text
+uv run python scripts/measure_paraphrase_routing.py
+uv run python scripts/measure_paraphrase_routing.py --check
+```
+
+It reports the contract matrix, entry accuracy, stretched entries, false meta on
+`must_not`, and the multiturn contract plus the fragment-leak rate. The live
+residual measurement, with the pinned small model and the evidence gate, is:
+
+```text
+uv run python scripts/measure_intent_classifier.py --mode on
+uv run python scripts/measure_intent_classifier.py --mode on --no-previous
+```
+
+`--no-previous` blanks the student's last turn, which is the one-field
+comparison. `--mode shadow` records the label without applying the override.
+The operating point and the evidence gate are in `docs/routing-contracts.md`.
+
+CI coverage for the slices is `pytest eval/` through
+`eval/routing/test_paraphrase.py`: the frozen hashes, the six required phrases,
+the clarify guard and the `must_not` no-lore assertion. The RAG
+`run_eval.py --check` gate does not run these slices; the routing measurement is
+a separate host check.
+
 The design note is `docs/routing-contracts.md`.

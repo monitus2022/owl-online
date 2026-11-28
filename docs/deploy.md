@@ -412,6 +412,12 @@ The pipeline ships only the image. Do these once on the instance:
    OWL_LESSON_FALLBACK=true
    OWL_PERSONA=false
    OWL_PERSONA_SUBJECT=dada
+   # Residual router classifier (#327). Shadow for the live comparison week,
+   # then on; off keeps the deterministic router alone. The code default is off.
+   OWL_INTENT_CLASSIFIER=shadow
+   OWL_INTENT_CLASSIFIER_PROVIDER=bedrock
+   OWL_INTENT_CLASSIFIER_MODEL=apac.amazon.nova-micro-v1:0
+   OWL_INTENT_CLASSIFIER_TIMEOUT_S=1.5
    ```
 
    The workflow always injects `OWL_SUBJECTS_PATH`, `OWL_LESSON_MODE`,

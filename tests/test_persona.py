@@ -237,6 +237,12 @@ def test_book_questions_do_not_select_lore():
         "What did the founders value?",
         "What happened at the Battle of Hogwarts?",
         "What is the DADA curriculum?",
+        "Who was headmaster before Snape?",
+        "What departments does Hogwarts have?",
+        "What is the Hogwarts school song?",
+        "Who is in charge of the Hogwarts staff?",
+        "What is the school of witchcraft and wizardry?",
+        "What is the school like in the first year?",
     ):
         assert store.select(question, subject="dada") == [], question
 

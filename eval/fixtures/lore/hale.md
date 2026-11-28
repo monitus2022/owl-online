@@ -5,6 +5,7 @@ tier = "product"
 title = "Professor Marcus Hale"
 source = "authored; reviewed 2026-11-07; post-war scheme per supplementary material"
 tags = ["professor", "hale", "transfiguration", "faculty", "founder"]
+aliases = ["professor-hale"]
 +++
 
 Marcus Hale is the Transfiguration professor and a co-founder of Ashcombe Academy. He fought at the Battle of Hogwarts as a student and joined the Auror Office under the post-war scheme for Battle veterans. He used transfiguration in pursuit and disguise. He is calm and methodical, and he dislikes improvisation without a plan.

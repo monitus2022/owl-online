@@ -206,14 +206,166 @@ def validate_subject_fixture(items: list[RoutingItem]) -> None:
             raise ValueError(f"{subject}: persona/lore/lesson items need a fact")
 
 
+def validate_paraphrase_fixture(items: list[RoutingItem]) -> None:
+    """Setting-phrasing coverage for #327.
+
+    ``lore`` with ``fact_present`` false is deliberate: the utterance is a
+    setting question, no entry covers it, and any selected entry is a stretch.
+    """
+    if len(items) < 60:
+        raise ValueError("paraphrase fixture needs at least 60 items")
+    if not any(item.holdout for item in items):
+        raise ValueError("paraphrase fixture needs a holdout split")
+    if any(item.contract not in {"lore", "clarify"} for item in items):
+        raise ValueError("paraphrase items must be lore or clarify")
+    clarify = [item for item in items if item.contract == "clarify"]
+    if len(clarify) < 8:
+        raise ValueError("paraphrase fixture needs at least 8 multi-intent items")
+    no_fact = [
+        item for item in items if item.contract == "lore" and not item.fact_present
+    ]
+    if len(no_fact) < 6:
+        raise ValueError("paraphrase fixture needs at least 6 no-fact items")
+    if any(
+        item.fact_present and not item.fact_ids[0].startswith("lore:")
+        for item in items
+    ):
+        raise ValueError("paraphrase lore facts must use the lore: prefix")
+    if any(item.contract == "lore" and item.fact_present and not item.fact_ids for item in items):
+        raise ValueError("a lore item with a fact must name the entry")
+    utterances = [item.utterance.casefold().strip().rstrip("?.!") for item in items]
+    if len(utterances) != len(set(utterances)):
+        raise ValueError("paraphrase fixture contains a duplicate utterance")
+
+
+def validate_must_not_fixture(items: list[RoutingItem]) -> None:
+    """Book questions that carry setting words; any lore route is a false positive."""
+    if len(items) < 30:
+        raise ValueError("must_not fixture needs at least 30 items")
+    if not any(item.holdout for item in items):
+        raise ValueError("must_not fixture needs a holdout split")
+    if any(item.contract != "lesson" for item in items):
+        raise ValueError("must_not items are book questions in a lesson room")
+    if any(item.fact_present or item.fact_ids for item in items):
+        raise ValueError("must_not items must not carry a teaching fact")
+
+
+@dataclass(frozen=True)
+class MultiturnItem:
+    """A short conversation whose final turn is the routing target."""
+
+    item_id: str
+    turns: tuple[str, ...]
+    final_contract: str
+    final_fact_ids: tuple[str, ...]
+    fact_present: bool
+    holdout: bool = False
+    subject: str = "dada"
+    note: str = ""
+
+    def fact_prefix_ok(self) -> bool:
+        if self.final_contract in FACT_PREFIX:
+            prefix = FACT_PREFIX[self.final_contract]
+            return all(fact.startswith(prefix) for fact in self.final_fact_ids)
+        return True
+
+
+def load_multiturn_items(path: Path) -> list[MultiturnItem]:
+    items: list[MultiturnItem] = []
+    seen: set[str] = set()
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        where = f"{path}:{line_number}"
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise ValueError(f"{where}: invalid JSON: {error}") from error
+        if not isinstance(record, dict):
+            raise ValueError(f"{where}: each line must be an object")
+        item_id = _require_str(record, "id", where)
+        if item_id in seen:
+            raise ValueError(f"{where}: duplicate id {item_id!r}")
+        seen.add(item_id)
+        turns = record.get("turns")
+        if (
+            not isinstance(turns, list)
+            or len(turns) < 2
+            or not all(isinstance(turn, str) and turn.strip() for turn in turns)
+        ):
+            raise ValueError(f"{where}: turns must be a list of at least two strings")
+        contract = _require_str(record, "final_contract", where)
+        if contract not in CONTRACTS:
+            raise ValueError(f"{where}: unknown contract {contract!r}")
+        subject = record.get("subject", "dada")
+        if not isinstance(subject, str) or subject not in SUBJECTS:
+            raise ValueError(f"{where}: unknown subject {subject!r}")
+        final_fact_ids = record.get("final_fact_ids", [])
+        if not isinstance(final_fact_ids, list) or not all(
+            isinstance(item, str) and item.strip() for item in final_fact_ids
+        ):
+            raise ValueError(
+                f"{where}: final_fact_ids must be a list of non-empty strings"
+            )
+        fact_ids = tuple(item.strip() for item in final_fact_ids)
+        if fact_ids:
+            if contract not in FACT_PREFIX:
+                raise ValueError(f"{where}: {contract!r} cannot carry fact ids")
+        fact_present = record.get("fact_present")
+        if not isinstance(fact_present, bool) or fact_present != bool(fact_ids):
+            raise ValueError(f"{where}: fact_present must equal whether fact_ids is non-empty")
+        holdout = record.get("holdout", False)
+        if not isinstance(holdout, bool):
+            raise ValueError(f"{where}: holdout must be a boolean")
+        note = record.get("note", "")
+        if not isinstance(note, str):
+            raise ValueError(f"{where}: note must be a string")
+        item = MultiturnItem(
+            item_id=item_id,
+            turns=tuple(turn.strip() for turn in turns),
+            final_contract=contract,
+            final_fact_ids=fact_ids,
+            fact_present=fact_present,
+            holdout=holdout,
+            subject=subject,
+            note=note.strip(),
+        )
+        if not item.fact_prefix_ok():
+            raise ValueError(f"{where}: fact ids do not match contract {contract!r}")
+        items.append(item)
+    if not items:
+        raise ValueError(f"{path}: no multiturn items")
+    return items
+
+
+def validate_multiturn_fixture(items: list[MultiturnItem]) -> None:
+    if len(items) < 20:
+        raise ValueError("multiturn fixture needs at least 20 conversations")
+    if not any(item.holdout for item in items):
+        raise ValueError("multiturn fixture needs a holdout split")
+    if any(len(item.turns) < 2 for item in items):
+        raise ValueError("every multiturn item needs a follow-up")
+    seen: set[tuple[str, ...]] = set()
+    for item in items:
+        key = tuple(turn.casefold() for turn in item.turns)
+        if key in seen:
+            raise ValueError(f"duplicate conversation {item.item_id}")
+        seen.add(key)
+
+
 __all__ = [
     "CONTRACTS",
     "MINIMUMS",
     "REQUIRED_UTTERANCES",
     "SUBJECTS",
+    "MultiturnItem",
     "RoutingItem",
+    "load_multiturn_items",
     "load_routing_items",
     "parse_item",
     "validate_fixture",
+    "validate_must_not_fixture",
+    "validate_multiturn_fixture",
+    "validate_paraphrase_fixture",
     "validate_subject_fixture",
 ]

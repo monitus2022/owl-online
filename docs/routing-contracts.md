@@ -269,6 +269,112 @@ proposed, the #184 gate still applies:
 - book answer accuracy, faithfulness and abstention do not move;
 - a run record documents the fixture and the shadow comparison.
 
+## Revisit (2026-11-28, #327)
+
+The revisit trigger fired. A live probe of 30 natural setting questions scored
+14/30. The misses split into four buckets: a gate blocked by a missing phrase
+("this academy"), a gate that passed but selected the wrong entry, a turn with
+no lexical signal at all, and one correctly clarified turn. The first two are
+deterministic bugs, not a model problem.
+
+The deterministic repair is part of #327: `_SCHOOL` and `_SCHOOL_AMBIGUOUS`
+cover `this academy`, `this place`, `this building`, `where am I`,
+`when was it founded`, `how many departments` and the founder phrasings; a
+setting cue plus an assessment cue in one turn clarifies; the lore entries carry
+authored aliases and the selector scores them with the title and tags; the
+`Battle of Hogwarts` timeline question keeps its frozen `timeline-1998` route;
+and core book characters sit in the book-context guard so a book question that
+mentions a school stays a book question.
+
+The residual classifier is admitted only for the turns the deterministic layer
+leaves at `abstain`. It is the documented exception to the 2026-11-10 decision,
+on the evidence of the three frozen slices in `eval/routing/fixtures/`:
+
+| Slice | Deterministic before | Deterministic after #327 | Classifier `on` |
+|---|---|---|---|
+| `paraphrase.jsonl`, contract | 32/77 | 69/77 | 72/77 |
+| `paraphrase.jsonl`, entry | 27/63 | 56/63 | 59/63 |
+| `must_not.jsonl`, false meta | 1/40 | 0/40 | 0/40 |
+| `multiturn.jsonl`, contract | 8/22 | 10/22 | 17/22 |
+| `multiturn.jsonl`, entry | 4/14 | 5/14 | 10/14 |
+
+The one-field comparison uses the same pack terms: with the student's last turn
+blanked, `multiturn` scores 15/22 contract and 9/14 entry, against 17/22 and
+10/14 with the two-field input. That is the measured value of the `previous`
+field. The classifier is used on 15 of 139 turns; it accepts the first candidate
+on 10, the second on 0 and rejects 5, at zero false meta. On the holdout it is
+used on 6, accepts 2 and rejects 4.
+
+The classifier is ordinal, so there is no score axis for a conventional
+risk-coverage curve. The operating point is fixed at zero false meta on
+`must_not`, and the acceptance distribution above is the coverage at that point.
+
+### The `none` label
+
+The #184 label set has no way to say "leave the deterministic result alone"
+without emitting `lesson`. The classifier therefore returns
+`lore | persona | policy | clarify | none`. `none` is not a contract and never
+reaches the graph; it means no override. This is the only deviation from the
+2026-11-10 label restriction.
+
+### Evidence decides, not the label
+
+The classifier returns an ordinal top-2, never a probability. The router applies
+an evidence gate to each candidate and takes the first that passes:
+
+- `lore`: the entry exists, matches the room subject (`subject` or `all`), and
+  beats the runner-up in the cue-free selection, or the question carries no
+  lexical signal and does point at the setting (deictic, speaker or setting
+  word). A book-context question is rejected. `fact_node` returns the entry
+  body verbatim with no later verification, so this is the one place a wrong
+  pick cannot be caught downstream.
+- `persona`: a second-person or professor cue is present and the card has a
+  scripted topic.
+- `policy`: an exam, syllabus, grading or mark-scheme word is present in the
+  current or previous turn.
+- `clarify`: the top two labels are two different real sources.
+- `none`, or no candidate with evidence: the deterministic result stands, which
+  in the residual is the in-world abstain.
+
+A setting question inside a lesson room is answered by the `fact` node for that
+turn. That is the sanctioned route: the doc forbids injecting fact entries into
+the lesson prompt and forbids a lesson citation for a setting fact. The teaching
+contract is left for that turn, explicitly rather than as a side effect.
+
+### Operating point
+
+- Config: `OWL_INTENT_CLASSIFIER=off|shadow|on`, default `off`. Shadow records
+  the comparison and changes nothing; `on` applies the gate. Deployment ships
+  `shadow` first, and a week of live comparisons is still required before `on`.
+- Model: `amazon.nova-micro-v1:0` through the APAC inference profile
+  (`apac.amazon.nova-micro-v1:0`) in `ap-northeast-1`, temperature 0. The probe
+  found no direct on-demand throughput in that region and no `outputConfig`
+  support, so the reply is prompt-only JSON with strict parsing. Fallback is the
+  existing `small_provider` / `small_model` pair.
+- Timeout 1.5 s, no retry; any failure is no override. The classifier client is
+  built with a 1.5 s read timeout and `max_attempts=0`, and it runs on one
+  long-lived loop with a wall-clock-bounded future, so a throttled provider call
+  cannot block the router thread. The cache key includes the model, prompt
+  version, room subject, standalone question and the 280-char previous turn.
+- Trace: `classifier_model`, `classifier_label`, `classifier_entry`,
+  `classifier_second`, `classifier_ms`, `deterministic_label` on the router
+  event. The applied turn also carries `classifier_used` and
+  `classifier_choice` in the router payload for the acceptance count.
+- The prompt appendix is built from `lore.entries` at startup, so the catalogue
+  cannot drift from the pack.
+- The prompt is about 5680 characters (roughly 1400 tokens), above the ticket's
+  600-800 token target. The measured p50 is about 350 ms, inside the latency
+  budget; the overrun is recorded rather than hidden.
+- The residual is the deterministic `abstain`. The teaching gate abstains when
+  no teaching term matches; a term with a thin or missing pack selection stays
+  `lesson` and is handled in `lesson_node`, so it is not reclassified. The four
+  `lore | lesson` rows in the run record are that case, not a classifier miss.
+
+The #184 gate still applies in full. `measure_routing.py` and
+`measure_subject_routing.py` stay the policy and authority regression guard;
+`measure_paraphrase_routing.py` and `measure_intent_classifier.py` are the new
+slices and the shadow comparison.
+
 ## Current state against the target
 
 | Target | State |
@@ -279,6 +385,7 @@ proposed, the #184 gate still applies:
 | Lesson citations only after the teaching gate | Implemented in #219 and #218 |
 | Typed citation authority and a cross-type checker | Implemented in #218 |
 | Stable `persona:` fact IDs and templates | Implemented in #220 |
+| Residual classifier, evidence-gated, never emits `lesson` | Implemented in #327 behind `OWL_INTENT_CLASSIFIER` set to `shadow` or `on` |
 
 ## Migration order
 

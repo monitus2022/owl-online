@@ -5,6 +5,7 @@ tier = "product"
 title = "2026: the present day"
 source = "authored; reviewed 2026-11-07"
 tags = ["timeline", "present", "school"]
+aliases = ["present-day", "current-year"]
 +++
 
 Ashcombe-trained defenders now serve in the Auror Office.

@@ -167,6 +167,37 @@ def test_small_provider_and_slug_must_match():
         )
 
 
+def test_department_question_does_not_steal_the_school_entry():
+    from app.agent.router import contract_decision
+
+    decision = contract_decision(
+        "Who is in charge of the DADA department?",
+        subject="dada",
+        requested_mode="lesson",
+        teaching_terms={"boggart"},
+    )
+    assert decision.fact_ids != ("lore:school-001",)
+
+
+def test_intent_provider_and_slug_must_match():
+    from pydantic import ValidationError
+
+    from app.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(
+            intent_classifier="shadow",
+            intent_classifier_provider="bedrock",
+            intent_classifier_model="amazon/nova-micro",
+        )
+    with pytest.raises(ValidationError):
+        Settings(
+            intent_classifier="on",
+            intent_classifier_provider="openrouter",
+            intent_classifier_model="amazon.nova-micro-v1:0",
+        )
+
+
 def test_prompt_extraction_and_override_route_to_policy():
     from app.agent.router import route
 

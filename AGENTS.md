@@ -11,7 +11,9 @@ offline generation and hybrid grading. All five O.W.L. packs are published at
 persona is live behind `OWL_PERSONA`; lesson mode is live behind `OWL_LESSON_MODE` with a
 labelled corpus fallback when the pack is thin; hybrid grading is built, the bank
 eval and judge calibration are recorded, and served papers are live; the
-router applies policy, closed-fact and teaching gates before retrieval, and
+router applies policy, closed-fact and teaching gates before retrieval; a
+residual, evidence-gated small-model classifier behind `OWL_INTENT_CLASSIFIER`
+handles only what those gates leave at abstain (#327); and
 answers carry typed `policy:script:`, `persona:`, `lore:` and `lesson:`
 citations with a cross-type check; short-term chat memory is opt-in per
 `thread_id`, process-local and feeds a bounded conversation block into the chat
