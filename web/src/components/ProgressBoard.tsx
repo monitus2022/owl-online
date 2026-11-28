@@ -37,7 +37,7 @@ export function ProgressBoard({
             state =
               best.band && best.total !== null
                 ? `best: ${BAND_LABELS[best.band]} (${best.total}/${best.max})`
-                : "a paper awaits examiner review";
+                : "a paper was kept back";
           } else if (subject.status === "open") {
             state = "the room is furnished, no papers sat yet";
           } else {

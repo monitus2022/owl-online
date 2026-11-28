@@ -9,6 +9,7 @@ import { ExamApiError, examClient } from "../api/exams";
 import { resultsStore } from "../api/results";
 import type { StoredAttempt } from "../api/results";
 import type { Subject } from "../data/subjects";
+import { stripChunkRefs } from "../data/sources";
 import { BandSeal } from "./BandSeal";
 import { ResultsCard } from "./ResultsCard";
 
@@ -61,9 +62,7 @@ function inStudentVoice(text: string): string {
     .replace(/\bThe response's\b/g, "Your response's")
     .replace(/\bthe response's\b/g, "your response's")
     .replace(/\bThe response\b/g, "Your response")
-    .replace(/\bthe response\b/g, "your response")
-    .replace(/\bThe answer\b/g, "Your answer")
-    .replace(/\bthe answer\b/g, "your answer");
+    .replace(/\bthe response\b/g, "your response");
 }
 
 export function ExamPanel({
@@ -237,15 +236,15 @@ export function ExamPanel({
             />
           ) : (
             <div className="notice">
-              The professor has set some answers aside for a second reading.
-              There is no final band yet.
+              The department has kept some answers back. This copy carries no
+              final band.
             </div>
           )}
           <div>
             <h3>Paper returned</h3>
             <p className="result-total">
               {result.total === null
-                ? "Awaiting the professor's second reading"
+                ? "Kept back — no final total"
                 : `${result.total} / ${result.maxMarks} marks`}
             </p>
             <div className="notice">
@@ -273,18 +272,24 @@ export function ExamPanel({
                 <span className="mark-row-index">{index + 1}</span>
                 <span className="mark-row-prompt">{question.prompt}</span>
                 <span className={markClass}>
-                  {marks === null ? "pending" : `${marks}/${grade.maxMarks}`}
+                  {marks === null ? "kept" : `${marks}/${grade.maxMarks}`}
                 </span>
                 {grade.needsReview && (
                   <span className="mark-row-answer">
-                    The professor has set this answer aside for a second reading.
+                    The department has kept this answer back; this copy carries
+                    no final band.
                   </span>
                 )}
-                {grade.kind === "short" && grade.feedback && (
-                  <span className="mark-row-answer">
-                    The professor's note: {inStudentVoice(grade.feedback)}
-                  </span>
-                )}
+                {!grade.needsReview &&
+                  grade.kind === "short" &&
+                  grade.feedback && (
+                    <span className="mark-row-answer">
+                      The professor's note:{" "}
+                      {inStudentVoice(
+                        stripChunkRefs(grade.feedback, grade.evidenceIds),
+                      )}
+                    </span>
+                  )}
                 {grade.kind === "mcq" && grade.feedback && (
                   <span className="mark-row-answer">{grade.feedback}</span>
                 )}
@@ -304,7 +309,12 @@ export function ExamPanel({
                     {criterionLabel(criterion.criterionId)}{" "}
                     {criterion.awarded}/{criterion.maxMarks}
                     {criterion.reason
-                      ? ` — ${inStudentVoice(criterion.reason)}`
+                      ? ` — ${inStudentVoice(
+                          stripChunkRefs(
+                            criterion.reason,
+                            grade.evidenceIds,
+                          ),
+                        )}`
                       : ""}
                   </span>
                 ))}

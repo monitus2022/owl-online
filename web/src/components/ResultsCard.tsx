@@ -29,7 +29,7 @@ export function ResultsCard({
   if (best.band === null || best.total === null) {
     return (
       <p className="results-card results-empty">
-        A paper is waiting for examiner review.
+        A paper was kept back; it carries no final band.
       </p>
     );
   }
