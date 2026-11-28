@@ -197,6 +197,12 @@ test("a paper can be sat, marked and found in history", async ({ page }) => {
   await expect(
     page.locator(".mark-row-marks").filter({ hasText: /\d+\/8/ }).first(),
   ).toBeVisible();
+  await expect(
+    page.getByText("The expected answer:", { exact: false }).first(),
+  ).toBeVisible();
+  await expect(page.getByText("The professor's note:").first()).toBeVisible();
+  await expect(page.getByText("Facts and accuracy").first()).toBeVisible();
+  await expect(page.getByText("Model:", { exact: false })).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Your papers" }).click();
   await expect(page.getByRole("region", { name: "Your papers" })).toBeVisible();
