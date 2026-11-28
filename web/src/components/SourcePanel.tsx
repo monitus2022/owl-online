@@ -15,7 +15,7 @@ import {
 // Materials are original pack prose and can be shown publicly. Book
 // citations stay locators (book, chapter, chunk id); the API route never
 // returns the corpus quote or chunk text. The exact ids remain under the
-// collapsed "Source details" disclosure.
+// collapsed "Exact references" disclosure.
 
 // A material id is subject-prefixed. Derive the subject so a cross-subject
 // referral can open its own note instead of the venue's pack.
@@ -154,7 +154,7 @@ export function SourcePanel({
             <>
               <p className="material-title">{detail.concept_title}</p>
               <p className="material-meta">
-                {sourceCopy.meta(detail.topic_title, detail.pack_version)}
+                {sourceCopy.meta(detail.topic_title)}
               </p>
               <p className="material-text">
                 {stripChunkRefs(

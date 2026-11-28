@@ -72,9 +72,9 @@ authority check, not a prompt instruction.
 The API now carries the typed field as `typed_citations` alongside the legacy
 `citations`, `lore_citations` and `material_citations`; `app/knowledge/citations.py`
 holds the parser and the cross-type checker, and the final payload reports
-`citation_errors`. The frontend builds a readable Sources row from the legacy
+`citation_errors`. The frontend builds a readable Passages row from the legacy
 fields and the typed citations, and keeps the exact typed strings under
-`Source details`. The cross-type fixture is
+`Exact references`. The cross-type fixture is
 `eval/routing/fixtures/citations.jsonl`; `eval/routing/test_citations.py` runs
 the checker over every row.
 

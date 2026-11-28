@@ -10,9 +10,8 @@ export const venueCopy = {
     papers: sharedCopy.yourPapers,
   },
   packMissing:
-    "The department's reviewed notes are not loaded on the server; answers come from the set texts until they are available.",
+    "The department's notes are not in this room yet; I will answer from the reference books until they arrive.",
   soonTitle: "The classroom is being furnished",
   soonBody: (blurb: string): string =>
-    `${blurb} This department opens when its exam bank is published.`,
-  voiceInRehearsal: " — voice in rehearsal",
+    `${blurb} This department opens when its papers are ready.`,
 } as const;

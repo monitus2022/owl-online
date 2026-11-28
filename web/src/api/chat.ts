@@ -1,13 +1,11 @@
 import { chatErrorCopy } from "../copy/errors";
 import { apiBase } from "./base";
 import { clearCachedSubjects } from "./subjects";
-import type { PersonaState } from "../data/subjects";
 
 // Client for POST /v1/chat/stream, the SSE contract in docs/api.md. The server
 // routes answer/practice/feedback itself, so the UI sends one question and
 // reads the `mode` event to learn which route it took. Status copy
-// addresses the professor as the addressee in every state; only the 503
-// consults personaState before using professor wording (voice live or not).
+// addresses the professor as the addressee in every state.
 
 export type ChatMode =
   | "answer"
@@ -91,7 +89,6 @@ const STREAM_IDLE_TIMEOUT_MS = 30_000;
 
 export async function* askStream(
   question: string,
-  personaState: PersonaState,
   subject: string,
   mode: "auto" | "lesson" = "auto",
   threadId?: string,
@@ -136,7 +133,7 @@ export async function* askStream(
     try {
       // Keep the first-response timer armed while the error body is read; a
       // gateway can send headers and then stall the body.
-      problem = await problemMessage(response, personaState);
+      problem = await problemMessage(response);
     } catch {
       if (controller.signal.aborted) {
         throw new ChatError(
@@ -216,7 +213,6 @@ export async function* askStream(
 // so failures read as in-world status lines, never as bare status codes.
 async function problemMessage(
   response: Response,
-  personaState: PersonaState,
 ): Promise<{ message: string; retryable: boolean }> {
   let problem: { error?: string; reason?: string; retry_after?: number; detail?: string };
   try {
@@ -242,12 +238,8 @@ async function problemMessage(
         retryable: true,
       };
     }
-    const quiet =
-      personaState === "live"
-        ? chatErrorCopy.quietProfessor
-        : chatErrorCopy.quietRooms;
     return {
-      message: chatErrorCopy.paused(quiet, problem.reason ?? null),
+      message: chatErrorCopy.paused,
       retryable: false,
     };
   }

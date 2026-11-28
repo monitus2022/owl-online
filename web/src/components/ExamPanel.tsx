@@ -334,6 +334,9 @@ export function ExamPanel({
             paper.durationMinutes,
           )}
         </p>
+        {!paper.timed && (
+          <p className="paper-meta">{examCopy.untimedNote}</p>
+        )}
         {attempt.questions.map((question, index) => (
           <fieldset key={question.id} className="question">
             <legend>

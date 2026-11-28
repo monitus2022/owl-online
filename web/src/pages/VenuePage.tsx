@@ -172,12 +172,7 @@ export function VenuePage() {
         <Silhouette variant={room.professorVariant} />
         <div>
           <h1>{room.name}</h1>
-          <p className="venue-professor">
-            {room.professor}
-            {room.personaState === "live" || vacant
-              ? ""
-              : venueCopy.voiceInRehearsal}
-          </p>
+          <p className="venue-professor">{room.professor}</p>
         </div>
         <Crest crest={room.crest} className="venue-crest" />
       </header>

@@ -9,6 +9,6 @@ export const gateCopy = {
     "“The ledger needs a name before the professors can greet you properly.”",
   nameLabel: "Your name",
   placeholder: "e.g. Mira",
-  hint: "A first name is enough. It stays in this browser, never in a student record.",
+  hint: "A first name is enough. It stays in this browser, never in a school record.",
   enter: "Enter the grounds",
 } as const;

@@ -46,30 +46,30 @@ export function chatGreeting(
   vacant: boolean,
 ): string {
   if (vacant) {
-    return `Welcome to the ${subject.name} revision room. Answers come from the department's reviewed notes, and nothing beyond them is guessed. No professor has been appointed for this department yet.`;
+    return `Welcome to the ${subject.name} revision room. Answers come from the department's notes, and nothing beyond them is guessed. No professor has been appointed to this department yet.`;
   }
   if (lesson) {
     const outside = lessonFallback
-      ? "Questions outside the notes are answered from the set texts and labelled."
-      : "Questions outside the notes are refused honestly.";
+      ? "If a question falls outside them, I will answer from the reference books and tell you when I have done so."
+      : "If a question falls outside the notes, I will say so rather than guess.";
     return subject.personaState === "live"
-      ? `Welcome to the ${subject.name} revision room. I teach from the department's reviewed notes; ask about the set topics, or say the word if you want to be tested. ${outside}`
-      : `Welcome to the ${subject.name} revision room. Answers come from the department's reviewed notes. ${outside} The professor's voice is still in rehearsal.`;
+      ? `Welcome to the ${subject.name} revision room. I teach from the department's own notes; ask about the set topics, or say the word if you want to be tested. ${outside}`
+      : `Welcome to the ${subject.name} revision room. I can answer from the department's notes. ${outside}`;
   }
   return subject.personaState === "live"
-    ? `Welcome to the ${subject.name} revision room. Ask ${subject.professor} about the set texts, or say the word if you want to be tested.`
-    : "Welcome to the revision room. Ask the professor about the set texts — grounded answers cite the books, and nothing beyond them is guessed. The professor's voice is still in rehearsal.";
+    ? `Welcome to the ${subject.name} revision room. Ask ${subject.professor} about the reference books, or say the word if you want to be tested.`
+    : "Welcome to the revision room. Ask the professor about the reference books. Every answer will show the passages it rests on, and nothing beyond them is guessed.";
 }
 
 export function scopeNote(scope: LessonScope): string | null {
   if (scope === "in_pack") {
-    return "Composed from the department notes. The sources below list the reviewed notes and the book passages they come from; they are not a sentence-level check.";
+    return "I have drawn this from the department's notes. The passages below show where it comes from; they are a guide to the sources, not a check of every sentence.";
   }
   if (scope === "mixed") {
-    return "Composed from the department notes and the set texts. The sources below are not a sentence-level check.";
+    return "I have drawn part of this from the department's notes and part from the reference books. The passages below show where it comes from; they are a guide to the sources, not a check of every sentence.";
   }
   if (scope === "off_pack") {
-    return "Set texts";
+    return "From the reference books";
   }
   return null;
 }
@@ -82,23 +82,23 @@ export function abstainNote(
   if (personaState === "live") {
     if (lesson) {
       return lessonFallback
-        ? "The professor could not ground this in the department's notes or the set texts, so he will not guess."
-        : "The professor could not ground this in the department's notes, so he will not guess.";
+        ? "The professor could not find this in the department's notes or the reference books, so he will not guess."
+        : "The professor could not find this in the department's notes, so he will not guess.";
     }
-    return "The professor could not ground this in the texts, so he will not guess.";
+    return "The professor could not find this in the reference books, so he will not guess.";
   }
   if (lesson) {
     return lessonFallback
-      ? "The reviewed notes and the set texts could not confirm this, and nothing is guessed."
-      : "The reviewed notes could not confirm this, and nothing is guessed.";
+      ? "The department's notes and the reference books could not confirm this, and nothing is guessed."
+      : "The department's notes could not confirm this, and nothing is guessed.";
   }
-  return "The texts could not confirm this, and nothing is guessed.";
+  return "The reference books could not confirm this, and nothing is guessed.";
 }
 
 export const chatCopy = {
   placeholder: {
     preparing: "Preparing the room…",
-    vacant: "Ask about the set texts…",
+    vacant: "Ask about the reference books…",
     ready: "Ask the professor…",
   },
   ask: "Ask",

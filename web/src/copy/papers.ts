@@ -6,7 +6,7 @@ export const papersCopy = {
   history: {
     heading: sharedCopy.yourPapers,
     notice:
-      "Marks are kept for this visit to the Academy and shown for this department. A school account will one day keep them across terms.",
+      "Marks are kept for this visit to the Academy and shown for this department. A school record will one day keep them across terms.",
     failed:
       "The paper records could not be read. Nothing is lost by trying again; if it keeps failing, the drawer stays shut.",
     loading: "Fetching the records…",
@@ -35,7 +35,7 @@ export const papersCopy = {
   progress: {
     heading: "The noticeboard",
     notice:
-      "Practice marks are kept for this visit until school accounts arrive.",
+      "Practice marks are kept for this visit until the school keeps a permanent record.",
     checking: "checking the records…",
     unreadable: "the records could not be read",
     best: (label: string, total: number, max: number): string =>

@@ -40,10 +40,10 @@ export const examCopy = {
     minutes: number,
   ): string =>
     `${questions} questions · ${marks} marks · ${
-      timed
-        ? `suggested ${minutes} minutes`
-        : "untimed practice; the student sets the pace"
+      timed ? `suggested ${minutes} minutes` : "untimed practice"
     }`,
+  untimedNote:
+    "This is an untimed practice paper; you can finish it whenever you are ready.",
   progress: (answered: number, total: number): string =>
     `${answered} of ${total} answered`,
   blankWarning: (blank: number): string =>
@@ -54,10 +54,11 @@ export const examCopy = {
   abandon: "Abandon paper",
   paperNotLoaded: "The paper could not be loaded.",
   abandonFailed:
-    "The paper could not be discarded. Clear all papers in Your papers deletes it.",
+    "The paper could not be discarded. You can clear it from Your papers.",
   errors: {
-    paperGone: "This paper or session is no longer available. Start a new paper.",
-    dailyLimit: "You have used today's attempt allowance. Try again tomorrow.",
+    paperGone: "This paper is no longer available. Start a new one.",
+    dailyLimit:
+      "You have sat as many papers as the department allows today. Come back tomorrow.",
     examinersAway:
       "The examiners are not at their desk right now. Try again later.",
     unreachable: "The exam room could not reach the examiners. Try again.",

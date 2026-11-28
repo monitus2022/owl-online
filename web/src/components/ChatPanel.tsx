@@ -135,7 +135,6 @@ export function ChatPanel({
     try {
       for await (const streamEvent of askStream(
         text,
-        subject.personaState,
         subject.apiSubject,
         lesson ? "lesson" : "auto",
         threadId,

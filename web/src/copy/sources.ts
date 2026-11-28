@@ -1,18 +1,17 @@
 import { sharedCopy } from "./shared";
 
-// Student-facing source labels. Book and material ids stay in the data layer;
-// this file owns the words around them.
+// Student-facing source labels. The exact book and chunk ids stay visible in
+// the technical reference panel; this file owns the words around them.
 
 export const sourceCopy = {
-  rowLabel: "Sources",
+  rowLabel: "Passages",
   noteTitle: (label: string | null): string =>
-    label !== null ? `Reviewed note: ${label}` : "Reviewed note",
-  loading: "Fetching the reviewed note…",
-  failed: "The reviewed note could not be opened.",
-  meta: (topic: string, packVersion: string): string =>
-    `${topic} · reviewed note · pack ${packVersion}`,
-  refsPrefix: "Sources:",
-  details: "Source details",
-  loaded: "Reviewed note loaded.",
+    label !== null ? `From the department's notes: ${label}` : "From the department's notes",
+  loading: "Fetching the note…",
+  failed: "The note could not be opened.",
+  meta: (topic: string): string => `${topic} · from the department's notes`,
+  refsPrefix: "References:",
+  details: "Exact references",
+  loaded: "Note loaded.",
   retry: sharedCopy.retry,
 } as const;
