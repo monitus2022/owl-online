@@ -164,8 +164,15 @@ The attempt is persisted before it is returned, so a reload is stable and a
 repeated grade returns the stored result without a second judge call. Grading
 also stores the submitted answers with the grade so a result can be audited.
 The grade response carries the MCQ key, per-question marks, model answer,
-feedback, criteria and the band. An unresolved judge result sets
-`needs_review` and leaves the total and band null.
+feedback, criteria and the band. `model_answer` is the stored, reviewed
+expected answer, not a runtime generation; the web client labels it as the
+expected answer. For a short answer, the judge's `feedback` is a short comment
+the web client presents as the professor's note speaking to the student; a
+blank answer uses the deterministic no-answer text as the note. Each criterion
+`reason` is shown as a marking note. MCQ feedback is the deterministic grader
+text, and a kept-back answer shows its state in place of the note. The judge
+prompt itself is unchanged. An unresolved judge result sets `needs_review` and
+leaves the total and band null.
 
 Attempts are scoped to the signed anonymous session cookie. The list route
 returns only the current session's graded attempts, and fetching or grading

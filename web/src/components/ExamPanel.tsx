@@ -9,6 +9,7 @@ import { ExamApiError, examClient } from "../api/exams";
 import { resultsStore } from "../api/results";
 import type { StoredAttempt } from "../api/results";
 import type { Subject } from "../data/subjects";
+import { stripChunkRefs } from "../data/sources";
 import { BandSeal } from "./BandSeal";
 import { ResultsCard } from "./ResultsCard";
 
@@ -27,13 +28,41 @@ function messageFor(error: unknown): string {
       return "You have used today's attempt allowance. Try again tomorrow.";
     }
     if (error.status === 503) {
-      return "The examiners are not available right now. Try again later.";
+      return "The examiners are not at their desk right now. Try again later.";
     }
     if (error.status === 400) {
       return error.message;
     }
   }
   return "The exam room could not reach the examiners. Try again.";
+}
+
+// The rubric ids are internal shape, not student-facing words.
+const CRITERION_LABELS: Record<string, string> = {
+  correctness: "Facts and accuracy",
+  completeness: "Coverage and explanation",
+};
+
+function criterionLabel(id: string): string {
+  return CRITERION_LABELS[id] ?? id.replace(/[_-]+/g, " ");
+}
+
+// The pinned judge writes its short comment in the third person. This is a
+// presentation-only rewrite for the returned parchment; it never changes a mark.
+function inStudentVoice(text: string): string {
+  return text
+    .replace(/\bThe student's\b/g, "Your")
+    .replace(/\bthe student's\b/g, "your")
+    .replace(/\bThe student\b/g, "You")
+    .replace(/\bthe student\b/g, "you")
+    .replace(/\bThe candidate's\b/g, "Your")
+    .replace(/\bthe candidate's\b/g, "your")
+    .replace(/\bThe candidate\b/g, "You")
+    .replace(/\bthe candidate\b/g, "you")
+    .replace(/\bThe response's\b/g, "Your response's")
+    .replace(/\bthe response's\b/g, "your response's")
+    .replace(/\bThe response\b/g, "Your response")
+    .replace(/\bthe response\b/g, "your response");
 }
 
 export function ExamPanel({
@@ -160,9 +189,9 @@ export function ExamPanel({
     return (
       <section className="exam" aria-label="Exam room">
         <div className="notice">
-          Untimed practice paper from the published {subject.name} bank. There
-          is no clock and no expiry: take as long as you need. The result is
-          provisional and is not an official O.W.L. record.
+          A practice paper from the {subject.name} department. There is no clock
+          and no expiry: take as long as you need. The result is provisional and
+          is not an official O.W.L. record.
         </div>
         <ResultsCard best={best} failed={bestFailed} />
         {error && <p className="exam-error">{error}</p>}
@@ -177,10 +206,13 @@ export function ExamPanel({
     return (
       <section className="exam" aria-label="Exam room">
         <div className="notice">
-          The examiners are marking. Objective answers are scored on the server;
-          the short answers are judged once against the stored rubric.
+          The professor is at the desk with your parchment. The quick questions
+          are checked straight away; the written answers are read against the
+          department's marking notes.
         </div>
-        <p className="grading-note">This usually takes a few seconds.</p>
+        <p className="grading-note">
+          The professor will return your parchment in a few seconds.
+        </p>
       </section>
     );
   }
@@ -204,19 +236,21 @@ export function ExamPanel({
             />
           ) : (
             <div className="notice">
-              Some answers need examiner review. There is no final band yet.
+              The department has kept some answers back. This copy carries no
+              final band.
             </div>
           )}
           <div>
             <h3>Paper returned</h3>
             <p className="result-total">
               {result.total === null
-                ? "Awaiting review"
+                ? "Kept back — no final total"
                 : `${result.total} / ${result.maxMarks} marks`}
             </p>
             <div className="notice">
-              Practice result. Marks and bands are deterministic; the model
-              answer and feedback are shown after submission.
+              Practice result. The marks and band are the department's; the
+              expected answer and the professor's note are returned with your
+              parchment.
             </div>
           </div>
         </div>
@@ -238,31 +272,52 @@ export function ExamPanel({
                 <span className="mark-row-index">{index + 1}</span>
                 <span className="mark-row-prompt">{question.prompt}</span>
                 <span className={markClass}>
-                  {marks === null ? "review" : `${marks}/${grade.maxMarks}`}
+                  {marks === null ? "kept" : `${marks}/${grade.maxMarks}`}
                 </span>
                 {grade.needsReview && (
                   <span className="mark-row-answer">
-                    Needs examiner review.
+                    The department has kept this answer back; this copy carries
+                    no final band.
                   </span>
                 )}
-                {grade.feedback && (
+                {!grade.needsReview &&
+                  grade.kind === "short" &&
+                  grade.feedback && (
+                    <span className="mark-row-answer">
+                      The professor's note:{" "}
+                      {inStudentVoice(
+                        stripChunkRefs(grade.feedback, grade.evidenceIds),
+                      )}
+                    </span>
+                  )}
+                {grade.kind === "mcq" && grade.feedback && (
                   <span className="mark-row-answer">{grade.feedback}</span>
                 )}
                 {grade.modelAnswer && (
                   <span className="mark-row-answer">
-                    Model: {grade.modelAnswer}
+                    {grade.kind === "mcq"
+                      ? "The correct answer"
+                      : "The expected answer"}
+                    : {grade.modelAnswer}
                   </span>
                 )}
-                {grade.criteria.length > 0 && (
-                  <span className="mark-row-answer">
-                    {grade.criteria
-                      .map(
-                        (criterion) =>
-                          `${criterion.criterionId} ${criterion.awarded}/${criterion.maxMarks}`,
-                      )
-                      .join(" · ")}
+                {grade.criteria.map((criterion) => (
+                  <span
+                    key={criterion.criterionId}
+                    className="mark-row-answer"
+                  >
+                    {criterionLabel(criterion.criterionId)}{" "}
+                    {criterion.awarded}/{criterion.maxMarks}
+                    {criterion.reason
+                      ? ` — ${inStudentVoice(
+                          stripChunkRefs(
+                            criterion.reason,
+                            grade.evidenceIds,
+                          ),
+                        )}`
+                      : ""}
                   </span>
-                )}
+                ))}
               </li>
             );
           })}
