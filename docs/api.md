@@ -643,8 +643,8 @@ runtime model output. The web client labels it as the expected answer (or the
 correct answer for an MCQ). For a short answer, it presents the judge's
 `feedback` as the professor's note and each criterion `reason` as a marking
 note; a blank answer uses the deterministic no-answer text as the note. MCQ
-feedback is the deterministic grader text, and a kept-back answer shows only
-its state.
+feedback is the deterministic grader text, and a kept-back answer shows its
+state in place of the note.
 
 A repeated submission returns the stored grade and makes no second judge call.
 An answer for an item outside the attempt, a duplicate item, an option id that
