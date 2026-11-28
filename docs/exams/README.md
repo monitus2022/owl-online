@@ -166,8 +166,10 @@ also stores the submitted answers with the grade so a result can be audited.
 The grade response carries the MCQ key, per-question marks, model answer,
 feedback, criteria and the band. `model_answer` is the stored, reviewed
 expected answer, not a runtime generation; the web client labels it as the
-expected answer. An unresolved judge result sets `needs_review` and leaves the
-total and band null.
+expected answer. The judge's `feedback` is a short neutral comment; the web
+client presents it as the professor's note in the student's voice and each
+criterion `reason` as a marking note. The judge prompt itself is unchanged. An
+unresolved judge result sets `needs_review` and leaves the total and band null.
 
 Attempts are scoped to the signed anonymous session cookie. The list route
 returns only the current session's graded attempts, and fetching or grading
