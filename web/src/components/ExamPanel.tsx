@@ -8,6 +8,7 @@ import type {
 import { ExamApiError, examClient } from "../api/exams";
 import { resultsStore } from "../api/results";
 import type { StoredAttempt } from "../api/results";
+import { criterionLabel, examCopy } from "../copy";
 import type { Subject } from "../data/subjects";
 import { stripChunkRefs } from "../data/sources";
 import { BandSeal } from "./BandSeal";
@@ -22,29 +23,19 @@ type Phase = "idle" | "answering" | "grading" | "graded";
 function messageFor(error: unknown): string {
   if (error instanceof ExamApiError) {
     if (error.status === 404) {
-      return "This paper or session is no longer available. Start a new paper.";
+      return examCopy.errors.paperGone;
     }
     if (error.status === 429) {
-      return "You have used today's attempt allowance. Try again tomorrow.";
+      return examCopy.errors.dailyLimit;
     }
     if (error.status === 503) {
-      return "The examiners are not at their desk right now. Try again later.";
+      return examCopy.errors.examinersAway;
     }
     if (error.status === 400) {
       return error.message;
     }
   }
-  return "The exam room could not reach the examiners. Try again.";
-}
-
-// The rubric ids are internal shape, not student-facing words.
-const CRITERION_LABELS: Record<string, string> = {
-  correctness: "Facts and accuracy",
-  completeness: "Coverage and explanation",
-};
-
-function criterionLabel(id: string): string {
-  return CRITERION_LABELS[id] ?? id.replace(/[_-]+/g, " ");
+  return examCopy.errors.unreachable;
 }
 
 // The pinned judge writes its short comment in the third person. This is a
@@ -152,9 +143,7 @@ export function ExamPanel({
     try {
       await examClient.abandon(current.attemptId);
     } catch {
-      setError(
-        "The paper could not be discarded. Clear all papers in Your papers deletes it.",
-      );
+      setError(examCopy.abandonFailed);
     }
   }
 
@@ -188,15 +177,11 @@ export function ExamPanel({
   if (phase === "idle") {
     return (
       <section className="exam" aria-label="Exam room">
-        <div className="notice">
-          A practice paper from the {subject.name} department. There is no clock
-          and no expiry: take as long as you need. The result is provisional and
-          is not an official O.W.L. record.
-        </div>
+        <div className="notice">{examCopy.idleNotice(subject.name)}</div>
         <ResultsCard best={best} failed={bestFailed} />
         {error && <p className="exam-error">{error}</p>}
         <button className="btn-primary" onClick={startPaper}>
-          Take a paper
+          {examCopy.takePaper}
         </button>
       </section>
     );
@@ -205,14 +190,8 @@ export function ExamPanel({
   if (phase === "grading") {
     return (
       <section className="exam" aria-label="Exam room">
-        <div className="notice">
-          The professor is at the desk with your parchment. The quick questions
-          are checked straight away; the written answers are read against the
-          department's marking notes.
-        </div>
-        <p className="grading-note">
-          The professor will return your parchment in a few seconds.
-        </p>
+        <div className="notice">{examCopy.gradingNotice}</div>
+        <p className="grading-note">{examCopy.gradingNote}</p>
       </section>
     );
   }
@@ -235,23 +214,16 @@ export function ExamPanel({
               }
             />
           ) : (
-            <div className="notice">
-              The department has kept some answers back. This copy carries no
-              final band.
-            </div>
+            <div className="notice">{examCopy.keptNotice}</div>
           )}
           <div>
-            <h3>Paper returned</h3>
+            <h3>{examCopy.returned}</h3>
             <p className="result-total">
               {result.total === null
-                ? "Kept back — no final total"
+                ? examCopy.keptTotal
                 : `${result.total} / ${result.maxMarks} marks`}
             </p>
-            <div className="notice">
-              Practice result. The marks and band are the department's; the
-              expected answer and the professor's note are returned with your
-              parchment.
-            </div>
+            <div className="notice">{examCopy.practiceNotice}</div>
           </div>
         </div>
         <ol className="mark-scheme">
@@ -272,19 +244,20 @@ export function ExamPanel({
                 <span className="mark-row-index">{index + 1}</span>
                 <span className="mark-row-prompt">{question.prompt}</span>
                 <span className={markClass}>
-                  {marks === null ? "kept" : `${marks}/${grade.maxMarks}`}
+                  {marks === null
+                    ? examCopy.keptMark
+                    : examCopy.marks(marks, grade.maxMarks)}
                 </span>
                 {grade.needsReview && (
                   <span className="mark-row-answer">
-                    The department has kept this answer back; this copy carries
-                    no final band.
+                    {examCopy.needsReview}
                   </span>
                 )}
                 {!grade.needsReview &&
                   grade.kind === "short" &&
                   grade.feedback && (
                     <span className="mark-row-answer">
-                      The professor's note:{" "}
+                      {examCopy.noteLabel}{" "}
                       {inStudentVoice(
                         stripChunkRefs(grade.feedback, grade.evidenceIds),
                       )}
@@ -296,8 +269,8 @@ export function ExamPanel({
                 {grade.modelAnswer && (
                   <span className="mark-row-answer">
                     {grade.kind === "mcq"
-                      ? "The correct answer"
-                      : "The expected answer"}
+                      ? examCopy.correct
+                      : examCopy.expected}
                     : {grade.modelAnswer}
                   </span>
                 )}
@@ -325,10 +298,10 @@ export function ExamPanel({
         <ResultsCard best={best} failed={bestFailed} />
         <div className="exam-actions">
           <button className="btn-primary" onClick={startPaper}>
-            Another paper
+            {examCopy.anotherPaper}
           </button>
           <button className="btn-quiet" onClick={() => setPhase("idle")}>
-            Back to the room
+            {examCopy.backToRoom}
           </button>
         </div>
       </section>
@@ -338,7 +311,7 @@ export function ExamPanel({
   if (!paper || !attempt) {
     return (
       <section className="exam" aria-label="Exam room">
-        <p className="exam-error">The paper could not be loaded.</p>
+        <p className="exam-error">{examCopy.paperNotLoaded}</p>
       </section>
     );
   }
@@ -354,16 +327,23 @@ export function ExamPanel({
       >
         <h3 className="paper-title">{paper.title}</h3>
         <p className="paper-meta">
-          {attempt.questions.length} questions · {attempt.marks} marks ·{" "}
-          {paper.timed
-            ? `suggested ${paper.durationMinutes} minutes`
-            : "untimed practice; the student sets the pace"}
+          {examCopy.paperMeta(
+            attempt.questions.length,
+            attempt.marks,
+            paper.timed,
+            paper.durationMinutes,
+          )}
         </p>
+        {!paper.timed && (
+          <p className="paper-meta">{examCopy.untimedNote}</p>
+        )}
         {attempt.questions.map((question, index) => (
           <fieldset key={question.id} className="question">
             <legend>
               {index + 1}. {question.prompt}
-              <span className="question-marks">[{question.marks} marks]</span>
+              <span className="question-marks">
+                {examCopy.questionMarks(question.marks)}
+              </span>
             </legend>
             {question.kind === "mcq" ? (
               <div className="options">
@@ -404,17 +384,16 @@ export function ExamPanel({
           </fieldset>
         ))}
         <p className="exam-progress" aria-live="polite">
-          {answered} of {attempt.questions.length} answered
+          {examCopy.progress(answered, attempt.questions.length)}
         </p>
         {confirmSubmit && (
           <p className="exam-confirm" role="alert">
-            {blankCount} question{blankCount === 1 ? "" : "s"} left blank. Send
-            the paper anyway?
+            {examCopy.blankWarning(blankCount)}
           </p>
         )}
         <div className="exam-actions">
           <button className="btn-primary" type="submit" ref={submitRef}>
-            {confirmSubmit ? "Send anyway" : "Send to the examiners"}
+            {confirmSubmit ? examCopy.sendAnyway : examCopy.send}
           </button>
           {confirmSubmit && (
             <button
@@ -425,7 +404,7 @@ export function ExamPanel({
                 submitRef.current?.focus();
               }}
             >
-              Keep working
+              {examCopy.keepWorking}
             </button>
           )}
           <button
@@ -433,7 +412,7 @@ export function ExamPanel({
             type="button"
             onClick={() => void abandonPaper()}
           >
-            Abandon paper
+            {examCopy.abandon}
           </button>
         </div>
       </form>

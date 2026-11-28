@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BAND_LABELS } from "../api/exams";
 import { resultsStore } from "../api/results";
 import type { StoredAttempt } from "../api/results";
+import { papersCopy } from "../copy";
 import type { Subject } from "../data/subjects";
 import { BandStrip, bandTone } from "./BandStrip";
 
@@ -60,9 +61,7 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
       setCleared(deleted);
       setConfirmClear(false);
     } catch {
-      setClearError(
-        "The papers could not be deleted. They are still stored for this visit.",
-      );
+      setClearError(papersCopy.history.deleteFailed);
     } finally {
       setClearing(false);
     }
@@ -70,26 +69,20 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
 
   return (
     <section className="history" aria-label="Your papers">
-      <h2>Your papers</h2>
-      <div className="notice notice-mock">
-        Marks are kept for this visit to the Academy and shown for this
-        department. A school account will one day keep them across terms.
-      </div>
+      <h2>{papersCopy.history.heading}</h2>
+      <div className="notice notice-mock">{papersCopy.history.notice}</div>
       <div aria-live="polite">
         {failed && (
-          <p className="history-empty">
-            The paper records could not be read. Nothing is lost by trying
-            again; if it keeps failing, the drawer stays shut.
-          </p>
+          <p className="history-empty">{papersCopy.history.failed}</p>
         )}
         {!failed && attempts === null && (
-          <p className="history-empty">Fetching the records…</p>
+          <p className="history-empty">{papersCopy.history.loading}</p>
         )}
         {!failed && attempts !== null && attempts.length === 0 && (
           <p className="history-empty">
             {cleared > 0
-              ? `Deleted ${cleared} paper${cleared === 1 ? "" : "s"}. The drawer is empty.`
-              : "The drawer is empty: no papers have been marked for this department yet. Sit one in the exam room."}
+              ? papersCopy.history.deleted(cleared)
+              : papersCopy.history.empty}
           </p>
         )}
       </div>
@@ -105,12 +98,16 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
                 <span className="history-index">{attempts.length - index}</span>
                 <span className="history-date">{new Date(attempt.gradedAt).toLocaleDateString()}</span>
                 <span className={`band-chip ${attempt.band ? `cell-${bandTone(attempt.band)}` : "band-none"}`}>
-                  {attempt.band ? BAND_LABELS[attempt.band] : "kept"}
+                  {attempt.band ? BAND_LABELS[attempt.band] : papersCopy.history.kept}
                 </span>
                 <span className="history-marks">
-                  {attempt.total === null ? "kept" : `${attempt.total}/${attempt.max}`}
+                  {attempt.total === null
+                    ? papersCopy.history.kept
+                    : `${attempt.total}/${attempt.max}`}
                 </span>
-                {isBest(attempt) && <span className="history-best">best</span>}
+                {isBest(attempt) && (
+                  <span className="history-best">{papersCopy.history.best}</span>
+                )}
               </li>
             ))}
           </ol>
@@ -127,16 +124,13 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
               setConfirmClear(true);
             }}
           >
-            Clear all papers
+            {papersCopy.history.clear}
           </button>
         </div>
       )}
       {confirmClear && (
         <div className="history-confirm">
-          <p role="alert">
-            Delete every paper from this visit, including any ungraded paper?
-            This cannot be undone.
-          </p>
+          <p role="alert">{papersCopy.history.clearConfirm}</p>
           {clearError && (
             <p className="history-error" role="alert">
               {clearError}
@@ -149,7 +143,9 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
               onClick={() => void clearAll()}
               disabled={clearing}
             >
-              {clearing ? "Deleting…" : "Delete them"}
+              {clearing
+                ? papersCopy.history.deleting
+                : papersCopy.history.delete}
             </button>
             <button
               className="btn-quiet"
@@ -161,7 +157,7 @@ export function HistoryPanel({ subject, active }: { subject: Subject; active: bo
               }}
               disabled={clearing}
             >
-              Keep them
+              {papersCopy.history.keep}
             </button>
           </div>
         </div>

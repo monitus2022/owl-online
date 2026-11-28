@@ -1,5 +1,6 @@
 import { BAND_LABELS } from "../api/exams";
 import type { StoredAttempt } from "../api/results";
+import { papersCopy } from "../copy";
 
 // Best-so-far card, read from the session-scoped store. The wording stays
 // honest about the visit and the absence of accounts (#35) without breaking
@@ -14,29 +15,28 @@ export function ResultsCard({
   if (failed) {
     return (
       <p className="results-card results-empty">
-        The paper records could not be read right now.
+        {papersCopy.results.failed}
       </p>
     );
   }
   if (!best) {
     return (
       <p className="results-card results-empty">
-        No paper has been marked for this department yet. Sit one in the exam
-        room.
+        {papersCopy.results.empty}
       </p>
     );
   }
   if (best.band === null || best.total === null) {
     return (
       <p className="results-card results-empty">
-        A paper was kept back; it carries no final band.
+        {papersCopy.results.keptBack}
       </p>
     );
   }
   const date = new Date(best.gradedAt);
   return (
     <p className="results-card">
-      Best so far this visit:{" "}
+      {papersCopy.results.bestPrefix}{" "}
       <strong>
         {BAND_LABELS[best.band]} ({best.total}/{best.max})
       </strong>{" "}

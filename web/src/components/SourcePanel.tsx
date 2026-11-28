@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from "react";
 import { getMaterial } from "../api/materials";
 import type { MaterialDetail } from "../api/materials";
+import { sourceCopy } from "../copy";
 import { SUBJECTS } from "../data/subjects";
 import {
   bookLabel,
@@ -14,7 +15,7 @@ import {
 // Materials are original pack prose and can be shown publicly. Book
 // citations stay locators (book, chapter, chunk id); the API route never
 // returns the corpus quote or chunk text. The exact ids remain under the
-// collapsed "Source details" disclosure.
+// collapsed "Exact references" disclosure.
 
 // A material id is subject-prefixed. Derive the subject so a cross-subject
 // referral can open its own note instead of the venue's pack.
@@ -48,9 +49,9 @@ export function SourcePanel({
   const panelId = useId();
 
   const openSource = sources.find((source) => source.materialId === open);
-  const panelLabel = openSource
-    ? `Reviewed note: ${openSource.label}`
-    : "Reviewed note";
+  const panelLabel = sourceCopy.noteTitle(
+    openSource ? openSource.label : null,
+  );
 
   if (sources.length === 0 && rawGroups.length === 0) return null;
 
@@ -99,7 +100,7 @@ export function SourcePanel({
   return (
     <>
       <div className="citation-group">
-        <span className="citation-label">Sources</span>
+        <span className="citation-label">{sourceCopy.rowLabel}</span>
         <ul className="citation-chips">
           {sources.map((source) => {
             if (!source.materialId) {
@@ -132,20 +133,20 @@ export function SourcePanel({
         >
           {loading && (
             <p className="material-status" role="status">
-              Fetching the reviewed note…
+              {sourceCopy.loading}
             </p>
           )}
           {failed && (
             <>
               <p className="material-status material-error" role="alert">
-                The reviewed note could not be opened.
+                {sourceCopy.failed}
               </p>
               <button
                 type="button"
                 className="btn-quiet material-retry"
                 onClick={() => void load(open)}
               >
-                Try again
+                {sourceCopy.retry}
               </button>
             </>
           )}
@@ -153,7 +154,7 @@ export function SourcePanel({
             <>
               <p className="material-title">{detail.concept_title}</p>
               <p className="material-meta">
-                {detail.topic_title} · reviewed note · pack {detail.pack_version}
+                {sourceCopy.meta(detail.topic_title)}
               </p>
               <p className="material-text">
                 {stripChunkRefs(
@@ -163,7 +164,7 @@ export function SourcePanel({
               </p>
               {detail.source_refs.length > 0 && (
                 <p className="material-refs">
-                  Sources:{" "}
+                  {sourceCopy.refsPrefix}{" "}
                   {detail.source_refs.map((ref, index) => (
                     <span key={ref.chunk_id}>
                       {index > 0 && " · "}
@@ -174,7 +175,7 @@ export function SourcePanel({
                 </p>
               )}
               <p className="visually-hidden" role="status">
-                Reviewed note loaded.
+                {sourceCopy.loaded}
               </p>
             </>
           )}
@@ -182,7 +183,7 @@ export function SourcePanel({
       )}
       {rawGroups.length > 0 && (
         <details className="citation-details">
-          <summary>Source details</summary>
+          <summary>{sourceCopy.details}</summary>
           {rawGroups.map((group) => (
             <div className="citation-group" key={group.label}>
               <span className="citation-label">{group.label}</span>

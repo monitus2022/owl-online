@@ -29,7 +29,7 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   // Wait for the live lesson flag, then pin the mode on the request so a slow
   // /v1/subjects cannot silently turn this into an auto-routed answer.
   await expect(
-    page.getByText(/I teach from the department's reviewed notes/),
+    page.getByText(/I teach from the department's own notes/),
   ).toBeVisible();
   const stream = page.waitForRequest("**/v1/chat/stream");
   await page.getByLabel("Your question").fill("What is a Boggart?");
@@ -41,14 +41,14 @@ test("a lesson question returns prose and citations", async ({ page }) => {
     .filter({ hasText: "A Boggart is a shape-shifter" });
   await expect(answer).toBeVisible();
   await expect(
-    page.getByText("Composed from the department notes"),
+    page.getByText("I have drawn this from the department's notes"),
   ).toBeVisible();
   await expect(answer).toHaveText(
     "A Boggart is a shape-shifter that takes the shape of what the watcher fears most.",
   );
   await expect(answer).not.toContainText("[mat:");
   await expect(answer).not.toContainText("[b1-c01-0000]");
-  await expect(page.getByText("Sources", { exact: true })).toBeVisible();
+  await expect(page.getByText("Passages", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Test · Material" }),
   ).toBeVisible();
@@ -56,7 +56,7 @@ test("a lesson question returns prose and citations", async ({ page }) => {
     page.getByText("Book 1, Chapter 1", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Test · Material" }).click();
-  const note = page.getByRole("region", { name: /^Reviewed note/ });
+  const note = page.getByRole("region", { name: /^From the department's notes/ });
   await expect(note).toBeVisible();
   await expect(note.getByText("Boggart", { exact: true })).toBeVisible();
   await expect(
@@ -69,7 +69,7 @@ test("a lesson question returns prose and citations", async ({ page }) => {
   await expect(note).toContainText("[b2-c03-0007]");
   await expect(note.getByText(/Book 1, Chapter 1/)).toBeVisible();
   await expect(note.getByText("b1-c01-0000", { exact: true })).toBeVisible();
-  await page.getByText("Source details").click();
+  await page.getByText("Exact references").click();
   const details = page.locator(".citation-details");
   await expect(
     details.getByText("dada-test-material", { exact: true }),
@@ -92,7 +92,7 @@ test("a failed reviewed note says so and offers a retry", async ({ page }) => {
   await page.getByRole("button", { name: "Ask" }).click();
   await page.getByRole("button", { name: "Test · Material" }).click();
   await expect(page.getByRole("alert")).toHaveText(
-    "The reviewed note could not be opened.",
+    "The note could not be opened.",
   );
   await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
 });
@@ -121,7 +121,7 @@ test("the reviewed note fits a narrow screen", async ({ page }) => {
   await page.getByRole("button", { name: "Ask" }).click();
   await page.getByRole("button", { name: "Test · Material" }).click();
   await expect(
-    page.getByRole("region", { name: /^Reviewed note/ }),
+    page.getByRole("region", { name: /^From the department's notes/ }),
   ).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
@@ -172,7 +172,7 @@ test("a paper can be sat, marked and found in history", async ({ page }) => {
   await page.getByRole("button", { name: "Take a paper" }).click();
 
   await expect(
-    page.getByText("untimed practice; the student sets the pace"),
+    page.getByText("This is an untimed practice paper; you can finish it whenever you are ready."),
   ).toBeVisible();
   const questions = page.locator("fieldset.question");
   await expect(questions).toHaveCount(10);
@@ -310,7 +310,7 @@ test("the venue stays open when the subjects API is unreachable", async ({
     page.getByRole("region", { name: "Chat with the professor" }),
   ).toBeVisible();
   await expect(page.getByRole("status")).toContainText(
-    "reviewed notes are not loaded",
+    "notes are not in this room yet",
   );
 });
 
@@ -343,7 +343,7 @@ test("a failed answer offers a retry", async ({ page }) => {
   await page.getByLabel("Your question").fill("What is a Boggart?");
   await page.getByRole("button", { name: "Ask" }).click();
   await expect(
-    page.getByText("Could not reach the Academy. Is the server running?"),
+    page.getByText("The Academy is not answering. Please try again."),
   ).toBeVisible();
   await page.getByRole("button", { name: /Try again/ }).click();
   await expect(page.getByText("A Boggart is a shape-shifter")).toBeVisible();
@@ -459,7 +459,7 @@ test("a subjects request that never answers times out and shows the note", async
   await expect(page.getByLabel("Your question")).toBeEnabled();
   await page.clock.fastForward(4_500);
   await expect(page.getByRole("status")).toContainText(
-    "reviewed notes are not loaded",
+    "notes are not in this room yet",
   );
 });
 
@@ -473,7 +473,7 @@ test("the education paraphrase answers from the persona fact", async ({
   await expect(
     page.getByText("Professor's note", { exact: true }),
   ).toBeVisible();
-  await page.getByText("Source details").click();
+  await page.getByText("Exact references").click();
   await expect(
     page.getByText("persona:professor.education", { exact: true }),
   ).toBeVisible();

@@ -3,8 +3,8 @@
 // The server returns citation ids: material ids such as
 // `dada-dark-creatures-boggarts-counter`, book chunk ids such as
 // `b3-c07-0041`, and typed citations such as `lesson:...`, `persona:...`,
-// `lore:...` and `policy:script:...`. The chat shows a readable Sources row
-// built from those ids and keeps the exact strings under "Source details".
+// `lore:...` and `policy:script:...`. The chat shows a readable Passages row
+// built from those ids and keeps the exact strings under "Exact references".
 // No verification or contract changes here: this module only decides what a
 // student reads.
 
@@ -113,7 +113,7 @@ export interface SourceChip {
 // The readable row: material breadcrumb, one chip per cited chapter, lore
 // entries, and a plain label for a persona note or a policy nameplate. Typed
 // lesson citations point at the material and chapter already shown, so they
-// are kept out of the row and preserved under Source details.
+// are kept out of the row and preserved under Exact references.
 export function sourceChips({
   materials = [],
   citations = [],

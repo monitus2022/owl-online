@@ -123,7 +123,7 @@ export function AboutPage() {
               <td className="truth-real">Real</td>
               <td>
                 Retrieved from the seven novels and cited by book and chapter,
-                with the chunk ids under Source details; a citation that does
+                with the chunk ids under Exact references; a citation that does
                 not resolve is stripped, and when nothing supports an answer,
                 the plain voice says it cannot answer from the books.
               </td>
@@ -135,10 +135,11 @@ export function AboutPage() {
                 The professor composes teaching prose from the
                 department&rsquo;s reviewed notes and lists them as sources by
                 material, book and chapter. Those sources locate the notes;
-                they are not a sentence-level support check. On the 2026-11-13
-                evaluation, 4 of 30 judged lesson answers were fully supported
-                by their notes, with citation recall 0.9615 and no false
-                refusals; comparison prompts are the weakest shape.
+                they are not a sentence-level support check. On the 2026-11-22
+                evaluation after the prompt-order change, 11 of 30 judged
+                lesson answers were fully supported by their notes, with
+                citation recall 0.9615 and no lesson false refusals;
+                comparison prompts remain the weakest shape.
               </td>
             </tr>
             <tr>
@@ -198,7 +199,7 @@ export function AboutPage() {
           Book facts come only from the seven novels. Lesson answers add the
           reviewed material, and answers drawn from the books list their book
           and chapter sources; the exact material, chunk and typed citation ids
-          stay available under Source details. Click a
+          stay available under Exact references. Click a
           reviewed material source to read the note; a book source stays a book
           and chapter locator, never a page of the novel. Setting facts about
           Ashcombe cite the academy&rsquo;s own lore pack. Secondary

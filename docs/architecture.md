@@ -251,7 +251,7 @@ librarian door (#195), not the librarian chat itself.
 
 Chat answers keep the evidence legible: inline citation brackets are stripped,
 and the `Sources` row shows material or chapter chips, with the exact ids under
-`Source details`. A material chip opens the reviewed
+`Exact references`. A material chip opens the reviewed
 pack note from the material route; book chips never open novel text (#290,
 #294). A local review run with `OWL_DEV_EVIDENCE` can show retrieved chunk text
 in the operator inspector; the flag is off in deployment (#295).
