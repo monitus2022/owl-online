@@ -167,6 +167,22 @@ same aliases were applied there for the host measurement, but the deploy must
 copy the updated pack to `/data/lore`; the code alone cannot add them to the
 running volume. The frozen `eval/fixtures/lore` copy is the reproducible one.
 
+## Live shadow check (2026-11-28)
+
+Deployed image `bed73a09` with `OWL_INTENT_CLASSIFIER=shadow` and copied the
+aliases to `/data/lore`. The first residual call failed with
+`AccessDeniedException`: the instance role policy `owl-online-bedrock` allowed
+Titan and the reranker, not Nova Micro. The policy now grants
+`bedrock:InvokeModel` on the account-scoped APAC inference-profile pattern and
+on `amazon.nova-micro-v1:0` in the six APAC regions. A second residual call
+recorded `classifier_label=lore`, `classifier_entry=school-001`,
+`classifier_ms=437.7` and `deterministic_label=abstain`, and the response stayed
+abstained, which is the shadow contract.
+
+Live verification also found a cache bug: a failed call was stored as `None`,
+so a transient provider failure poisoned that question for the process. The
+follow-up caches only a usable label; a failure is retried on the next turn.
+
 ## Reproduction
 
 ```text
